@@ -63,7 +63,6 @@ import type {
   DashboardData,
   Lead,
   Task,
-  Tenant,
   User,
   Website,
   WebsiteSection,
