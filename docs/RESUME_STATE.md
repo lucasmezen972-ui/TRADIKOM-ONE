@@ -28,6 +28,7 @@ Last completed checkpoint:
 - PostgreSQL RLS integration test added for restricted-role tenant isolation and cross-tenant write rejection.
 - Public-site hero images now use `next/image` with `images.unsplash.com` explicitly allowlisted.
 - Workflow worker now processes due `domain_events` batches durably with processing claims, retry backoff, stale processing requeue, terminal failures, and targeted unit coverage.
+- Lead follow-up now loads the active tenant workflow definition from persistence and executes it through `src/modules/workflows/` repository helpers and action registry rather than a hidden hard-coded action path. The checkpoint includes normalized versioned definitions, condition checks, event replay idempotency, timeline step metadata, approval-required stops, waiting-state support, and registered initial actions for task/contact/tag/activity/mock notification/webhook/wait/approval behavior.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
@@ -64,10 +65,12 @@ Current validation note:
 - GitHub Actions passed on PR #1 for CRM duplicate merge fix commit `aa098ff`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the Opportunity Radar extraction checkpoint, targeted validation (`pnpm exec vitest run tests/opportunity-radar.test.ts`) and local `git diff --check` both hung without output and were stopped. Validate the checkpoint through GitHub Actions after push.
 - GitHub Actions passed on PR #1 for Opportunity Radar extraction commit `fe98f56`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the persisted workflow engine checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-engine.test.ts`), a one-off TypeScript check, and a simple `tsx` startup all hung without output and were stopped. Targeted `git diff --check` and `git diff --cached --check` passed.
+- GitHub Actions passed on PR #1 for workflow engine checkpoint commit `46a0164`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
 
-1. Continue Phase 2 with the persisted workflow engine: versioned workflow definitions, action registry, delays/retries, approvals, cancellation, dead-letter visibility, timeline, manual retry, and persisted lead follow-up definition.
+1. Continue Phase 2 workflow engine depth: durable delayed resumption, cancellation, approval/rejection actions, manual retry, dead-letter visibility, retry/backoff execution attempts, and domain-specific async handlers beyond the synchronous lead follow-up path.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
