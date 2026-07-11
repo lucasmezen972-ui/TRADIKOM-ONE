@@ -1,7 +1,17 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso, toJson } from "@/lib/security";
+import { executeWorkflowAction } from "@/modules/workflows/actions";
+import { WorkflowError } from "@/modules/workflows/errors";
+import {
+  findActiveWorkflowDefinition,
+  findSucceededWorkflowStepByIdempotency,
+  insertWorkflowRun,
+  insertWorkflowRunStep,
+  updateWorkflowRunStatus,
+} from "@/modules/workflows/repository";
 import {
   workflowDefinitionSchema,
+  type WorkflowAction,
   type WorkflowDefinition,
   type WorkflowEvent,
 } from "@/modules/workflows/types";
@@ -20,11 +30,11 @@ export const leadFollowUpWorkflow: WorkflowDefinition =
       },
       {
         type: "send_mock_email",
-        input: { message: "Nouveau lead site à traiter." },
+        input: { message: "Nouveau lead site a traiter." },
       },
       {
         type: "create_activity",
-        input: { summary: "Workflow de relance lead exécuté." },
+        input: { summary: "Workflow de relance lead execute." },
       },
     ],
     retryPolicy: { maxAttempts: 3, backoffMs: 500 },
@@ -34,10 +44,11 @@ export const leadFollowUpWorkflow: WorkflowDefinition =
 
 export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
   const now = nowIso();
-  await db.query(
+  const result = await db.query<{ id: string }>(
     `insert into domain_events (id, tenant_id, actor_id, event_type, payload, status, attempts, idempotency_key, correlation_id, causation_id, next_run_at, last_error, created_at, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-     on conflict (tenant_id, idempotency_key) do nothing`,
+     on conflict (tenant_id, idempotency_key) do nothing
+     returning id`,
     [
       event.id,
       event.tenantId,
@@ -55,6 +66,8 @@ export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
       now,
     ],
   );
+
+  return Boolean(result.rows[0]);
 }
 
 export async function executeLeadFollowUpWorkflow(
@@ -68,7 +81,19 @@ export async function executeLeadFollowUpWorkflow(
     correlationId: string;
   },
 ) {
-  return executeWorkflowDefinition(db, leadFollowUpWorkflow, {
+  const storedWorkflow = await findActiveWorkflowDefinition(
+    db,
+    input.tenantId,
+    leadFollowUpWorkflow.key,
+  );
+
+  if (!storedWorkflow) {
+    return null;
+  }
+
+  const definition = storedWorkflow.definition;
+
+  return executeWorkflowDefinition(db, definition, {
     id: id("event"),
     tenantId: input.tenantId,
     actorId: "system",
@@ -80,7 +105,7 @@ export async function executeLeadFollowUpWorkflow(
       source: input.source,
     },
     correlationId: input.correlationId,
-    idempotencyKey: `lead.created:${input.leadId}:workflow:v1`,
+    idempotencyKey: `lead.created:${input.leadId}:workflow:v${definition.version}`,
   });
 }
 
@@ -90,133 +115,250 @@ export async function executeWorkflowDefinition(
   event: WorkflowEvent,
 ) {
   const parsedDefinition = workflowDefinitionSchema.parse(definition);
-  await enqueueDomainEvent(db, event);
+  const eventInserted = await enqueueDomainEvent(db, event);
+
+  if (!eventInserted) {
+    return null;
+  }
 
   if (!parsedDefinition.active || parsedDefinition.trigger !== event.type) {
+    await markDomainEventSkipped(
+      db,
+      event,
+      "Workflow inactif ou declencheur non correspondant.",
+    );
+    return null;
+  }
+
+  if (!conditionsMatch(parsedDefinition, event)) {
+    await markDomainEventSkipped(
+      db,
+      event,
+      "Conditions workflow non satisfaites.",
+    );
     return null;
   }
 
   const runId = id("run");
-  const now = nowIso();
-
-  await db.query(
-    `insert into workflow_runs (id, tenant_id, workflow_key, trigger_name, status, summary, error, retry_count, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      runId,
-      event.tenantId,
-      parsedDefinition.key,
-      parsedDefinition.trigger,
-      "running",
-      "Workflow en cours d'exécution.",
-      null,
-      0,
-      now,
-    ],
-  );
+  await insertWorkflowRun(db, {
+    id: runId,
+    tenantId: event.tenantId,
+    workflowKey: parsedDefinition.key,
+    triggerName: parsedDefinition.trigger,
+    status: "running",
+    summary: `Workflow v${parsedDefinition.version} en cours d'execution.`,
+    error: null,
+    retryCount: 0,
+    createdAt: nowIso(),
+  });
 
   try {
-    for (const action of parsedDefinition.actions) {
-      await executeAction(db, runId, event, action.type, action.input);
+    let terminalStatus = "succeeded";
+    let terminalSummary = `Workflow v${parsedDefinition.version} execute.`;
+
+    for (const [index, action] of parsedDefinition.actions.entries()) {
+      const result = await executeAction(db, {
+        runId,
+        event,
+        definition: parsedDefinition,
+        action,
+        actionIndex: index,
+      });
+
+      if (result.status === "waiting" || result.status === "approval_required") {
+        terminalStatus = result.status;
+        terminalSummary = result.summary;
+        break;
+      }
     }
 
-    await db.query(
-      "update workflow_runs set status = $1, summary = $2 where tenant_id = $3 and id = $4",
-      [
-        "succeeded",
-        "Tâche de relance créée et notification mock envoyée.",
-        event.tenantId,
-        runId,
-      ],
-    );
-    await db.query(
-      "update domain_events set status = $1, attempts = attempts + 1, updated_at = $2 where tenant_id = $3 and idempotency_key = $4",
-      ["succeeded", nowIso(), event.tenantId, event.idempotencyKey],
-    );
+    await updateWorkflowRunStatus(db, {
+      tenantId: event.tenantId,
+      runId,
+      status: terminalStatus,
+      summary: terminalSummary,
+      error: null,
+    });
+    await markDomainEventSucceeded(db, event);
     return runId;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Workflow failed";
-    await db.query(
-      "update workflow_runs set status = $1, summary = $2, error = $3, retry_count = retry_count + 1 where tenant_id = $4 and id = $5",
-      ["failed", "Le workflow a échoué.", message, event.tenantId, runId],
-    );
-    await db.query(
-      "update domain_events set status = $1, attempts = attempts + 1, last_error = $2, updated_at = $3 where tenant_id = $4 and idempotency_key = $5",
-      ["failed", message, nowIso(), event.tenantId, event.idempotencyKey],
-    );
+    const message =
+      error instanceof Error ? error.message : "Workflow failed";
+    await updateWorkflowRunStatus(db, {
+      tenantId: event.tenantId,
+      runId,
+      status: "failed",
+      summary: "Le workflow a echoue.",
+      error: message,
+      incrementRetry: true,
+    });
+    await markDomainEventFailed(db, event, message);
     throw error;
   }
 }
 
 async function executeAction(
   db: DbClient,
-  runId: string,
-  event: WorkflowEvent,
-  actionName: string,
-  input: Record<string, unknown>,
+  input: {
+    runId: string;
+    event: WorkflowEvent;
+    definition: WorkflowDefinition;
+    action: WorkflowAction;
+    actionIndex: number;
+  },
 ) {
-  const payload = event.payload;
-  const now = nowIso();
+  const idempotencyKey =
+    input.action.idempotencyKey ??
+    `${input.event.idempotencyKey}:a${input.actionIndex}:${input.action.type}`;
+  const existingStep = await findSucceededWorkflowStepByIdempotency(db, {
+    tenantId: input.event.tenantId,
+    runId: input.runId,
+    actionName: input.action.type,
+    idempotencyKey,
+  });
 
-  if (actionName === "create_task") {
-    await db.query(
-      `insert into tasks (id, tenant_id, title, status, assigned_user_id, due_at, related_type, related_id, created_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        id("task"),
-        event.tenantId,
-        String(input.title ?? "Relancer le nouveau lead"),
-        "open",
-        String(payload.ownerId),
-        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        "lead",
-        String(payload.leadId),
-        now,
-      ],
-    );
+  if (existingStep) {
+    await insertWorkflowRunStep(db, {
+      id: id("step"),
+      tenantId: input.event.tenantId,
+      runId: input.runId,
+      actionName: input.action.type,
+      status: "skipped",
+      metadata: {
+        eventId: input.event.id,
+        actionIndex: input.actionIndex,
+        idempotencyKey,
+        reason: "Action deja executee.",
+      },
+      createdAt: nowIso(),
+    });
+
+    return {
+      status: "succeeded" as const,
+      summary: "Action deja executee.",
+    };
   }
 
-  if (actionName === "send_mock_email") {
-    await db.query(
-      "insert into notifications (id, tenant_id, channel, recipient_user_id, message, status, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-      [
-        id("notification"),
-        event.tenantId,
-        "mock_email",
-        String(payload.ownerId),
-        String(input.message ?? "Notification mock envoyée."),
-        "sent",
-        now,
-      ],
-    );
-  }
+  try {
+    const result = await executeWorkflowAction({
+      db,
+      runId: input.runId,
+      event: input.event,
+      definition: input.definition,
+      action: input.action,
+      now: nowIso(),
+    });
 
-  if (actionName === "create_activity") {
-    await db.query(
-      "insert into activities (id, tenant_id, type, summary, target_type, target_id, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-      [
-        id("activity"),
-        event.tenantId,
-        "workflow.action",
-        String(input.summary ?? "Action workflow exécutée."),
-        "workflow_run",
-        runId,
-        now,
-      ],
-    );
-  }
+    await insertWorkflowRunStep(db, {
+      id: id("step"),
+      tenantId: input.event.tenantId,
+      runId: input.runId,
+      actionName: input.action.type,
+      status: result.status,
+      metadata: {
+        eventId: input.event.id,
+        actionIndex: input.actionIndex,
+        idempotencyKey,
+        input: input.action.input,
+        ...result.metadata,
+      },
+      createdAt: nowIso(),
+    });
 
+    return result;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Action workflow echouee.";
+    await insertWorkflowRunStep(db, {
+      id: id("step"),
+      tenantId: input.event.tenantId,
+      runId: input.runId,
+      actionName: input.action.type,
+      status: "failed",
+      metadata: {
+        eventId: input.event.id,
+        actionIndex: input.actionIndex,
+        idempotencyKey,
+        input: input.action.input,
+        error: message,
+      },
+      createdAt: nowIso(),
+    });
+    throw error;
+  }
+}
+
+async function markDomainEventSucceeded(db: DbClient, event: WorkflowEvent) {
   await db.query(
-    `insert into workflow_run_steps (id, tenant_id, workflow_run_id, action_name, status, safe_metadata, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7)`,
-    [
-      id("step"),
-      event.tenantId,
-      runId,
-      actionName,
-      "succeeded",
-      toJson({ eventId: event.id, input }),
-      now,
-    ],
+    "update domain_events set status = $1, attempts = attempts + 1, updated_at = $2 where tenant_id = $3 and idempotency_key = $4",
+    ["succeeded", nowIso(), event.tenantId, event.idempotencyKey],
   );
+}
+
+async function markDomainEventFailed(
+  db: DbClient,
+  event: WorkflowEvent,
+  message: string,
+) {
+  await db.query(
+    "update domain_events set status = $1, attempts = attempts + 1, last_error = $2, updated_at = $3 where tenant_id = $4 and idempotency_key = $5",
+    ["failed", message, nowIso(), event.tenantId, event.idempotencyKey],
+  );
+}
+
+async function markDomainEventSkipped(
+  db: DbClient,
+  event: WorkflowEvent,
+  message: string,
+) {
+  await db.query(
+    "update domain_events set status = $1, attempts = attempts + 1, last_error = $2, updated_at = $3 where tenant_id = $4 and idempotency_key = $5",
+    ["skipped", message, nowIso(), event.tenantId, event.idempotencyKey],
+  );
+}
+
+function conditionsMatch(definition: WorkflowDefinition, event: WorkflowEvent) {
+  if (definition.conditions.length === 0) {
+    return true;
+  }
+
+  return definition.conditions.every((condition) =>
+    condition
+      .split("||")
+      .map((part) => part.trim())
+      .some((part) => simpleConditionMatches(part, event)),
+  );
+}
+
+function simpleConditionMatches(condition: string, event: WorkflowEvent) {
+  const match = condition.match(
+    /^(?:payload\.)?([a-zA-Z0-9_.]+)\s*==\s*["']?([a-zA-Z0-9_-]+)["']?$/,
+  );
+
+  if (!match) {
+    throw new WorkflowError(
+      "workflow_definition_invalid",
+      `Condition workflow non supportee: ${condition}.`,
+    );
+  }
+
+  const [, path, expected] = match;
+  if (!path || expected === undefined) {
+    throw new WorkflowError(
+      "workflow_definition_invalid",
+      `Condition workflow non supportee: ${condition}.`,
+    );
+  }
+
+  return String(readPayloadPath(event.payload, path) ?? "") === expected;
+}
+
+function readPayloadPath(payload: Record<string, unknown>, path: string) {
+  return path.split(".").reduce<unknown>((current, key) => {
+    if (!current || typeof current !== "object" || Array.isArray(current)) {
+      return undefined;
+    }
+
+    return (current as Record<string, unknown>)[key];
+  }, payload);
 }

@@ -84,6 +84,7 @@ import {
   dismissOpportunityRadarAlert,
   getOpportunityRadar,
 } from "@/modules/opportunity-radar";
+import { leadFollowUpWorkflow } from "@/modules/workflows";
 import {
   id,
   nowIso,
@@ -347,17 +348,12 @@ async function createTenantDefaults(db: DbClient, tenantId: string) {
     [
       id("workflow"),
       tenantId,
-      "new_website_lead_follow_up",
+      leadFollowUpWorkflow.key,
       "Suivi automatique des nouveaux leads site",
-      "lead.created",
+      leadFollowUpWorkflow.trigger,
       "active",
-      "no_approval_required",
-      toJson({
-        conditions: ["source == website"],
-        actions: ["create_task", "send_mock_email", "create_activity"],
-        delays: [],
-        approvalGateReady: true,
-      }),
+      leadFollowUpWorkflow.approvalPolicy,
+      toJson(leadFollowUpWorkflow),
       now,
     ],
   );
