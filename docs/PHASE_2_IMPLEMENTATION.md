@@ -17,7 +17,7 @@
 - Added CRM contact detail and mutation depth in `src/modules/crm/`: contact updates, assignment validation, consent status, notes, task creation/completion, contact-linked opportunities, timeline reads, server actions, contact detail UI, and tenant-isolation/audit coverage.
 - Added CRM opportunity depth in `src/modules/crm/`: opportunity listing with search/filter support, detail UI, stage/value/next-action/lost-reason updates, pipeline-stage tenant validation, contact timeline propagation, audit events, and integration coverage.
 - Added CRM duplicate handling in `src/modules/crm/`: normalized candidate detection, manual review UI, side-by-side comparison, survivor selection, field-level merge choices, explicit confirmation, merge tombstone records, audit logging, transaction-backed reassignment of related records, and integration coverage.
-- Started Opportunity Radar extraction into `src/modules/opportunity-radar/` with typed persisted alerts, deterministic sync, direct action links, dismissal, automatic resolution, dashboard wiring, dedicated UI, and integration coverage pending CI confirmation.
+- Extracted Opportunity Radar into `src/modules/opportunity-radar/` with typed persisted alerts, deterministic sync, direct action links, duplicate-contact alerts, dismissal, automatic resolution, dashboard wiring, dedicated UI, and integration coverage.
 - Extracted website draft/publication responsibilities into `src/modules/websites/` with repository functions, schemas, typed errors, tenant authorization, audit preservation, immutable public snapshot reads, and rollback support.
 - Added invitation creation, acceptance, pending invitation display, and member role updates for non-owner roles.
 - Gated public demo outside local development unless `FEATURE_PUBLIC_DEMO=true`.
@@ -33,5 +33,5 @@
 ## Still incomplete
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
-- Email delivery for auth links, full Opportunity Radar rule/test completion beyond the first extracted checkpoint, approval workflows, delayed workflows, and connector UI mapping are not complete.
+- Email delivery for auth links, approval workflows, delayed workflows, persisted workflow definitions/action registry, and connector UI mapping are not complete.
 - The worker is a durable batch dispatcher, but still needs a long-running polling loop, dead-letter UI, and domain-specific async handlers beyond the synchronous lead workflow.
