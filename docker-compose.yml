@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: tradikom
+      POSTGRES_PASSWORD: tradikom_local
+      POSTGRES_DB: tradikom_one
+    ports:
+      - "5432:5432"
+    volumes:
+      - tradikom-postgres:/var/lib/postgresql/data
+
+volumes:
+  tradikom-postgres:

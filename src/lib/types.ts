@@ -1,0 +1,228 @@
+export type Role =
+  | "owner"
+  | "administrator"
+  | "manager"
+  | "collaborator"
+  | "read-only";
+
+export type ConnectorStatus =
+  | "Disponible"
+  | "Connecté"
+  | "Configuration requise"
+  | "Erreur"
+  | "Bientôt disponible";
+
+export type ApprovalPolicy =
+  | "no_approval_required"
+  | "user_approval_required"
+  | "administrator_approval_required"
+  | "prohibited_automatic_execution";
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
+export type Tenant = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  createdAt: string;
+};
+
+export type Membership = {
+  tenantId: string;
+  userId: string;
+  role: Role;
+};
+
+export type BusinessProfile = {
+  identity: {
+    companyName: string;
+    category: string;
+    description: string;
+    existingWebsite?: string;
+  };
+  brand: {
+    tone: string;
+    colors: string[];
+    logoUrl?: string;
+    photoUrls: string[];
+  };
+  services: string[];
+  products: string[];
+  targetCustomers: string;
+  geographicalAreas: string[];
+  openingHours: string;
+  salesObjectives: string;
+  approvedClaims: string[];
+  forbiddenClaims: string[];
+  faqs: Array<{ question: string; answer: string }>;
+  contactMethods: {
+    address: string;
+    phone: string;
+    email: string;
+    socialLinks: string[];
+  };
+  websitePreferences: {
+    desiredCallsToAction: string[];
+    preferredTemplate: WebsiteTemplateKey;
+  };
+  automationPreferences: {
+    leadFollowUpDelayHours: number;
+    notificationChannels: string[];
+    approvalPolicy: ApprovalPolicy;
+  };
+  futureKnowledgeSources: string[];
+};
+
+export type WebsiteTemplateKey = "artisan" | "restaurant" | "beauty";
+
+export type WebsiteTheme = {
+  primary: string;
+  accent: string;
+  background: string;
+  text: string;
+  radius: string;
+};
+
+export type WebsiteSectionType =
+  | "hero"
+  | "introduction"
+  | "services"
+  | "offers"
+  | "benefits"
+  | "reviews"
+  | "gallery"
+  | "faq"
+  | "hours"
+  | "coverage"
+  | "contact"
+  | "whatsapp"
+  | "appointment"
+  | "footer";
+
+export type WebsiteSection = {
+  id: string;
+  tenantId: string;
+  websiteId: string;
+  type: WebsiteSectionType;
+  position: number;
+  enabled: boolean;
+  title: string;
+  body: string;
+  imageUrl?: string;
+  buttonLabel?: string;
+  buttonHref?: string;
+  data: Record<string, unknown>;
+};
+
+export type Website = {
+  id: string;
+  tenantId: string;
+  name: string;
+  templateKey: WebsiteTemplateKey;
+  status: "draft" | "published";
+  theme: WebsiteTheme;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+};
+
+export type Contact = {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  source: string;
+  tags: string[];
+  assignedUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Lead = {
+  id: string;
+  tenantId: string;
+  contactId: string;
+  source: string;
+  status: string;
+  opportunityValue: number;
+  pagePath: string;
+  createdAt: string;
+};
+
+export type Activity = {
+  id: string;
+  tenantId: string;
+  type: string;
+  summary: string;
+  targetType: string;
+  targetId: string;
+  createdAt: string;
+};
+
+export type Task = {
+  id: string;
+  tenantId: string;
+  title: string;
+  status: "open" | "done";
+  assignedUserId: string;
+  dueAt: string;
+  relatedType: string;
+  relatedId: string;
+  createdAt: string;
+};
+
+export type WorkflowRun = {
+  id: string;
+  tenantId: string;
+  workflowKey: string;
+  triggerName: string;
+  status: "succeeded" | "failed" | "waiting";
+  summary: string;
+  createdAt: string;
+};
+
+export type ConnectorCard = {
+  key: string;
+  name: string;
+  description: string;
+  status: ConnectorStatus;
+  capabilities: string[];
+  lastSyncAt?: string;
+  health: "healthy" | "warning" | "error" | "inactive";
+};
+
+export type AuditLog = {
+  id: string;
+  tenantId: string;
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  metadata: Record<string, unknown>;
+  correlationId: string;
+  createdAt: string;
+};
+
+export type DashboardData = {
+  tenant: Tenant;
+  metrics: {
+    newLeads: number;
+    contacts: number;
+    pendingTasks: number;
+    formSubmissions: number;
+  };
+  websiteStatus: string;
+  opportunitiesByStage: Array<{ stage: string; count: number }>;
+  connectorHealth: ConnectorCard[];
+  recentActivities: Activity[];
+  workflowRuns: WorkflowRun[];
+  detectedOpportunities: string[];
+};
