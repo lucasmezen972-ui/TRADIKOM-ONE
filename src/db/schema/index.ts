@@ -25,6 +25,16 @@ export const sessions = pgTable("sessions", {
   createdAt: text("created_at").notNull(),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+});
+
 export const tenants = pgTable("tenants", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -47,6 +57,19 @@ export const memberships = pgTable(
   },
   (table) => [primaryKey({ columns: [table.tenantId, table.userId] })],
 );
+
+export const invitations = pgTable("invitations", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role").notNull(),
+  status: text("status").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
 
 export const businessProfiles = pgTable("business_profiles", {
   tenantId: text("tenant_id")

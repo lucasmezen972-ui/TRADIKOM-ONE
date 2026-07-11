@@ -11,3 +11,7 @@
 - Fixed public publication to read immutable snapshots.
 - Added public form idempotency, honeypot, and consent.
 - Expanded tests from 3 to 6 tests.
+- Confirmed PR #1 CI was green for the Phase 2 foundation checkpoint.
+- Added password reset request/complete flows with hashed single-use tokens and session revocation.
+- Added invitation creation, one-time acceptance, pending invitation display, and non-owner member role updates.
+- Expanded tests from 6 to 10 tests.

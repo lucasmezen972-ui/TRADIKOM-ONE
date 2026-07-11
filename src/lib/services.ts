@@ -94,6 +94,38 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const passwordResetRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+const passwordResetSchema = z.object({
+  token: z.string().min(20),
+  password: z.string().min(8),
+});
+
+const invitationRoles = [
+  "administrator",
+  "manager",
+  "collaborator",
+  "read-only",
+] as const;
+
+const invitationSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(invitationRoles),
+});
+
+const acceptInvitationSchema = z.object({
+  token: z.string().min(20),
+  name: z.string().min(2),
+  password: z.string().min(8),
+});
+
+const updateMemberRoleSchema = z.object({
+  targetUserId: z.string().min(1),
+  role: z.enum(invitationRoles),
+});
+
 const orgSchema = z.object({
   name: z.string().min(2),
   category: z.string().min(2),
@@ -138,6 +170,17 @@ type UserRow = {
   name: string;
   email: string;
   password_hash: string;
+  created_at: string;
+};
+
+type InvitationRow = {
+  id: string;
+  tenant_id: string;
+  email: string;
+  role: Role;
+  status: string;
+  token_hash: string;
+  expires_at: string;
   created_at: string;
 };
 
@@ -187,6 +230,10 @@ export function createServices(db: DbClient) {
     registerUser: (input: z.input<typeof registrationSchema>) =>
       registerUser(db, input),
     loginUser: (input: z.input<typeof loginSchema>) => loginUser(db, input),
+    requestPasswordReset: (input: z.input<typeof passwordResetRequestSchema>) =>
+      requestPasswordReset(db, input),
+    resetPassword: (input: z.input<typeof passwordResetSchema>) =>
+      resetPassword(db, input),
     createSession: (userId: string) => createSession(db, userId),
     getSessionUser: (sessionId?: string) => getSessionUser(db, sessionId),
     revokeSession: (sessionToken?: string) => revokeSession(db, sessionToken),
@@ -197,6 +244,24 @@ export function createServices(db: DbClient) {
     getUserTenants: (userId: string) => getUserTenants(db, userId),
     getTenantContext: (userId: string, preferredTenantId?: string) =>
       getTenantContext(db, userId, preferredTenantId),
+    getTenantMembers: (userId: string, tenantId: string) =>
+      getTenantMembers(db, userId, tenantId),
+    getPendingInvitations: (userId: string, tenantId: string) =>
+      getPendingInvitations(db, userId, tenantId),
+    createInvitation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof invitationSchema>,
+    ) => createInvitation(db, userId, tenantId, input),
+    acceptInvitation: (input: z.input<typeof acceptInvitationSchema>) =>
+      acceptInvitation(db, input),
+    acceptInvitationForUser: (userId: string, token: string) =>
+      acceptInvitationForUser(db, userId, token),
+    updateMemberRole: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof updateMemberRoleSchema>,
+    ) => updateMemberRole(db, userId, tenantId, input),
     saveOnboarding: (
       userId: string,
       tenantId: string,
@@ -355,6 +420,76 @@ async function revokeSession(db: DbClient, sessionToken?: string) {
   ]);
 }
 
+async function requestPasswordReset(
+  db: DbClient,
+  input: z.input<typeof passwordResetRequestSchema>,
+) {
+  const parsed = passwordResetRequestSchema.parse(input);
+  const email = parsed.email.toLowerCase();
+  const user = await db.query<UserRow>("select * from users where email = $1", [
+    email,
+  ]);
+  const existingUser = user.rows[0];
+
+  if (!existingUser) {
+    return { accepted: true };
+  }
+
+  const resetToken = secureToken();
+  const now = nowIso();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+  await db.query(
+    "update password_reset_tokens set used_at = $1 where user_id = $2 and used_at is null",
+    [now, existingUser.id],
+  );
+  await db.query(
+    "insert into password_reset_tokens (id, user_id, token_hash, expires_at, used_at) values ($1, $2, $3, $4, $5)",
+    [id("reset"), existingUser.id, hashToken(resetToken), expiresAt, null],
+  );
+
+  return { accepted: true, resetToken, expiresAt, email };
+}
+
+async function resetPassword(
+  db: DbClient,
+  input: z.input<typeof passwordResetSchema>,
+) {
+  const parsed = passwordResetSchema.parse(input);
+  const token = await db.query<{
+    id: string;
+    user_id: string;
+    expires_at: string;
+    used_at: string | null;
+  }>(
+    `select id, user_id, expires_at, used_at
+     from password_reset_tokens
+     where token_hash = $1 and used_at is null and expires_at > $2`,
+    [hashToken(parsed.token), nowIso()],
+  );
+  const reset = token.rows[0];
+
+  if (!reset) {
+    throw new Error("Lien de réinitialisation invalide ou expiré.");
+  }
+
+  const now = nowIso();
+  await db.query("update users set password_hash = $1 where id = $2", [
+    hashPassword(parsed.password),
+    reset.user_id,
+  ]);
+  await db.query(
+    "update password_reset_tokens set used_at = $1 where user_id = $2 and used_at is null",
+    [now, reset.user_id],
+  );
+  await db.query(
+    "update sessions set revoked_at = $1 where user_id = $2 and revoked_at is null",
+    [now, reset.user_id],
+  );
+
+  return { userId: reset.user_id };
+}
+
 async function createTenant(
   db: DbClient,
   userId: string,
@@ -476,6 +611,234 @@ async function getTenantContext(
   );
 }
 
+async function getTenantMembers(db: DbClient, userId: string, tenantId: string) {
+  await assertTenantAccess(db, userId, tenantId);
+  const result = await db.query<{
+    id: string;
+    name: string;
+    email: string;
+    created_at: string;
+    role: Role;
+    membership_created_at: string;
+  }>(
+    `select users.id, users.name, users.email, users.created_at, memberships.role, memberships.created_at as membership_created_at
+     from memberships
+     join users on users.id = memberships.user_id
+     where memberships.tenant_id = $1
+     order by case when memberships.role = 'owner' then 0 when memberships.role = 'administrator' then 1 else 2 end, users.name asc`,
+    [tenantId],
+  );
+
+  return result.rows.map((row) => ({
+    user: mapUser(row),
+    membership: {
+      tenantId,
+      userId: row.id,
+      role: row.role,
+    } satisfies Membership,
+    joinedAt: row.membership_created_at,
+  }));
+}
+
+async function getPendingInvitations(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator"]);
+  const result = await db.query<InvitationRow>(
+    `select *
+     from invitations
+     where tenant_id = $1 and status = $2 and expires_at > $3
+     order by created_at desc`,
+    [tenantId, "pending", nowIso()],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    email: row.email,
+    role: row.role,
+    status: row.status,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+  }));
+}
+
+async function createInvitation(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: z.input<typeof invitationSchema>,
+) {
+  const actorRole = await assertTenantAccess(db, userId, tenantId, [
+    "owner",
+    "administrator",
+  ]);
+  const parsed = invitationSchema.parse(input);
+  const email = parsed.email.toLowerCase();
+
+  if (parsed.role === "administrator" && actorRole !== "owner") {
+    throw new Error("Seul un propriétaire peut inviter un administrateur.");
+  }
+
+  const existingMember = await db.query(
+    `select memberships.user_id
+     from memberships
+     join users on users.id = memberships.user_id
+     where memberships.tenant_id = $1 and users.email = $2`,
+    [tenantId, email],
+  );
+
+  if (existingMember.rows.length > 0) {
+    throw new Error("Cet utilisateur est déjà membre de l'organisation.");
+  }
+
+  const now = nowIso();
+  const invitationToken = secureToken();
+  const invitationId = id("invite");
+  const expiresAt = daysFromNow(7);
+
+  await db.query(
+    "update invitations set status = $1 where tenant_id = $2 and email = $3 and status = $4",
+    ["revoked", tenantId, email, "pending"],
+  );
+  await db.query(
+    "insert into invitations (id, tenant_id, email, role, status, token_hash, expires_at, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8)",
+    [
+      invitationId,
+      tenantId,
+      email,
+      parsed.role,
+      "pending",
+      hashToken(invitationToken),
+      expiresAt,
+      now,
+    ],
+  );
+  await audit(db, tenantId, userId, "team.invitation_created", "invitation", invitationId, {
+    email,
+    role: parsed.role,
+  });
+
+  return {
+    id: invitationId,
+    email,
+    role: parsed.role,
+    invitationToken,
+    expiresAt,
+  };
+}
+
+async function acceptInvitation(
+  db: DbClient,
+  input: z.input<typeof acceptInvitationSchema>,
+) {
+  const parsed = acceptInvitationSchema.parse(input);
+  const invitation = await findPendingInvitation(db, parsed.token);
+
+  if (!invitation) {
+    throw new Error("Invitation invalide ou expirée.");
+  }
+
+  const existingUser = await db.query<UserRow>("select * from users where email = $1", [
+    invitation.email,
+  ]);
+
+  if (existingUser.rows[0]) {
+    throw new Error(
+      "Ce compte existe déjà. Connectez-vous puis ouvrez à nouveau le lien d'invitation.",
+    );
+  }
+
+  const user = await registerUser(db, {
+    name: parsed.name,
+    email: invitation.email,
+    password: parsed.password,
+  });
+  const membership = await completeInvitation(db, invitation, user.id);
+  const tenant = await getTenantById(db, invitation.tenant_id);
+
+  return { user, tenant, membership };
+}
+
+async function acceptInvitationForUser(
+  db: DbClient,
+  userId: string,
+  token: string,
+) {
+  const invitation = await findPendingInvitation(db, token);
+
+  if (!invitation) {
+    throw new Error("Invitation invalide ou expirée.");
+  }
+
+  const user = await db.query<UserRow>("select * from users where id = $1", [userId]);
+  const existingUser = user.rows[0];
+
+  if (!existingUser || existingUser.email !== invitation.email) {
+    throw new Error("Cette invitation ne correspond pas au compte connecté.");
+  }
+
+  const membership = await completeInvitation(db, invitation, userId);
+  const tenant = await getTenantById(db, invitation.tenant_id);
+
+  return { user: mapUser(existingUser), tenant, membership };
+}
+
+async function updateMemberRole(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: z.input<typeof updateMemberRoleSchema>,
+) {
+  const actorRole = await assertTenantAccess(db, userId, tenantId, [
+    "owner",
+    "administrator",
+  ]);
+  const parsed = updateMemberRoleSchema.parse(input);
+
+  if (parsed.targetUserId === userId) {
+    throw new Error("Votre propre rôle ne peut pas être modifié ici.");
+  }
+
+  const target = await db.query<{ role: Role }>(
+    "select role from memberships where tenant_id = $1 and user_id = $2",
+    [tenantId, parsed.targetUserId],
+  );
+  const currentRole = target.rows[0]?.role;
+
+  if (!currentRole) {
+    throw new Error("Membre introuvable.");
+  }
+
+  if (currentRole === "owner") {
+    throw new Error("Le rôle propriétaire ne peut pas être modifié.");
+  }
+
+  if (
+    actorRole !== "owner" &&
+    (currentRole === "administrator" || parsed.role === "administrator")
+  ) {
+    throw new Error("Seul un propriétaire peut gérer les administrateurs.");
+  }
+
+  await db.query(
+    "update memberships set role = $1 where tenant_id = $2 and user_id = $3",
+    [parsed.role, tenantId, parsed.targetUserId],
+  );
+  await audit(db, tenantId, userId, "team.member_role_updated", "membership", parsed.targetUserId, {
+    previousRole: currentRole,
+    role: parsed.role,
+  });
+
+  return {
+    tenantId,
+    userId: parsed.targetUserId,
+    role: parsed.role,
+  } satisfies Membership;
+}
+
 async function assertTenantAccess(
   db: DbClient,
   userId: string,
@@ -499,6 +862,60 @@ async function assertTenantAccess(
   }
 
   return role;
+}
+
+async function findPendingInvitation(db: DbClient, token: string) {
+  if (!token) {
+    return null;
+  }
+
+  const result = await db.query<InvitationRow>(
+    `select *
+     from invitations
+     where token_hash = $1 and status = $2 and expires_at > $3`,
+    [hashToken(token), "pending", nowIso()],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+async function completeInvitation(
+  db: DbClient,
+  invitation: InvitationRow,
+  userId: string,
+) {
+  const now = nowIso();
+  const existing = await db.query<{ role: Role }>(
+    "select role from memberships where tenant_id = $1 and user_id = $2",
+    [invitation.tenant_id, userId],
+  );
+
+  if (!existing.rows[0]) {
+    await db.query(
+      "insert into memberships (tenant_id, user_id, role, created_at) values ($1, $2, $3, $4)",
+      [invitation.tenant_id, userId, invitation.role, now],
+    );
+  }
+
+  await db.query("update invitations set status = $1 where id = $2", [
+    "accepted",
+    invitation.id,
+  ]);
+  await audit(
+    db,
+    invitation.tenant_id,
+    userId,
+    "team.invitation_accepted",
+    "invitation",
+    invitation.id,
+    { email: invitation.email, role: invitation.role },
+  );
+
+  return {
+    tenantId: invitation.tenant_id,
+    userId,
+    role: existing.rows[0]?.role ?? invitation.role,
+  } satisfies Membership;
 }
 
 async function saveOnboarding(

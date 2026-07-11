@@ -109,6 +109,7 @@ function getMigrations(enableRls: boolean) {
     { id: "001_initial", sql: initialMigrationSql },
     { id: "002_phase2_foundation", sql: phase2FoundationMigrationSql },
     ...(enableRls ? [{ id: "003_rls", sql: rlsMigrationSql }] : []),
+    { id: "004_auth_flows", sql: authFlowsMigrationSql },
   ];
 }
 
@@ -631,6 +632,13 @@ create table if not exists connector_secret_versions (
 create index if not exists idx_domain_events_status on domain_events(status, next_run_at);
 create index if not exists idx_generation_records_tenant on generation_records(tenant_id, created_at desc);
 create index if not exists idx_connector_secret_versions_tenant on connector_secret_versions(tenant_id, connector_key);
+`;
+
+const authFlowsMigrationSql = `
+create unique index if not exists idx_password_reset_tokens_token_hash on password_reset_tokens(token_hash);
+create index if not exists idx_password_reset_tokens_user on password_reset_tokens(user_id);
+create unique index if not exists idx_invitations_token_hash on invitations(token_hash);
+create index if not exists idx_invitations_tenant_email_status on invitations(tenant_id, email, status);
 `;
 
 const rlsMigrationSql = `

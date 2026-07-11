@@ -10,12 +10,13 @@
 - Site public `/sites/{tenant-slug}` avec formulaire.
 - Creation automatique contact, lead, opportunite, activite, tache et notification mock.
 - Dashboard, CRM, workflows, connecteurs, import CSV, webhook et audit log.
+- Reset password securise, invitations d'equipe et administration des roles non-owner.
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
 
 - Finaliser les tests RLS PostgreSQL avec role applicatif restreint.
-- Ajouter reset password complet et invitations par email.
+- Brancher l'envoi email pour reset password et invitations.
 - Ajouter file upload valide pour logo/photos.
 - Transformer le worker outbox en dispatcher durable.
 - Ajouter connecteurs OAuth reels.

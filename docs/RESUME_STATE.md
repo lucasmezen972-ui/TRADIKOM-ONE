@@ -13,16 +13,17 @@ Last completed checkpoint:
 - Connector SDK, CSV parser, credential encryption, and AI provider abstraction added.
 - Public site now renders immutable published snapshots.
 - Public form now has explicit idempotency, honeypot, and consent.
-- Tests added for session revocation, published snapshot safety, and quoted CSV parsing.
+- Password reset request/complete flows use hashed single-use tokens and revoke sessions after reset.
+- Invitations can be created, accepted once, listed as pending, and used for non-owner role administration.
+- Tests added for session revocation, password reset, invitations, member role updates, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
 
-- `pnpm lint && pnpm typecheck && pnpm test && pnpm build` passed with one non-blocking Next.js `<img>` warning.
-- `pnpm test:e2e` passed after updating the selector for accented French copy and consent checkbox.
+- `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` passed after the auth flow batch.
+- `pnpm lint` still has one non-blocking Next.js `<img>` warning in `src/components/site-renderer.tsx`.
 
 Next unfinished task:
 
-1. Run full validation again after documentation updates.
-2. Commit the Phase 2 foundation batch.
-3. Continue with password reset and invitations, or deepen PostgreSQL RLS tests with a restricted DB role.
-4. Push branch and open/update draft PR when a coherent checkpoint is ready.
+1. Commit and push the auth flow batch.
+2. Confirm GitHub Actions on PR #1 after push.
+3. Continue with PostgreSQL RLS integration tests using a restricted DB role.

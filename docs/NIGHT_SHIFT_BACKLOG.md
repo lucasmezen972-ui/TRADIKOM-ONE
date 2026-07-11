@@ -1,12 +1,12 @@
 # Night Shift Backlog
 
-1. Validate and commit current Phase 2 foundation batch.
-2. Add password reset request/complete flows with hashed single-use tokens.
-3. Add invitation acceptance and owner/admin role administration.
-4. Add PostgreSQL RLS integration tests using a restricted non-owner role.
-5. Convert more of `src/lib/services.ts` into bounded modules.
-6. Make workflow worker process pending events durably.
-7. Wire webhook HMAC verification to endpoint secrets.
-8. Add CRM contact/task/opportunity mutations and audit tests.
-9. Expand Playwright for draft edit while published site remains available.
-10. Push branch and open/update draft PR.
+1. Validate, commit, and push the auth flow batch.
+2. Confirm GitHub Actions on PR #1 after push.
+3. Add PostgreSQL RLS integration tests using a restricted non-owner role.
+4. Convert more of `src/lib/services.ts` into bounded modules.
+5. Make workflow worker process pending events durably.
+6. Wire webhook HMAC verification to endpoint secrets.
+7. Add CRM contact/task/opportunity mutations and audit tests.
+8. Expand Playwright for draft edit while published site remains available.
+9. Add real email delivery for password reset and invitation links.
+10. Keep PR #1 updated as each coherent checkpoint lands.

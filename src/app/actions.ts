@@ -8,8 +8,13 @@ import {
   setTenantCookie,
 } from "@/lib/security";
 import { getServices } from "@/lib/services";
-import { requireTenantContext, requireUser, signInUser } from "@/lib/session";
-import type { WebsiteTemplateKey } from "@/lib/types";
+import {
+  getCurrentSession,
+  requireTenantContext,
+  requireUser,
+  signInUser,
+} from "@/lib/session";
+import type { Role, WebsiteTemplateKey } from "@/lib/types";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -30,6 +35,28 @@ export async function loginAction(formData: FormData) {
   });
   const context = await signInUser(user.id);
   redirect(context ? "/aujourdhui" : "/creer-organisation");
+}
+
+export async function requestPasswordResetAction(formData: FormData) {
+  const services = await getServices();
+  const email = text(formData, "email").toLowerCase();
+  await services.requestPasswordReset({ email });
+  redirect(`/mot-de-passe-oublie/confirme?email=${encodeURIComponent(email)}`);
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const services = await getServices();
+  const password = text(formData, "password");
+
+  if (password !== text(formData, "passwordConfirm")) {
+    throw new Error("La confirmation du mot de passe ne correspond pas.");
+  }
+
+  await services.resetPassword({
+    token: text(formData, "token"),
+    password,
+  });
+  redirect("/?motdepasse=reinitialise");
 }
 
 export async function logoutAction() {
@@ -58,6 +85,60 @@ export async function switchTenantAction(formData: FormData) {
   await setTenantCookie(tenantId);
   revalidatePath("/", "layout");
   redirect("/aujourdhui");
+}
+
+export async function createInvitationAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const invitation = await services.createInvitation(user.id, tenant.id, {
+    email: text(formData, "email"),
+    role: text(formData, "role") as Exclude<Role, "owner">,
+  });
+  const invitationUrl = `/invitation?token=${encodeURIComponent(
+    invitation.invitationToken,
+  )}`;
+
+  revalidatePath("/parametres");
+  redirect(
+    `/parametres?invitation=${encodeURIComponent(
+      invitationUrl,
+    )}&inviteEmail=${encodeURIComponent(invitation.email)}`,
+  );
+}
+
+export async function acceptInvitationAction(formData: FormData) {
+  const services = await getServices();
+  const session = await getCurrentSession();
+  const token = text(formData, "token");
+
+  if (!session && text(formData, "password") !== text(formData, "passwordConfirm")) {
+    throw new Error("La confirmation du mot de passe ne correspond pas.");
+  }
+
+  const accepted = session
+    ? await services.acceptInvitationForUser(session.user.id, token)
+    : await services.acceptInvitation({
+        token,
+        name: text(formData, "name"),
+        password: text(formData, "password"),
+      });
+
+  if (!session) {
+    await signInUser(accepted.user.id);
+  }
+  await setTenantCookie(accepted.tenant.id);
+  redirect("/aujourdhui");
+}
+
+export async function updateMemberRoleAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.updateMemberRole(user.id, tenant.id, {
+    targetUserId: text(formData, "targetUserId"),
+    role: text(formData, "role") as Exclude<Role, "owner">,
+  });
+  revalidatePath("/parametres");
+  redirect("/parametres");
 }
 
 export async function saveOnboardingAction(formData: FormData) {

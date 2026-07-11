@@ -9,6 +9,7 @@ Risques principaux : fuite cross-tenant, vol de session, injection SQL, XSS via 
 - Mots de passe hashes avec scrypt et salt unique.
 - Sessions HTTP-only, SameSite Lax, Secure en production.
 - Tokens de session hashes en base avec révocation serveur au logout.
+- Tokens de reset password et d'invitation hashes en base, expirables et a usage unique.
 - Requetes parametrees PGlite/Postgres.
 - Validation Zod des entrees critiques.
 - Membership verifie cote serveur avant acces tenant.
