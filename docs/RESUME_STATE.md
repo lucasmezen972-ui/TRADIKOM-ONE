@@ -49,7 +49,8 @@ Current validation note:
 - GitHub Actions passed on PR #1 for website extraction commit `033f062`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the same continuation, targeted CRM read-model validation (`pnpm exec vitest run tests/crm-module.test.ts tests/tenant-isolation.test.ts tests/vertical-slice.test.ts`) hung without output and was stopped; `git diff --check` passed.
 - GitHub Actions passed on PR #1 for CRM read-model extraction commit `70d8ff9`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
-- During the same continuation, targeted connectors validation (`pnpm exec vitest run tests/connectors-module.test.ts tests/connectors.test.ts`) hung without output and was stopped; `git diff --check` passed. Validate the connectors extraction checkpoint through GitHub Actions after push.
+- During the same continuation, targeted connectors validation (`pnpm exec vitest run tests/connectors-module.test.ts tests/connectors.test.ts`) hung without output and was stopped; `git diff --check` passed.
+- GitHub Actions passed on PR #1 for connectors extraction commit `a9a55cf`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
