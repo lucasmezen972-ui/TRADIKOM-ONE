@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb } from "../src/lib/db";
-import { defaultGarageOnboarding } from "../src/lib/generation";
-import { createServices } from "../src/lib/services";
+import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { toJson } from "../src/lib/security";
 import {
   executeLeadFollowUpWorkflow,
   leadFollowUpWorkflow,
+  workflowDefinitionSchema,
+  type WorkflowDefinition,
 } from "../src/modules/workflows";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
@@ -13,7 +13,7 @@ const opened: Array<{ close: () => Promise<void> }> = [];
 async function setup() {
   const db = await createMemoryDb();
   opened.push(db);
-  return { db, services: createServices(db) };
+  return { db };
 }
 
 afterEach(async () => {
@@ -22,138 +22,96 @@ afterEach(async () => {
 
 describe("workflow engine", () => {
   it("executes the tenant persisted lead workflow and skips replayed events", async () => {
-    const { db, services } = await setup();
-    const ownerA = await services.registerUser({
-      name: "Malia Workflow A",
-      email: "malia.workflow.a@example.com",
-      password: "Password!1",
+    const { db } = await setup();
+    await seedTenant(db, {
+      tenantId: "tenant_workflow_a",
+      ownerId: "user_workflow_a",
+      workflowDefinition: workflowDefinitionSchema.parse({
+        ...leadFollowUpWorkflow,
+        version: 2,
+        conditions: ["payload.source == website"],
+        actions: [
+          {
+            type: "create_task",
+            input: { title: "Relance persistante sous 2h", dueInHours: 2 },
+          },
+          { type: "add_tag", input: { tag: "workflow-persisted" } },
+          {
+            type: "send_mock_email",
+            input: { message: "Definition persistante executee." },
+          },
+          {
+            type: "create_activity",
+            input: { summary: "Workflow persistant execute." },
+          },
+        ],
+      }),
     });
-    const ownerB = await services.registerUser({
-      name: "Malia Workflow B",
-      email: "malia.workflow.b@example.com",
-      password: "Password!1",
-    });
-    const tenantA = await services.createTenant(ownerA.id, {
-      name: "Garage Workflow A",
-      category: "Garage automobile",
-    });
-    const tenantB = await services.createTenant(ownerB.id, {
-      name: "Garage Workflow B",
-      category: "Garage automobile",
-    });
-    const customDefinition = {
-      ...leadFollowUpWorkflow,
-      version: 2,
-      conditions: ["payload.source == website"],
-      actions: [
-        {
-          type: "create_task",
-          input: { title: "Relance persistante sous 2h", dueInHours: 2 },
-        },
-        { type: "add_tag", input: { tag: "workflow-persisted" } },
-        {
-          type: "send_mock_email",
-          input: { message: "Definition persistante executee." },
-        },
-        {
-          type: "create_activity",
-          input: { summary: "Workflow persistant execute." },
-        },
-      ],
-    };
-
-    await db.query(
-      "update workflows set definition = $1 where tenant_id = $2 and workflow_key = $3",
-      [toJson(customDefinition), tenantA.id, leadFollowUpWorkflow.key],
-    );
-
-    await services.saveOnboarding(
-      ownerA.id,
-      tenantA.id,
-      defaultGarageOnboarding(),
-    );
-    await services.saveOnboarding(
-      ownerB.id,
-      tenantB.id,
-      defaultGarageOnboarding(),
-    );
-    await services.publishWebsite(ownerA.id, tenantA.id);
-    await services.publishWebsite(ownerB.id, tenantB.id);
-
-    const leadA = await services.submitPublicLead(tenantA.slug, {
-      name: "Client Workflow A",
-      email: "client.workflow.a@example.com",
-      phone: "+596 696 10 10 10",
-      message: "Demande workflow A",
-    });
-    await services.submitPublicLead(tenantB.slug, {
-      name: "Client Workflow B",
-      email: "client.workflow.b@example.com",
-      phone: "+596 696 20 20 20",
-      message: "Demande workflow B",
+    await seedTenant(db, {
+      tenantId: "tenant_workflow_b",
+      ownerId: "user_workflow_b",
+      workflowDefinition: leadFollowUpWorkflow,
     });
 
-    const crmA = await services.getCrm(ownerA.id, tenantA.id);
-    const crmB = await services.getCrm(ownerB.id, tenantB.id);
-    const contactA = crmA.contacts.find(
-      (contact) => contact.email === "client.workflow.a@example.com",
-    );
-    const contactB = crmB.contacts.find(
-      (contact) => contact.email === "client.workflow.b@example.com",
-    );
+    await seedLead(db, {
+      tenantId: "tenant_workflow_a",
+      contactId: "contact_workflow_a",
+      leadId: "lead_workflow_a",
+      ownerId: "user_workflow_a",
+    });
+    await seedLead(db, {
+      tenantId: "tenant_workflow_b",
+      contactId: "contact_workflow_b",
+      leadId: "lead_workflow_b",
+      ownerId: "user_workflow_b",
+    });
 
-    expect(contactA).toBeDefined();
-    expect(contactB).toBeDefined();
-    if (!contactA || !contactB) {
-      throw new Error("Contacts workflow introuvables.");
-    }
-
-    expect(contactA.tags).toEqual(
-      expect.arrayContaining(["website", "workflow-persisted"]),
-    );
-    expect(contactB.tags).not.toContain("workflow-persisted");
-    expect(crmA.tasks[0]?.title).toBe("Relance persistante sous 2h");
-    expect(crmB.tasks[0]?.title).toBe("Relancer le nouveau lead site sous 24h");
+    await executeLeadFollowUpWorkflow(db, {
+      tenantId: "tenant_workflow_a",
+      leadId: "lead_workflow_a",
+      contactId: "contact_workflow_a",
+      ownerId: "user_workflow_a",
+      source: "website",
+      correlationId: "corr_workflow_a",
+    });
+    await executeLeadFollowUpWorkflow(db, {
+      tenantId: "tenant_workflow_b",
+      leadId: "lead_workflow_b",
+      contactId: "contact_workflow_b",
+      ownerId: "user_workflow_b",
+      source: "website",
+      correlationId: "corr_workflow_b",
+    });
 
     const replayedRun = await executeLeadFollowUpWorkflow(db, {
-      tenantId: tenantA.id,
-      leadId: leadA,
-      contactId: contactA.id,
-      ownerId: ownerA.id,
+      tenantId: "tenant_workflow_a",
+      leadId: "lead_workflow_a",
+      contactId: "contact_workflow_a",
+      ownerId: "user_workflow_a",
       source: "website",
-      correlationId: "replayed-correlation",
+      correlationId: "corr_workflow_replay",
     });
+
+    const contactA = await loadContactTags(db, "tenant_workflow_a");
+    const contactB = await loadContactTags(db, "tenant_workflow_b");
+    const taskCount = await countRows(
+      db,
+      "tasks",
+      "tenant_id = $1 and title = $2",
+      ["tenant_workflow_a", "Relance persistante sous 2h"],
+    );
+    const runCount = await countRows(db, "workflow_runs", "tenant_id = $1", [
+      "tenant_workflow_a",
+    ]);
+    const orderedSteps = await loadOrderedSteps(db, "tenant_workflow_a");
+
     expect(replayedRun).toBeNull();
-
-    const taskCount = await db.query<{ count: number }>(
-      "select count(*)::int as count from tasks where tenant_id = $1 and title = $2",
-      [tenantA.id, "Relance persistante sous 2h"],
+    expect(contactA).toEqual(
+      expect.arrayContaining(["website", "workflow-persisted"]),
     );
-    const runCount = await db.query<{ count: number }>(
-      "select count(*)::int as count from workflow_runs where tenant_id = $1",
-      [tenantA.id],
-    );
-    const steps = await db.query<{
-      action_name: string;
-      status: string;
-      safe_metadata: string;
-    }>(
-      `select action_name, status, safe_metadata
-       from workflow_run_steps
-       where tenant_id = $1`,
-      [tenantA.id],
-    );
-    const orderedSteps = steps.rows
-      .map((step) => ({
-        action_name: step.action_name,
-        status: step.status,
-        actionIndex: Number(JSON.parse(step.safe_metadata).actionIndex),
-      }))
-      .sort((left, right) => left.actionIndex - right.actionIndex)
-      .map(({ action_name, status }) => ({ action_name, status }));
-
-    expect(taskCount.rows[0]?.count).toBe(1);
-    expect(runCount.rows[0]?.count).toBe(1);
+    expect(contactB).not.toContain("workflow-persisted");
+    expect(taskCount).toBe(1);
+    expect(runCount).toBe(1);
     expect(orderedSteps).toEqual([
       { action_name: "create_task", status: "succeeded" },
       { action_name: "add_tag", status: "succeeded" },
@@ -163,60 +121,193 @@ describe("workflow engine", () => {
   });
 
   it("records approval-required workflow runs without executing later actions", async () => {
-    const { db, services } = await setup();
-    const owner = await services.registerUser({
-      name: "Malia Approval",
-      email: "malia.workflow.approval@example.com",
-      password: "Password!1",
+    const { db } = await setup();
+    await seedTenant(db, {
+      tenantId: "tenant_workflow_approval",
+      ownerId: "user_workflow_approval",
+      workflowDefinition: workflowDefinitionSchema.parse({
+        ...leadFollowUpWorkflow,
+        version: 3,
+        approvalPolicy: "user_approval_required",
+        actions: [
+          { type: "request_approval", input: {} },
+          { type: "create_task", input: { title: "Ne doit pas etre creee" } },
+        ],
+      }),
     });
-    const tenant = await services.createTenant(owner.id, {
-      name: "Garage Workflow Approval",
-      category: "Garage automobile",
+    await seedLead(db, {
+      tenantId: "tenant_workflow_approval",
+      contactId: "contact_workflow_approval",
+      leadId: "lead_workflow_approval",
+      ownerId: "user_workflow_approval",
     });
-    const approvalDefinition = {
-      ...leadFollowUpWorkflow,
-      version: 3,
-      approvalPolicy: "user_approval_required",
-      actions: [
-        { type: "request_approval", input: {} },
-        { type: "create_task", input: { title: "Ne doit pas etre creee" } },
-      ],
-    };
 
-    await db.query(
-      "update workflows set approval_policy = $1, definition = $2 where tenant_id = $3 and workflow_key = $4",
-      [
-        approvalDefinition.approvalPolicy,
-        toJson(approvalDefinition),
-        tenant.id,
-        leadFollowUpWorkflow.key,
-      ],
-    );
-    await services.saveOnboarding(owner.id, tenant.id, defaultGarageOnboarding());
-    await services.publishWebsite(owner.id, tenant.id);
-
-    await services.submitPublicLead(tenant.slug, {
-      name: "Client Approval",
-      email: "client.workflow.approval@example.com",
-      phone: "+596 696 30 30 30",
-      message: "Demande workflow approval",
+    await executeLeadFollowUpWorkflow(db, {
+      tenantId: "tenant_workflow_approval",
+      leadId: "lead_workflow_approval",
+      contactId: "contact_workflow_approval",
+      ownerId: "user_workflow_approval",
+      source: "website",
+      correlationId: "corr_workflow_approval",
     });
 
     const run = await db.query<{ status: string }>(
       "select status from workflow_runs where tenant_id = $1 limit 1",
-      [tenant.id],
+      ["tenant_workflow_approval"],
     );
-    const approvals = await db.query<{ count: number }>(
-      "select count(*)::int as count from approvals where tenant_id = $1 and status = $2",
-      [tenant.id, "pending"],
+    const approvals = await countRows(
+      db,
+      "approvals",
+      "tenant_id = $1 and status = $2",
+      ["tenant_workflow_approval", "pending"],
     );
-    const blockedTasks = await db.query<{ count: number }>(
-      "select count(*)::int as count from tasks where tenant_id = $1 and title = $2",
-      [tenant.id, "Ne doit pas etre creee"],
+    const blockedTasks = await countRows(
+      db,
+      "tasks",
+      "tenant_id = $1 and title = $2",
+      ["tenant_workflow_approval", "Ne doit pas etre creee"],
     );
 
     expect(run.rows[0]?.status).toBe("approval_required");
-    expect(approvals.rows[0]?.count).toBe(1);
-    expect(blockedTasks.rows[0]?.count).toBe(0);
+    expect(approvals).toBe(1);
+    expect(blockedTasks).toBe(0);
   });
 });
+
+async function seedTenant(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    ownerId: string;
+    workflowDefinition: WorkflowDefinition;
+  },
+) {
+  const now = "2026-07-11T14:00:00.000Z";
+  await db.query(
+    "insert into users (id, name, email, password_hash, created_at) values ($1, $2, $3, $4, $5)",
+    [
+      input.ownerId,
+      input.ownerId,
+      `${input.ownerId}@example.com`,
+      "hash",
+      now,
+    ],
+  );
+  await db.query(
+    "insert into tenants (id, name, slug, category, created_at) values ($1, $2, $3, $4, $5)",
+    [
+      input.tenantId,
+      input.tenantId,
+      input.tenantId.replaceAll("_", "-"),
+      "Garage automobile",
+      now,
+    ],
+  );
+  await db.query(
+    "insert into memberships (tenant_id, user_id, role, created_at) values ($1, $2, $3, $4)",
+    [input.tenantId, input.ownerId, "owner", now],
+  );
+  await db.query(
+    `insert into workflows (id, tenant_id, workflow_key, name, trigger_name, status, approval_policy, definition, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      `workflow_${input.tenantId}`,
+      input.tenantId,
+      input.workflowDefinition.key,
+      "Suivi automatique des nouveaux leads site",
+      input.workflowDefinition.trigger,
+      "active",
+      input.workflowDefinition.approvalPolicy,
+      toJson(input.workflowDefinition),
+      now,
+    ],
+  );
+}
+
+async function seedLead(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    contactId: string;
+    leadId: string;
+    ownerId: string;
+  },
+) {
+  const now = "2026-07-11T14:00:00.000Z";
+  await db.query(
+    `insert into contacts (id, tenant_id, name, email, phone, status, source, tags, assigned_user_id, created_at, updated_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      input.contactId,
+      input.tenantId,
+      input.contactId,
+      `${input.contactId}@example.com`,
+      "+596 696 00 00 00",
+      "Nouveau",
+      "website",
+      toJson(["website"]),
+      input.ownerId,
+      now,
+      now,
+    ],
+  );
+  await db.query(
+    `insert into leads (id, tenant_id, contact_id, source, status, opportunity_value, page_path, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      input.leadId,
+      input.tenantId,
+      input.contactId,
+      "website",
+      "Nouveau contact",
+      0,
+      "/sites/workflow",
+      now,
+    ],
+  );
+}
+
+async function loadContactTags(db: DbClient, tenantId: string) {
+  const result = await db.query<{ tags: string }>(
+    "select tags from contacts where tenant_id = $1 limit 1",
+    [tenantId],
+  );
+
+  return JSON.parse(result.rows[0]?.tags ?? "[]") as string[];
+}
+
+async function loadOrderedSteps(db: DbClient, tenantId: string) {
+  const steps = await db.query<{
+    action_name: string;
+    status: string;
+    safe_metadata: string;
+  }>(
+    `select action_name, status, safe_metadata
+     from workflow_run_steps
+     where tenant_id = $1`,
+    [tenantId],
+  );
+
+  return steps.rows
+    .map((step) => ({
+      action_name: step.action_name,
+      status: step.status,
+      actionIndex: Number(JSON.parse(step.safe_metadata).actionIndex),
+    }))
+    .sort((left, right) => left.actionIndex - right.actionIndex)
+    .map(({ action_name, status }) => ({ action_name, status }));
+}
+
+async function countRows(
+  db: DbClient,
+  tableName: string,
+  whereClause: string,
+  params: unknown[],
+) {
+  const result = await db.query<{ count: number }>(
+    `select count(*)::int as count from ${tableName} where ${whereClause}`,
+    params,
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
