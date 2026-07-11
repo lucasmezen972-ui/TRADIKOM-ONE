@@ -15,3 +15,4 @@
 - Added password reset request/complete flows with hashed single-use tokens and session revocation.
 - Added invitation creation, one-time acceptance, pending invitation display, and non-owner member role updates.
 - Expanded tests from 6 to 10 tests.
+- Added a PostgreSQL-only RLS integration test with a temporary restricted role.

@@ -7,6 +7,7 @@
 - Kept PGlite as a local fallback only when `DATABASE_URL` is absent outside production.
 - Added Phase 2 migrations for hashed session tokens, published/draft website version pointers, domain events, rate limits, generation records, and encrypted connector secret versions.
 - Added RLS migration draft with tenant context helpers and policies for key tenant-owned tables.
+- Added PostgreSQL RLS integration coverage that runs with `DATABASE_URL` and verifies restricted-role tenant isolation plus cross-tenant write rejection.
 - Hardened sessions so cookies store raw tokens while the database stores token hashes; logout revokes the database session.
 - Added password reset request and completion flows with hashed single-use tokens and session revocation after password change.
 - Added invitation creation, acceptance, pending invitation display, and member role updates for non-owner roles.
@@ -17,11 +18,10 @@
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
 - Changed public website rendering to load the last immutable published snapshot.
 - Added explicit public form idempotency keys, honeypot field, and visible consent checkbox.
-- Added tests for session revocation, password reset, invitations, member role updates, published snapshot safety, and quoted CSV values.
+- Added tests for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV values.
 
 ## Still incomplete
 
 - Full service modularization is started but the legacy `src/lib/services.ts` remains the central adapter.
-- RLS is present as SQL migration but local automated RLS tests still need a dedicated non-owner PostgreSQL role.
 - Email delivery for auth links, CRM mutation depth, approval workflows, delayed workflows, and connector UI mapping are not complete.
 - The worker is a foundation entry point, not a long-running durable dispatcher yet.

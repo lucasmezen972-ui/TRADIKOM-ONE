@@ -15,7 +15,7 @@
 
 ## Prochaines priorites
 
-- Finaliser les tests RLS PostgreSQL avec role applicatif restreint.
+- Generaliser les transactions tenant-aware sur les services metier.
 - Brancher l'envoi email pour reset password et invitations.
 - Ajouter file upload valide pour logo/photos.
 - Transformer le worker outbox en dispatcher durable.
