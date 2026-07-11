@@ -25,6 +25,7 @@ Latest local validation:
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` passed after adding the RLS test; locally the RLS test is skipped unless `DATABASE_URL` is present.
 - GitHub Actions passed on PR #1 for commit `bb367bf`, including the PostgreSQL RLS test with `DATABASE_URL`.
 - GitHub Actions passed on PR #1 for commit `093080f`, including lint, typecheck, PostgreSQL tests, production build, and Playwright E2E. The previous public-site `<img>` lint warning is gone.
+- GitHub Actions passed on PR #1 for commit `47906c3`, the resume-state update after the image cleanup.
 
 Current validation note:
 
@@ -35,6 +36,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Commit and push this resume-state update.
-2. Continue converting `src/lib/services.ts` into bounded modules, or make the workflow worker process pending events durably.
-3. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
+1. Continue converting `src/lib/services.ts` into bounded modules, or make the workflow worker process pending events durably.
+2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
+3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
