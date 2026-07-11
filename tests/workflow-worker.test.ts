@@ -9,6 +9,7 @@ import {
   leadFollowUpWorkflow,
   retryWorkflowDeadLetter,
 } from "../src/modules/workflows";
+import { opportunityRadarSyncRequestedEventType } from "../src/modules/opportunity-radar";
 import {
   parseWorkerConfig,
   runWorkerPoll,
@@ -275,6 +276,39 @@ describe("workflow worker", () => {
     expect(await countWorkflowExecutedAudits(db, "tenant_lead_worker")).toBe(1);
   });
 
+  it("dispatches opportunity radar sync requests through the durable worker", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_radar_worker", "user_radar_worker");
+    await seedLeadForWorkflow(db, {
+      tenantId: "tenant_radar_worker",
+      userId: "user_radar_worker",
+      contactId: "contact_radar_worker",
+      leadId: "lead_radar_worker",
+    });
+    await seedOverdueRadarTask(db, {
+      tenantId: "tenant_radar_worker",
+      userId: "user_radar_worker",
+      contactId: "contact_radar_worker",
+    });
+    await insertDomainEvent(db, {
+      id: "event_radar_sync",
+      tenantId: "tenant_radar_worker",
+      actorId: "user_radar_worker",
+      eventType: opportunityRadarSyncRequestedEventType,
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+    });
+    const event = await loadEvent(db, "event_radar_sync");
+
+    expect(summary.succeeded).toBe(1);
+    expect(event.status).toBe("succeeded");
+    expect(await countRadarAlerts(db, "tenant_radar_worker")).toBeGreaterThan(0);
+    expect(await countRadarSyncAudits(db, "tenant_radar_worker")).toBe(1);
+  });
+
   it("lists failed domain events as tenant-isolated dead letters", async () => {
     const { db } = await setup();
     await seedTenant(db, "tenant_dead_letters", "user_dead_letters");
@@ -375,6 +409,7 @@ async function insertDomainEvent(
   overrides: {
     id: string;
     tenantId?: string;
+    actorId?: string;
     eventType: string;
     payload?: Record<string, unknown>;
     status?: string;
@@ -406,7 +441,7 @@ async function insertDomainEvent(
     [
       overrides.id,
       overrides.tenantId ?? "tenant_worker",
-      "system",
+      overrides.actorId ?? "system",
       overrides.eventType,
       JSON.stringify(overrides.payload ?? {}),
       overrides.status ?? "pending",
@@ -557,6 +592,40 @@ async function seedLeadForWorkflow(
   );
 }
 
+async function seedOverdueRadarTask(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    userId: string;
+    contactId: string;
+  },
+) {
+  await db.query(
+    `insert into tasks (
+       id,
+       tenant_id,
+       title,
+       status,
+       assigned_user_id,
+       due_at,
+       related_type,
+       related_id,
+       created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      "task_radar_worker",
+      input.tenantId,
+      "Relancer le contact Radar",
+      "open",
+      input.userId,
+      "2000-01-01T00:00:00.000Z",
+      "contact",
+      input.contactId,
+      "2026-07-11T09:00:00.000Z",
+    ],
+  );
+}
+
 async function loadEvent(db: DbClient, eventId: string) {
   const result = await db.query<{
     status: string;
@@ -642,6 +711,24 @@ async function countWorkflowExecutedAudits(db: DbClient, tenantId: string) {
   const result = await db.query<{ count: number | string }>(
     "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
     [tenantId, "workflow.executed"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countRadarAlerts(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from opportunity_radar_alerts where tenant_id = $1 and status = $2",
+    [tenantId, "active"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countRadarSyncAudits(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
+    [tenantId, "opportunity_radar.synced"],
   );
 
   return Number(result.rows[0]?.count ?? 0);

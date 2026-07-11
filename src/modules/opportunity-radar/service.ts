@@ -13,10 +13,24 @@ import {
 import { dismissOpportunityAlertSchema } from "@/modules/opportunity-radar/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
 
+export const opportunityRadarSyncRequestedEventType =
+  "opportunity_radar.sync_requested";
+
 export async function getOpportunityRadar(
   db: DbClient,
   userId: string,
   tenantId: string,
+) {
+  await syncOpportunityRadarAlerts(db, userId, tenantId);
+
+  return listOpportunityRadarAlerts(db, tenantId);
+}
+
+export async function syncOpportunityRadarAlerts(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  options: { audit?: boolean } = {},
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const detected = await detectOpportunityRadarAlerts(db, userId, tenantId);
@@ -40,7 +54,24 @@ export async function getOpportunityRadar(
     }
   }
 
-  return listOpportunityRadarAlerts(db, tenantId);
+  const alerts = await listOpportunityRadarAlerts(db, tenantId);
+
+  if (options.audit) {
+    await recordAuditLog(db, {
+      tenantId,
+      actorId: userId,
+      action: "opportunity_radar.synced",
+      targetType: "tenant",
+      targetId: tenantId,
+      metadata: {
+        detectedCount: detected.length,
+        visibleCount: alerts.length,
+        activeCount: alerts.filter((alert) => alert.status === "active").length,
+      },
+    });
+  }
+
+  return alerts;
 }
 
 export async function dismissOpportunityRadarAlert(

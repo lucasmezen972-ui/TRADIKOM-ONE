@@ -1,6 +1,10 @@
 import type { DbClient } from "@/lib/db";
 import { syncMockConnectorJob } from "@/modules/connectors";
 import {
+  opportunityRadarSyncRequestedEventType,
+  syncOpportunityRadarAlerts,
+} from "@/modules/opportunity-radar";
+import {
   leadCreatedEventType,
   processLeadFollowUpWorkflowEvent,
   resumeWorkflowRun,
@@ -131,6 +135,14 @@ export async function processPendingDomainEvents(
       await processLeadFollowUpWorkflowEvent(handlerDb, {
         ...event,
         causationId: event.causationId ?? undefined,
+      });
+    },
+    [opportunityRadarSyncRequestedEventType]: async ({
+      db: handlerDb,
+      event,
+    }) => {
+      await syncOpportunityRadarAlerts(handlerDb, event.actorId, event.tenantId, {
+        audit: true,
       });
     },
     ...(options.handlers ?? {}),
