@@ -25,3 +25,5 @@
 - Targeted local worker validation hung and `git diff --check` exited abnormally without output, so the worker checkpoint should be confirmed through GitHub Actions.
 - Wired generic webhook HMAC verification to encrypted endpoint secrets with timestamp/signature headers and rejection delivery logs.
 - Targeted local connector validation hung after runner startup, while `git diff --check` passed, so the HMAC checkpoint should be confirmed through GitHub Actions.
+- Extracted authentication and session logic into `src/modules/auth/` with schemas, typed errors, repository functions, a domain service, and a direct module test.
+- Targeted local auth validation hung without output and was stopped; `git diff --check` passed, so the auth extraction should be confirmed through GitHub Actions.

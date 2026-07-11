@@ -12,9 +12,23 @@ import {
   type WebhookSignatureInput,
 } from "@/modules/connectors/webhooks";
 import {
+  createSession,
+  getSessionUser,
+  loginSchema,
+  loginUser,
+  mapUser,
+  passwordResetRequestSchema,
+  passwordResetSchema,
+  registerUser,
+  registrationSchema,
+  requestPasswordReset,
+  resetPassword,
+  revokeSession,
+  type UserRow,
+} from "@/modules/auth";
+import {
   correlationId,
   daysFromNow,
-  hashPassword,
   hashToken,
   id,
   nowIso,
@@ -22,7 +36,6 @@ import {
   secureToken,
   slugify,
   toJson,
-  verifyPassword,
 } from "@/lib/security";
 import type {
   Activity,
@@ -87,26 +100,6 @@ const connectorMetadata: ConnectorCard[] = [
   },
 ];
 
-const registrationSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
-const passwordResetRequestSchema = z.object({
-  email: z.string().email(),
-});
-
-const passwordResetSchema = z.object({
-  token: z.string().min(20),
-  password: z.string().min(8),
-});
-
 const invitationRoles = [
   "administrator",
   "manager",
@@ -157,25 +150,6 @@ const onboardingSchema = z.object({
   faqs: z.string().default(""),
   templateKey: z.enum(["artisan", "restaurant", "beauty"]),
 });
-
-type SessionRow = {
-  session_id: string;
-  token_hash: string;
-  expires_at: string;
-  revoked_at: string | null;
-  id: string;
-  name: string;
-  email: string;
-  created_at: string;
-};
-
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  password_hash: string;
-  created_at: string;
-};
 
 type InvitationRow = {
   id: string;
@@ -337,161 +311,6 @@ export function createServices(db: DbClient) {
       contactId: string,
     ) => findContactForTenant(db, userId, tenantId, contactId),
   };
-}
-
-async function registerUser(db: DbClient, input: z.input<typeof registrationSchema>) {
-  const parsed = registrationSchema.parse(input);
-  const existing = await db.query("select id from users where email = $1", [
-    parsed.email.toLowerCase(),
-  ]);
-
-  if (existing.rows.length > 0) {
-    throw new Error("Un compte existe deja avec cet email.");
-  }
-
-  const userId = id("user");
-  const createdAt = nowIso();
-  await db.query(
-    "insert into users (id, name, email, password_hash, created_at) values ($1, $2, $3, $4, $5)",
-    [
-      userId,
-      parsed.name,
-      parsed.email.toLowerCase(),
-      hashPassword(parsed.password),
-      createdAt,
-    ],
-  );
-
-  return { id: userId, name: parsed.name, email: parsed.email, createdAt };
-}
-
-async function loginUser(db: DbClient, input: z.input<typeof loginSchema>) {
-  const parsed = loginSchema.parse(input);
-  const result = await db.query<UserRow>("select * from users where email = $1", [
-    parsed.email.toLowerCase(),
-  ]);
-  const user = result.rows[0];
-
-  if (!user || !verifyPassword(parsed.password, user.password_hash)) {
-    throw new Error("Email ou mot de passe incorrect.");
-  }
-
-  return mapUser(user);
-}
-
-async function createSession(db: DbClient, userId: string) {
-  const sessionId = id("sess");
-  const sessionToken = secureToken();
-  const expiresAt = daysFromNow(14);
-  await db.query(
-    "insert into sessions (id, user_id, token_hash, expires_at, revoked_at, created_at) values ($1, $2, $3, $4, $5, $6)",
-    [sessionId, userId, hashToken(sessionToken), expiresAt, null, nowIso()],
-  );
-  return { sessionId, sessionToken, expiresAt };
-}
-
-async function getSessionUser(db: DbClient, sessionToken?: string) {
-  if (!sessionToken) {
-    return null;
-  }
-
-  const result = await db.query<SessionRow>(
-    `select sessions.id as session_id, sessions.token_hash, sessions.expires_at, sessions.revoked_at, users.id, users.name, users.email, users.created_at
-     from sessions
-     join users on users.id = sessions.user_id
-     where sessions.token_hash = $1 and sessions.expires_at > $2 and sessions.revoked_at is null`,
-    [hashToken(sessionToken), nowIso()],
-  );
-
-  const row = result.rows[0];
-  return row
-    ? {
-        sessionId: row.session_id,
-        expiresAt: row.expires_at,
-        user: mapUser(row),
-      }
-    : null;
-}
-
-async function revokeSession(db: DbClient, sessionToken?: string) {
-  if (!sessionToken) {
-    return;
-  }
-
-  await db.query("update sessions set revoked_at = $1 where token_hash = $2", [
-    nowIso(),
-    hashToken(sessionToken),
-  ]);
-}
-
-async function requestPasswordReset(
-  db: DbClient,
-  input: z.input<typeof passwordResetRequestSchema>,
-) {
-  const parsed = passwordResetRequestSchema.parse(input);
-  const email = parsed.email.toLowerCase();
-  const user = await db.query<UserRow>("select * from users where email = $1", [
-    email,
-  ]);
-  const existingUser = user.rows[0];
-
-  if (!existingUser) {
-    return { accepted: true };
-  }
-
-  const resetToken = secureToken();
-  const now = nowIso();
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-
-  await db.query(
-    "update password_reset_tokens set used_at = $1 where user_id = $2 and used_at is null",
-    [now, existingUser.id],
-  );
-  await db.query(
-    "insert into password_reset_tokens (id, user_id, token_hash, expires_at, used_at) values ($1, $2, $3, $4, $5)",
-    [id("reset"), existingUser.id, hashToken(resetToken), expiresAt, null],
-  );
-
-  return { accepted: true, resetToken, expiresAt, email };
-}
-
-async function resetPassword(
-  db: DbClient,
-  input: z.input<typeof passwordResetSchema>,
-) {
-  const parsed = passwordResetSchema.parse(input);
-  const token = await db.query<{
-    id: string;
-    user_id: string;
-    expires_at: string;
-    used_at: string | null;
-  }>(
-    `select id, user_id, expires_at, used_at
-     from password_reset_tokens
-     where token_hash = $1 and used_at is null and expires_at > $2`,
-    [hashToken(parsed.token), nowIso()],
-  );
-  const reset = token.rows[0];
-
-  if (!reset) {
-    throw new Error("Lien de réinitialisation invalide ou expiré.");
-  }
-
-  const now = nowIso();
-  await db.query("update users set password_hash = $1 where id = $2", [
-    hashPassword(parsed.password),
-    reset.user_id,
-  ]);
-  await db.query(
-    "update password_reset_tokens set used_at = $1 where user_id = $2 and used_at is null",
-    [now, reset.user_id],
-  );
-  await db.query(
-    "update sessions set revoked_at = $1 where user_id = $2 and revoked_at is null",
-    [now, reset.user_id],
-  );
-
-  return { userId: reset.user_id };
 }
 
 async function createTenant(
@@ -2095,15 +1914,6 @@ async function uniqueSlug(db: DbClient, value: string) {
     suffix += 1;
     candidate = `${base}-${suffix}`;
   }
-}
-
-function mapUser(row: Pick<UserRow, "id" | "name" | "email" | "created_at">): User {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    createdAt: row.created_at,
-  };
 }
 
 function mapTenant(row: TenantRow): Tenant {

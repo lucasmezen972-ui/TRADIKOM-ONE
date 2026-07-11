@@ -10,6 +10,7 @@
 - Added PostgreSQL RLS integration coverage that runs with `DATABASE_URL` and verifies restricted-role tenant isolation plus cross-tenant write rejection.
 - Hardened sessions so cookies store raw tokens while the database stores token hashes; logout revokes the database session.
 - Added password reset request and completion flows with hashed single-use tokens and session revocation after password change.
+- Extracted authentication and session logic into `src/modules/auth/` with schemas, typed errors, repository functions, and a domain service while keeping `src/lib/services.ts` as the legacy adapter.
 - Added invitation creation, acceptance, pending invitation display, and member role updates for non-owner roles.
 - Gated public demo outside local development unless `FEATURE_PUBLIC_DEMO=true`.
 - Introduced workflow definition schema, domain event enqueueing, a workflow action executor, and a worker entry point with durable batch processing, retries, and stale processing requeue.
@@ -22,6 +23,6 @@
 
 ## Still incomplete
 
-- Full service modularization is started but the legacy `src/lib/services.ts` remains the central adapter.
+- Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for tenants, websites, CRM, connectors, dashboards, and invitations.
 - Email delivery for auth links, CRM mutation depth, approval workflows, delayed workflows, and connector UI mapping are not complete.
 - The worker is a durable batch dispatcher, but still needs a long-running polling loop, dead-letter UI, and domain-specific async handlers beyond the synchronous lead workflow.
