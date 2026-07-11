@@ -1,6 +1,8 @@
 import type { DbClient } from "@/lib/db";
 import { syncMockConnectorJob } from "@/modules/connectors";
 import {
+  leadCreatedEventType,
+  processLeadFollowUpWorkflowEvent,
   resumeWorkflowRun,
   workflowResumeEventType,
 } from "@/modules/workflows/engine";
@@ -123,6 +125,12 @@ export async function processPendingDomainEvents(
       await syncMockConnectorJob(handlerDb, {
         tenantId: event.tenantId,
         actorId: event.actorId,
+      });
+    },
+    [leadCreatedEventType]: async ({ db: handlerDb, event }) => {
+      await processLeadFollowUpWorkflowEvent(handlerDb, {
+        ...event,
+        causationId: event.causationId ?? undefined,
       });
     },
     ...(options.handlers ?? {}),

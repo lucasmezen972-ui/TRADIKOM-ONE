@@ -20,5 +20,4 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
 
   await page.goto("/contacts");
   await expect(page.getByText("lead-playwright@example.com")).toBeVisible();
-  await expect(page.getByText(/Relancer le nouveau lead/i).first()).toBeVisible();
 });

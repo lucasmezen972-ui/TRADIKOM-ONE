@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso, safeJson, toJson } from "@/lib/security";
+import { recordAuditLog } from "@/modules/audit";
 import { executeWorkflowAction } from "@/modules/workflows/actions";
 import { WorkflowError } from "@/modules/workflows/errors";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@/modules/workflows/types";
 
 export const workflowResumeEventType = "workflow.resume";
+export const leadCreatedEventType = "lead.created";
 
 export const leadFollowUpWorkflow: WorkflowDefinition =
   workflowDefinitionSchema.parse({
@@ -140,20 +142,92 @@ export async function executeLeadFollowUpWorkflow(
 
   const definition = storedWorkflow.definition;
 
-  return executeWorkflowDefinition(db, definition, {
-    id: id("event"),
-    tenantId: input.tenantId,
-    actorId: "system",
-    type: "lead.created",
-    payload: {
-      leadId: input.leadId,
-      contactId: input.contactId,
-      ownerId: input.ownerId,
-      source: input.source,
+  return executeWorkflowDefinition(
+    db,
+    definition,
+    buildLeadCreatedWorkflowEvent(definition, input),
+  );
+}
+
+export async function enqueueLeadFollowUpWorkflow(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    leadId: string;
+    contactId: string;
+    ownerId: string;
+    source: string;
+    correlationId: string;
+  },
+) {
+  const storedWorkflow = await findActiveWorkflowDefinition(
+    db,
+    input.tenantId,
+    leadFollowUpWorkflow.key,
+  );
+
+  if (!storedWorkflow) {
+    return null;
+  }
+
+  const event = buildLeadCreatedWorkflowEvent(storedWorkflow.definition, input);
+  const inserted = await enqueueDomainEvent(db, event);
+
+  return inserted ? event.id : null;
+}
+
+export async function processLeadFollowUpWorkflowEvent(
+  db: DbClient,
+  event: WorkflowEvent,
+) {
+  if (event.type !== leadCreatedEventType) {
+    throw new WorkflowError(
+      "workflow_definition_invalid",
+      "Evenement lead workflow invalide.",
+    );
+  }
+
+  const payload = parseLeadCreatedPayload(event.payload);
+  const storedWorkflow = await findActiveWorkflowDefinition(
+    db,
+    event.tenantId,
+    leadFollowUpWorkflow.key,
+  );
+
+  if (!storedWorkflow) {
+    throw new WorkflowError(
+      "workflow_not_found",
+      "Definition workflow introuvable pour le lead.",
+    );
+  }
+
+  const runId = await executeWorkflowDefinitionForEvent(
+    db,
+    storedWorkflow.definition,
+    {
+      ...event,
+      payload: {
+        ...event.payload,
+        leadId: payload.leadId,
+        contactId: payload.contactId,
+        ownerId: payload.ownerId,
+        source: payload.source,
+      },
     },
-    correlationId: input.correlationId,
-    idempotencyKey: `lead.created:${input.leadId}:workflow:v${definition.version}`,
-  });
+  );
+
+  if (runId) {
+    await recordAuditLog(db, {
+      tenantId: event.tenantId,
+      actorId: "system",
+      action: "workflow.executed",
+      targetType: "workflow_run",
+      targetId: runId,
+      metadata: { leadId: payload.leadId },
+    });
+  }
+
+  return runId;
 }
 
 export async function executeWorkflowDefinition(
@@ -168,21 +242,38 @@ export async function executeWorkflowDefinition(
     return null;
   }
 
+  return executeWorkflowDefinitionForEvent(db, parsedDefinition, event, {
+    markDomainEvent: true,
+  });
+}
+
+async function executeWorkflowDefinitionForEvent(
+  db: DbClient,
+  definition: WorkflowDefinition,
+  event: WorkflowEvent,
+  options: { markDomainEvent?: boolean } = {},
+) {
+  const parsedDefinition = workflowDefinitionSchema.parse(definition);
+
   if (!parsedDefinition.active || parsedDefinition.trigger !== event.type) {
-    await markDomainEventSkipped(
-      db,
-      event,
-      "Workflow inactif ou declencheur non correspondant.",
-    );
+    if (options.markDomainEvent) {
+      await markDomainEventSkipped(
+        db,
+        event,
+        "Workflow inactif ou declencheur non correspondant.",
+      );
+    }
     return null;
   }
 
   if (!conditionsMatch(parsedDefinition, event)) {
-    await markDomainEventSkipped(
-      db,
-      event,
-      "Conditions workflow non satisfaites.",
-    );
+    if (options.markDomainEvent) {
+      await markDomainEventSkipped(
+        db,
+        event,
+        "Conditions workflow non satisfaites.",
+      );
+    }
     return null;
   }
 
@@ -213,7 +304,9 @@ export async function executeWorkflowDefinition(
       summary: terminal.summary,
       error: null,
     });
-    await markDomainEventSucceeded(db, event);
+    if (options.markDomainEvent) {
+      await markDomainEventSucceeded(db, event);
+    }
     return runId;
   } catch (error) {
     const message =
@@ -226,7 +319,9 @@ export async function executeWorkflowDefinition(
       error: message,
       incrementRetry: true,
     });
-    await markDomainEventFailed(db, event, message);
+    if (options.markDomainEvent) {
+      await markDomainEventFailed(db, event, message);
+    }
     throw error;
   }
 }
@@ -665,6 +760,54 @@ function parseResumePayload(payload: Record<string, unknown>) {
     sourceEventId,
     resumeFromActionIndex: Math.max(0, Math.floor(resumeFromActionIndex)),
     reason,
+  };
+}
+
+function parseLeadCreatedPayload(payload: Record<string, unknown>) {
+  const leadId = payload.leadId;
+  const contactId = payload.contactId;
+  const ownerId = payload.ownerId;
+  const source = payload.source;
+
+  if (
+    typeof leadId !== "string" ||
+    typeof contactId !== "string" ||
+    typeof ownerId !== "string" ||
+    typeof source !== "string"
+  ) {
+    throw new WorkflowError(
+      "workflow_definition_invalid",
+      "Payload lead workflow invalide.",
+    );
+  }
+
+  return { leadId, contactId, ownerId, source };
+}
+
+function buildLeadCreatedWorkflowEvent(
+  definition: WorkflowDefinition,
+  input: {
+    tenantId: string;
+    leadId: string;
+    contactId: string;
+    ownerId: string;
+    source: string;
+    correlationId: string;
+  },
+): WorkflowEvent {
+  return {
+    id: id("event"),
+    tenantId: input.tenantId,
+    actorId: "system",
+    type: leadCreatedEventType,
+    payload: {
+      leadId: input.leadId,
+      contactId: input.contactId,
+      ownerId: input.ownerId,
+      source: input.source,
+    },
+    correlationId: input.correlationId,
+    idempotencyKey: `${leadCreatedEventType}:${input.leadId}:workflow:v${definition.version}`,
   };
 }
 

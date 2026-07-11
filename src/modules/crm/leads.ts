@@ -28,7 +28,7 @@ import {
   type PublicLeadInput,
 } from "@/modules/crm/schemas";
 import { getTenantOwnerId } from "@/modules/tenants";
-import { executeLeadFollowUpWorkflow } from "@/modules/workflows/engine";
+import { enqueueLeadFollowUpWorkflow } from "@/modules/workflows/engine";
 
 export type PublishedSiteLookup = {
   tenant: Tenant;
@@ -196,7 +196,7 @@ async function runDefaultLeadWorkflow(
   ownerId: string,
   source: string,
 ) {
-  const runId = await executeLeadFollowUpWorkflow(db, {
+  const eventId = await enqueueLeadFollowUpWorkflow(db, {
     tenantId,
     leadId,
     contactId,
@@ -205,13 +205,13 @@ async function runDefaultLeadWorkflow(
     correlationId: correlationId(),
   });
 
-  if (runId) {
+  if (eventId) {
     await recordAuditLog(db, {
       tenantId,
       actorId: "system",
-      action: "workflow.executed",
-      targetType: "workflow_run",
-      targetId: runId,
+      action: "workflow.enqueued",
+      targetType: "domain_event",
+      targetId: eventId,
       metadata: { leadId },
     });
   }

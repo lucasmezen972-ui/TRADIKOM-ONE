@@ -54,8 +54,13 @@ describe("public lead ingestion module", () => {
       "select count(*)::int as count from form_submissions where tenant_id = $1 and idempotency_key = $2",
       [tenant.id, payload.idempotencyKey],
     );
+    const workflowEvents = await db.query<{ count: number }>(
+      "select count(*)::int as count from domain_events where tenant_id = $1 and event_type = $2",
+      [tenant.id, "lead.created"],
+    );
 
     expect(leads.rows[0]?.count).toBe(1);
     expect(submissions.rows[0]?.count).toBe(1);
+    expect(workflowEvents.rows[0]?.count).toBe(1);
   });
 });

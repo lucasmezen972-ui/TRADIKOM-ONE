@@ -6,6 +6,7 @@ import {
 } from "../src/modules/workflows/worker";
 import {
   getWorkflowDeadLetters,
+  leadFollowUpWorkflow,
   retryWorkflowDeadLetter,
 } from "../src/modules/workflows";
 import {
@@ -239,6 +240,41 @@ describe("workflow worker", () => {
     expect(await countConnectorSyncAudits(db, "tenant_connector_worker")).toBe(1);
   });
 
+  it("dispatches lead workflow events through the durable worker", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_lead_worker", "user_lead_worker");
+    await seedLeadFollowUpWorkflow(db, "tenant_lead_worker");
+    await seedLeadForWorkflow(db, {
+      tenantId: "tenant_lead_worker",
+      userId: "user_lead_worker",
+      contactId: "contact_lead_worker",
+      leadId: "lead_worker",
+    });
+    await insertDomainEvent(db, {
+      id: "event_lead_created",
+      tenantId: "tenant_lead_worker",
+      eventType: "lead.created",
+      payload: {
+        leadId: "lead_worker",
+        contactId: "contact_lead_worker",
+        ownerId: "user_lead_worker",
+        source: "website",
+      },
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+    });
+    const event = await loadEvent(db, "event_lead_created");
+
+    expect(summary.succeeded).toBe(1);
+    expect(event.status).toBe("succeeded");
+    expect(await countLeadWorkflowRuns(db, "tenant_lead_worker")).toBe(1);
+    expect(await countLeadWorkflowTasks(db, "tenant_lead_worker")).toBe(1);
+    expect(await countWorkflowExecutedAudits(db, "tenant_lead_worker")).toBe(1);
+  });
+
   it("lists failed domain events as tenant-isolated dead letters", async () => {
     const { db } = await setup();
     await seedTenant(db, "tenant_dead_letters", "user_dead_letters");
@@ -432,6 +468,95 @@ async function seedMockConnector(db: DbClient, tenantId: string) {
   );
 }
 
+async function seedLeadFollowUpWorkflow(db: DbClient, tenantId: string) {
+  await db.query(
+    `insert into workflows (
+       id,
+       tenant_id,
+       workflow_key,
+       name,
+       trigger_name,
+       status,
+       approval_policy,
+       definition,
+       created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      `workflow_${tenantId}`,
+      tenantId,
+      leadFollowUpWorkflow.key,
+      "Suivi automatique des nouveaux leads site",
+      leadFollowUpWorkflow.trigger,
+      "active",
+      leadFollowUpWorkflow.approvalPolicy,
+      JSON.stringify(leadFollowUpWorkflow),
+      "2026-07-11T09:00:00.000Z",
+    ],
+  );
+}
+
+async function seedLeadForWorkflow(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    userId: string;
+    contactId: string;
+    leadId: string;
+  },
+) {
+  const now = "2026-07-11T09:00:00.000Z";
+  await db.query(
+    `insert into contacts (
+       id,
+       tenant_id,
+       name,
+       email,
+       phone,
+       status,
+       source,
+       tags,
+       assigned_user_id,
+       created_at,
+       updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      input.contactId,
+      input.tenantId,
+      "Client Worker",
+      "client.worker@example.com",
+      "+596 696 00 00 00",
+      "Nouveau",
+      "website",
+      JSON.stringify(["website"]),
+      input.userId,
+      now,
+      now,
+    ],
+  );
+  await db.query(
+    `insert into leads (
+       id,
+       tenant_id,
+       contact_id,
+       source,
+       status,
+       opportunity_value,
+       page_path,
+       created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      input.leadId,
+      input.tenantId,
+      input.contactId,
+      "website",
+      "Nouveau contact",
+      0,
+      "/sites/worker",
+      now,
+    ],
+  );
+}
+
 async function loadEvent(db: DbClient, eventId: string) {
   const result = await db.query<{
     status: string;
@@ -490,6 +615,33 @@ async function countConnectorSyncAudits(db: DbClient, tenantId: string) {
   const result = await db.query<{ count: number | string }>(
     "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
     [tenantId, "connector.sync_completed"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countLeadWorkflowRuns(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from workflow_runs where tenant_id = $1 and workflow_key = $2 and status = $3",
+    [tenantId, leadFollowUpWorkflow.key, "succeeded"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countLeadWorkflowTasks(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from tasks where tenant_id = $1 and title like $2",
+    [tenantId, "Relancer%"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countWorkflowExecutedAudits(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
+    [tenantId, "workflow.executed"],
   );
 
   return Number(result.rows[0]?.count ?? 0);

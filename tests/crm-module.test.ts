@@ -3,6 +3,7 @@ import { createMemoryDb } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import { findContactForTenant, getCrm } from "../src/modules/crm";
+import { processPendingDomainEvents } from "../src/modules/workflows/worker";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -46,6 +47,7 @@ describe("crm module", () => {
       phone: "+596 696 44 55 66",
       message: "Demande CRM",
     });
+    await processPendingDomainEvents(db);
 
     const crmA = await getCrm(db, ownerA.id, tenantA.id);
     expect(crmA.contacts[0]?.email).toBe("client.crm@example.com");
