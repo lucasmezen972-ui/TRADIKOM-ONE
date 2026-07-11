@@ -35,3 +35,5 @@
 - Targeted local website validation and `git diff --check` both hung without output and were stopped; GitHub Actions passed for commit `033f062`.
 - Extracted CRM read models, recent activity reads, and tenant-scoped contact lookup into `src/modules/crm/`, with a direct cross-tenant isolation test.
 - Targeted local CRM validation hung without output and was stopped; `git diff --check` passed and GitHub Actions passed for commit `70d8ff9`.
+- Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import rows, and webhook delivery logging into `src/modules/connectors/`, with a direct module test.
+- Targeted local connectors validation hung without output and was stopped; `git diff --check` passed, so this checkpoint should be validated by GitHub Actions.

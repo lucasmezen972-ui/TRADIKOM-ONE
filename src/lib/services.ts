@@ -4,13 +4,15 @@ import {
   buildBusinessTwin,
   defaultGarageOnboarding,
 } from "@/lib/generation";
-import { parseContactsCsv } from "@/modules/connectors/csv";
 import {
-  verifyWebhookEndpointSignature,
+  connectorCatalog,
+  getConnectors,
+  importCsvContacts,
+  receiveWebhook,
+  syncMockConnector,
   type WebhookSignatureInput,
-} from "@/modules/connectors/webhooks";
+} from "@/modules/connectors";
 import {
-  createLeadFromPayload,
   findContactForTenant,
   getCrm,
   getTenantActivities,
@@ -68,7 +70,6 @@ import {
 import type {
   AuditLog,
   BusinessProfile,
-  ConnectorCard,
   DashboardData,
   User,
   Website,
@@ -82,41 +83,6 @@ const pipelineStages = [
   "Devis envoye",
   "Gagne",
   "Perdu",
-];
-
-const connectorMetadata: ConnectorCard[] = [
-  {
-    key: "generic_webhook",
-    name: "Webhook generique",
-    description: "Recevez des demandes JSON depuis n'importe quel outil.",
-    status: "Connecté",
-    health: "healthy",
-    capabilities: ["webhook", "mapping contact", "journal livraisons"],
-  },
-  {
-    key: "csv_contacts",
-    name: "Import CSV contacts",
-    description: "Importez un fichier de contacts et detectez les doublons.",
-    status: "Disponible",
-    health: "inactive",
-    capabilities: ["csv", "validation", "rapport import"],
-  },
-  {
-    key: "mock_business",
-    name: "Logiciel metier demo",
-    description: "Simule clients, rendez-vous, devis et factures.",
-    status: "Configuration requise",
-    health: "warning",
-    capabilities: ["sync", "clients", "rendez-vous", "devis"],
-  },
-  {
-    key: "google_business_profile",
-    name: "Google Business Profile",
-    description: "Connexion prevue apres validation OAuth.",
-    status: "Bientôt disponible",
-    health: "inactive",
-    capabilities: ["avis", "profil", "statistiques"],
-  },
 ];
 
 const onboardingSchema = z.object({
@@ -299,7 +265,7 @@ async function createTenantDefaults(db: DbClient, tenantId: string) {
     ],
   );
 
-  for (const connector of connectorMetadata.slice(0, 3)) {
+  for (const connector of connectorCatalog.slice(0, 3)) {
     await db.query(
       `insert into connectors (id, tenant_id, connector_key, status, health, safe_config, last_sync_at, created_at, updated_at)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -415,203 +381,6 @@ async function getDashboard(db: DbClient, userId: string, tenantId: string) {
     workflowRuns: workflowRuns.slice(0, 5),
     detectedOpportunities,
   } satisfies DashboardData;
-}
-
-async function getConnectors(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const rows = await db.query<{
-    connector_key: string;
-    status: ConnectorCard["status"];
-    health: ConnectorCard["health"];
-    last_sync_at: string | null;
-  }>("select connector_key, status, health, last_sync_at from connectors where tenant_id = $1", [
-    tenantId,
-  ]);
-  const byKey = new Map(rows.rows.map((row) => [row.connector_key, row]));
-
-  return connectorMetadata.map((connector) => {
-    const state = byKey.get(connector.key);
-    return state
-      ? {
-          ...connector,
-          status: state.status,
-          health: state.health,
-          lastSyncAt: state.last_sync_at ?? undefined,
-        }
-      : connector;
-  });
-}
-
-async function importCsvContacts(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  csvText: string,
-) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  const rows = parseContactsCsv(csvText);
-  const importId = id("import");
-  const report = {
-    total: rows.length,
-    imported: 0,
-    duplicates: 0,
-    invalid: 0,
-  };
-  const now = nowIso();
-
-  await db.query(
-    "insert into imports (id, tenant_id, source, status, report, created_at) values ($1, $2, $3, $4, $5, $6)",
-    [importId, tenantId, "csv_contacts", "running", toJson(report), now],
-  );
-
-  for (const [index, row] of rows.entries()) {
-    const name = row.name;
-    const email = row.email;
-    const phone = row.phone;
-
-    if (!name || !email.includes("@")) {
-      report.invalid += 1;
-      await insertImportRow(db, tenantId, importId, index + 2, "invalid", row.raw, "Email invalide");
-      continue;
-    }
-
-    const duplicate = await db.query<{ id: string }>(
-      "select id from contacts where tenant_id = $1 and email = $2",
-      [tenantId, email],
-    );
-    if (duplicate.rows[0]) {
-      report.duplicates += 1;
-      await insertImportRow(db, tenantId, importId, index + 2, "duplicate", row.raw, null);
-      continue;
-    }
-
-    await db.query(
-      `insert into contacts (id, tenant_id, name, email, phone, status, source, tags, assigned_user_id, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [
-        id("contact"),
-        tenantId,
-        name,
-        email,
-        phone,
-        "Importe",
-        "csv",
-        toJson(["csv"]),
-        userId,
-        nowIso(),
-        nowIso(),
-      ],
-    );
-    report.imported += 1;
-    await insertImportRow(db, tenantId, importId, index + 2, "imported", row.raw, null);
-  }
-
-  await db.query("update imports set status = $1, report = $2 where tenant_id = $3 and id = $4", [
-    "completed",
-    toJson(report),
-    tenantId,
-    importId,
-  ]);
-  await audit(db, tenantId, userId, "connector.csv_imported", "import", importId, report);
-
-  return report;
-}
-
-async function syncMockConnector(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  const now = nowIso();
-  await db.query(
-    "update connectors set status = $1, health = $2, last_sync_at = $3, updated_at = $4 where tenant_id = $5 and connector_key = $6",
-    ["Connecté", "healthy", now, now, tenantId, "mock_business"],
-  );
-  await db.query(
-    "insert into connector_sync_runs (id, tenant_id, connector_key, status, summary, created_at) values ($1, $2, $3, $4, $5, $6)",
-    [
-      id("sync"),
-      tenantId,
-      "mock_business",
-      "succeeded",
-      "3 clients, 2 rendez-vous et 1 devis simules synchronises.",
-      now,
-    ],
-  );
-  await db.query(
-    "insert into activities (id, tenant_id, type, summary, target_type, target_id, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      id("activity"),
-      tenantId,
-      "connector.sync_completed",
-      "Synchronisation demo terminee.",
-      "connector",
-      "mock_business",
-      now,
-    ],
-  );
-  await audit(db, tenantId, userId, "connector.sync_completed", "connector", "mock_business", {});
-}
-
-async function receiveWebhook(
-  db: DbClient,
-  token: string,
-  payload: Record<string, unknown>,
-  signatureInput?: WebhookSignatureInput,
-) {
-  const endpoint = await db.query<{
-    id: string;
-    tenant_id: string;
-    secret_hash: string | null;
-    status: string;
-  }>("select * from webhook_endpoints where token = $1", [token]);
-  const row = endpoint.rows[0];
-  if (!row || row.status !== "active") {
-    throw new Error("Webhook invalide.");
-  }
-
-  const signature = await verifyWebhookEndpointSignature(
-    db,
-    {
-      id: row.id,
-      tenantId: row.tenant_id,
-      secretHash: row.secret_hash,
-    },
-    signatureInput,
-  );
-
-  if (!signature.ok) {
-    await recordWebhookDelivery(
-      db,
-      row.tenant_id,
-      row.id,
-      payload,
-      "rejected",
-      signature.error,
-    );
-    throw new Error(signature.error);
-  }
-
-  const mapped = {
-    name: String(payload.name ?? payload.nom ?? "Contact webhook"),
-    email: String(payload.email ?? payload.mail ?? ""),
-    phone: String(payload.phone ?? payload.telephone ?? ""),
-    message: String(payload.message ?? payload.notes ?? "Demande recue par webhook"),
-  };
-
-  if (!mapped.email.includes("@")) {
-    await recordWebhookDelivery(db, row.tenant_id, row.id, payload, "rejected", "Email invalide");
-    throw new Error("Payload invalide.");
-  }
-
-  const result = await createLeadFromPayload(db, row.tenant_id, {
-    ...mapped,
-    source: "webhook",
-    pagePath: "webhook/generic",
-  });
-  await recordWebhookDelivery(db, row.tenant_id, row.id, payload, "accepted", null);
-  await audit(db, row.tenant_id, "system", "connector.webhook_received", "lead", result.leadId, {
-    endpointId: row.id,
-  });
-
-  return result;
 }
 
 async function getWorkflowRuns(db: DbClient, userId: string, tenantId: string) {
@@ -762,35 +531,6 @@ async function detectOpportunities(
   return opportunities.length > 0
     ? opportunities
     : ["Aucune alerte critique. Continuer le suivi des nouveaux leads."];
-}
-
-async function recordWebhookDelivery(
-  db: DbClient,
-  tenantId: string,
-  endpointId: string,
-  payload: Record<string, unknown>,
-  status: string,
-  error: string | null,
-) {
-  await db.query(
-    "insert into webhook_deliveries (id, tenant_id, webhook_endpoint_id, status, payload, error, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-    [id("delivery"), tenantId, endpointId, status, toJson(payload), error, nowIso()],
-  );
-}
-
-async function insertImportRow(
-  db: DbClient,
-  tenantId: string,
-  importId: string,
-  rowNumber: number,
-  status: string,
-  data: Record<string, string>,
-  error: string | null,
-) {
-  await db.query(
-    "insert into import_rows (id, tenant_id, import_id, row_number, status, safe_data, error) values ($1, $2, $3, $4, $5, $6, $7)",
-    [id("importrow"), tenantId, importId, rowNumber, status, toJson(data), error],
-  );
 }
 
 async function audit(
