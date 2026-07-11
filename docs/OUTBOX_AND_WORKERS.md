@@ -10,7 +10,18 @@ The worker entry point is:
 pnpm worker
 ```
 
-Current worker behavior processes one due batch from `domain_events`.
+By default, the worker runs in one-shot mode and processes one due batch from
+`domain_events`. This remains the mode used by CI and scheduled jobs.
+
+```bash
+WORKER_MODE=once pnpm worker
+```
+
+Long-running polling mode is available for hosted worker processes:
+
+```bash
+WORKER_MODE=poll WORKER_POLL_INTERVAL_MS=5000 WORKER_BATCH_SIZE=25 pnpm worker
+```
 
 - pending events whose `next_run_at` is due are atomically claimed as `processing`;
 - registered handlers receive the parsed event payload and attempt number;
@@ -18,12 +29,18 @@ Current worker behavior processes one due batch from `domain_events`.
 - failed handlers retry with exponential backoff until `maxAttempts`, then mark `failed`;
 - stale `processing` events are requeued after the worker lease timeout;
 - unsupported event types fail fast with a visible `last_error`.
+- polling mode emits structured JSON logs for startup, heartbeat, batch completion,
+  signal handling, shutdown, and errors;
+- `SIGTERM` and `SIGINT` request graceful shutdown and database resources are closed
+  before the process exits.
 
-The lead workflow still executes synchronously to preserve the Phase 1 vertical slice. The outbox worker is now ready for future async handlers without changing public request paths.
+The lead workflow is backed by persisted workflow definitions and durable
+`workflow.resume` events. Wait actions, approval decisions, and manual retry now
+resume through the outbox worker rather than a hidden in-memory path.
 
 Remaining work:
 
-- long-running polling loop;
 - dead-letter UI;
-- delayed action resumption;
-- approval waiting/resume flow.
+- richer persisted action-attempt metadata;
+- domain-specific async handlers beyond the lead workflow;
+- operator screens for failed workflow runs and domain events.

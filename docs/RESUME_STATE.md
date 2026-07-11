@@ -31,6 +31,7 @@ Last completed checkpoint:
 - Lead follow-up now loads the active tenant workflow definition from persistence and executes it through `src/modules/workflows/` repository helpers and action registry rather than a hidden hard-coded action path. The checkpoint includes normalized versioned definitions, condition checks, event replay idempotency, timeline step metadata, approval-required stops, waiting-state support, and registered initial actions for task/contact/tag/activity/mock notification/webhook/wait/approval behavior.
 - Workflow run controls are implemented in `src/modules/workflows/` with tenant-authorized cancel, approve, reject, and manual retry services; server actions; Automatisations UI controls; control timeline entries; audit logs; and integration coverage for tenant isolation and status transitions.
 - Durable workflow resumption is implemented through `workflow.resume` domain events: wait actions schedule delayed resumes, approvals enqueue resumes after approval, manual retry replays the failed action, cancelled runs skip queued resumes, and focused tests cover wait, approval, cancellation, and retry behavior.
+- Worker polling mode is implemented with `WORKER_MODE=once|poll`, configurable batch size and interval, structured JSON logs, heartbeat entries, graceful `SIGTERM`/`SIGINT` shutdown, clean database closing, and focused worker tests.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
@@ -75,9 +76,10 @@ Current validation note:
 - GitHub Actions initially failed commit `ba42a11` because the older workflow-controls test seeded an approval run without a timeline cursor; commit `a27045a` preserves that legacy control behavior while still enqueueing resumes for real approval action timelines.
 - GitHub Actions passed on PR #1 for durable workflow resumption fix commit `a27045a`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
+- During the worker polling checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --stat` also hung without output and were stopped, so this checkpoint should be validated through GitHub Actions after push.
 
 Next unfinished task:
 
-1. Continue Phase 2 workflow engine depth: dead-letter visibility, persisted execution attempts, richer retry/backoff metadata, and domain-specific async handlers beyond the synchronous lead follow-up path.
+1. Continue Phase 2 workflow engine depth: dead-letter visibility, persisted execution attempts, richer retry/backoff metadata, and domain-specific async handlers beyond the lead follow-up path.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

@@ -25,6 +25,7 @@
 - Switched lead follow-up behavior to the workflow engine rather than inline special-case task creation.
 - Added workflow run controls for cancellation, approval, rejection, and manual retry with tenant authorization, audit logs, timeline entries, server actions, UI controls, and integration coverage.
 - Added durable workflow resumption through internal `workflow.resume` domain events for waits, approvals, manual retries, and cancelled-run skip behavior.
+- Added worker polling mode with `WORKER_MODE=once|poll`, configurable batch size and polling interval, heartbeat logs, structured JSON output, graceful `SIGTERM`/`SIGINT` shutdown, and database cleanup.
 - Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC verification for configured endpoint secrets, and AES-256-GCM credential encryption helpers.
 - Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import row persistence, and webhook delivery logging into `src/modules/connectors/`.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
@@ -36,4 +37,4 @@
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- The worker is a durable batch dispatcher, but still needs a long-running polling loop, dead-letter UI, persisted action attempts with richer retry/backoff metadata, and domain-specific async handlers beyond the synchronous lead workflow.
+- The worker is now available as both a durable batch dispatcher and a polling process, but still needs dead-letter UI, persisted action attempts with richer retry/backoff metadata, and domain-specific async handlers beyond the lead workflow.

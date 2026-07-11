@@ -4,6 +4,11 @@ import {
   getPendingDomainEventCount,
   processPendingDomainEvents,
 } from "../src/modules/workflows/worker";
+import {
+  parseWorkerConfig,
+  runWorkerPoll,
+  type WorkerLogEntry,
+} from "../src/worker/runtime";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -127,6 +132,73 @@ describe("workflow worker", () => {
     expect(summary.succeeded).toBe(1);
     expect(event.status).toBe("succeeded");
     expect(event.attempts).toBe(2);
+  });
+
+  it("polls repeated batches with structured heartbeat logs and bounded sleeps", async () => {
+    const { db } = await setup();
+    const logs: WorkerLogEntry[] = [];
+    const sleeps: number[] = [];
+
+    const result = await runWorkerPoll({
+      db,
+      batchSize: 3,
+      pollIntervalMs: 250,
+      maxIterations: 2,
+      logger: (entry) => logs.push(entry),
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+
+    expect(result.iterations).toBe(2);
+    expect(result.stoppedBy).toBe("max_iterations");
+    expect(sleeps).toEqual([250]);
+    expect(logs.map((entry) => entry.event)).toEqual([
+      "worker.start",
+      "worker.heartbeat",
+      "worker.poll.completed",
+      "worker.heartbeat",
+      "worker.poll.completed",
+      "worker.shutdown",
+    ]);
+    expect(logs.every((entry) => Boolean(entry.correlationId))).toBe(true);
+  });
+
+  it("stops polling gracefully after a shutdown signal", async () => {
+    const { db } = await setup();
+    const shutdown = new AbortController();
+
+    const result = await runWorkerPoll({
+      db,
+      batchSize: 1,
+      pollIntervalMs: 250,
+      maxIterations: 5,
+      signal: shutdown.signal,
+      logger: () => undefined,
+      sleep: async () => {
+        shutdown.abort();
+      },
+    });
+
+    expect(result.iterations).toBe(1);
+    expect(result.stoppedBy).toBe("signal");
+  });
+
+  it("parses worker mode, batch size, and polling interval from environment", () => {
+    expect(
+      parseWorkerConfig({
+        WORKER_MODE: "poll",
+        WORKER_BATCH_SIZE: "7",
+        WORKER_POLL_INTERVAL_MS: "1500",
+      }),
+    ).toEqual({ mode: "poll", batchSize: 7, pollIntervalMs: 1500 });
+    expect(
+      parseWorkerConfig({
+        WORKER_MODE: "unsupported",
+        WORKER_BATCH_SIZE: "oops",
+        WORKER_POLL_INTERVAL_MS: "1",
+      }),
+    ).toEqual({ mode: "once", batchSize: 25, pollIntervalMs: 100 });
   });
 });
 

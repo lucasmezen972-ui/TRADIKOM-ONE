@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-1. Continue workflow engine depth: dead-letter visibility, persisted execution attempts, richer retry/backoff metadata, and domain-specific async handlers beyond the synchronous lead workflow.
+1. Continue workflow engine depth: dead-letter visibility, persisted execution attempts, richer retry/backoff metadata, and domain-specific async handlers beyond the lead workflow.
 2. Expand Playwright for draft edit while published site remains available.
 3. Add real email delivery for password reset and invitation links.
 4. Adopt `withTenantTransaction` across tenant service paths.
