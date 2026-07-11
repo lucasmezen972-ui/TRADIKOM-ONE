@@ -63,3 +63,4 @@
 - Added worker polling runtime support: `WORKER_MODE=once|poll`, configurable batch size and interval, structured JSON startup/heartbeat/batch/shutdown logs, graceful `SIGTERM`/`SIGINT` shutdown, and tests for polling cadence, bounded sleeps, configuration parsing, and signal stop behavior.
 - GitHub Actions passed for worker polling commit `64c9bf3`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Added workflow dead-letter visibility: failed terminal `domain_events` now appear in Automatisations as tenant-scoped incidents with attempts, correlation IDs, timestamps, redacted errors, and test coverage for tenant isolation.
+- GitHub Actions passed for workflow dead-letter commit `75d5740`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
