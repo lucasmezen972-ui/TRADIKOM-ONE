@@ -46,7 +46,8 @@ Current validation note:
 - During the same continuation, targeted public lead validation (`pnpm exec vitest run tests/public-leads-module.test.ts tests/vertical-slice.test.ts`) produced no output after a reasonable wait and was stopped; `git diff --check` should be run before push and the checkpoint validated through GitHub Actions.
 - During the same continuation, targeted website validation (`pnpm exec vitest run tests/websites-module.test.ts tests/publication-snapshots.test.ts tests/vertical-slice.test.ts`) produced no output after a reasonable wait and was stopped. `git diff --check` also hung without output and was stopped.
 - GitHub Actions passed on PR #1 for website extraction commit `033f062`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
-- During the same continuation, targeted CRM read-model validation (`pnpm exec vitest run tests/crm-module.test.ts tests/tenant-isolation.test.ts tests/vertical-slice.test.ts`) hung without output and was stopped; `git diff --check` passed. Validate the CRM read-model checkpoint through GitHub Actions after push.
+- During the same continuation, targeted CRM read-model validation (`pnpm exec vitest run tests/crm-module.test.ts tests/tenant-isolation.test.ts tests/vertical-slice.test.ts`) hung without output and was stopped; `git diff --check` passed.
+- GitHub Actions passed on PR #1 for CRM read-model extraction commit `70d8ff9`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
