@@ -84,7 +84,14 @@ import {
   dismissOpportunityRadarAlert,
   getOpportunityRadar,
 } from "@/modules/opportunity-radar";
-import { leadFollowUpWorkflow } from "@/modules/workflows";
+import {
+  approveWorkflowRun,
+  cancelWorkflowRun,
+  getWorkflowRuns,
+  leadFollowUpWorkflow,
+  rejectWorkflowRun,
+  requestManualWorkflowRetry,
+} from "@/modules/workflows";
 import {
   id,
   nowIso,
@@ -96,7 +103,6 @@ import type {
   BusinessProfile,
   DashboardData,
   User,
-  WorkflowRun,
 } from "@/lib/types";
 
 const pipelineStages = [
@@ -316,6 +322,17 @@ export function createServices(db: DbClient) {
     ) => receiveWebhook(db, token, payload, signatureInput),
     getWorkflowRuns: (userId: string, tenantId: string) =>
       getWorkflowRuns(db, userId, tenantId),
+    cancelWorkflowRun: (userId: string, tenantId: string, runId: string) =>
+      cancelWorkflowRun(db, userId, tenantId, { runId }),
+    approveWorkflowRun: (userId: string, tenantId: string, runId: string) =>
+      approveWorkflowRun(db, userId, tenantId, { runId }),
+    rejectWorkflowRun: (userId: string, tenantId: string, runId: string) =>
+      rejectWorkflowRun(db, userId, tenantId, { runId }),
+    requestManualWorkflowRetry: (
+      userId: string,
+      tenantId: string,
+      runId: string,
+    ) => requestManualWorkflowRetry(db, userId, tenantId, { runId }),
     getAuditLogs: (userId: string, tenantId: string) =>
       getAuditLogs(db, userId, tenantId),
     seedDemo: () => seedDemo(db),
@@ -476,30 +493,6 @@ async function getDashboard(db: DbClient, userId: string, tenantId: string) {
     workflowRuns: workflowRuns.slice(0, 5),
     detectedOpportunities,
   } satisfies DashboardData;
-}
-
-async function getWorkflowRuns(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const runs = await db.query<{
-    id: string;
-    tenant_id: string;
-    workflow_key: string;
-    trigger_name: string;
-    status: "succeeded" | "failed" | "waiting";
-    summary: string;
-    created_at: string;
-  }>("select * from workflow_runs where tenant_id = $1 order by created_at desc limit 20", [
-    tenantId,
-  ]);
-  return runs.rows.map((row) => ({
-    id: row.id,
-    tenantId: row.tenant_id,
-    workflowKey: row.workflow_key,
-    triggerName: row.trigger_name,
-    status: row.status,
-    summary: row.summary,
-    createdAt: row.created_at,
-  })) satisfies WorkflowRun[];
 }
 
 async function getAuditLogs(db: DbClient, userId: string, tenantId: string) {

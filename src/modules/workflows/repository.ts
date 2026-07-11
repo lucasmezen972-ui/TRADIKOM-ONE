@@ -19,6 +19,29 @@ type WorkflowRow = {
   created_at: string;
 };
 
+export type WorkflowRunRow = {
+  id: string;
+  tenant_id: string;
+  workflow_key: string;
+  trigger_name: string;
+  status: string;
+  summary: string;
+  error: string | null;
+  retry_count: number;
+  created_at: string;
+};
+
+export type ApprovalRow = {
+  id: string;
+  tenant_id: string;
+  requested_by: string;
+  policy: string;
+  status: string;
+  target_type: string;
+  target_id: string;
+  created_at: string;
+};
+
 export type StoredWorkflowDefinition = {
   workflowId: string;
   tenantId: string;
@@ -81,6 +104,37 @@ export async function insertWorkflowRun(
       input.createdAt,
     ],
   );
+}
+
+export async function listWorkflowRunRows(
+  db: DbClient,
+  tenantId: string,
+  limit: number,
+) {
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const runs = await db.query<WorkflowRunRow>(
+    `select *
+     from workflow_runs
+     where tenant_id = $1
+     order by created_at desc
+     limit ${safeLimit}`,
+    [tenantId],
+  );
+
+  return runs.rows;
+}
+
+export async function findWorkflowRunById(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  const result = await db.query<WorkflowRunRow>(
+    "select * from workflow_runs where tenant_id = $1 and id = $2 limit 1",
+    [tenantId, runId],
+  );
+
+  return result.rows[0] ?? null;
 }
 
 export async function updateWorkflowRunStatus(
@@ -167,6 +221,38 @@ export async function insertWorkflowRunStep(
       toJson(input.metadata),
       input.createdAt,
     ],
+  );
+}
+
+export async function findPendingApprovalForRun(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  const result = await db.query<ApprovalRow>(
+    `select *
+     from approvals
+     where tenant_id = $1
+       and target_type = $2
+       and target_id = $3
+       and status = $4
+     order by created_at desc
+     limit 1`,
+    [tenantId, "workflow_run", runId, "pending"],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function updateApprovalStatus(
+  db: DbClient,
+  tenantId: string,
+  approvalId: string,
+  status: "approved" | "rejected",
+) {
+  await db.query(
+    "update approvals set status = $1 where tenant_id = $2 and id = $3",
+    [status, tenantId, approvalId],
   );
 }
 

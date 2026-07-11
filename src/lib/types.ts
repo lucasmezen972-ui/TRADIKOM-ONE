@@ -184,7 +184,14 @@ export type WorkflowRun = {
   tenantId: string;
   workflowKey: string;
   triggerName: string;
-  status: "succeeded" | "failed" | "waiting";
+  status:
+    | "running"
+    | "succeeded"
+    | "failed"
+    | "waiting"
+    | "approval_required"
+    | "cancelled"
+    | "rejected";
   summary: string;
   createdAt: string;
 };

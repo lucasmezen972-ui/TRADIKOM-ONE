@@ -380,6 +380,42 @@ export async function dismissOpportunityRadarAlertAction(formData: FormData) {
   revalidatePath("/opportunites/radar");
 }
 
+export async function cancelWorkflowRunAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.cancelWorkflowRun(user.id, tenant.id, text(formData, "runId"));
+  revalidatePath("/automatisations");
+  revalidatePath("/aujourdhui");
+}
+
+export async function approveWorkflowRunAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.approveWorkflowRun(user.id, tenant.id, text(formData, "runId"));
+  revalidatePath("/automatisations");
+  revalidatePath("/aujourdhui");
+}
+
+export async function rejectWorkflowRunAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.rejectWorkflowRun(user.id, tenant.id, text(formData, "runId"));
+  revalidatePath("/automatisations");
+  revalidatePath("/aujourdhui");
+}
+
+export async function retryWorkflowRunAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.requestManualWorkflowRetry(
+    user.id,
+    tenant.id,
+    text(formData, "runId"),
+  );
+  revalidatePath("/automatisations");
+  revalidatePath("/aujourdhui");
+}
+
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
