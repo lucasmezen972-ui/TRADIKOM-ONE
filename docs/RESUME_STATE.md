@@ -59,6 +59,7 @@ Current validation note:
 - During the same heartbeat, targeted CRM opportunity validation (`pnpm exec vitest run tests/crm-opportunities.test.ts tests/crm-mutations.test.ts`) hung without output and was stopped. `git diff --check` also exited abnormally without output before staging, but `git diff --cached --check` passed after explicit staging.
 - GitHub Actions passed on PR #1 for CRM opportunity mutation commit `0c892b2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the CRM duplicate merge checkpoint, targeted validation (`pnpm exec vitest run tests/crm-duplicates.test.ts`) hung without output and was stopped after 30 seconds. A one-off TypeScript check (`pnpm exec tsc --noEmit --pretty false --incremental false`) also hung without output and was stopped after 30 seconds. `GIT_PAGER=cat git diff --check` passed.
+- GitHub Actions initially failed duplicate tests on commit `1afba97` because `DATABASE_URL` made the CRM merge transaction helper choose PostgreSQL even when the injected test database was PGlite. The fix marks real PostgreSQL SQL clients and only uses `withTenantTransaction` for those clients.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:

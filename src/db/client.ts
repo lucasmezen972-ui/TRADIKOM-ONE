@@ -8,6 +8,7 @@ export type SqlQueryResult<T = Record<string, unknown>> = {
 };
 
 export type SqlClient = {
+  __runtime?: "postgres";
   query: <T = Record<string, unknown>>(
     sql: string,
     params?: unknown[],
@@ -51,6 +52,7 @@ export function getDrizzleDb() {
 
 export function pgPoolAsSqlClient(pgPool = getPgPool()): SqlClient {
   return {
+    __runtime: "postgres",
     async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []) {
       const result = await pgPool.query<QueryResultRow>(sql, params);
       return {
@@ -63,6 +65,7 @@ export function pgPoolAsSqlClient(pgPool = getPgPool()): SqlClient {
 
 export function pgClientAsSqlClient(client: PoolClient): SqlClient {
   return {
+    __runtime: "postgres",
     async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []) {
       const result = await client.query<QueryResultRow>(sql, params);
       return {

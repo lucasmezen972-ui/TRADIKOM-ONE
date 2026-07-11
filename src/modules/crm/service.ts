@@ -967,7 +967,7 @@ async function runTenantAwareTransaction<T>(
   actorId: string,
   callback: (client: DbClient) => Promise<T>,
 ) {
-  if (getDatabaseUrl()) {
+  if (getDatabaseUrl() && isPostgresClient(db)) {
     return withTenantTransaction(tenantId, actorId, callback);
   }
 
@@ -980,4 +980,8 @@ async function runTenantAwareTransaction<T>(
     await db.query("rollback");
     throw error;
   }
+}
+
+function isPostgresClient(db: DbClient) {
+  return (db as DbClient & { __runtime?: string }).__runtime === "postgres";
 }
