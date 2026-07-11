@@ -366,6 +366,20 @@ export async function updateOpportunityAction(formData: FormData) {
   revalidatePath(`/contacts/${opportunity.contactId}`);
 }
 
+export async function dismissOpportunityRadarAlertAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+
+  await services.dismissOpportunityRadarAlert(
+    user.id,
+    tenant.id,
+    text(formData, "alertId"),
+  );
+  revalidatePath("/aujourdhui");
+  revalidatePath("/opportunites");
+  revalidatePath("/opportunites/radar");
+}
+
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

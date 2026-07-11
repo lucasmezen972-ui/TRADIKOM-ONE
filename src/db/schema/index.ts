@@ -119,6 +119,33 @@ export const contactMergeRecords = pgTable(
   (table) => [unique().on(table.tenantId, table.mergedContactId)],
 );
 
+export const opportunityRadarAlerts = pgTable(
+  "opportunity_radar_alerts",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    ruleKey: text("rule_key").notNull(),
+    severity: text("severity").notNull(),
+    title: text("title").notNull(),
+    explanation: text("explanation").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    actionLabel: text("action_label").notNull(),
+    actionHref: text("action_href").notNull(),
+    status: text("status").notNull(),
+    detectedAt: text("detected_at").notNull(),
+    dismissedAt: text("dismissed_at"),
+    resolvedAt: text("resolved_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    unique().on(table.tenantId, table.ruleKey, table.entityType, table.entityId),
+  ],
+);
+
 export const leads = pgTable("leads", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id")

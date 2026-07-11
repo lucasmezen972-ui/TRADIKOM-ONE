@@ -115,6 +115,10 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "007_crm_contact_merges_rls", sql: crmContactMergesRlsMigrationSql }]
       : []),
+    { id: "008_opportunity_radar_alerts", sql: opportunityRadarAlertsMigrationSql },
+    ...(enableRls
+      ? [{ id: "009_opportunity_radar_alerts_rls", sql: opportunityRadarAlertsRlsMigrationSql }]
+      : []),
   ];
 }
 
@@ -265,6 +269,26 @@ create table contact_merge_records (
   created_by text not null,
   created_at text not null,
   unique (tenant_id, merged_contact_id)
+);
+
+create table opportunity_radar_alerts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  rule_key text not null,
+  severity text not null,
+  title text not null,
+  explanation text not null,
+  entity_type text not null,
+  entity_id text not null,
+  action_label text not null,
+  action_href text not null,
+  status text not null,
+  detected_at text not null,
+  dismissed_at text,
+  resolved_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, rule_key, entity_type, entity_id)
 );
 
 create table companies (
@@ -688,6 +712,37 @@ create policy tenant_contact_merge_records on contact_merge_records
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
 
+const opportunityRadarAlertsMigrationSql = `
+create table if not exists opportunity_radar_alerts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  rule_key text not null,
+  severity text not null,
+  title text not null,
+  explanation text not null,
+  entity_type text not null,
+  entity_id text not null,
+  action_label text not null,
+  action_href text not null,
+  status text not null,
+  detected_at text not null,
+  dismissed_at text,
+  resolved_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, rule_key, entity_type, entity_id)
+);
+`;
+
+const opportunityRadarAlertsRlsMigrationSql = `
+alter table opportunity_radar_alerts enable row level security;
+
+drop policy if exists tenant_opportunity_radar_alerts on opportunity_radar_alerts;
+create policy tenant_opportunity_radar_alerts on opportunity_radar_alerts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
 const rlsMigrationSql = `
 create or replace function app_current_tenant_id()
 returns text
@@ -709,6 +764,7 @@ alter table business_profiles enable row level security;
 alter table knowledge_documents enable row level security;
 alter table contacts enable row level security;
 alter table contact_merge_records enable row level security;
+alter table opportunity_radar_alerts enable row level security;
 alter table companies enable row level security;
 alter table contact_consents enable row level security;
 alter table pipelines enable row level security;
@@ -752,6 +808,11 @@ create policy tenant_contacts on contacts
 
 drop policy if exists tenant_contact_merge_records on contact_merge_records;
 create policy tenant_contact_merge_records on contact_merge_records
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_opportunity_radar_alerts on opportunity_radar_alerts;
+create policy tenant_opportunity_radar_alerts on opportunity_radar_alerts
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 

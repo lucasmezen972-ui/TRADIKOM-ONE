@@ -21,6 +21,7 @@ Last completed checkpoint:
 - CRM contact detail, contact profile updates, consent updates, notes, contact tasks, task completion, contact-linked opportunities, and interaction timeline reads now live in `src/modules/crm/` with tenant authorization, assignment validation, audit events, server actions, UI, and integration coverage.
 - CRM opportunity listing, search/filter support, opportunity detail, stage/value/next-action/lost-reason updates, pipeline-stage tenant validation, audit events, contact timeline propagation, UI, and integration coverage are implemented in `src/modules/crm/`.
 - CRM duplicate detection and transactional merge are implemented in `src/modules/crm/` with normalized email/phone/name/company matching, review UI, field-level merge choices, tombstone merge records, audit events, reassignment of related CRM/workflow references, and integration coverage.
+- Opportunity Radar extraction is in progress under `src/modules/opportunity-radar/` with typed alert records, persisted status, direct action links, dismissal, automatic resolution, dashboard wiring, and dedicated UI.
 - Website draft, publication, rollback, immutable public snapshot, and workspace reads are extracted into `src/modules/websites/` with schemas, typed errors, repository functions, tenant authorization, and audit events preserved.
 - Connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import rows, and webhook delivery logging are extracted into `src/modules/connectors/` with schemas, typed errors, repository functions, tenant authorization, audit events, and direct module coverage.
 - Invitations can be created, accepted once, listed as pending, and used for non-owner role administration.
@@ -61,10 +62,11 @@ Current validation note:
 - During the CRM duplicate merge checkpoint, targeted validation (`pnpm exec vitest run tests/crm-duplicates.test.ts`) hung without output and was stopped after 30 seconds. A one-off TypeScript check (`pnpm exec tsc --noEmit --pretty false --incremental false`) also hung without output and was stopped after 30 seconds. `GIT_PAGER=cat git diff --check` passed.
 - GitHub Actions initially failed duplicate tests on commit `1afba97` because `DATABASE_URL` made the CRM merge transaction helper choose PostgreSQL even when the injected test database was PGlite. The fix marks real PostgreSQL SQL clients and only uses `withTenantTransaction` for those clients.
 - GitHub Actions passed on PR #1 for CRM duplicate merge fix commit `aa098ff`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the Opportunity Radar extraction checkpoint, targeted validation (`pnpm exec vitest run tests/opportunity-radar.test.ts`) and local `git diff --check` both hung without output and were stopped. Validate the checkpoint through GitHub Actions after push.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
 
-1. Extract Opportunity Radar into `src/modules/opportunity-radar/` with typed alerts, direct action links, duplicate-contact alert integration, dismissal, automatic resolution, and tests.
+1. Confirm the Opportunity Radar checkpoint in GitHub Actions, then continue filling any missing radar rules/tests or move to the persisted workflow engine if Radar is green.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

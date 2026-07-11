@@ -108,12 +108,35 @@ export default async function OpportunitiesPage({
         </div>
       </section>
       <section className="rounded-lg bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-bold">Regles d&apos;opportunite</h2>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold">Opportunity Radar</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Alertes actives avec action directe.
+            </p>
+          </div>
+          <Link
+            href="/opportunites/radar"
+            className="rounded-md bg-[#08111f] px-4 py-3 text-sm font-semibold text-white"
+          >
+            Ouvrir le radar
+          </Link>
+        </div>
         <div className="mt-4 grid gap-3">
-          {dashboard.detectedOpportunities.map((item) => (
-            <div key={item} className="rounded-md border border-slate-200 px-4 py-3">
-              {item}
+          {dashboard.detectedOpportunities.length === 0 ? (
+            <div className="rounded-md border border-slate-200 px-4 py-3 text-slate-500">
+              Aucune alerte active.
             </div>
+          ) : null}
+          {dashboard.detectedOpportunities.slice(0, 6).map((alert) => (
+            <Link
+              key={alert.id}
+              href={alert.actionHref}
+              className="rounded-md border border-slate-200 px-4 py-3"
+            >
+              <p className="font-semibold">{alert.title}</p>
+              <p className="mt-1 text-sm text-slate-500">{alert.explanation}</p>
+            </Link>
           ))}
         </div>
       </section>

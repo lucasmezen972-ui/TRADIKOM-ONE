@@ -81,6 +81,10 @@ import {
   updateWebsiteSection,
 } from "@/modules/websites";
 import {
+  dismissOpportunityRadarAlert,
+  getOpportunityRadar,
+} from "@/modules/opportunity-radar";
+import {
   id,
   nowIso,
   safeJson,
@@ -91,7 +95,6 @@ import type {
   BusinessProfile,
   DashboardData,
   User,
-  Website,
   WorkflowRun,
 } from "@/lib/types";
 
@@ -223,6 +226,13 @@ export function createServices(db: DbClient) {
       }),
     getDashboard: (userId: string, tenantId: string) =>
       getDashboard(db, userId, tenantId),
+    getOpportunityRadar: (userId: string, tenantId: string) =>
+      getOpportunityRadar(db, userId, tenantId),
+    dismissOpportunityRadarAlert: (
+      userId: string,
+      tenantId: string,
+      alertId: string,
+    ) => dismissOpportunityRadarAlert(db, userId, tenantId, { alertId }),
     getCrm: (userId: string, tenantId: string) => getCrm(db, userId, tenantId),
     getOpportunities: (
       userId: string,
@@ -451,7 +461,9 @@ async function getDashboard(db: DbClient, userId: string, tenantId: string) {
   const activities = await getTenantActivities(db, tenantId, 8);
   const workflowRuns = await getWorkflowRuns(db, userId, tenantId);
   const connectors = await getConnectors(db, userId, tenantId);
-  const detectedOpportunities = await detectOpportunities(db, tenantId, website);
+  const detectedOpportunities = (
+    await getOpportunityRadar(db, userId, tenantId)
+  ).filter((alert) => alert.status === "active");
 
   return {
     tenant,
@@ -581,43 +593,6 @@ async function seedDemo(db: DbClient) {
   }
 
   return { user, tenant, password: "Tradikom!2026" };
-}
-
-async function detectOpportunities(
-  db: DbClient,
-  tenantId: string,
-  website: Website | null,
-) {
-  const opportunities: string[] = [];
-  const pendingTasks = await db.query<{ count: number }>(
-    "select count(*)::int as count from tasks where tenant_id = $1 and status = $2 and due_at < $3",
-    [tenantId, "open", nowIso()],
-  );
-  const unassigned = await db.query<{ count: number }>(
-    "select count(*)::int as count from contacts where tenant_id = $1 and assigned_user_id is null",
-    [tenantId],
-  );
-  const connectorErrors = await db.query<{ count: number }>(
-    "select count(*)::int as count from connectors where tenant_id = $1 and health = $2",
-    [tenantId, "error"],
-  );
-
-  if (!website || website.status !== "published") {
-    opportunities.push("Le site est encore en brouillon : publier pour capter des demandes.");
-  }
-  if ((pendingTasks.rows[0]?.count ?? 0) > 0) {
-    opportunities.push("Des relances depassent 24h : prioriser les leads chauds.");
-  }
-  if ((unassigned.rows[0]?.count ?? 0) > 0) {
-    opportunities.push("Des contacts n'ont pas de responsable assigne.");
-  }
-  if ((connectorErrors.rows[0]?.count ?? 0) > 0) {
-    opportunities.push("Une connexion est en erreur et peut masquer des opportunites.");
-  }
-
-  return opportunities.length > 0
-    ? opportunities
-    : ["Aucune alerte critique. Continuer le suivi des nouveaux leads."];
 }
 
 async function audit(

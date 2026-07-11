@@ -211,6 +211,34 @@ export type AuditLog = {
   createdAt: string;
 };
 
+export type OpportunityRadarRuleKey =
+  | "lead_sla_missed"
+  | "overdue_task"
+  | "opportunity_without_activity"
+  | "unassigned_contact"
+  | "failed_workflow"
+  | "connector_error"
+  | "unpublished_draft_changes"
+  | "failed_form_processing"
+  | "likely_duplicate_contact";
+
+export type OpportunityRadarAlert = {
+  id: string;
+  tenantId: string;
+  ruleKey: OpportunityRadarRuleKey;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  explanation: string;
+  entityType: string;
+  entityId: string;
+  detectedAt: string;
+  actionLabel: string;
+  actionHref: string;
+  status: "active" | "dismissed" | "resolved";
+  dismissedAt?: string;
+  resolvedAt?: string;
+};
+
 export type DashboardData = {
   tenant: Tenant;
   metrics: {
@@ -224,5 +252,5 @@ export type DashboardData = {
   connectorHealth: ConnectorCard[];
   recentActivities: Activity[];
   workflowRuns: WorkflowRun[];
-  detectedOpportunities: string[];
+  detectedOpportunities: OpportunityRadarAlert[];
 };

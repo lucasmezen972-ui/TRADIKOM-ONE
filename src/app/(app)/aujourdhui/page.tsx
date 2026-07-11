@@ -67,15 +67,30 @@ export default async function TodayPage() {
 
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-lg bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-bold">Opportunites detectees</h2>
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="text-xl font-bold">Opportunity Radar</h2>
+            <Link
+              href="/opportunites/radar"
+              className="text-sm font-semibold text-[#0b8f84]"
+            >
+              Tout voir
+            </Link>
+          </div>
           <div className="mt-4 grid gap-3">
-            {dashboard.detectedOpportunities.map((item) => (
-              <div
-                key={item}
+            {dashboard.detectedOpportunities.length === 0 ? (
+              <div className="rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-500">
+                Aucune alerte active. Continuer le suivi des nouveaux leads.
+              </div>
+            ) : null}
+            {dashboard.detectedOpportunities.slice(0, 5).map((alert) => (
+              <Link
+                key={alert.id}
+                href={alert.actionHref}
                 className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
               >
-                {item}
-              </div>
+                <span className="block font-semibold">{alert.title}</span>
+                <span className="mt-1 block text-amber-900">{alert.explanation}</span>
+              </Link>
             ))}
           </div>
         </div>
