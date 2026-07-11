@@ -29,3 +29,5 @@
 - Targeted local auth validation hung without output and was stopped; `git diff --check` passed, so the auth extraction should be confirmed through GitHub Actions.
 - Extracted tenant access, tenant creation, team invitations, member role management, and audit recording into `src/modules/tenants/` and `src/modules/audit/`, with a direct module test.
 - Targeted local tenant validation hung and was stopped; `git diff --check` passed, so the tenant/team extraction should be confirmed through GitHub Actions.
+- Extracted public website lead ingestion into `src/modules/crm/` with repository functions, schemas, typed errors, idempotent public form handling, audit preservation, and a direct idempotency test.
+- Targeted local public lead validation hung without output and was stopped; continue to use `git diff --check` plus GitHub Actions for this checkpoint.

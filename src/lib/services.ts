@@ -5,12 +5,15 @@ import {
   createWebsiteDraft,
   defaultGarageOnboarding,
 } from "@/lib/generation";
-import { executeLeadFollowUpWorkflow } from "@/modules/workflows/engine";
 import { parseContactsCsv } from "@/modules/connectors/csv";
 import {
   verifyWebhookEndpointSignature,
   type WebhookSignatureInput,
 } from "@/modules/connectors/webhooks";
+import {
+  createLeadFromPayload,
+  submitPublicLead as submitPublicLeadDomain,
+} from "@/modules/crm";
 import {
   createSession,
   getSessionUser,
@@ -38,7 +41,6 @@ import {
   getTenantBySlug,
   getTenantContext,
   getTenantMembers,
-  getTenantOwnerId,
   getUserTenants,
   invitationSchema,
   orgSchema,
@@ -47,12 +49,9 @@ import {
   acceptInvitationSchema,
 } from "@/modules/tenants";
 import {
-  correlationId,
-  daysFromNow,
   id,
   nowIso,
   safeJson,
-  secureToken,
   toJson,
 } from "@/lib/security";
 import type {
@@ -256,7 +255,10 @@ export function createServices(db: DbClient) {
         message: string;
         idempotencyKey?: string;
       },
-    ) => submitPublicLead(db, slug, payload),
+    ) =>
+      submitPublicLeadDomain(db, slug, payload, {
+        getPublishedSite,
+      }),
     getDashboard: (userId: string, tenantId: string) =>
       getDashboard(db, userId, tenantId),
     getCrm: (userId: string, tenantId: string) => getCrm(db, userId, tenantId),
@@ -677,180 +679,6 @@ async function getPublishedSite(db: DbClient, slug: string) {
   };
 }
 
-async function submitPublicLead(
-  db: DbClient,
-  slug: string,
-  payload: {
-    name: string;
-    email: string;
-    phone: string;
-    message: string;
-    idempotencyKey?: string;
-  },
-) {
-  const site = await getPublishedSite(db, slug);
-  if (!site) {
-    throw new Error("Site introuvable ou non publie.");
-  }
-
-  const websiteId = site.website.id;
-  const tenantId = site.tenant.id;
-  const idempotencyKey = payload.idempotencyKey || secureToken();
-  const existing = await db.query<{ id: string }>(
-    "select id from form_submissions where tenant_id = $1 and idempotency_key = $2",
-    [tenantId, idempotencyKey],
-  );
-
-  if (existing.rows.length > 0) {
-    return existing.rows[0].id;
-  }
-
-  const result = await createLeadFromPayload(db, tenantId, {
-    name: payload.name,
-    email: payload.email,
-    phone: payload.phone,
-    message: payload.message,
-    source: "website",
-    pagePath: `/sites/${slug}`,
-    websiteId,
-  });
-
-  await db.query(
-    `insert into form_submissions (id, tenant_id, form_id, website_id, payload, created_contact_id, idempotency_key, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [
-      id("submission"),
-      tenantId,
-      null,
-      websiteId,
-      toJson(payload),
-      result.contactId,
-      idempotencyKey,
-      nowIso(),
-    ],
-  );
-  await audit(db, tenantId, "system", "form.submitted", "website", websiteId, {
-    source: "website",
-  });
-
-  return result.leadId;
-}
-
-async function createLeadFromPayload(
-  db: DbClient,
-  tenantId: string,
-  payload: {
-    name: string;
-    email: string;
-    phone: string;
-    message?: string;
-    source: string;
-    pagePath: string;
-    websiteId?: string;
-  },
-) {
-  const now = nowIso();
-  const normalizedEmail = payload.email.toLowerCase();
-  const ownerId = await getTenantOwnerId(db, tenantId);
-  let contactId: string;
-  const existing = await db.query<{ id: string }>(
-    "select id from contacts where tenant_id = $1 and email = $2",
-    [tenantId, normalizedEmail],
-  );
-
-  if (existing.rows[0]) {
-    contactId = existing.rows[0].id;
-    await db.query(
-      "update contacts set name = $1, phone = $2, status = $3, source = $4, updated_at = $5 where tenant_id = $6 and id = $7",
-      [payload.name, payload.phone, "A qualifier", payload.source, now, tenantId, contactId],
-    );
-  } else {
-    contactId = id("contact");
-    await db.query(
-      `insert into contacts (id, tenant_id, name, email, phone, status, source, tags, assigned_user_id, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [
-        contactId,
-        tenantId,
-        payload.name,
-        normalizedEmail,
-        payload.phone,
-        "Nouveau",
-        payload.source,
-        toJson([payload.source]),
-        ownerId,
-        now,
-        now,
-      ],
-    );
-    await audit(db, tenantId, "system", "contact.created", "contact", contactId, {
-      source: payload.source,
-    });
-  }
-
-  const leadId = id("lead");
-  await db.query(
-    `insert into leads (id, tenant_id, contact_id, source, status, opportunity_value, page_path, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [leadId, tenantId, contactId, payload.source, "Nouveau contact", 0, payload.pagePath, now],
-  );
-
-  const stage = await db.query<{ id: string }>(
-    "select id from pipeline_stages where tenant_id = $1 order by position asc limit 1",
-    [tenantId],
-  );
-  if (stage.rows[0]) {
-    await db.query(
-      `insert into opportunities (id, tenant_id, contact_id, stage_id, value_cents, next_follow_up_at, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [id("opp"), tenantId, contactId, stage.rows[0].id, 0, daysFromNow(1), now, now],
-    );
-  }
-
-  await db.query(
-    "insert into activities (id, tenant_id, type, summary, target_type, target_id, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      id("activity"),
-      tenantId,
-      "lead.created",
-      `Nouveau lead recu depuis ${payload.source}`,
-      "lead",
-      leadId,
-      now,
-    ],
-  );
-  await audit(db, tenantId, "system", "lead.created", "lead", leadId, {
-    source: payload.source,
-  });
-  await runDefaultLeadWorkflow(db, tenantId, leadId, contactId, ownerId, payload.source);
-
-  return { leadId, contactId };
-}
-
-async function runDefaultLeadWorkflow(
-  db: DbClient,
-  tenantId: string,
-  leadId: string,
-  contactId: string,
-  ownerId: string,
-  source: string,
-) {
-  const runId = await executeLeadFollowUpWorkflow(db, {
-    tenantId,
-    leadId,
-    contactId,
-    ownerId,
-    source,
-    correlationId: correlationId(),
-  });
-
-  if (runId) {
-    await audit(db, tenantId, "system", "workflow.executed", "workflow_run", runId, {
-      leadId,
-    });
-  }
-}
-
 async function getDashboard(db: DbClient, userId: string, tenantId: string) {
   await assertTenantAccess(db, userId, tenantId);
   const tenant = await getTenantById(db, tenantId);
@@ -1267,12 +1095,17 @@ async function seedDemo(db: DbClient) {
     tenant.id,
   ]);
   if (contacts.rows.length === 0) {
-    await submitPublicLead(db, tenant.slug, {
-      name: "Jonathan Pelage",
-      email: "jonathan.pelage@example.com",
-      phone: "+596 696 11 22 33",
-      message: "Bonjour, je souhaite un devis pour un diagnostic climatisation.",
-    });
+    await submitPublicLeadDomain(
+      db,
+      tenant.slug,
+      {
+        name: "Jonathan Pelage",
+        email: "jonathan.pelage@example.com",
+        phone: "+596 696 11 22 33",
+        message: "Bonjour, je souhaite un devis pour un diagnostic climatisation.",
+      },
+      { getPublishedSite },
+    );
   }
 
   return { user, tenant, password: "Tradikom!2026" };
