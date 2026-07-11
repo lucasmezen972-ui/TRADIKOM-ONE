@@ -40,9 +40,6 @@ export default async function ContactDetailPage({
   }
 
   const { contact, notes, consent, tasks, activities, opportunities } = detail;
-  const defaultDueAt = toDateInputValue(
-    new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  );
 
   return (
     <div className="grid gap-6">
@@ -173,7 +170,7 @@ export default async function ContactDetailPage({
               Notice acceptee
             </label>
             <label className="grid gap-2 text-sm font-semibold">
-              Conservation jusqu'au
+              Conservation jusqu&apos;au
               <input
                 type="date"
                 name="dataRetentionUntil"
@@ -208,7 +205,6 @@ export default async function ContactDetailPage({
                 required
                 type="date"
                 name="dueAt"
-                defaultValue={defaultDueAt}
                 className="rounded-md border border-slate-200 px-4 py-3"
               />
               <select
