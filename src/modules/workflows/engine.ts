@@ -44,11 +44,19 @@ export const leadFollowUpWorkflow: WorkflowDefinition =
 
 export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
   const now = nowIso();
-  const result = await db.query<{ id: string }>(
+  const existing = await db.query<{ id: string }>(
+    "select id from domain_events where tenant_id = $1 and idempotency_key = $2 limit 1",
+    [event.tenantId, event.idempotencyKey],
+  );
+
+  if (existing.rows[0]) {
+    return false;
+  }
+
+  await db.query(
     `insert into domain_events (id, tenant_id, actor_id, event_type, payload, status, attempts, idempotency_key, correlation_id, causation_id, next_run_at, last_error, created_at, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-     on conflict (tenant_id, idempotency_key) do nothing
-     returning id`,
+     on conflict (tenant_id, idempotency_key) do nothing`,
     [
       event.id,
       event.tenantId,
@@ -67,7 +75,7 @@ export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
     ],
   );
 
-  return Boolean(result.rows[0]);
+  return true;
 }
 
 export async function executeLeadFollowUpWorkflow(
