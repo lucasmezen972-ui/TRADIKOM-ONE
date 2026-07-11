@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-1. Continue workflow engine depth: durable delayed resumption, cancellation, approval/rejection actions, manual retry, dead-letter visibility, retry/backoff execution attempts, and domain-specific async handlers beyond the synchronous lead workflow.
+1. Continue workflow engine depth: durable delayed resumption after waits/approvals/manual retries, cancellation checks during resume, dead-letter visibility, persisted execution attempts, and domain-specific async handlers beyond the synchronous lead workflow.
 2. Expand Playwright for draft edit while published site remains available.
 3. Add real email delivery for password reset and invitation links.
 4. Adopt `withTenantTransaction` across tenant service paths.

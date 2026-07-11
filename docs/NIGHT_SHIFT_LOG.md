@@ -53,3 +53,6 @@
 - Seeded new tenants with the full `leadFollowUpWorkflow` definition instead of the old partial JSON shape, and added focused workflow-engine tests for persisted tenant behavior, replay idempotency, tenant isolation, and approval stops.
 - Local workflow validation still hung (`pnpm exec vitest run tests/workflow-engine.test.ts`, one-off TypeScript, and `tsx` startup all stalled and were stopped), while targeted `git diff --check` passed.
 - GitHub Actions passed for workflow engine checkpoint commit `46a0164`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- Added workflow run controls in `src/modules/workflows/`: tenant-authorized cancel, approve, reject, and manual retry services; server actions; Automatisations UI controls; control timeline entries; audit logs; and integration tests for status transitions and tenant isolation.
+- Local Node validation was skipped for the workflow controls checkpoint because the local tooling remained unreliable; the changed files were manually inspected and staged explicitly.
+- GitHub Actions passed for workflow controls commit `73cef7b`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.

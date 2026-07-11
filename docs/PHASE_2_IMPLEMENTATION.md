@@ -23,6 +23,7 @@
 - Gated public demo outside local development unless `FEATURE_PUBLIC_DEMO=true`.
 - Introduced workflow definition schema, domain event enqueueing, a workflow action executor, and a worker entry point with durable batch processing, retries, and stale processing requeue.
 - Switched lead follow-up behavior to the workflow engine rather than inline special-case task creation.
+- Added workflow run controls for cancellation, approval, rejection, and manual retry with tenant authorization, audit logs, timeline entries, server actions, UI controls, and integration coverage.
 - Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC verification for configured endpoint secrets, and AES-256-GCM credential encryption helpers.
 - Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import row persistence, and webhook delivery logging into `src/modules/connectors/`.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
@@ -33,5 +34,5 @@
 ## Still incomplete
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
-- Email delivery for auth links, approval workflows, delayed workflows, persisted workflow definitions/action registry, and connector UI mapping are not complete.
-- The worker is a durable batch dispatcher, but still needs a long-running polling loop, dead-letter UI, and domain-specific async handlers beyond the synchronous lead workflow.
+- Email delivery for auth links, durable approval resumption, delayed workflows, and connector UI mapping are not complete.
+- The worker is a durable batch dispatcher, but still needs a long-running polling loop, dead-letter UI, persisted action attempts, durable delayed/approval/manual retry resumption, and domain-specific async handlers beyond the synchronous lead workflow.
