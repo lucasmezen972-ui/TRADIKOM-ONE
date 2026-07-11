@@ -36,7 +36,7 @@ Last completed checkpoint:
 - Workflow step attempt metadata is persisted: `workflow_run_steps` now records attempt counts, scheduled/start/completion timestamps, safe error summaries, and tests assert completed action attempts.
 - Workflow dead-letter manual recovery is implemented: authorized workflow operators can requeue failed terminal `domain_events` from Automatisations, reset attempts for a fresh worker retry window, clear safe errors, and audit the action.
 - Domain event retry/backoff metadata is persisted: worker claims, retries, and terminal failures now record last attempted time, computed retry delay, failure classification, and max attempts.
-- The worker has its first domain-specific async handler beyond workflow resume: `connector.sync_requested` dispatches the mock connector sync through the durable outbox path with connector state updates, sync/activity rows, and audit logging.
+- The worker has domain-specific async handlers beyond workflow resume: `connector.sync_requested` dispatches the mock connector sync through the durable outbox path, and `lead.created` now drives lead follow-up workflow runs from the worker after public form ingestion enqueues the durable event.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
@@ -90,9 +90,10 @@ Current validation note:
 - During the workflow dead-letter recovery checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` passed, so validate this checkpoint through GitHub Actions after push.
 - During the workflow retry metadata checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. GitHub Actions then caught a retry-metadata type mismatch and SQL null-parameter issue in commits `ea706aa` and `b6d4950`; fix commit `04dfc73` passed migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the connector sync domain-event handler checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. GitHub Actions passed for commit `020051e`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the lead workflow worker checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts tests/public-leads-module.test.ts tests/vertical-slice.test.ts tests/crm-module.test.ts`) hung without output and was stopped after 30 seconds. Unstaged `git diff --check` also hung and was stopped, while staged `git diff --cached --check` passed. GitHub Actions passed for commit `3bf22e4`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Continue Phase 2 workflow engine depth: additional domain-specific async handlers beyond the lead follow-up path and deeper operational recovery views beyond the current dead-letter requeue control.
+1. Continue Phase 2 workflow engine depth: additional domain-specific async handlers beyond lead and connector sync, plus deeper operational recovery views beyond the current dead-letter requeue control.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
