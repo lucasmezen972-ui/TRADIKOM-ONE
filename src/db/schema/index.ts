@@ -101,6 +101,24 @@ export const contacts = pgTable(
   (table) => [unique().on(table.tenantId, table.email)],
 );
 
+export const contactMergeRecords = pgTable(
+  "contact_merge_records",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    survivorContactId: text("survivor_contact_id").notNull(),
+    mergedContactId: text("merged_contact_id").notNull(),
+    reason: text("reason").notNull(),
+    selectedFields: text("selected_fields").notNull(),
+    mergedSnapshot: text("merged_snapshot").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [unique().on(table.tenantId, table.mergedContactId)],
+);
+
 export const leads = pgTable("leads", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id")

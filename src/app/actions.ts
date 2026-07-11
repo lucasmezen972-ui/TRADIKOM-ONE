@@ -307,6 +307,44 @@ export async function completeContactTaskAction(formData: FormData) {
   revalidatePath(`/contacts/${contactId}`);
 }
 
+export async function mergeContactsAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const leftContactId = text(formData, "leftContactId");
+  const rightContactId = text(formData, "rightContactId");
+  const survivorContactId = text(formData, "survivorContactId");
+  const mergedContactId =
+    survivorContactId === leftContactId ? rightContactId : leftContactId;
+
+  if (![leftContactId, rightContactId].includes(survivorContactId)) {
+    throw new Error("Le contact survivant est invalide.");
+  }
+
+  const mergeRecord = await services.mergeContacts(user.id, tenant.id, {
+    survivorContactId,
+    mergedContactId,
+    reason: text(formData, "reason"),
+    confirm: formData.get("confirmMerge") === "on",
+    fieldSources: {
+      name: mergeFieldSource(formData, "nameSource", survivorContactId),
+      email: mergeFieldSource(formData, "emailSource", survivorContactId),
+      phone: mergeFieldSource(formData, "phoneSource", survivorContactId),
+      status: mergeFieldSource(formData, "statusSource", survivorContactId),
+      source: mergeFieldSource(formData, "sourceSource", survivorContactId),
+      assignedUserId: mergeFieldSource(
+        formData,
+        "assignedUserIdSource",
+        survivorContactId,
+      ),
+    },
+  });
+
+  revalidatePath("/contacts");
+  revalidatePath("/contacts/doublons");
+  revalidatePath(`/contacts/${survivorContactId}`);
+  redirect(`/contacts/${mergeRecord.survivorContactId}`);
+}
+
 export async function updateOpportunityAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
@@ -377,4 +415,13 @@ function list(formData: FormData, key: string) {
 function moneyToCents(value: string) {
   const amount = Number.parseFloat(value.replace(",", "."));
   return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+}
+
+function mergeFieldSource(
+  formData: FormData,
+  key: string,
+  survivorContactId: string,
+) {
+  const value = text(formData, key);
+  return value && value !== survivorContactId ? "merged" : "survivor";
 }

@@ -69,6 +69,32 @@ export const opportunityUpdateSchema = z.object({
   lostReason: z.string().optional(),
 });
 
+export const contactMergeFieldSourceSchema = z.enum(["survivor", "merged"]);
+
+export const contactMergeSchema = z.object({
+  survivorContactId: z.string().min(1),
+  mergedContactId: z.string().min(1),
+  reason: z.string().min(3),
+  confirm: z.boolean().refine((value) => value, {
+    message: "La confirmation explicite est requise.",
+  }),
+  fieldSources: z
+    .object({
+      name: contactMergeFieldSourceSchema.optional(),
+      email: contactMergeFieldSourceSchema.optional(),
+      phone: contactMergeFieldSourceSchema.optional(),
+      status: contactMergeFieldSourceSchema.optional(),
+      source: contactMergeFieldSourceSchema.optional(),
+      assignedUserId: contactMergeFieldSourceSchema.optional(),
+    })
+    .default({}),
+});
+
+export const duplicatePairSchema = z.object({
+  leftContactId: z.string().min(1),
+  rightContactId: z.string().min(1),
+});
+
 export type PublicLeadInput = z.input<typeof publicLeadSchema>;
 export type LeadIngestionInput = z.input<typeof leadIngestionSchema>;
 export type TenantContactLookupInput = z.input<typeof tenantContactLookupSchema>;
@@ -79,3 +105,4 @@ export type ContactTaskInput = z.input<typeof contactTaskSchema>;
 export type CompleteTaskInput = z.input<typeof completeTaskSchema>;
 export type OpportunityFiltersInput = z.input<typeof opportunityFiltersSchema>;
 export type OpportunityUpdateInput = z.input<typeof opportunityUpdateSchema>;
+export type ContactMergeInput = z.input<typeof contactMergeSchema>;

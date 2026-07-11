@@ -93,9 +93,33 @@ type OpportunityListRow = OpportunityRow & {
   contact_email: string;
 };
 
+type ContactMergeRecordRow = {
+  id: string;
+  tenant_id: string;
+  survivor_contact_id: string;
+  merged_contact_id: string;
+  reason: string;
+  selected_fields: string;
+  merged_snapshot: string;
+  created_by: string;
+  created_at: string;
+};
+
 export async function listContacts(db: DbClient, tenantId: string) {
   const contacts = await db.query<ContactRow>(
     "select * from contacts where tenant_id = $1 order by updated_at desc",
+    [tenantId],
+  );
+
+  return contacts.rows.map(mapContact);
+}
+
+export async function listContactsForDuplicateReview(
+  db: DbClient,
+  tenantId: string,
+) {
+  const contacts = await db.query<ContactRow>(
+    "select * from contacts where tenant_id = $1 order by updated_at desc, id asc",
     [tenantId],
   );
 
@@ -148,6 +172,19 @@ export async function findContactById(
   return contact.rows[0] ? mapContact(contact.rows[0]) : null;
 }
 
+export async function findContactMergeRecordByMergedContactId(
+  db: DbClient,
+  tenantId: string,
+  mergedContactId: string,
+) {
+  const result = await db.query<ContactMergeRecordRow>(
+    "select * from contact_merge_records where tenant_id = $1 and merged_contact_id = $2",
+    [tenantId, mergedContactId],
+  );
+
+  return result.rows[0] ? mapContactMergeRecord(result.rows[0]) : null;
+}
+
 export async function updateContact(
   db: DbClient,
   input: {
@@ -179,6 +216,212 @@ export async function updateContact(
   );
 
   return result.rows[0] ? mapContact(result.rows[0]) : null;
+}
+
+export async function updateMergedContactSurvivor(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    contactId: string;
+    name: string;
+    email: string;
+    phone: string;
+    status: string;
+    source: string;
+    tags: string;
+    assignedUserId: string | null;
+    updatedAt: string;
+  },
+) {
+  const result = await db.query<ContactRow>(
+    `update contacts
+     set name = $1,
+         email = $2,
+         phone = $3,
+         status = $4,
+         source = $5,
+         tags = $6,
+         assigned_user_id = $7,
+         updated_at = $8
+     where tenant_id = $9 and id = $10
+     returning *`,
+    [
+      input.name,
+      input.email,
+      input.phone,
+      input.status,
+      input.source,
+      input.tags,
+      input.assignedUserId,
+      input.updatedAt,
+      input.tenantId,
+      input.contactId,
+    ],
+  );
+
+  return result.rows[0] ? mapContact(result.rows[0]) : null;
+}
+
+export async function reassignMergedContactReferences(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    survivorContactId: string;
+    mergedContactId: string;
+    updatedAt: string;
+  },
+) {
+  const params = [
+    input.survivorContactId,
+    input.tenantId,
+    input.mergedContactId,
+  ];
+
+  await db.query(
+    "update leads set contact_id = $1 where tenant_id = $2 and contact_id = $3",
+    params,
+  );
+  await db.query(
+    "update opportunities set contact_id = $1 where tenant_id = $2 and contact_id = $3",
+    params,
+  );
+  await db.query(
+    "update notes set target_id = $1 where tenant_id = $2 and target_type = $4 and target_id = $3",
+    [...params, "contact"],
+  );
+  await db.query(
+    "update tasks set related_id = $1 where tenant_id = $2 and related_type = $4 and related_id = $3",
+    [...params, "contact"],
+  );
+  await db.query(
+    "update activities set target_id = $1 where tenant_id = $2 and target_type = $4 and target_id = $3",
+    [...params, "contact"],
+  );
+  await db.query(
+    "update form_submissions set created_contact_id = $1 where tenant_id = $2 and created_contact_id = $3",
+    params,
+  );
+  await db.query(
+    "update external_record_mappings set internal_id = $1 where tenant_id = $2 and internal_type = $4 and internal_id = $3",
+    [...params, "contact"],
+  );
+  await db.query(
+    "update domain_events set payload = replace(payload, $3, $1), updated_at = $5 where tenant_id = $2 and payload like $4",
+    [
+      input.survivorContactId,
+      input.tenantId,
+      input.mergedContactId,
+      `%${input.mergedContactId}%`,
+      input.updatedAt,
+    ],
+  );
+  await db.query(
+    "update workflow_run_steps set safe_metadata = replace(safe_metadata, $3, $1) where tenant_id = $2 and safe_metadata like $4",
+    [
+      input.survivorContactId,
+      input.tenantId,
+      input.mergedContactId,
+      `%${input.mergedContactId}%`,
+    ],
+  );
+}
+
+export async function mergeContactConsents(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    survivorContactId: string;
+    mergedContactId: string;
+  },
+) {
+  const survivor = await findContactConsent(
+    db,
+    input.tenantId,
+    input.survivorContactId,
+  );
+  const merged = await findContactConsent(
+    db,
+    input.tenantId,
+    input.mergedContactId,
+  );
+
+  if (!merged) {
+    return;
+  }
+
+  if (!survivor) {
+    await db.query(
+      "update contact_consents set contact_id = $1 where tenant_id = $2 and contact_id = $3",
+      [input.survivorContactId, input.tenantId, input.mergedContactId],
+    );
+    return;
+  }
+
+  await db.query(
+    `update contact_consents
+     set marketing_opt_in = $1,
+         privacy_notice_accepted_at = $2,
+         data_retention_until = $3
+     where tenant_id = $4 and id = $5`,
+    [
+      survivor.marketingOptIn || merged.marketingOptIn ? 1 : 0,
+      survivor.privacyNoticeAcceptedAt ?? merged.privacyNoticeAcceptedAt ?? null,
+      survivor.dataRetentionUntil ?? merged.dataRetentionUntil ?? null,
+      input.tenantId,
+      survivor.id,
+    ],
+  );
+  await db.query(
+    "delete from contact_consents where tenant_id = $1 and contact_id = $2",
+    [input.tenantId, input.mergedContactId],
+  );
+}
+
+export async function deleteMergedContact(
+  db: DbClient,
+  tenantId: string,
+  mergedContactId: string,
+) {
+  await db.query("delete from contacts where tenant_id = $1 and id = $2", [
+    tenantId,
+    mergedContactId,
+  ]);
+}
+
+export async function insertContactMergeRecord(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    survivorContactId: string;
+    mergedContactId: string;
+    reason: string;
+    selectedFields: string;
+    mergedSnapshot: string;
+    createdBy: string;
+    createdAt: string;
+  },
+) {
+  const result = await db.query<ContactMergeRecordRow>(
+    `insert into contact_merge_records
+       (id, tenant_id, survivor_contact_id, merged_contact_id, reason, selected_fields, merged_snapshot, created_by, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     on conflict (tenant_id, merged_contact_id) do nothing
+     returning *`,
+    [
+      input.id,
+      input.tenantId,
+      input.survivorContactId,
+      input.mergedContactId,
+      input.reason,
+      input.selectedFields,
+      input.mergedSnapshot,
+      input.createdBy,
+      input.createdAt,
+    ],
+  );
+
+  return result.rows[0] ? mapContactMergeRecord(result.rows[0]) : null;
 }
 
 export async function listContactNotes(
@@ -748,6 +991,23 @@ function mapContact(row: ContactRow): Contact {
     assignedUserId: row.assigned_user_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function mapContactMergeRecord(row: ContactMergeRecordRow) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    survivorContactId: row.survivor_contact_id,
+    mergedContactId: row.merged_contact_id,
+    reason: row.reason,
+    selectedFields: safeJson<Record<string, "survivor" | "merged">>(
+      row.selected_fields,
+      {},
+    ),
+    mergedSnapshot: safeJson<Record<string, unknown>>(row.merged_snapshot, {}),
+    createdBy: row.created_by,
+    createdAt: row.created_at,
   };
 }
 

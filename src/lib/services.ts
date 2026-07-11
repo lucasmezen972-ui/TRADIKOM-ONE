@@ -15,6 +15,7 @@ import {
 import {
   addContactNote,
   completeContactTask,
+  contactMergeSchema,
   contactConsentSchema,
   contactNoteSchema,
   contactTaskSchema,
@@ -22,10 +23,13 @@ import {
   createContactTask,
   findContactForTenant,
   getContactDetail,
+  getContactDuplicateCandidates,
   getCrm,
+  getDuplicatePairDetail,
   getOpportunities,
   getOpportunityDetail,
   getTenantActivities,
+  mergeContacts,
   opportunityFiltersSchema,
   opportunityUpdateSchema,
   submitPublicLead as submitPublicLeadDomain,
@@ -238,6 +242,26 @@ export function createServices(db: DbClient) {
     ) => updateOpportunity(db, userId, tenantId, opportunityId, input),
     getContactDetail: (userId: string, tenantId: string, contactId: string) =>
       getContactDetail(db, userId, tenantId, contactId),
+    getContactDuplicateCandidates: (userId: string, tenantId: string) =>
+      getContactDuplicateCandidates(db, userId, tenantId),
+    getDuplicatePairDetail: (
+      userId: string,
+      tenantId: string,
+      leftContactId: string,
+      rightContactId: string,
+    ) =>
+      getDuplicatePairDetail(
+        db,
+        userId,
+        tenantId,
+        leftContactId,
+        rightContactId,
+      ),
+    mergeContacts: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof contactMergeSchema>,
+    ) => mergeContacts(db, userId, tenantId, input),
     updateContact: (
       userId: string,
       tenantId: string,

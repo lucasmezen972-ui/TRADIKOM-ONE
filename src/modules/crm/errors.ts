@@ -4,7 +4,10 @@ export type CrmErrorCode =
   | "contact_not_found"
   | "task_not_found"
   | "opportunity_not_found"
-  | "stage_not_found";
+  | "stage_not_found"
+  | "duplicate_pair_not_found"
+  | "duplicate_merge_invalid"
+  | "contact_already_merged";
 
 export class CrmError extends Error {
   constructor(

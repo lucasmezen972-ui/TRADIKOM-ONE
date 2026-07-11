@@ -11,9 +11,17 @@ export default async function ContactsPage() {
 
   return (
     <div className="grid gap-6">
-      <header>
-        <p className="text-sm uppercase tracking-[0.16em] text-slate-500">CRM</p>
-        <h1 className="mt-1 text-4xl font-bold">Contacts et leads</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm uppercase tracking-[0.16em] text-slate-500">CRM</p>
+          <h1 className="mt-1 text-4xl font-bold">Contacts et leads</h1>
+        </div>
+        <Link
+          href="/contacts/doublons"
+          className="inline-flex rounded-md bg-[#08111f] px-4 py-3 font-semibold text-white"
+        >
+          Revoir les doublons
+        </Link>
       </header>
 
       <section className="rounded-lg bg-white p-5 shadow-sm">

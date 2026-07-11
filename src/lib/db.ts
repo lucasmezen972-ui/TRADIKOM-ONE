@@ -111,6 +111,10 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls ? [{ id: "003_rls", sql: rlsMigrationSql }] : []),
     { id: "004_auth_flows", sql: authFlowsMigrationSql },
     { id: "005_crm_opportunity_depth", sql: crmOpportunityDepthMigrationSql },
+    { id: "006_crm_contact_merges", sql: crmContactMergesMigrationSql },
+    ...(enableRls
+      ? [{ id: "007_crm_contact_merges_rls", sql: crmContactMergesRlsMigrationSql }]
+      : []),
   ];
 }
 
@@ -248,6 +252,19 @@ create table contacts (
   created_at text not null,
   updated_at text not null,
   unique (tenant_id, email)
+);
+
+create table contact_merge_records (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  survivor_contact_id text not null,
+  merged_contact_id text not null,
+  reason text not null,
+  selected_fields text not null,
+  merged_snapshot text not null,
+  created_by text not null,
+  created_at text not null,
+  unique (tenant_id, merged_contact_id)
 );
 
 create table companies (
@@ -647,6 +664,30 @@ const crmOpportunityDepthMigrationSql = `
 alter table opportunities add column if not exists lost_reason text;
 `;
 
+const crmContactMergesMigrationSql = `
+create table if not exists contact_merge_records (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  survivor_contact_id text not null,
+  merged_contact_id text not null,
+  reason text not null,
+  selected_fields text not null,
+  merged_snapshot text not null,
+  created_by text not null,
+  created_at text not null,
+  unique (tenant_id, merged_contact_id)
+);
+`;
+
+const crmContactMergesRlsMigrationSql = `
+alter table contact_merge_records enable row level security;
+
+drop policy if exists tenant_contact_merge_records on contact_merge_records;
+create policy tenant_contact_merge_records on contact_merge_records
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
 const rlsMigrationSql = `
 create or replace function app_current_tenant_id()
 returns text
@@ -667,6 +708,7 @@ $$;
 alter table business_profiles enable row level security;
 alter table knowledge_documents enable row level security;
 alter table contacts enable row level security;
+alter table contact_merge_records enable row level security;
 alter table companies enable row level security;
 alter table contact_consents enable row level security;
 alter table pipelines enable row level security;
@@ -705,6 +747,11 @@ alter table connector_secret_versions enable row level security;
 
 drop policy if exists tenant_contacts on contacts;
 create policy tenant_contacts on contacts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_contact_merge_records on contact_merge_records;
+create policy tenant_contact_merge_records on contact_merge_records
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 
