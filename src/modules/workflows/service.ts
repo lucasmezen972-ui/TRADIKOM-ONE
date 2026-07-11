@@ -93,12 +93,7 @@ export async function approveWorkflowRun(
     actorId: userId,
     approvalId: approval.id,
   });
-  await enqueueResumeForLatestWorkflowAction(db, {
-    tenantId,
-    runId: run.id,
-    actorId: userId,
-    reason: "approval_granted",
-  });
+  await enqueueApprovalResumeWhenPossible(db, tenantId, run.id, userId);
   await auditWorkflowControl(db, tenantId, userId, "workflow.approved", run.id);
 }
 
@@ -258,6 +253,31 @@ async function auditWorkflowControl(
     targetId: runId,
     metadata: {},
   });
+}
+
+async function enqueueApprovalResumeWhenPossible(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+  actorId: string,
+) {
+  try {
+    await enqueueResumeForLatestWorkflowAction(db, {
+      tenantId,
+      runId,
+      actorId,
+      reason: "approval_granted",
+    });
+  } catch (error) {
+    if (
+      error instanceof WorkflowError &&
+      error.code === "workflow_run_not_actionable"
+    ) {
+      return;
+    }
+
+    throw error;
+  }
 }
 
 function mapWorkflowRun(row: {
