@@ -21,3 +21,5 @@
 - Retried the `next/image` cleanup validation one hour later; `next/image` import and `git diff --check` passed, but ESLint import and `pnpm typecheck` still hung, so nothing was committed or pushed.
 - Retried again; local Node validation still hung, but manual diff inspection and `git diff --check` passed, so the cleanup was prepared for CI validation on PR #1.
 - Pushed the `next/image` cleanup as commit `093080f`; GitHub Actions passed and the previous `<img>` lint warning disappeared.
+- Added durable batch processing for `domain_events`: processing claims, retry backoff, stale processing requeue, terminal failures, and targeted worker tests.
+- Targeted local worker validation hung and `git diff --check` exited abnormally without output, so the worker checkpoint should be confirmed through GitHub Actions.

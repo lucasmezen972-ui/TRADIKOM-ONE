@@ -12,7 +12,7 @@
 - Added password reset request and completion flows with hashed single-use tokens and session revocation after password change.
 - Added invitation creation, acceptance, pending invitation display, and member role updates for non-owner roles.
 - Gated public demo outside local development unless `FEATURE_PUBLIC_DEMO=true`.
-- Introduced workflow definition schema, domain event enqueueing, a workflow action executor, and a worker entry point.
+- Introduced workflow definition schema, domain event enqueueing, a workflow action executor, and a worker entry point with durable batch processing, retries, and stale processing requeue.
 - Switched lead follow-up behavior to the workflow engine rather than inline special-case task creation.
 - Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC helper, and AES-256-GCM credential encryption helpers.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
@@ -24,4 +24,4 @@
 
 - Full service modularization is started but the legacy `src/lib/services.ts` remains the central adapter.
 - Email delivery for auth links, CRM mutation depth, approval workflows, delayed workflows, and connector UI mapping are not complete.
-- The worker is a foundation entry point, not a long-running durable dispatcher yet.
+- The worker is a durable batch dispatcher, but still needs a long-running polling loop, dead-letter UI, and domain-specific async handlers beyond the synchronous lead workflow.

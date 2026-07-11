@@ -17,6 +17,7 @@ Last completed checkpoint:
 - Invitations can be created, accepted once, listed as pending, and used for non-owner role administration.
 - PostgreSQL RLS integration test added for restricted-role tenant isolation and cross-tenant write rejection.
 - Public-site hero images now use `next/image` with `images.unsplash.com` explicitly allowlisted.
+- Workflow worker now processes due `domain_events` batches durably with processing claims, retry backoff, stale processing requeue, terminal failures, and targeted unit coverage.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -32,10 +33,11 @@ Current validation note:
 - On the 2026-07-11 06:48 UTC heartbeat, full and targeted Node-based validation commands (`pnpm lint`, `pnpm typecheck`, `pnpm build`, direct ESLint, direct tsc) repeatedly hung and were stopped with a 60s guard.
 - On the 2026-07-11 07:48 UTC heartbeat, PR #1 was still green at `bb367bf`; local `next/image` cleanup validation was retried. `next/image` eventually imported successfully, `git diff --check` passed, but ESLint import and `pnpm typecheck` still hung, so the draft was left uncommitted.
 - On the 2026-07-11 08:48 UTC heartbeat, local validation still hung, but manual diff inspection and `git diff --check` passed. The cleanup was committed and pushed so GitHub Actions can run the full validation in the stable CI environment.
+- On the 2026-07-11 09:49 UTC heartbeat, targeted local worker validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung and `git diff --check` exited abnormally without output, matching the known local Node/tooling instability. The worker change was manually inspected and should be validated through GitHub Actions after push.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
 
-1. Continue converting `src/lib/services.ts` into bounded modules, or make the workflow worker process pending events durably.
+1. Continue converting `src/lib/services.ts` into bounded modules, or wire webhook HMAC verification to endpoint secrets.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
