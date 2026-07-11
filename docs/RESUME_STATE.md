@@ -77,6 +77,7 @@ Current validation note:
 - GitHub Actions passed on PR #1 for durable workflow resumption fix commit `a27045a`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 - During the worker polling checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --stat` also hung without output and were stopped, so this checkpoint should be validated through GitHub Actions after push.
+- GitHub Actions passed on PR #1 for worker polling commit `64c9bf3`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
