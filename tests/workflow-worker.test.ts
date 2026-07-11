@@ -4,6 +4,7 @@ import {
   getPendingDomainEventCount,
   processPendingDomainEvents,
 } from "../src/modules/workflows/worker";
+import { getWorkflowDeadLetters } from "../src/modules/workflows";
 import {
   parseWorkerConfig,
   runWorkerPoll,
@@ -200,16 +201,65 @@ describe("workflow worker", () => {
       }),
     ).toEqual({ mode: "once", batchSize: 25, pollIntervalMs: 100 });
   });
+
+  it("lists failed domain events as tenant-isolated dead letters", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_dead_letters", "user_dead_letters");
+    await seedTenant(db, "tenant_other_dead_letters", "user_other_dead_letters");
+    await insertDomainEvent(db, {
+      id: "event_dead_letter",
+      tenantId: "tenant_dead_letters",
+      eventType: "workflow.resume",
+      status: "failed",
+      attempts: 3,
+      lastError: "Worker failed permanently. token=secret",
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+    await insertDomainEvent(db, {
+      id: "event_other_dead_letter",
+      tenantId: "tenant_other_dead_letters",
+      eventType: "workflow.resume",
+      status: "failed",
+      attempts: 3,
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    const deadLetters = await getWorkflowDeadLetters(
+      db,
+      "user_dead_letters",
+      "tenant_dead_letters",
+    );
+
+    await expect(
+      getWorkflowDeadLetters(
+        db,
+        "user_other_dead_letters",
+        "tenant_dead_letters",
+      ),
+    ).rejects.toThrow("Acces refuse");
+
+    expect(deadLetters).toEqual([
+      expect.objectContaining({
+        id: "event_dead_letter",
+        tenantId: "tenant_dead_letters",
+        eventType: "workflow.resume",
+        attempts: 3,
+        lastError: "Worker failed permanently. token=[redacted]",
+      }),
+    ]);
+  });
 });
 
 async function insertDomainEvent(
   db: DbClient,
   overrides: {
     id: string;
+    tenantId?: string;
     eventType: string;
     payload?: Record<string, unknown>;
     status?: string;
     attempts?: number;
+    lastError?: string;
     nextRunAt?: string;
     updatedAt?: string;
   },
@@ -235,7 +285,7 @@ async function insertDomainEvent(
     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       overrides.id,
-      "tenant_worker",
+      overrides.tenantId ?? "tenant_worker",
       "system",
       overrides.eventType,
       JSON.stringify(overrides.payload ?? {}),
@@ -245,10 +295,28 @@ async function insertDomainEvent(
       `${overrides.id}:correlation`,
       null,
       overrides.nextRunAt ?? createdAt,
-      null,
+      overrides.status === "failed"
+        ? overrides.lastError ?? "Worker failed permanently."
+        : null,
       createdAt,
       overrides.updatedAt ?? createdAt,
     ],
+  );
+}
+
+async function seedTenant(db: DbClient, tenantId: string, userId: string) {
+  const now = "2026-07-11T09:00:00.000Z";
+  await db.query(
+    "insert into users (id, name, email, password_hash, created_at) values ($1, $2, $3, $4, $5)",
+    [userId, userId, `${userId}@example.com`, "hash", now],
+  );
+  await db.query(
+    "insert into tenants (id, name, slug, category, created_at) values ($1, $2, $3, $4, $5)",
+    [tenantId, tenantId, tenantId.replaceAll("_", "-"), "Garage", now],
+  );
+  await db.query(
+    "insert into memberships (tenant_id, user_id, role, created_at) values ($1, $2, $3, $4)",
+    [tenantId, userId, "owner", now],
   );
 }
 

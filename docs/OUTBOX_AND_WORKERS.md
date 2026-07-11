@@ -33,6 +33,9 @@ WORKER_MODE=poll WORKER_POLL_INTERVAL_MS=5000 WORKER_BATCH_SIZE=25 pnpm worker
   signal handling, shutdown, and errors;
 - `SIGTERM` and `SIGINT` request graceful shutdown and database resources are closed
   before the process exits.
+- failed terminal events are visible from Automatisations as tenant-scoped
+  incidents with redacted error messages, attempts, correlation IDs, and update
+  timestamps.
 
 The lead workflow is backed by persisted workflow definitions and durable
 `workflow.resume` events. Wait actions, approval decisions, and manual retry now
@@ -40,7 +43,6 @@ resume through the outbox worker rather than a hidden in-memory path.
 
 Remaining work:
 
-- dead-letter UI;
 - richer persisted action-attempt metadata;
 - domain-specific async handlers beyond the lead workflow;
-- operator screens for failed workflow runs and domain events.
+- manual operator recovery controls for failed domain events.

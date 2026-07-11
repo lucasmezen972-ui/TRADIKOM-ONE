@@ -1,6 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
-import type { Role, WorkflowRun } from "@/lib/types";
+import type { Role, WorkflowDeadLetterEvent, WorkflowRun } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import { assertTenantAccess } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows/errors";
@@ -13,6 +13,7 @@ import {
   findPendingApprovalForRun,
   findWorkflowRunById,
   insertWorkflowRunStep,
+  listFailedDomainEventRows,
   listWorkflowRunRows,
   updateApprovalStatus,
   updateWorkflowRunStatus,
@@ -33,6 +34,17 @@ export async function getWorkflowRuns(
   const runs = await listWorkflowRunRows(db, tenantId, 20);
 
   return runs.map(mapWorkflowRun) satisfies WorkflowRun[];
+}
+
+export async function getWorkflowDeadLetters(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  await assertTenantAccess(db, userId, tenantId);
+  const events = await listFailedDomainEventRows(db, tenantId, 20);
+
+  return events.map(mapWorkflowDeadLetter) satisfies WorkflowDeadLetterEvent[];
 }
 
 export async function cancelWorkflowRun(
@@ -298,6 +310,41 @@ function mapWorkflowRun(row: {
     summary: row.summary,
     createdAt: row.created_at,
   };
+}
+
+function mapWorkflowDeadLetter(row: {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  attempts: number;
+  correlation_id: string;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    eventType: row.event_type,
+    attempts: Number(row.attempts),
+    lastError: safeDeadLetterError(row.last_error),
+    correlationId: row.correlation_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function safeDeadLetterError(value: string | null) {
+  const fallback = "Erreur terminale sans detail.";
+  const message = value?.trim() ? value.trim() : fallback;
+  return message
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]")
+    .replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]")
+    .replace(
+      /(password|token|secret|api[_-]?key)=\S+/gi,
+      "$1=[redacted]",
+    )
+    .slice(0, 280);
 }
 
 function isTerminalStatus(status: string) {

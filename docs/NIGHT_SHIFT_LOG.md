@@ -62,3 +62,4 @@
 - GitHub Actions initially failed commit `ba42a11` on a legacy controls fixture without an action cursor; commit `a27045a` keeps that historical control path compatible and both PR #1 CI runs passed end-to-end.
 - Added worker polling runtime support: `WORKER_MODE=once|poll`, configurable batch size and interval, structured JSON startup/heartbeat/batch/shutdown logs, graceful `SIGTERM`/`SIGINT` shutdown, and tests for polling cadence, bounded sleeps, configuration parsing, and signal stop behavior.
 - GitHub Actions passed for worker polling commit `64c9bf3`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- Added workflow dead-letter visibility: failed terminal `domain_events` now appear in Automatisations as tenant-scoped incidents with attempts, correlation IDs, timestamps, redacted errors, and test coverage for tenant isolation.

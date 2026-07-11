@@ -196,6 +196,17 @@ export type WorkflowRun = {
   createdAt: string;
 };
 
+export type WorkflowDeadLetterEvent = {
+  id: string;
+  tenantId: string;
+  eventType: string;
+  attempts: number;
+  lastError: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ConnectorCard = {
   key: string;
   name: string;

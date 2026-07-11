@@ -87,6 +87,7 @@ import {
 import {
   approveWorkflowRun,
   cancelWorkflowRun,
+  getWorkflowDeadLetters,
   getWorkflowRuns,
   leadFollowUpWorkflow,
   rejectWorkflowRun,
@@ -322,6 +323,8 @@ export function createServices(db: DbClient) {
     ) => receiveWebhook(db, token, payload, signatureInput),
     getWorkflowRuns: (userId: string, tenantId: string) =>
       getWorkflowRuns(db, userId, tenantId),
+    getWorkflowDeadLetters: (userId: string, tenantId: string) =>
+      getWorkflowDeadLetters(db, userId, tenantId),
     cancelWorkflowRun: (userId: string, tenantId: string, runId: string) =>
       cancelWorkflowRun(db, userId, tenantId, { runId }),
     approveWorkflowRun: (userId: string, tenantId: string, runId: string) =>

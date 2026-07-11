@@ -53,6 +53,17 @@ export type DomainEventRow = {
   causation_id: string | null;
 };
 
+export type FailedDomainEventRow = {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  attempts: number;
+  correlation_id: string;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkflowActionCursor = {
   actionIndex: number;
   actionName: string;
@@ -276,6 +287,31 @@ export async function findDomainEventById(
   );
 
   return result.rows[0] ?? null;
+}
+
+export async function listFailedDomainEventRows(
+  db: DbClient,
+  tenantId: string,
+  limit: number,
+) {
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const result = await db.query<FailedDomainEventRow>(
+    `select id,
+            tenant_id,
+            event_type,
+            attempts,
+            correlation_id,
+            last_error,
+            created_at,
+            updated_at
+     from domain_events
+     where tenant_id = $1 and status = $2
+     order by updated_at desc, created_at desc
+     limit ${safeLimit}`,
+    [tenantId, "failed"],
+  );
+
+  return result.rows;
 }
 
 export async function findLatestWorkflowActionCursor(

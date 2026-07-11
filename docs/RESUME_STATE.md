@@ -32,6 +32,7 @@ Last completed checkpoint:
 - Workflow run controls are implemented in `src/modules/workflows/` with tenant-authorized cancel, approve, reject, and manual retry services; server actions; Automatisations UI controls; control timeline entries; audit logs; and integration coverage for tenant isolation and status transitions.
 - Durable workflow resumption is implemented through `workflow.resume` domain events: wait actions schedule delayed resumes, approvals enqueue resumes after approval, manual retry replays the failed action, cancelled runs skip queued resumes, and focused tests cover wait, approval, cancellation, and retry behavior.
 - Worker polling mode is implemented with `WORKER_MODE=once|poll`, configurable batch size and interval, structured JSON logs, heartbeat entries, graceful `SIGTERM`/`SIGINT` shutdown, clean database closing, and focused worker tests.
+- Workflow dead-letter visibility is implemented: failed terminal `domain_events` are exposed in Automatisations through tenant-scoped workflow service reads with attempts, correlation IDs, timestamps, redacted error messages, and tenant-isolation coverage.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
@@ -81,6 +82,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Continue Phase 2 workflow engine depth: dead-letter visibility, persisted execution attempts, richer retry/backoff metadata, and domain-specific async handlers beyond the lead follow-up path.
+1. Continue Phase 2 workflow engine depth: persisted execution attempts, richer retry/backoff metadata, domain-specific async handlers beyond the lead follow-up path, and manual recovery controls for failed domain events.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
