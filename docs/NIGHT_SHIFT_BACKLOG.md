@@ -1,7 +1,7 @@
 # Night Shift Backlog
 
 1. Add domain-specific async workflow handlers beyond the synchronous lead workflow.
-2. Add CRM contact/task/opportunity mutations and audit tests.
+2. Add CRM opportunity mutations, search/filter support, duplicate detection, duplicate merge, and audit tests.
 3. Expand Playwright for draft edit while published site remains available.
 4. Add real email delivery for password reset and invitation links.
 5. Adopt `withTenantTransaction` across tenant service paths.

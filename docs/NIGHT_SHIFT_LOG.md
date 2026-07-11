@@ -37,3 +37,5 @@
 - Targeted local CRM validation hung without output and was stopped; `git diff --check` passed and GitHub Actions passed for commit `70d8ff9`.
 - Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import rows, and webhook delivery logging into `src/modules/connectors/`, with a direct module test.
 - Targeted local connectors validation hung without output and was stopped; `git diff --check` passed and GitHub Actions passed for commit `a9a55cf`.
+- Added CRM contact detail and mutation depth in `src/modules/crm/`: profile edits, assignment validation, consent updates, notes, contact tasks, task completion, contact-linked opportunity reads, timeline activity, server actions, contact detail UI, and a tenant-isolation/audit integration test.
+- Targeted local CRM mutation validation hung without output and was stopped; `git diff --check` passed. GitHub Actions first caught a lint issue on commit `ef4cb8c`, the page lint fix was pushed as `5877e3f`, and both PR #1 CI checks passed.
