@@ -262,11 +262,11 @@ async function claimPendingEvent(
      set status = $1,
          attempts = attempts + 1,
          last_attempted_at = $2,
-         failure_classification = $5,
+         failure_classification = null,
          updated_at = $2
      where id = $3 and status = $4
      returning ${selectedColumns}`,
-    ["processing", nowIso, eventId, "pending", null],
+    ["processing", nowIso, eventId, "pending"],
   );
 
   return result.rows[0] ?? null;
@@ -276,13 +276,13 @@ async function markSucceeded(db: DbClient, eventId: string, nowIso: string) {
   await db.query(
     `update domain_events
      set status = $1,
-         last_error = $2,
+         last_error = null,
          last_retry_delay_ms = 0,
-         failure_classification = $2,
-         max_attempts = $2,
-         updated_at = $3
-     where id = $4`,
-    ["succeeded", null, nowIso, eventId],
+         failure_classification = null,
+         max_attempts = null,
+         updated_at = $2
+     where id = $3`,
+    ["succeeded", nowIso, eventId],
   );
 }
 

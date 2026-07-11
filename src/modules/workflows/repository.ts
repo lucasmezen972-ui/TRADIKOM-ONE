@@ -406,18 +406,17 @@ export async function requeueFailedDomainEvent(
     `update domain_events
      set status = $1,
          attempts = 0,
-         last_error = $2,
-         last_attempted_at = $2,
+         last_error = null,
+         last_attempted_at = null,
          last_retry_delay_ms = 0,
-         failure_classification = $2,
-         max_attempts = $2,
-         next_run_at = $3,
-         updated_at = $3
-     where tenant_id = $4 and id = $5 and status = $6
+         failure_classification = null,
+         max_attempts = null,
+         next_run_at = $2,
+         updated_at = $2
+     where tenant_id = $3 and id = $4 and status = $5
      returning id`,
     [
       "pending",
-      null,
       input.nextRunAt,
       input.tenantId,
       input.eventId,
