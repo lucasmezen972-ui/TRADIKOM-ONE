@@ -2,7 +2,6 @@ import { z } from "zod";
 import { getDb, migrate, type DbClient } from "@/lib/db";
 import {
   buildBusinessTwin,
-  createWebsiteDraft,
   defaultGarageOnboarding,
 } from "@/lib/generation";
 import { parseContactsCsv } from "@/modules/connectors/csv";
@@ -38,7 +37,6 @@ import {
   createTenant as createTenantDomain,
   getPendingInvitations,
   getTenantById,
-  getTenantBySlug,
   getTenantContext,
   getTenantMembers,
   getUserTenants,
@@ -48,6 +46,16 @@ import {
   updateMemberRoleSchema,
   acceptInvitationSchema,
 } from "@/modules/tenants";
+import {
+  generateOrReplaceWebsite,
+  getPublishedSite,
+  getWebsite,
+  getWebsiteWorkspace,
+  moveWebsiteSection,
+  publishWebsite,
+  restoreWebsiteVersion,
+  updateWebsiteSection,
+} from "@/modules/websites";
 import {
   id,
   nowIso,
@@ -65,8 +73,6 @@ import type {
   Task,
   User,
   Website,
-  WebsiteSection,
-  WebsiteTemplateKey,
   WorkflowRun,
 } from "@/lib/types";
 
@@ -136,33 +142,6 @@ const onboardingSchema = z.object({
   faqs: z.string().default(""),
   templateKey: z.enum(["artisan", "restaurant", "beauty"]),
 });
-
-type WebsiteRow = {
-  id: string;
-  tenant_id: string;
-  name: string;
-  template_key: WebsiteTemplateKey;
-  theme: string;
-  status: "draft" | "published";
-  published_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type WebsiteSectionRow = {
-  id: string;
-  tenant_id: string;
-  website_id: string;
-  type: WebsiteSection["type"];
-  position: number;
-  enabled: number;
-  title: string;
-  body: string;
-  image_url: string | null;
-  button_label: string | null;
-  button_href: string | null;
-  data: string;
-};
 
 export async function getServices() {
   const db = await getDb();
@@ -385,297 +364,6 @@ async function getOnboarding(db: DbClient, userId: string, tenantId: string) {
   return result.rows[0]?.data
     ? safeJson<BusinessProfile>(result.rows[0].data, null as never)
     : null;
-}
-
-async function generateOrReplaceWebsite(
-  db: DbClient,
-  tenantId: string,
-  profile: BusinessProfile,
-) {
-  const existing = await db.query<{ id: string }>(
-    "select id from websites where tenant_id = $1 limit 1",
-    [tenantId],
-  );
-  const draft = createWebsiteDraft(tenantId, profile);
-
-  if (existing.rows[0]) {
-    const websiteId = existing.rows[0].id;
-    await db.query("delete from website_sections where tenant_id = $1 and website_id = $2", [
-      tenantId,
-      websiteId,
-    ]);
-    await db.query(
-      "update websites set name = $1, template_key = $2, theme = $3, status = $4, updated_at = $5 where tenant_id = $6 and id = $7",
-      [
-        draft.website.name,
-        draft.website.templateKey,
-        toJson(draft.website.theme),
-        "draft",
-        nowIso(),
-        tenantId,
-        websiteId,
-      ],
-    );
-
-    for (const section of draft.sections) {
-      await insertSection(db, { ...section, websiteId });
-    }
-
-    await snapshotWebsite(db, tenantId, websiteId, "deterministic_regeneration");
-    return;
-  }
-
-  await insertWebsite(db, draft.website);
-  await db.query(
-    "insert into website_pages (id, tenant_id, website_id, slug, title, seo_metadata, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      id("page"),
-      tenantId,
-      draft.website.id,
-      "accueil",
-      draft.website.name,
-      toJson({
-        title: draft.website.name,
-        description: profile.identity.description,
-      }),
-      nowIso(),
-    ],
-  );
-  await db.query(
-    "insert into forms (id, tenant_id, website_id, name, created_at) values ($1, $2, $3, $4, $5)",
-    [id("form"), tenantId, draft.website.id, "Formulaire contact site", nowIso()],
-  );
-
-  for (const section of draft.sections) {
-    await insertSection(db, section);
-  }
-
-  await snapshotWebsite(db, tenantId, draft.website.id, "deterministic_generation");
-}
-
-async function getWebsiteWorkspace(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const website = await getWebsite(db, tenantId);
-  const profile = await getOnboarding(db, userId, tenantId);
-  const sections = website ? await getWebsiteSections(db, tenantId, website.id) : [];
-  const versions = website
-    ? await db.query<{ id: string; source: string; approval_state: string; created_at: string }>(
-        "select id, source, approval_state, created_at from website_versions where tenant_id = $1 and website_id = $2 order by created_at desc limit 8",
-        [tenantId, website.id],
-      )
-    : { rows: [] };
-
-  return { profile, website, sections, versions: versions.rows };
-}
-
-async function updateWebsiteSection(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  sectionId: string,
-  input: {
-    title: string;
-    body: string;
-    imageUrl?: string;
-    buttonLabel?: string;
-    buttonHref?: string;
-    enabled: boolean;
-  },
-) {
-  await assertTenantAccess(db, userId, tenantId, [
-    "owner",
-    "administrator",
-    "manager",
-    "collaborator",
-  ]);
-  const row = await db.query<{ website_id: string }>(
-    "select website_id from website_sections where tenant_id = $1 and id = $2",
-    [tenantId, sectionId],
-  );
-  const websiteId = row.rows[0]?.website_id;
-  if (!websiteId) {
-    throw new Error("Section introuvable.");
-  }
-
-  await db.query(
-    `update website_sections
-     set title = $1, body = $2, image_url = $3, button_label = $4, button_href = $5, enabled = $6
-     where tenant_id = $7 and id = $8`,
-    [
-      input.title,
-      input.body,
-      input.imageUrl || null,
-      input.buttonLabel || null,
-      input.buttonHref || null,
-      input.enabled ? 1 : 0,
-      tenantId,
-      sectionId,
-    ],
-  );
-  await db.query(
-    "update websites set status = $1, updated_at = $2 where tenant_id = $3 and id = $4",
-    ["draft", nowIso(), tenantId, websiteId],
-  );
-  await snapshotWebsite(db, tenantId, websiteId, "manual_edit");
-  await audit(db, tenantId, userId, "website.section_updated", "website_section", sectionId, {
-    enabled: input.enabled,
-  });
-}
-
-async function moveWebsiteSection(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  sectionId: string,
-  direction: "up" | "down",
-) {
-  await assertTenantAccess(db, userId, tenantId, [
-    "owner",
-    "administrator",
-    "manager",
-    "collaborator",
-  ]);
-  const sections = await db.query<{ id: string; website_id: string; position: number }>(
-    "select id, website_id, position from website_sections where tenant_id = $1 order by position asc",
-    [tenantId],
-  );
-  const index = sections.rows.findIndex((section) => section.id === sectionId);
-  const targetIndex = direction === "up" ? index - 1 : index + 1;
-  const current = sections.rows[index];
-  const target = sections.rows[targetIndex];
-
-  if (!current || !target) {
-    return;
-  }
-
-  await db.query("update website_sections set position = $1 where tenant_id = $2 and id = $3", [
-    target.position,
-    tenantId,
-    current.id,
-  ]);
-  await db.query("update website_sections set position = $1 where tenant_id = $2 and id = $3", [
-    current.position,
-    tenantId,
-    target.id,
-  ]);
-  await db.query(
-    "update websites set status = $1, updated_at = $2 where tenant_id = $3 and id = $4",
-    ["draft", nowIso(), tenantId, current.website_id],
-  );
-  await snapshotWebsite(db, tenantId, current.website_id, "manual_reorder");
-  await audit(db, tenantId, userId, "website.section_reordered", "website_section", sectionId, {
-    direction,
-  });
-}
-
-async function publishWebsite(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  const website = await getWebsite(db, tenantId);
-  if (!website) {
-    throw new Error("Aucun site a publier.");
-  }
-
-  const versionId = await snapshotWebsite(
-    db,
-    tenantId,
-    website.id,
-    "publication",
-    "published",
-  );
-  const tenant = await getTenantById(db, tenantId);
-  const now = nowIso();
-  const localUrl = `/sites/${tenant.slug}`;
-
-  await db.query(
-    "update websites set status = $1, published_at = $2, current_version_id = $3, current_published_version_id = $4, updated_at = $5 where tenant_id = $6 and id = $7",
-    ["published", now, versionId, versionId, now, tenantId, website.id],
-  );
-  await db.query(
-    "insert into website_publications (id, tenant_id, website_id, version_id, local_url, published_at) values ($1, $2, $3, $4, $5, $6)",
-    [id("publication"), tenantId, website.id, versionId, localUrl, now],
-  );
-  await audit(db, tenantId, userId, "website.published", "website", website.id, {
-    localUrl,
-  });
-
-  return localUrl;
-}
-
-async function restoreWebsiteVersion(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  versionId: string,
-) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  const result = await db.query<{ website_id: string; snapshot: string }>(
-    "select website_id, snapshot from website_versions where tenant_id = $1 and id = $2",
-    [tenantId, versionId],
-  );
-  const version = result.rows[0];
-  if (!version) {
-    throw new Error("Version introuvable.");
-  }
-
-  const snapshot = safeJson<{ sections: WebsiteSection[] }>(version.snapshot, {
-    sections: [],
-  });
-  await db.query("delete from website_sections where tenant_id = $1 and website_id = $2", [
-    tenantId,
-    version.website_id,
-  ]);
-
-  for (const section of snapshot.sections) {
-    await insertSection(db, {
-      ...section,
-      id: id("section"),
-      tenantId,
-      websiteId: version.website_id,
-    });
-  }
-
-  await db.query(
-    "update websites set status = $1, updated_at = $2 where tenant_id = $3 and id = $4",
-    ["draft", nowIso(), tenantId, version.website_id],
-  );
-  await audit(db, tenantId, userId, "website.version_restored", "website_version", versionId, {});
-}
-
-async function getPublishedSite(db: DbClient, slug: string) {
-  const tenant = await getTenantBySlug(db, slug);
-  if (!tenant) {
-    return null;
-  }
-
-  const publication = await db.query<{ snapshot: string }>(
-    `select website_versions.snapshot
-     from website_publications
-     join website_versions on website_versions.id = website_publications.version_id
-     where website_publications.tenant_id = $1
-     order by website_publications.published_at desc
-     limit 1`,
-    [tenant.id],
-  );
-  const snapshot = publication.rows[0]?.snapshot;
-
-  if (!snapshot) {
-    return null;
-  }
-
-  const published = safeJson<{ website: Website; sections: WebsiteSection[] }>(
-    snapshot,
-    null as never,
-  );
-
-  if (!published?.website || published.website.status === "draft") {
-    published.website.status = "published";
-  }
-
-  return {
-    tenant,
-    website: published.website,
-    sections: published.sections.filter((section) => section.enabled),
-  };
 }
 
 async function getDashboard(db: DbClient, userId: string, tenantId: string) {
@@ -1110,94 +798,6 @@ async function seedDemo(db: DbClient) {
   return { user, tenant, password: "Tradikom!2026" };
 }
 
-async function insertWebsite(db: DbClient, website: Website) {
-  await db.query(
-    `insert into websites (id, tenant_id, name, template_key, theme, status, current_version_id, published_at, created_at, updated_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-    [
-      website.id,
-      website.tenantId,
-      website.name,
-      website.templateKey,
-      toJson(website.theme),
-      website.status,
-      null,
-      website.publishedAt ?? null,
-      website.createdAt,
-      website.updatedAt,
-    ],
-  );
-}
-
-async function insertSection(db: DbClient, section: WebsiteSection) {
-  await db.query(
-    `insert into website_sections (id, tenant_id, website_id, type, position, enabled, title, body, image_url, button_label, button_href, data)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [
-      section.id,
-      section.tenantId,
-      section.websiteId,
-      section.type,
-      section.position,
-      section.enabled ? 1 : 0,
-      section.title,
-      section.body,
-      section.imageUrl ?? null,
-      section.buttonLabel ?? null,
-      section.buttonHref ?? null,
-      toJson(section.data),
-    ],
-  );
-}
-
-async function snapshotWebsite(
-  db: DbClient,
-  tenantId: string,
-  websiteId: string,
-  source: string,
-  versionType: "draft" | "published" = "draft",
-) {
-  const website = await getWebsite(db, tenantId);
-  const sections = await getWebsiteSections(db, tenantId, websiteId);
-  const versionId = id("version");
-  await db.query(
-    "insert into website_versions (id, tenant_id, website_id, snapshot, approval_state, source, version_type, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8)",
-    [
-      versionId,
-      tenantId,
-      websiteId,
-      toJson({ website, sections }),
-      "approved_for_preview",
-      source,
-      versionType,
-      nowIso(),
-    ],
-  );
-  await db.query(
-    "update websites set current_version_id = $1, current_draft_version_id = case when $2 = 'draft' then $1 else current_draft_version_id end where tenant_id = $3 and id = $4",
-    [versionId, versionType, tenantId, websiteId],
-  );
-  return versionId;
-}
-
-async function getWebsite(db: DbClient, tenantId: string) {
-  const result = await db.query<WebsiteRow>(
-    "select * from websites where tenant_id = $1 order by created_at desc limit 1",
-    [tenantId],
-  );
-  const row = result.rows[0];
-  return row ? mapWebsite(row) : null;
-}
-
-async function getWebsiteSections(db: DbClient, tenantId: string, websiteId: string) {
-  const result = await db.query<WebsiteSectionRow>(
-    "select * from website_sections where tenant_id = $1 and website_id = $2 order by position asc",
-    [tenantId, websiteId],
-  );
-
-  return result.rows.map(mapSection);
-}
-
 async function getActivities(db: DbClient, tenantId: string, limit: number) {
   const rows = await db.query<{
     id: string;
@@ -1307,43 +907,6 @@ async function audit(
     targetId,
     metadata,
   });
-}
-
-function mapWebsite(row: WebsiteRow): Website {
-  return {
-    id: row.id,
-    tenantId: row.tenant_id,
-    name: row.name,
-    templateKey: row.template_key,
-    status: row.status,
-    theme: safeJson(row.theme, {
-      primary: "#08111f",
-      accent: "#19c6b7",
-      background: "#fffaf1",
-      text: "#111827",
-      radius: "8px",
-    }),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    publishedAt: row.published_at ?? undefined,
-  };
-}
-
-function mapSection(row: WebsiteSectionRow): WebsiteSection {
-  return {
-    id: row.id,
-    tenantId: row.tenant_id,
-    websiteId: row.website_id,
-    type: row.type,
-    position: Number(row.position),
-    enabled: Boolean(row.enabled),
-    title: row.title,
-    body: row.body,
-    imageUrl: row.image_url ?? undefined,
-    buttonLabel: row.button_label ?? undefined,
-    buttonHref: row.button_href ?? undefined,
-    data: safeJson(row.data, {}),
-  };
 }
 
 function mapContact(row: {

@@ -17,6 +17,7 @@ Last completed checkpoint:
 - Authentication and sessions are extracted into `src/modules/auth/` with schemas, typed errors, repository functions, and a domain service.
 - Tenant access, tenant creation, team invitations, member role management, and audit recording are extracted into bounded tenant/audit modules.
 - Public website lead ingestion is extracted into `src/modules/crm/` with schemas, typed errors, repository functions, idempotent form submission handling, contact/lead/opportunity creation, audit events, and workflow dispatch preserved.
+- Website draft, publication, rollback, immutable public snapshot, and workspace reads are extracted into `src/modules/websites/` with schemas, typed errors, repository functions, tenant authorization, and audit events preserved.
 - Invitations can be created, accepted once, listed as pending, and used for non-owner role administration.
 - PostgreSQL RLS integration test added for restricted-role tenant isolation and cross-tenant write rejection.
 - Public-site hero images now use `next/image` with `images.unsplash.com` explicitly allowlisted.
@@ -42,10 +43,11 @@ Current validation note:
 - During the immediate 2026-07-11 continuation, targeted auth validation (`pnpm exec vitest run tests/auth-module.test.ts tests/auth-sessions.test.ts tests/auth-flows.test.ts`) hung without output and was stopped; `git diff --check` passed. The auth extraction should be validated through GitHub Actions after push.
 - During the same continuation, targeted tenant validation (`pnpm exec vitest run tests/tenants-module.test.ts tests/auth-flows.test.ts`) hung and was stopped; `git diff --check` passed. The tenant/team extraction should be validated through GitHub Actions after push.
 - During the same continuation, targeted public lead validation (`pnpm exec vitest run tests/public-leads-module.test.ts tests/vertical-slice.test.ts`) produced no output after a reasonable wait and was stopped; `git diff --check` should be run before push and the checkpoint validated through GitHub Actions.
+- During the same continuation, targeted website validation (`pnpm exec vitest run tests/websites-module.test.ts tests/publication-snapshots.test.ts tests/vertical-slice.test.ts`) produced no output after a reasonable wait and was stopped. `git diff --check` also hung without output and was stopped, so this checkpoint should be validated through GitHub Actions after manual inspection and push.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
 
-1. Continue extracting bounded modules from `src/lib/services.ts`, starting with website draft/publication responsibilities.
+1. Continue extracting bounded modules from `src/lib/services.ts`, starting with deeper CRM views/mutations or connectors after the website checkpoint is green.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
