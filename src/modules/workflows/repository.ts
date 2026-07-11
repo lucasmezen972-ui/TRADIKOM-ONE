@@ -60,6 +60,10 @@ export type FailedDomainEventRow = {
   attempts: number;
   correlation_id: string;
   last_error: string | null;
+  last_attempted_at: string | null;
+  last_retry_delay_ms: number;
+  failure_classification: string | null;
+  max_attempts: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -347,6 +351,10 @@ export async function listFailedDomainEventRows(
             attempts,
             correlation_id,
             last_error,
+            last_attempted_at,
+            last_retry_delay_ms,
+            failure_classification,
+            max_attempts,
             created_at,
             updated_at
      from domain_events
@@ -371,6 +379,10 @@ export async function findFailedDomainEventRow(
             attempts,
             correlation_id,
             last_error,
+            last_attempted_at,
+            last_retry_delay_ms,
+            failure_classification,
+            max_attempts,
             created_at,
             updated_at
      from domain_events
@@ -395,6 +407,10 @@ export async function requeueFailedDomainEvent(
      set status = $1,
          attempts = 0,
          last_error = $2,
+         last_attempted_at = $2,
+         last_retry_delay_ms = 0,
+         failure_classification = $2,
+         max_attempts = $2,
          next_run_at = $3,
          updated_at = $3
      where tenant_id = $4 and id = $5 and status = $6

@@ -120,6 +120,7 @@ function getMigrations(enableRls: boolean) {
       ? [{ id: "009_opportunity_radar_alerts_rls", sql: opportunityRadarAlertsRlsMigrationSql }]
       : []),
     { id: "010_workflow_step_attempts", sql: workflowStepAttemptsMigrationSql },
+    { id: "011_domain_event_attempt_metadata", sql: domainEventAttemptMetadataMigrationSql },
   ];
 }
 
@@ -641,6 +642,10 @@ create table if not exists domain_events (
   causation_id text,
   next_run_at text not null,
   last_error text,
+  last_attempted_at text,
+  last_retry_delay_ms integer not null default 0,
+  failure_classification text,
+  max_attempts integer,
   created_at text not null,
   updated_at text not null,
   unique (tenant_id, idempotency_key)
@@ -756,6 +761,14 @@ alter table workflow_run_steps add column if not exists started_at text;
 alter table workflow_run_steps add column if not exists completed_at text;
 alter table workflow_run_steps add column if not exists error text;
 create index if not exists idx_workflow_run_steps_attempts on workflow_run_steps(tenant_id, workflow_run_id, action_name, created_at desc);
+`;
+
+const domainEventAttemptMetadataMigrationSql = `
+alter table domain_events add column if not exists last_attempted_at text;
+alter table domain_events add column if not exists last_retry_delay_ms integer not null default 0;
+alter table domain_events add column if not exists failure_classification text;
+alter table domain_events add column if not exists max_attempts integer;
+create index if not exists idx_domain_events_failure on domain_events(tenant_id, status, failure_classification, updated_at desc);
 `;
 
 const rlsMigrationSql = `

@@ -94,10 +94,18 @@ function DeadLetterCard({ event }: { event: WorkflowDeadLetterEvent }) {
           <p className="mt-2 text-xs text-slate-500">
             Correlation {event.correlationId}
           </p>
+          {event.failureClassification ? (
+            <p className="mt-1 text-xs text-slate-500">
+              Cause {deadLetterFailureLabel(event.failureClassification)}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-col items-end gap-2 text-right text-sm text-slate-600">
           <div>
             <p>{event.attempts} tentative(s)</p>
+            {event.maxAttempts ? (
+              <p className="text-xs">Maximum {event.maxAttempts}</p>
+            ) : null}
             <p className="text-xs">{event.updatedAt}</p>
           </div>
           <form action={retryWorkflowDeadLetterAction}>
@@ -113,6 +121,22 @@ function DeadLetterCard({ event }: { event: WorkflowDeadLetterEvent }) {
       </div>
     </div>
   );
+}
+
+function deadLetterFailureLabel(value: string) {
+  if (value === "max_attempts_exceeded") {
+    return "tentatives epuisees";
+  }
+
+  if (value === "handler_missing") {
+    return "gestionnaire manquant";
+  }
+
+  if (value === "worker_lease_expired") {
+    return "traitement interrompu";
+  }
+
+  return "erreur transitoire";
 }
 
 function WorkflowRunControls({ run }: { run: WorkflowRun }) {

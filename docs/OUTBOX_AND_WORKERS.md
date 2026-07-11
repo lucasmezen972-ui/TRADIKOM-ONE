@@ -41,6 +41,8 @@ WORKER_MODE=poll WORKER_POLL_INTERVAL_MS=5000 WORKER_BATCH_SIZE=25 pnpm worker
   records an audit event.
 - workflow step rows persist action attempt counts, scheduled/start/completion
   timestamps, and safe error summaries.
+- domain events persist worker attempt metadata: last attempted time, retry delay,
+  failure classification, and configured max attempts.
 
 The lead workflow is backed by persisted workflow definitions and durable
 `workflow.resume` events. Wait actions, approval decisions, and manual retry now
@@ -48,6 +50,5 @@ resume through the outbox worker rather than a hidden in-memory path.
 
 Remaining work:
 
-- richer retry/backoff scheduling metadata;
 - domain-specific async handlers beyond the lead workflow;
 - deeper delivery/run recovery views beyond the current requeue control.

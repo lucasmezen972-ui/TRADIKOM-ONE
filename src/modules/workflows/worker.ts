@@ -53,6 +53,10 @@ type DomainEventRow = {
   causation_id: string | null;
   next_run_at: string;
   last_error: string | null;
+  last_attempted_at: string | null;
+  last_retry_delay_ms: number;
+  failure_classification: string | null;
+  max_attempts: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -75,6 +79,10 @@ const selectedColumns = `
   causation_id,
   next_run_at,
   last_error,
+  last_attempted_at,
+  last_retry_delay_ms,
+  failure_classification,
+  max_attempts,
   created_at,
   updated_at
 `;
@@ -154,6 +162,8 @@ export async function processPendingDomainEvents(
         claimed.id,
         nowIso,
         `No handler registered for domain event type "${claimed.event_type}".`,
+        "handler_missing",
+        1,
       );
       summary.failed += 1;
       continue;
@@ -171,10 +181,25 @@ export async function processPendingDomainEvents(
       const message = errorMessage(error);
 
       if (attempt >= maxAttempts) {
-        await markFailed(db, claimed.id, nowIso, message);
+        await markFailed(
+          db,
+          claimed.id,
+          nowIso,
+          message,
+          "max_attempts_exceeded",
+          maxAttempts,
+        );
         summary.failed += 1;
       } else {
-        await markRetry(db, claimed.id, now, attempt, baseBackoffMs, message);
+        await markRetry(
+          db,
+          claimed.id,
+          now,
+          attempt,
+          baseBackoffMs,
+          maxAttempts,
+          message,
+        );
         summary.retried += 1;
       }
     }
@@ -208,7 +233,10 @@ async function requeueStaleProcessingEvents(
   const staleBefore = new Date(now.getTime() - processingTimeoutMs).toISOString();
   const result = await db.query<{ id: string }>(
     `update domain_events
-     set status = $1, last_error = $2, updated_at = $3
+     set status = $1,
+         last_error = $2,
+         failure_classification = $6,
+         updated_at = $3
      where status = $4 and updated_at <= $5
      returning id`,
     [
@@ -217,6 +245,7 @@ async function requeueStaleProcessingEvents(
       nowIso,
       "processing",
       staleBefore,
+      "worker_lease_expired",
     ],
   );
 
@@ -230,10 +259,14 @@ async function claimPendingEvent(
 ) {
   const result = await db.query<DomainEventRow>(
     `update domain_events
-     set status = $1, attempts = attempts + 1, updated_at = $2
+     set status = $1,
+         attempts = attempts + 1,
+         last_attempted_at = $2,
+         failure_classification = $5,
+         updated_at = $2
      where id = $3 and status = $4
      returning ${selectedColumns}`,
-    ["processing", nowIso, eventId, "pending"],
+    ["processing", nowIso, eventId, "pending", null],
   );
 
   return result.rows[0] ?? null;
@@ -241,7 +274,14 @@ async function claimPendingEvent(
 
 async function markSucceeded(db: DbClient, eventId: string, nowIso: string) {
   await db.query(
-    "update domain_events set status = $1, last_error = $2, updated_at = $3 where id = $4",
+    `update domain_events
+     set status = $1,
+         last_error = $2,
+         last_retry_delay_ms = 0,
+         failure_classification = $2,
+         max_attempts = $2,
+         updated_at = $3
+     where id = $4`,
     ["succeeded", null, nowIso, eventId],
   );
 }
@@ -251,10 +291,19 @@ async function markFailed(
   eventId: string,
   nowIso: string,
   message: string,
+  classification: string,
+  maxAttempts: number,
 ) {
   await db.query(
-    "update domain_events set status = $1, last_error = $2, updated_at = $3 where id = $4",
-    ["failed", message, nowIso, eventId],
+    `update domain_events
+     set status = $1,
+         last_error = $2,
+         last_retry_delay_ms = 0,
+         failure_classification = $3,
+         max_attempts = $4,
+         updated_at = $5
+     where id = $6`,
+    ["failed", message, classification, maxAttempts, nowIso, eventId],
   );
 }
 
@@ -264,14 +313,32 @@ async function markRetry(
   now: Date,
   attempt: number,
   baseBackoffMs: number,
+  maxAttempts: number,
   message: string,
 ) {
   const delayMs = baseBackoffMs * 2 ** Math.max(0, attempt - 1);
   const nextRunAt = new Date(now.getTime() + delayMs).toISOString();
 
   await db.query(
-    "update domain_events set status = $1, last_error = $2, next_run_at = $3, updated_at = $4 where id = $5",
-    ["pending", message, nextRunAt, now.toISOString(), eventId],
+    `update domain_events
+     set status = $1,
+         last_error = $2,
+         next_run_at = $3,
+         last_retry_delay_ms = $4,
+         failure_classification = $5,
+         max_attempts = $6,
+         updated_at = $7
+     where id = $8`,
+    [
+      "pending",
+      message,
+      nextRunAt,
+      delayMs,
+      "transient_error",
+      maxAttempts,
+      now.toISOString(),
+      eventId,
+    ],
   );
 }
 

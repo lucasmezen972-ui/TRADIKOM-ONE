@@ -239,6 +239,10 @@ export const domainEvents = pgTable("domain_events", {
   causationId: text("causation_id"),
   nextRunAt: text("next_run_at").notNull(),
   lastError: text("last_error"),
+  lastAttemptedAt: text("last_attempted_at"),
+  lastRetryDelayMs: integer("last_retry_delay_ms").notNull().default(0),
+  failureClassification: text("failure_classification"),
+  maxAttempts: integer("max_attempts"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

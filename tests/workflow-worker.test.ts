@@ -61,6 +61,8 @@ describe("workflow worker", () => {
     expect(event.status).toBe("succeeded");
     expect(event.attempts).toBe(1);
     expect(event.last_error).toBeNull();
+    expect(event.failure_classification).toBeNull();
+    expect(event.last_retry_delay_ms).toBe(0);
   });
 
   it("retries failed handlers with backoff before terminal failure", async () => {
@@ -90,6 +92,10 @@ describe("workflow worker", () => {
     expect(afterFirstAttempt.status).toBe("pending");
     expect(afterFirstAttempt.attempts).toBe(1);
     expect(afterFirstAttempt.next_run_at).toBe(retryAt.toISOString());
+    expect(afterFirstAttempt.last_attempted_at).toBe(now.toISOString());
+    expect(afterFirstAttempt.last_retry_delay_ms).toBe(1_000);
+    expect(afterFirstAttempt.failure_classification).toBe("transient_error");
+    expect(afterFirstAttempt.max_attempts).toBe(2);
     expect(await getPendingDomainEventCount(db, now)).toBe(0);
 
     const second = await processPendingDomainEvents(db, {
@@ -108,6 +114,11 @@ describe("workflow worker", () => {
     expect(afterSecondAttempt.status).toBe("failed");
     expect(afterSecondAttempt.attempts).toBe(2);
     expect(afterSecondAttempt.last_error).toBe("Downstream unavailable.");
+    expect(afterSecondAttempt.last_retry_delay_ms).toBe(0);
+    expect(afterSecondAttempt.failure_classification).toBe(
+      "max_attempts_exceeded",
+    );
+    expect(afterSecondAttempt.max_attempts).toBe(2);
   });
 
   it("requeues stale processing events before dispatching them", async () => {
@@ -290,6 +301,10 @@ describe("workflow worker", () => {
     expect(event.status).toBe("pending");
     expect(event.attempts).toBe(0);
     expect(event.last_error).toBeNull();
+    expect(event.last_attempted_at).toBeNull();
+    expect(event.last_retry_delay_ms).toBe(0);
+    expect(event.failure_classification).toBeNull();
+    expect(event.max_attempts).toBeNull();
     expect(await countDeadLetterRetryAudits(db, "tenant_requeue_dead_letter")).toBe(
       1,
     );
@@ -372,8 +387,21 @@ async function loadEvent(db: DbClient, eventId: string) {
     attempts: number;
     next_run_at: string;
     last_error: string | null;
+    last_attempted_at: string | null;
+    last_retry_delay_ms: number;
+    failure_classification: string | null;
+    max_attempts: number | null;
   }>(
-    "select status, attempts, next_run_at, last_error from domain_events where id = $1",
+    `select status,
+            attempts,
+            next_run_at,
+            last_error,
+            last_attempted_at,
+            last_retry_delay_ms,
+            failure_classification,
+            max_attempts
+     from domain_events
+     where id = $1`,
     [eventId],
   );
 

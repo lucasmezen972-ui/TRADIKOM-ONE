@@ -29,6 +29,7 @@
 - Added tenant-scoped workflow dead-letter visibility in Automatisations for failed terminal `domain_events`, with attempts, correlation IDs, timestamps, redacted error messages, and tenant-isolation coverage.
 - Added persisted workflow step attempt metadata: action rows now include attempt counts, scheduled/start/completion timestamps, safe error summaries, a runtime migration, schema coverage, and focused workflow-engine assertions.
 - Added manual dead-letter recovery controls: failed terminal domain events can be requeued from Automatisations by authorized workflow operators with tenant isolation, audit logging, and a fresh worker retry window.
+- Added domain event retry/backoff metadata: worker attempts now persist last attempted time, computed retry delay, failure classification, and max attempts, and Automatisations surfaces safe failure labels for failed incidents.
 - Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC verification for configured endpoint secrets, and AES-256-GCM credential encryption helpers.
 - Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import row persistence, and webhook delivery logging into `src/modules/connectors/`.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
@@ -40,4 +41,4 @@
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- The worker is now available as both a durable batch dispatcher and a polling process, but still needs richer retry/backoff scheduling metadata, domain-specific async handlers beyond the lead workflow, and deeper recovery views beyond the current dead-letter requeue control.
+- The worker is now available as both a durable batch dispatcher and a polling process, but still needs domain-specific async handlers beyond the lead workflow and deeper recovery views beyond the current dead-letter requeue control.

@@ -68,3 +68,4 @@
 - GitHub Actions passed for workflow step-attempt commit `a510be2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Added manual dead-letter recovery controls: failed terminal domain events can be requeued from Automatisations by authorized workflow operators, attempts are reset for a fresh worker retry window, safe errors are cleared, and an audit log records the action.
 - Targeted local worker validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` passed, so this checkpoint should be validated through GitHub Actions after push.
+- Added domain event retry/backoff metadata: worker claims now record last attempted time, retries store computed delay and transient classification, terminal failures store max-attempt classification, manual requeue clears the metadata, and failed incidents surface safe failure labels.

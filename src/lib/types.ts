@@ -202,6 +202,10 @@ export type WorkflowDeadLetterEvent = {
   eventType: string;
   attempts: number;
   lastError: string;
+  lastAttemptedAt: string | null;
+  lastRetryDelayMs: number;
+  failureClassification: string | null;
+  maxAttempts: number | null;
   correlationId: string;
   createdAt: string;
   updatedAt: string;
