@@ -1,7 +1,7 @@
 # Night Shift Backlog
 
-1. Extract tenant and invitation responsibilities from `src/lib/services.ts`.
-2. Extract public lead ingestion from `src/lib/services.ts`.
+1. Extract public lead ingestion from `src/lib/services.ts`.
+2. Extract website draft/publication responsibilities from `src/lib/services.ts`.
 3. Add domain-specific async workflow handlers beyond the synchronous lead workflow.
 4. Add CRM contact/task/opportunity mutations and audit tests.
 5. Expand Playwright for draft edit while published site remains available.

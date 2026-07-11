@@ -15,6 +15,7 @@ Last completed checkpoint:
 - Public form now has explicit idempotency, honeypot, and consent.
 - Password reset request/complete flows use hashed single-use tokens and revoke sessions after reset.
 - Authentication and sessions are extracted into `src/modules/auth/` with schemas, typed errors, repository functions, and a domain service.
+- Tenant access, tenant creation, team invitations, member role management, and audit recording are extracted into bounded tenant/audit modules.
 - Invitations can be created, accepted once, listed as pending, and used for non-owner role administration.
 - PostgreSQL RLS integration test added for restricted-role tenant isolation and cross-tenant write rejection.
 - Public-site hero images now use `next/image` with `images.unsplash.com` explicitly allowlisted.
@@ -38,10 +39,11 @@ Current validation note:
 - On the 2026-07-11 09:49 UTC heartbeat, targeted local worker validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung and `git diff --check` exited abnormally without output, matching the known local Node/tooling instability. The worker change was manually inspected and should be validated through GitHub Actions after push.
 - On the 2026-07-11 10:51 UTC heartbeat, targeted connector validation (`pnpm exec vitest run tests/connectors.test.ts`) hung after runner startup, while `git diff --check` passed. The HMAC webhook change should be validated through GitHub Actions after push.
 - During the immediate 2026-07-11 continuation, targeted auth validation (`pnpm exec vitest run tests/auth-module.test.ts tests/auth-sessions.test.ts tests/auth-flows.test.ts`) hung without output and was stopped; `git diff --check` passed. The auth extraction should be validated through GitHub Actions after push.
+- During the same continuation, targeted tenant validation (`pnpm exec vitest run tests/tenants-module.test.ts tests/auth-flows.test.ts`) hung and was stopped; `git diff --check` passed. The tenant/team extraction should be validated through GitHub Actions after push.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
 
-1. Continue extracting bounded modules from `src/lib/services.ts`, starting with tenant/invitation boundaries or public lead ingestion.
+1. Continue extracting bounded modules from `src/lib/services.ts`, starting with public lead ingestion or website publication.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

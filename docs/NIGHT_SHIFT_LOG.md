@@ -27,3 +27,5 @@
 - Targeted local connector validation hung after runner startup, while `git diff --check` passed, so the HMAC checkpoint should be confirmed through GitHub Actions.
 - Extracted authentication and session logic into `src/modules/auth/` with schemas, typed errors, repository functions, a domain service, and a direct module test.
 - Targeted local auth validation hung without output and was stopped; `git diff --check` passed, so the auth extraction should be confirmed through GitHub Actions.
+- Extracted tenant access, tenant creation, team invitations, member role management, and audit recording into `src/modules/tenants/` and `src/modules/audit/`, with a direct module test.
+- Targeted local tenant validation hung and was stopped; `git diff --check` passed, so the tenant/team extraction should be confirmed through GitHub Actions.

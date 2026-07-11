@@ -26,15 +26,33 @@ import {
   revokeSession,
   type UserRow,
 } from "@/modules/auth";
+import { recordAuditLog } from "@/modules/audit";
+import {
+  acceptInvitation,
+  acceptInvitationForUser,
+  assertTenantAccess,
+  createInvitation,
+  createTenant as createTenantDomain,
+  getPendingInvitations,
+  getTenantById,
+  getTenantBySlug,
+  getTenantContext,
+  getTenantMembers,
+  getTenantOwnerId,
+  getUserTenants,
+  invitationSchema,
+  orgSchema,
+  updateMemberRole,
+  updateMemberRoleSchema,
+  acceptInvitationSchema,
+} from "@/modules/tenants";
 import {
   correlationId,
   daysFromNow,
-  hashToken,
   id,
   nowIso,
   safeJson,
   secureToken,
-  slugify,
   toJson,
 } from "@/lib/security";
 import type {
@@ -45,8 +63,6 @@ import type {
   Contact,
   DashboardData,
   Lead,
-  Membership,
-  Role,
   Task,
   Tenant,
   User,
@@ -100,34 +116,6 @@ const connectorMetadata: ConnectorCard[] = [
   },
 ];
 
-const invitationRoles = [
-  "administrator",
-  "manager",
-  "collaborator",
-  "read-only",
-] as const;
-
-const invitationSchema = z.object({
-  email: z.string().email(),
-  role: z.enum(invitationRoles),
-});
-
-const acceptInvitationSchema = z.object({
-  token: z.string().min(20),
-  name: z.string().min(2),
-  password: z.string().min(8),
-});
-
-const updateMemberRoleSchema = z.object({
-  targetUserId: z.string().min(1),
-  role: z.enum(invitationRoles),
-});
-
-const orgSchema = z.object({
-  name: z.string().min(2),
-  category: z.string().min(2),
-});
-
 const onboardingSchema = z.object({
   companyName: z.string().min(2),
   category: z.string().min(2),
@@ -150,25 +138,6 @@ const onboardingSchema = z.object({
   faqs: z.string().default(""),
   templateKey: z.enum(["artisan", "restaurant", "beauty"]),
 });
-
-type InvitationRow = {
-  id: string;
-  tenant_id: string;
-  email: string;
-  role: Role;
-  status: string;
-  token_hash: string;
-  expires_at: string;
-  created_at: string;
-};
-
-type TenantRow = {
-  id: string;
-  name: string;
-  slug: string;
-  category: string;
-  created_at: string;
-};
 
 type WebsiteRow = {
   id: string;
@@ -216,7 +185,9 @@ export function createServices(db: DbClient) {
     getSessionUser: (sessionId?: string) => getSessionUser(db, sessionId),
     revokeSession: (sessionToken?: string) => revokeSession(db, sessionToken),
     createTenant: (userId: string, input: z.input<typeof orgSchema>) =>
-      createTenant(db, userId, input),
+      createTenantDomain(db, userId, input, {
+        createDefaults: createTenantDefaults,
+      }),
     switchTenant: (userId: string, tenantId: string) =>
       assertTenantAccess(db, userId, tenantId),
     getUserTenants: (userId: string) => getUserTenants(db, userId),
@@ -313,32 +284,6 @@ export function createServices(db: DbClient) {
   };
 }
 
-async function createTenant(
-  db: DbClient,
-  userId: string,
-  input: z.input<typeof orgSchema>,
-) {
-  const parsed = orgSchema.parse(input);
-  const tenantId = id("tenant");
-  const now = nowIso();
-  const slug = await uniqueSlug(db, parsed.name);
-
-  await db.query(
-    "insert into tenants (id, name, slug, category, created_at) values ($1, $2, $3, $4, $5)",
-    [tenantId, parsed.name, slug, parsed.category, now],
-  );
-  await db.query(
-    "insert into memberships (tenant_id, user_id, role, created_at) values ($1, $2, $3, $4)",
-    [tenantId, userId, "owner", now],
-  );
-  await createTenantDefaults(db, tenantId);
-  await audit(db, tenantId, userId, "organization.created", "tenant", tenantId, {
-    name: parsed.name,
-  });
-
-  return { id: tenantId, name: parsed.name, slug, category: parsed.category, createdAt: now };
-}
-
 async function createTenantDefaults(db: DbClient, tenantId: string) {
   const now = nowIso();
   const pipelineId = id("pipeline");
@@ -397,348 +342,6 @@ async function createTenantDefaults(db: DbClient, tenantId: string) {
     "insert into webhook_endpoints (id, tenant_id, token, secret_hash, status, created_at) values ($1, $2, $3, $4, $5, $6)",
     [id("webhook"), tenantId, id("wh"), null, "active", now],
   );
-}
-
-async function getUserTenants(db: DbClient, userId: string) {
-  const result = await db.query<TenantRow & { role: Role }>(
-    `select tenants.*, memberships.role
-     from tenants
-     join memberships on memberships.tenant_id = tenants.id
-     where memberships.user_id = $1
-     order by tenants.created_at asc`,
-    [userId],
-  );
-
-  return result.rows.map((row) => ({
-    tenant: mapTenant(row),
-    membership: {
-      tenantId: row.id,
-      userId,
-      role: row.role,
-    } satisfies Membership,
-  }));
-}
-
-async function getTenantContext(
-  db: DbClient,
-  userId: string,
-  preferredTenantId?: string,
-) {
-  const tenants = await getUserTenants(db, userId);
-  if (tenants.length === 0) {
-    return null;
-  }
-
-  return (
-    tenants.find((item) => item.tenant.id === preferredTenantId) ?? tenants[0]
-  );
-}
-
-async function getTenantMembers(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const result = await db.query<{
-    id: string;
-    name: string;
-    email: string;
-    created_at: string;
-    role: Role;
-    membership_created_at: string;
-  }>(
-    `select users.id, users.name, users.email, users.created_at, memberships.role, memberships.created_at as membership_created_at
-     from memberships
-     join users on users.id = memberships.user_id
-     where memberships.tenant_id = $1
-     order by case when memberships.role = 'owner' then 0 when memberships.role = 'administrator' then 1 else 2 end, users.name asc`,
-    [tenantId],
-  );
-
-  return result.rows.map((row) => ({
-    user: mapUser(row),
-    membership: {
-      tenantId,
-      userId: row.id,
-      role: row.role,
-    } satisfies Membership,
-    joinedAt: row.membership_created_at,
-  }));
-}
-
-async function getPendingInvitations(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator"]);
-  const result = await db.query<InvitationRow>(
-    `select *
-     from invitations
-     where tenant_id = $1 and status = $2 and expires_at > $3
-     order by created_at desc`,
-    [tenantId, "pending", nowIso()],
-  );
-
-  return result.rows.map((row) => ({
-    id: row.id,
-    tenantId: row.tenant_id,
-    email: row.email,
-    role: row.role,
-    status: row.status,
-    expiresAt: row.expires_at,
-    createdAt: row.created_at,
-  }));
-}
-
-async function createInvitation(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  input: z.input<typeof invitationSchema>,
-) {
-  const actorRole = await assertTenantAccess(db, userId, tenantId, [
-    "owner",
-    "administrator",
-  ]);
-  const parsed = invitationSchema.parse(input);
-  const email = parsed.email.toLowerCase();
-
-  if (parsed.role === "administrator" && actorRole !== "owner") {
-    throw new Error("Seul un propriétaire peut inviter un administrateur.");
-  }
-
-  const existingMember = await db.query(
-    `select memberships.user_id
-     from memberships
-     join users on users.id = memberships.user_id
-     where memberships.tenant_id = $1 and users.email = $2`,
-    [tenantId, email],
-  );
-
-  if (existingMember.rows.length > 0) {
-    throw new Error("Cet utilisateur est déjà membre de l'organisation.");
-  }
-
-  const now = nowIso();
-  const invitationToken = secureToken();
-  const invitationId = id("invite");
-  const expiresAt = daysFromNow(7);
-
-  await db.query(
-    "update invitations set status = $1 where tenant_id = $2 and email = $3 and status = $4",
-    ["revoked", tenantId, email, "pending"],
-  );
-  await db.query(
-    "insert into invitations (id, tenant_id, email, role, status, token_hash, expires_at, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8)",
-    [
-      invitationId,
-      tenantId,
-      email,
-      parsed.role,
-      "pending",
-      hashToken(invitationToken),
-      expiresAt,
-      now,
-    ],
-  );
-  await audit(db, tenantId, userId, "team.invitation_created", "invitation", invitationId, {
-    email,
-    role: parsed.role,
-  });
-
-  return {
-    id: invitationId,
-    email,
-    role: parsed.role,
-    invitationToken,
-    expiresAt,
-  };
-}
-
-async function acceptInvitation(
-  db: DbClient,
-  input: z.input<typeof acceptInvitationSchema>,
-) {
-  const parsed = acceptInvitationSchema.parse(input);
-  const invitation = await findPendingInvitation(db, parsed.token);
-
-  if (!invitation) {
-    throw new Error("Invitation invalide ou expirée.");
-  }
-
-  const existingUser = await db.query<UserRow>("select * from users where email = $1", [
-    invitation.email,
-  ]);
-
-  if (existingUser.rows[0]) {
-    throw new Error(
-      "Ce compte existe déjà. Connectez-vous puis ouvrez à nouveau le lien d'invitation.",
-    );
-  }
-
-  const user = await registerUser(db, {
-    name: parsed.name,
-    email: invitation.email,
-    password: parsed.password,
-  });
-  const membership = await completeInvitation(db, invitation, user.id);
-  const tenant = await getTenantById(db, invitation.tenant_id);
-
-  return { user, tenant, membership };
-}
-
-async function acceptInvitationForUser(
-  db: DbClient,
-  userId: string,
-  token: string,
-) {
-  const invitation = await findPendingInvitation(db, token);
-
-  if (!invitation) {
-    throw new Error("Invitation invalide ou expirée.");
-  }
-
-  const user = await db.query<UserRow>("select * from users where id = $1", [userId]);
-  const existingUser = user.rows[0];
-
-  if (!existingUser || existingUser.email !== invitation.email) {
-    throw new Error("Cette invitation ne correspond pas au compte connecté.");
-  }
-
-  const membership = await completeInvitation(db, invitation, userId);
-  const tenant = await getTenantById(db, invitation.tenant_id);
-
-  return { user: mapUser(existingUser), tenant, membership };
-}
-
-async function updateMemberRole(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  input: z.input<typeof updateMemberRoleSchema>,
-) {
-  const actorRole = await assertTenantAccess(db, userId, tenantId, [
-    "owner",
-    "administrator",
-  ]);
-  const parsed = updateMemberRoleSchema.parse(input);
-
-  if (parsed.targetUserId === userId) {
-    throw new Error("Votre propre rôle ne peut pas être modifié ici.");
-  }
-
-  const target = await db.query<{ role: Role }>(
-    "select role from memberships where tenant_id = $1 and user_id = $2",
-    [tenantId, parsed.targetUserId],
-  );
-  const currentRole = target.rows[0]?.role;
-
-  if (!currentRole) {
-    throw new Error("Membre introuvable.");
-  }
-
-  if (currentRole === "owner") {
-    throw new Error("Le rôle propriétaire ne peut pas être modifié.");
-  }
-
-  if (
-    actorRole !== "owner" &&
-    (currentRole === "administrator" || parsed.role === "administrator")
-  ) {
-    throw new Error("Seul un propriétaire peut gérer les administrateurs.");
-  }
-
-  await db.query(
-    "update memberships set role = $1 where tenant_id = $2 and user_id = $3",
-    [parsed.role, tenantId, parsed.targetUserId],
-  );
-  await audit(db, tenantId, userId, "team.member_role_updated", "membership", parsed.targetUserId, {
-    previousRole: currentRole,
-    role: parsed.role,
-  });
-
-  return {
-    tenantId,
-    userId: parsed.targetUserId,
-    role: parsed.role,
-  } satisfies Membership;
-}
-
-async function assertTenantAccess(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  allowedRoles: Role[] = [
-    "owner",
-    "administrator",
-    "manager",
-    "collaborator",
-    "read-only",
-  ],
-) {
-  const result = await db.query<{ role: Role }>(
-    "select role from memberships where user_id = $1 and tenant_id = $2",
-    [userId, tenantId],
-  );
-  const role = result.rows[0]?.role;
-
-  if (!role || !allowedRoles.includes(role)) {
-    throw new Error("Acces refuse pour cette organisation.");
-  }
-
-  return role;
-}
-
-async function findPendingInvitation(db: DbClient, token: string) {
-  if (!token) {
-    return null;
-  }
-
-  const result = await db.query<InvitationRow>(
-    `select *
-     from invitations
-     where token_hash = $1 and status = $2 and expires_at > $3`,
-    [hashToken(token), "pending", nowIso()],
-  );
-
-  return result.rows[0] ?? null;
-}
-
-async function completeInvitation(
-  db: DbClient,
-  invitation: InvitationRow,
-  userId: string,
-) {
-  const now = nowIso();
-  const existing = await db.query<{ role: Role }>(
-    "select role from memberships where tenant_id = $1 and user_id = $2",
-    [invitation.tenant_id, userId],
-  );
-
-  if (!existing.rows[0]) {
-    await db.query(
-      "insert into memberships (tenant_id, user_id, role, created_at) values ($1, $2, $3, $4)",
-      [invitation.tenant_id, userId, invitation.role, now],
-    );
-  }
-
-  await db.query("update invitations set status = $1 where id = $2", [
-    "accepted",
-    invitation.id,
-  ]);
-  await audit(
-    db,
-    invitation.tenant_id,
-    userId,
-    "team.invitation_accepted",
-    "invitation",
-    invitation.id,
-    { email: invitation.email, role: invitation.role },
-  );
-
-  return {
-    tenantId: invitation.tenant_id,
-    userId,
-    role: existing.rows[0]?.role ?? invitation.role,
-  } satisfies Membership;
 }
 
 async function saveOnboarding(
@@ -1639,10 +1242,15 @@ async function seedDemo(db: DbClient) {
   let tenant = tenants[0]?.tenant;
 
   if (!tenant) {
-    tenant = await createTenant(db, user.id, {
-      name: "Garage Caraibes Auto",
-      category: "Garage automobile",
-    });
+    tenant = await createTenantDomain(
+      db,
+      user.id,
+      {
+        name: "Garage Caraibes Auto",
+        category: "Garage automobile",
+      },
+      { createDefaults: createTenantDefaults },
+    );
   }
 
   const profile = await getOnboarding(db, user.id, tenant.id);
@@ -1784,32 +1392,6 @@ async function getActivities(db: DbClient, tenantId: string, limit: number) {
   })) satisfies Activity[];
 }
 
-async function getTenantById(db: DbClient, tenantId: string) {
-  const result = await db.query<TenantRow>("select * from tenants where id = $1", [tenantId]);
-  const tenant = result.rows[0];
-  if (!tenant) {
-    throw new Error("Organisation introuvable.");
-  }
-  return mapTenant(tenant);
-}
-
-async function getTenantBySlug(db: DbClient, slug: string) {
-  const result = await db.query<TenantRow>("select * from tenants where slug = $1", [slug]);
-  return result.rows[0] ? mapTenant(result.rows[0]) : null;
-}
-
-async function getTenantOwnerId(db: DbClient, tenantId: string) {
-  const owner = await db.query<{ user_id: string }>(
-    "select user_id from memberships where tenant_id = $1 order by case when role = 'owner' then 0 else 1 end limit 1",
-    [tenantId],
-  );
-  const ownerId = owner.rows[0]?.user_id;
-  if (!ownerId) {
-    throw new Error("Aucun proprietaire trouve pour cette organisation.");
-  }
-  return ownerId;
-}
-
 async function detectOpportunities(
   db: DbClient,
   tenantId: string,
@@ -1885,45 +1467,14 @@ async function audit(
   targetId: string,
   metadata: Record<string, unknown>,
 ) {
-  await db.query(
-    "insert into audit_logs (id, tenant_id, actor_id, action, target_type, target_id, safe_metadata, correlation_id, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-    [
-      id("audit"),
-      tenantId,
-      actorId,
-      action,
-      targetType,
-      targetId,
-      toJson(metadata),
-      correlationId(),
-      nowIso(),
-    ],
-  );
-}
-
-async function uniqueSlug(db: DbClient, value: string) {
-  const base = slugify(value) || "organisation";
-  let candidate = base;
-  let suffix = 1;
-
-  while (true) {
-    const exists = await db.query("select id from tenants where slug = $1", [candidate]);
-    if (exists.rows.length === 0) {
-      return candidate;
-    }
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
-  }
-}
-
-function mapTenant(row: TenantRow): Tenant {
-  return {
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    category: row.category,
-    createdAt: row.created_at,
-  };
+  await recordAuditLog(db, {
+    tenantId,
+    actorId,
+    action,
+    targetType,
+    targetId,
+    metadata,
+  });
 }
 
 function mapWebsite(row: WebsiteRow): Website {
