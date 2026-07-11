@@ -24,6 +24,10 @@ export function id(prefix: string) {
   return `${prefix}_${randomUUID().replaceAll("-", "")}`;
 }
 
+export function secureToken(bytes = 32) {
+  return randomBytes(bytes).toString("base64url");
+}
+
 export function correlationId() {
   return id("corr");
 }

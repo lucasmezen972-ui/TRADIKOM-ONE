@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { clearSessionCookie, setTenantCookie } from "@/lib/security";
+import {
+  clearSessionCookie,
+  getSessionIdFromCookie,
+  setTenantCookie,
+} from "@/lib/security";
 import { getServices } from "@/lib/services";
 import { requireTenantContext, requireUser, signInUser } from "@/lib/session";
 import type { WebsiteTemplateKey } from "@/lib/types";
@@ -29,6 +33,8 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  const services = await getServices();
+  await services.revokeSession(await getSessionIdFromCookie());
   await clearSessionCookie();
   redirect("/");
 }
@@ -129,12 +135,21 @@ export async function submitSiteLeadAction(slug: string, formData: FormData) {
     return;
   }
 
+  if (text(formData, "website")) {
+    throw new Error("La demande n'a pas pu être acceptée.");
+  }
+
+  if (formData.get("privacyConsent") !== "on") {
+    throw new Error("Le consentement est requis pour envoyer la demande.");
+  }
+
   const services = await getServices();
   await services.submitPublicLead(slug, {
     name: text(formData, "name"),
     email: text(formData, "email"),
     phone: text(formData, "phone"),
     message: text(formData, "message"),
+    idempotencyKey: text(formData, "idempotencyKey"),
   });
   revalidatePath(`/sites/${slug}`);
   redirect(`/sites/${slug}/merci`);
@@ -157,6 +172,14 @@ export async function syncMockConnectorAction() {
 }
 
 export async function seedDemoAction() {
+  const demoEnabled =
+    process.env.NODE_ENV !== "production" ||
+    process.env.FEATURE_PUBLIC_DEMO === "true";
+
+  if (!demoEnabled) {
+    throw new Error("La démonstration publique est désactivée.");
+  }
+
   const services = await getServices();
   const demo = await services.seedDemo();
   const context = await signInUser(demo.user.id);

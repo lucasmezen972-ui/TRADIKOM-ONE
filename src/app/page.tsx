@@ -7,6 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getCurrentSession();
+  const demoEnabled =
+    process.env.NODE_ENV !== "production" ||
+    process.env.FEATURE_PUBLIC_DEMO === "true";
+
   if (session) {
     redirect("/aujourdhui");
   }
@@ -40,12 +44,14 @@ export default async function Home() {
               </div>
             ))}
           </div>
-          <form action={seedDemoAction} className="mt-8">
-            <button className="inline-flex items-center gap-2 rounded-md bg-[#19c6b7] px-5 py-3 font-semibold text-[#08111f]">
-              Ouvrir la demo Garage Caraibes Auto
-              <Sparkles size={18} aria-hidden />
-            </button>
-          </form>
+          {demoEnabled ? (
+            <form action={seedDemoAction} className="mt-8">
+              <button className="inline-flex items-center gap-2 rounded-md bg-[#19c6b7] px-5 py-3 font-semibold text-[#08111f]">
+                Ouvrir la démo Garage Caraïbes Auto
+                <Sparkles size={18} aria-hidden />
+              </button>
+            </form>
+          ) : null}
         </section>
 
         <section className="grid gap-4">
@@ -90,14 +96,14 @@ export default async function Home() {
                 required
                 type="email"
                 name="email"
-                placeholder="patron@garage-caraibes-auto.example"
+                placeholder="Email professionnel"
                 className="rounded-md border border-white/10 bg-white px-4 py-3 text-slate-950"
               />
               <input
                 required
                 type="password"
                 name="password"
-                placeholder="Tradikom!2026"
+                placeholder="Mot de passe"
                 className="rounded-md border border-white/10 bg-white px-4 py-3 text-slate-950"
               />
               <button className="rounded-md bg-white px-5 py-3 font-semibold text-[#08111f]">

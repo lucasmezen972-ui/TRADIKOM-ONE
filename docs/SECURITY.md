@@ -8,17 +8,20 @@ Risques principaux : fuite cross-tenant, vol de session, injection SQL, XSS via 
 
 - Mots de passe hashes avec scrypt et salt unique.
 - Sessions HTTP-only, SameSite Lax, Secure en production.
+- Tokens de session hashes en base avec révocation serveur au logout.
 - Requetes parametrees PGlite/Postgres.
 - Validation Zod des entrees critiques.
 - Membership verifie cote serveur avant acces tenant.
 - Audit log pour actions importantes.
 - Webhook avec token unique et secret optionnel.
+- Fondations HMAC webhook et chiffrement AES-256-GCM des secrets connecteurs.
 - Credentials connecteurs modelises separement pour chiffrement futur.
 - Aucune cle reelle commitee.
 
 ## Production hardening
 
 - Activer PostgreSQL RLS.
+- Completer les tests RLS avec role PostgreSQL non proprietaire.
 - Ajouter rate limiting distribue.
 - Ajouter CSRF token explicite pour mutations critiques.
 - Ajouter CSP stricte et validation upload.

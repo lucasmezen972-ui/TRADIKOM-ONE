@@ -5,6 +5,8 @@ import {
   createWebsiteDraft,
   defaultGarageOnboarding,
 } from "@/lib/generation";
+import { executeLeadFollowUpWorkflow } from "@/modules/workflows/engine";
+import { parseContactsCsv } from "@/modules/connectors/csv";
 import {
   correlationId,
   daysFromNow,
@@ -13,6 +15,7 @@ import {
   id,
   nowIso,
   safeJson,
+  secureToken,
   slugify,
   toJson,
   verifyPassword,
@@ -121,7 +124,9 @@ const onboardingSchema = z.object({
 
 type SessionRow = {
   session_id: string;
+  token_hash: string;
   expires_at: string;
+  revoked_at: string | null;
   id: string;
   name: string;
   email: string;
@@ -184,6 +189,7 @@ export function createServices(db: DbClient) {
     loginUser: (input: z.input<typeof loginSchema>) => loginUser(db, input),
     createSession: (userId: string) => createSession(db, userId),
     getSessionUser: (sessionId?: string) => getSessionUser(db, sessionId),
+    revokeSession: (sessionToken?: string) => revokeSession(db, sessionToken),
     createTenant: (userId: string, input: z.input<typeof orgSchema>) =>
       createTenant(db, userId, input),
     switchTenant: (userId: string, tenantId: string) =>
@@ -229,7 +235,13 @@ export function createServices(db: DbClient) {
     getPublishedSite: (slug: string) => getPublishedSite(db, slug),
     submitPublicLead: (
       slug: string,
-      payload: { name: string; email: string; phone: string; message: string },
+      payload: {
+        name: string;
+        email: string;
+        phone: string;
+        message: string;
+        idempotencyKey?: string;
+      },
     ) => submitPublicLead(db, slug, payload),
     getDashboard: (userId: string, tenantId: string) =>
       getDashboard(db, userId, tenantId),
@@ -300,25 +312,26 @@ async function loginUser(db: DbClient, input: z.input<typeof loginSchema>) {
 
 async function createSession(db: DbClient, userId: string) {
   const sessionId = id("sess");
+  const sessionToken = secureToken();
   const expiresAt = daysFromNow(14);
   await db.query(
-    "insert into sessions (id, user_id, expires_at, created_at) values ($1, $2, $3, $4)",
-    [sessionId, userId, expiresAt, nowIso()],
+    "insert into sessions (id, user_id, token_hash, expires_at, revoked_at, created_at) values ($1, $2, $3, $4, $5, $6)",
+    [sessionId, userId, hashToken(sessionToken), expiresAt, null, nowIso()],
   );
-  return { sessionId, expiresAt };
+  return { sessionId, sessionToken, expiresAt };
 }
 
-async function getSessionUser(db: DbClient, sessionId?: string) {
-  if (!sessionId) {
+async function getSessionUser(db: DbClient, sessionToken?: string) {
+  if (!sessionToken) {
     return null;
   }
 
   const result = await db.query<SessionRow>(
-    `select sessions.id as session_id, sessions.expires_at, users.id, users.name, users.email, users.created_at
+    `select sessions.id as session_id, sessions.token_hash, sessions.expires_at, sessions.revoked_at, users.id, users.name, users.email, users.created_at
      from sessions
      join users on users.id = sessions.user_id
-     where sessions.id = $1 and sessions.expires_at > $2`,
-    [sessionId, nowIso()],
+     where sessions.token_hash = $1 and sessions.expires_at > $2 and sessions.revoked_at is null`,
+    [hashToken(sessionToken), nowIso()],
   );
 
   const row = result.rows[0];
@@ -329,6 +342,17 @@ async function getSessionUser(db: DbClient, sessionId?: string) {
         user: mapUser(row),
       }
     : null;
+}
+
+async function revokeSession(db: DbClient, sessionToken?: string) {
+  if (!sessionToken) {
+    return;
+  }
+
+  await db.query("update sessions set revoked_at = $1 where token_hash = $2", [
+    nowIso(),
+    hashToken(sessionToken),
+  ]);
 }
 
 async function createTenant(
@@ -707,14 +731,20 @@ async function publishWebsite(db: DbClient, userId: string, tenantId: string) {
     throw new Error("Aucun site a publier.");
   }
 
-  const versionId = await snapshotWebsite(db, tenantId, website.id, "publication");
+  const versionId = await snapshotWebsite(
+    db,
+    tenantId,
+    website.id,
+    "publication",
+    "published",
+  );
   const tenant = await getTenantById(db, tenantId);
   const now = nowIso();
   const localUrl = `/sites/${tenant.slug}`;
 
   await db.query(
-    "update websites set status = $1, published_at = $2, current_version_id = $3, updated_at = $4 where tenant_id = $5 and id = $6",
-    ["published", now, versionId, now, tenantId, website.id],
+    "update websites set status = $1, published_at = $2, current_version_id = $3, current_published_version_id = $4, updated_at = $5 where tenant_id = $6 and id = $7",
+    ["published", now, versionId, versionId, now, tenantId, website.id],
   );
   await db.query(
     "insert into website_publications (id, tenant_id, website_id, version_id, local_url, published_at) values ($1, $2, $3, $4, $5, $6)",
@@ -773,23 +803,47 @@ async function getPublishedSite(db: DbClient, slug: string) {
     return null;
   }
 
-  const website = await getWebsite(db, tenant.id);
-  if (!website || website.status !== "published") {
+  const publication = await db.query<{ snapshot: string }>(
+    `select website_versions.snapshot
+     from website_publications
+     join website_versions on website_versions.id = website_publications.version_id
+     where website_publications.tenant_id = $1
+     order by website_publications.published_at desc
+     limit 1`,
+    [tenant.id],
+  );
+  const snapshot = publication.rows[0]?.snapshot;
+
+  if (!snapshot) {
     return null;
   }
 
-  const sections = await getWebsiteSections(db, tenant.id, website.id);
+  const published = safeJson<{ website: Website; sections: WebsiteSection[] }>(
+    snapshot,
+    null as never,
+  );
+
+  if (!published?.website || published.website.status === "draft") {
+    published.website.status = "published";
+  }
+
   return {
     tenant,
-    website,
-    sections: sections.filter((section) => section.enabled),
+    website: published.website,
+    sections: published.sections.filter((section) => section.enabled),
   };
 }
 
 async function submitPublicLead(
   db: DbClient,
   slug: string,
-  payload: { name: string; email: string; phone: string; message: string },
+  payload: {
+    name: string;
+    email: string;
+    phone: string;
+    message: string;
+    idempotencyKey?: string;
+  },
 ) {
   const site = await getPublishedSite(db, slug);
   if (!site) {
@@ -798,9 +852,7 @@ async function submitPublicLead(
 
   const websiteId = site.website.id;
   const tenantId = site.tenant.id;
-  const idempotencyKey = hashToken(
-    `${payload.email}:${payload.phone}:${payload.message}:${new Date().toISOString().slice(0, 10)}`,
-  );
+  const idempotencyKey = payload.idempotencyKey || secureToken();
   const existing = await db.query<{ id: string }>(
     "select id from form_submissions where tenant_id = $1 and idempotency_key = $2",
     [tenantId, idempotencyKey],
@@ -927,7 +979,7 @@ async function createLeadFromPayload(
   await audit(db, tenantId, "system", "lead.created", "lead", leadId, {
     source: payload.source,
   });
-  await runDefaultLeadWorkflow(db, tenantId, leadId, contactId, ownerId);
+  await runDefaultLeadWorkflow(db, tenantId, leadId, contactId, ownerId, payload.source);
 
   return { leadId, contactId };
 }
@@ -938,63 +990,22 @@ async function runDefaultLeadWorkflow(
   leadId: string,
   contactId: string,
   ownerId: string,
+  source: string,
 ) {
-  const runId = id("run");
-  const now = nowIso();
-  await db.query(
-    `insert into workflow_runs (id, tenant_id, workflow_key, trigger_name, status, summary, error, retry_count, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      runId,
-      tenantId,
-      "new_website_lead_follow_up",
-      "lead.created",
-      "succeeded",
-      "Tache de relance creee et notification mock envoyee.",
-      null,
-      0,
-      now,
-    ],
-  );
-  await db.query(
-    `insert into tasks (id, tenant_id, title, status, assigned_user_id, due_at, related_type, related_id, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      id("task"),
-      tenantId,
-      "Relancer le nouveau lead site sous 24h",
-      "open",
-      ownerId,
-      daysFromNow(1),
-      "lead",
-      leadId,
-      now,
-    ],
-  );
-  await db.query(
-    "insert into notifications (id, tenant_id, channel, recipient_user_id, message, status, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      id("notification"),
-      tenantId,
-      "mock_email",
-      ownerId,
-      "Nouveau lead site a traiter.",
-      "sent",
-      now,
-    ],
-  );
-
-  for (const action of ["create_task", "send_mock_email", "create_activity"]) {
-    await db.query(
-      `insert into workflow_run_steps (id, tenant_id, workflow_run_id, action_name, status, safe_metadata, created_at)
-       values ($1, $2, $3, $4, $5, $6, $7)`,
-      [id("step"), tenantId, runId, action, "succeeded", toJson({ contactId }), now],
-    );
-  }
-
-  await audit(db, tenantId, "system", "workflow.executed", "workflow_run", runId, {
+  const runId = await executeLeadFollowUpWorkflow(db, {
+    tenantId,
     leadId,
+    contactId,
+    ownerId,
+    source,
+    correlationId: correlationId(),
   });
+
+  if (runId) {
+    await audit(db, tenantId, "system", "workflow.executed", "workflow_run", runId, {
+      leadId,
+    });
+  }
 }
 
 async function getDashboard(db: DbClient, userId: string, tenantId: string) {
@@ -1127,7 +1138,7 @@ async function importCsvContacts(
   csvText: string,
 ) {
   await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  const rows = parseCsv(csvText);
+  const rows = parseContactsCsv(csvText);
   const importId = id("import");
   const report = {
     total: rows.length,
@@ -1143,13 +1154,13 @@ async function importCsvContacts(
   );
 
   for (const [index, row] of rows.entries()) {
-    const name = row.nom ?? row.name ?? "";
-    const email = (row.email ?? row.mail ?? "").toLowerCase();
-    const phone = row.telephone ?? row.phone ?? "";
+    const name = row.name;
+    const email = row.email;
+    const phone = row.phone;
 
     if (!name || !email.includes("@")) {
       report.invalid += 1;
-      await insertImportRow(db, tenantId, importId, index + 2, "invalid", row, "Email invalide");
+      await insertImportRow(db, tenantId, importId, index + 2, "invalid", row.raw, "Email invalide");
       continue;
     }
 
@@ -1159,7 +1170,7 @@ async function importCsvContacts(
     );
     if (duplicate.rows[0]) {
       report.duplicates += 1;
-      await insertImportRow(db, tenantId, importId, index + 2, "duplicate", row, null);
+      await insertImportRow(db, tenantId, importId, index + 2, "duplicate", row.raw, null);
       continue;
     }
 
@@ -1181,7 +1192,7 @@ async function importCsvContacts(
       ],
     );
     report.imported += 1;
-    await insertImportRow(db, tenantId, importId, index + 2, "imported", row, null);
+    await insertImportRow(db, tenantId, importId, index + 2, "imported", row.raw, null);
   }
 
   await db.query("update imports set status = $1, report = $2 where tenant_id = $3 and id = $4", [
@@ -1447,12 +1458,13 @@ async function snapshotWebsite(
   tenantId: string,
   websiteId: string,
   source: string,
+  versionType: "draft" | "published" = "draft",
 ) {
   const website = await getWebsite(db, tenantId);
   const sections = await getWebsiteSections(db, tenantId, websiteId);
   const versionId = id("version");
   await db.query(
-    "insert into website_versions (id, tenant_id, website_id, snapshot, approval_state, source, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
+    "insert into website_versions (id, tenant_id, website_id, snapshot, approval_state, source, version_type, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8)",
     [
       versionId,
       tenantId,
@@ -1460,12 +1472,13 @@ async function snapshotWebsite(
       toJson({ website, sections }),
       "approved_for_preview",
       source,
+      versionType,
       nowIso(),
     ],
   );
   await db.query(
-    "update websites set current_version_id = $1 where tenant_id = $2 and id = $3",
-    [versionId, tenantId, websiteId],
+    "update websites set current_version_id = $1, current_draft_version_id = case when $2 = 'draft' then $1 else current_draft_version_id end where tenant_id = $3 and id = $4",
+    [versionId, versionType, tenantId, websiteId],
   );
   return versionId;
 }
@@ -1644,23 +1657,6 @@ async function uniqueSlug(db: DbClient, value: string) {
     suffix += 1;
     candidate = `${base}-${suffix}`;
   }
-}
-
-function parseCsv(csvText: string) {
-  const lines = csvText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const [headerLine, ...dataLines] = lines;
-  if (!headerLine) {
-    return [];
-  }
-
-  const headers = headerLine.split(",").map((header) => header.trim().toLowerCase());
-  return dataLines.map((line) => {
-    const values = line.split(",").map((value) => value.trim());
-    return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
-  });
 }
 
 function mapUser(row: Pick<UserRow, "id" | "name" | "email" | "created_at">): User {

@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - codex/phase-2-production-foundation
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify:
+    name: Lint, test, build, and E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tradikom
+          POSTGRES_PASSWORD: tradikom_local
+          POSTGRES_DB: tradikom_one_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tradikom -d tradikom_one_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://tradikom:tradikom_local@localhost:5432/tradikom_one_test
+      FEATURE_PUBLIC_DEMO: "true"
+      CONNECTOR_ENCRYPTION_KEY: "ci-ci-ci-ci-ci-ci-ci-ci-ci-ci-ci-32"
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify migrations
+        run: pnpm db:migrate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit and integration tests
+        run: pnpm test
+
+      - name: Production build
+        run: pnpm build
+
+      - name: Playwright E2E
+        run: pnpm test:e2e

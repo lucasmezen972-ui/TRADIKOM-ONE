@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { closePgPool, getDatabaseUrl, pgPoolAsSqlClient } from "@/db/client";
 
 export type QueryResult<T = Record<string, unknown>> = {
   rows: T[];
@@ -14,11 +15,12 @@ export type DbClient = {
   ) => Promise<QueryResult<T>>;
 };
 
-let dbPromise: Promise<PGlite> | null = null;
+let dbPromise: Promise<DbClient> | null = null;
+let pglitePromise: Promise<PGlite> | null = null;
 
-export async function getDb(): Promise<PGlite> {
+export async function getDb(): Promise<DbClient> {
   if (!dbPromise) {
-    dbPromise = createPersistentDb();
+    dbPromise = createRuntimeDb();
   }
 
   return dbPromise;
@@ -35,25 +37,45 @@ export async function closeDb() {
     return;
   }
 
-  const db = await dbPromise;
-  await db.close();
+  if (pglitePromise) {
+    const db = await pglitePromise;
+    await db.close();
+  }
+
+  await closePgPool();
+
   dbPromise = null;
+  pglitePromise = null;
 }
 
 export const closeDbForTests = closeDb;
 
-async function createPersistentDb() {
+async function createRuntimeDb() {
+  if (getDatabaseUrl()) {
+    const db = pgPoolAsSqlClient();
+    await migrate(db, { enableRls: true });
+    return db;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("DATABASE_URL must be configured in production.");
+  }
+
   const dataDir =
     process.env.PGLITE_DATA_DIR ??
     path.join(process.cwd(), ".data", "tradikom-one-pglite");
 
   await mkdir(dataDir, { recursive: true });
-  const db = new PGlite(dataDir);
-  await migrate(db);
+  pglitePromise = Promise.resolve(new PGlite(dataDir));
+  const db = await pglitePromise;
+  await migrate(db, { enableRls: false });
   return db;
 }
 
-export async function migrate(db: DbClient) {
+export async function migrate(
+  db: DbClient,
+  options: { enableRls?: boolean } = {},
+) {
   await db.query(`
     create table if not exists schema_migrations (
       id text primary key,
@@ -61,25 +83,69 @@ export async function migrate(db: DbClient) {
     );
   `);
 
-  const applied = await db.query<{ id: string }>(
-    "select id from schema_migrations where id = $1",
-    ["001_initial"],
-  );
+  for (const migration of getMigrations(options.enableRls ?? false)) {
+    const applied = await db.query<{ id: string }>(
+      "select id from schema_migrations where id = $1",
+      [migration.id],
+    );
 
-  if (applied.rows.length > 0) {
-    return;
+    if (applied.rows.length > 0) {
+      continue;
+    }
+
+    for (const statement of splitSqlStatements(migration.sql)) {
+      await db.query(statement);
+    }
+
+    await db.query(
+      "insert into schema_migrations (id, applied_at) values ($1, $2)",
+      [migration.id, new Date().toISOString()],
+    );
+  }
+}
+
+function getMigrations(enableRls: boolean) {
+  return [
+    { id: "001_initial", sql: initialMigrationSql },
+    { id: "002_phase2_foundation", sql: phase2FoundationMigrationSql },
+    ...(enableRls ? [{ id: "003_rls", sql: rlsMigrationSql }] : []),
+  ];
+}
+
+function splitSqlStatements(sql: string) {
+  const statements: string[] = [];
+  let current = "";
+  let inDollarQuote = false;
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    const pair = sql.slice(index, index + 2);
+
+    if (pair === "$$") {
+      inDollarQuote = !inDollarQuote;
+      current += pair;
+      index += 1;
+      continue;
+    }
+
+    if (char === ";" && !inDollarQuote) {
+      const statement = current.trim();
+      if (statement) {
+        statements.push(statement);
+      }
+      current = "";
+      continue;
+    }
+
+    current += char;
   }
 
-  for (const statement of initialMigrationSql
-    .split(";")
-    .map((item) => item.trim())
-    .filter(Boolean)) {
-    await db.query(statement);
+  const finalStatement = current.trim();
+  if (finalStatement) {
+    statements.push(finalStatement);
   }
-  await db.query(
-    "insert into schema_migrations (id, applied_at) values ($1, $2)",
-    ["001_initial", new Date().toISOString()],
-  );
+
+  return statements;
 }
 
 const initialMigrationSql = `
@@ -94,7 +160,9 @@ create table users (
 create table sessions (
   id text primary key,
   user_id text not null references users(id) on delete cascade,
+  token_hash text not null unique,
   expires_at text not null,
+  revoked_at text,
   created_at text not null
 );
 
@@ -499,4 +567,155 @@ create index idx_activities_tenant on activities(tenant_id);
 create index idx_website_sections_tenant on website_sections(tenant_id, website_id);
 create index idx_audit_logs_tenant on audit_logs(tenant_id, created_at desc);
 create index idx_webhook_token on webhook_endpoints(token);
+`;
+
+const phase2FoundationMigrationSql = `
+alter table sessions add column if not exists token_hash text;
+alter table sessions add column if not exists revoked_at text;
+create unique index if not exists idx_sessions_token_hash on sessions(token_hash);
+
+alter table websites add column if not exists current_draft_version_id text;
+alter table websites add column if not exists current_published_version_id text;
+alter table website_versions add column if not exists version_type text not null default 'draft';
+
+create table if not exists domain_events (
+  id text primary key,
+  tenant_id text not null,
+  actor_id text not null,
+  event_type text not null,
+  payload text not null,
+  status text not null,
+  attempts integer not null default 0,
+  idempotency_key text not null,
+  correlation_id text not null,
+  causation_id text,
+  next_run_at text not null,
+  last_error text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, idempotency_key)
+);
+
+create table if not exists rate_limits (
+  id text primary key,
+  key text not null unique,
+  count integer not null,
+  reset_at text not null,
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists generation_records (
+  id text primary key,
+  tenant_id text not null,
+  provider text not null,
+  model text not null,
+  prompt_version text not null,
+  generation_type text not null,
+  input_refs text not null,
+  output text not null,
+  usage_metadata text not null,
+  approval_status text not null,
+  created_at text not null
+);
+
+create table if not exists connector_secret_versions (
+  id text primary key,
+  tenant_id text not null,
+  connector_key text not null,
+  key_version text not null,
+  encrypted_payload text not null,
+  created_at text not null
+);
+
+create index if not exists idx_domain_events_status on domain_events(status, next_run_at);
+create index if not exists idx_generation_records_tenant on generation_records(tenant_id, created_at desc);
+create index if not exists idx_connector_secret_versions_tenant on connector_secret_versions(tenant_id, connector_key);
+`;
+
+const rlsMigrationSql = `
+create or replace function app_current_tenant_id()
+returns text
+language sql
+stable
+as $$
+  select nullif(current_setting('app.tenant_id', true), '')
+$$;
+
+create or replace function app_is_system()
+returns boolean
+language sql
+stable
+as $$
+  select coalesce(nullif(current_setting('app.system_access', true), ''), 'false') = 'true'
+$$;
+
+alter table business_profiles enable row level security;
+alter table knowledge_documents enable row level security;
+alter table contacts enable row level security;
+alter table companies enable row level security;
+alter table contact_consents enable row level security;
+alter table pipelines enable row level security;
+alter table pipeline_stages enable row level security;
+alter table opportunities enable row level security;
+alter table leads enable row level security;
+alter table activities enable row level security;
+alter table notes enable row level security;
+alter table tasks enable row level security;
+alter table websites enable row level security;
+alter table website_pages enable row level security;
+alter table website_sections enable row level security;
+alter table website_versions enable row level security;
+alter table website_publications enable row level security;
+alter table forms enable row level security;
+alter table form_fields enable row level security;
+alter table form_submissions enable row level security;
+alter table workflows enable row level security;
+alter table workflow_runs enable row level security;
+alter table workflow_run_steps enable row level security;
+alter table approvals enable row level security;
+alter table connectors enable row level security;
+alter table connector_accounts enable row level security;
+alter table connector_credentials enable row level security;
+alter table connector_sync_runs enable row level security;
+alter table webhook_endpoints enable row level security;
+alter table webhook_deliveries enable row level security;
+alter table external_record_mappings enable row level security;
+alter table imports enable row level security;
+alter table import_rows enable row level security;
+alter table notifications enable row level security;
+alter table audit_logs enable row level security;
+alter table domain_events enable row level security;
+alter table generation_records enable row level security;
+alter table connector_secret_versions enable row level security;
+
+drop policy if exists tenant_contacts on contacts;
+create policy tenant_contacts on contacts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_leads on leads;
+create policy tenant_leads on leads
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_tasks on tasks;
+create policy tenant_tasks on tasks
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_websites on websites;
+create policy tenant_websites on websites
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_website_versions on website_versions;
+create policy tenant_website_versions on website_versions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_audit_logs on audit_logs;
+create policy tenant_audit_logs on audit_logs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;

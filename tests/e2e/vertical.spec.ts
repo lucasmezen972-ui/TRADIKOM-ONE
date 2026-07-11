@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("demo user can publish site lead into CRM", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /Ouvrir la demo/i }).click();
+  await page.getByRole("button", { name: /Ouvrir la d.mo/i }).click();
   await expect(page).toHaveURL(/aujourdhui/);
 
   await page.getByRole("link", { name: "Mon site" }).click();
@@ -14,6 +14,7 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
   await page.getByPlaceholder("Email").fill("lead-playwright@example.com");
   await page.getByPlaceholder("Telephone").fill("+596 696 12 12 12");
   await page.getByPlaceholder("Votre demande").fill("Je souhaite prendre rendez-vous.");
+  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /Envoyer/i }).click();
   await expect(page).toHaveURL(/merci/);
 

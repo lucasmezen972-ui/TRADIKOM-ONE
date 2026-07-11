@@ -14,10 +14,10 @@
 
 ## Prochaines priorites
 
-- Remplacer PGlite par PostgreSQL managé avec RLS activee.
+- Finaliser les tests RLS PostgreSQL avec role applicatif restreint.
 - Ajouter reset password complet et invitations par email.
 - Ajouter file upload valide pour logo/photos.
-- Ajouter vrais workers et queue Redis-compatible.
+- Transformer le worker outbox en dispatcher durable.
 - Ajouter connecteurs OAuth reels.
-- Ajouter provider OpenAI structure derriere l'abstraction.
+- Brancher les vrais appels OpenAI structures derriere l'abstraction.
 - Ajouter exports de donnees et suppression de compte.

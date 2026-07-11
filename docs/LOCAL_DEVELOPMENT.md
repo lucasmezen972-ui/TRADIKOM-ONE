@@ -18,6 +18,13 @@ pnpm db:seed
 
 Docker n'est pas requis pour le MVP local. `docker-compose.yml` documente le chemin Postgres futur.
 
+Pour tester le chemin PostgreSQL :
+
+```bash
+docker compose up -d
+DATABASE_URL=postgres://tradikom:tradikom_local@localhost:5432/tradikom_one pnpm db:migrate
+```
+
 Depannage :
 
 - Si le seed existe deja, la commande est idempotente.

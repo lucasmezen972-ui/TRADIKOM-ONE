@@ -44,4 +44,21 @@ describe("connectors", () => {
     );
     expect(crm.leads.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("parses quoted CSV values with embedded commas", async () => {
+    const { services } = await setup();
+    const demo = await services.seedDemo();
+
+    const report = await services.importCsvContacts(
+      demo.user.id,
+      demo.tenant.id,
+      'nom,email,telephone\n"Cabinet Conseil, Martinique",cabinet@example.com,+596 696 01 02 03',
+    );
+
+    expect(report.imported).toBe(1);
+    const crm = await services.getCrm(demo.user.id, demo.tenant.id);
+    expect(
+      crm.contacts.some((contact) => contact.name === "Cabinet Conseil, Martinique"),
+    ).toBe(true);
+  });
 });
