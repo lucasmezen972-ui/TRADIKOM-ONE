@@ -89,6 +89,7 @@ Current validation note:
 - GitHub Actions passed on PR #1 for workflow step-attempt commit `a510be2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the workflow dead-letter recovery checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` passed, so validate this checkpoint through GitHub Actions after push.
 - During the workflow retry metadata checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. GitHub Actions then caught a retry-metadata type mismatch and SQL null-parameter issue in commits `ea706aa` and `b6d4950`; fix commit `04dfc73` passed migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the connector sync domain-event handler checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. GitHub Actions passed for commit `020051e`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
