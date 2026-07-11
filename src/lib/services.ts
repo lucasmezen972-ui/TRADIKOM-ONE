@@ -13,10 +13,20 @@ import {
   type WebhookSignatureInput,
 } from "@/modules/connectors";
 import {
+  addContactNote,
+  completeContactTask,
+  contactConsentSchema,
+  contactNoteSchema,
+  contactTaskSchema,
+  contactUpdateSchema,
+  createContactTask,
   findContactForTenant,
+  getContactDetail,
   getCrm,
   getTenantActivities,
   submitPublicLead as submitPublicLeadDomain,
+  updateContactProfile,
+  upsertContactConsent,
 } from "@/modules/crm";
 import {
   createSession,
@@ -205,6 +215,38 @@ export function createServices(db: DbClient) {
     getDashboard: (userId: string, tenantId: string) =>
       getDashboard(db, userId, tenantId),
     getCrm: (userId: string, tenantId: string) => getCrm(db, userId, tenantId),
+    getContactDetail: (userId: string, tenantId: string, contactId: string) =>
+      getContactDetail(db, userId, tenantId, contactId),
+    updateContact: (
+      userId: string,
+      tenantId: string,
+      contactId: string,
+      input: z.input<typeof contactUpdateSchema>,
+    ) => updateContactProfile(db, userId, tenantId, contactId, input),
+    updateContactConsent: (
+      userId: string,
+      tenantId: string,
+      contactId: string,
+      input: z.input<typeof contactConsentSchema>,
+    ) => upsertContactConsent(db, userId, tenantId, contactId, input),
+    addContactNote: (
+      userId: string,
+      tenantId: string,
+      contactId: string,
+      input: z.input<typeof contactNoteSchema>,
+    ) => addContactNote(db, userId, tenantId, contactId, input),
+    createContactTask: (
+      userId: string,
+      tenantId: string,
+      contactId: string,
+      input: z.input<typeof contactTaskSchema>,
+    ) => createContactTask(db, userId, tenantId, contactId, input),
+    completeContactTask: (
+      userId: string,
+      tenantId: string,
+      contactId: string,
+      taskId: string,
+    ) => completeContactTask(db, userId, tenantId, contactId, { taskId }),
     getConnectors: (userId: string, tenantId: string) =>
       getConnectors(db, userId, tenantId),
     importCsvContacts: (userId: string, tenantId: string, csvText: string) =>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
 
@@ -32,7 +33,14 @@ export default async function ContactsPage() {
             <tbody>
               {crm.contacts.map((contact) => (
                 <tr key={contact.id} className="border-t border-slate-100">
-                  <td className="py-3 font-semibold">{contact.name}</td>
+                  <td className="py-3 font-semibold">
+                    <Link
+                      href={`/contacts/${contact.id}`}
+                      className="text-slate-950 underline-offset-4 hover:underline"
+                    >
+                      {contact.name}
+                    </Link>
+                  </td>
                   <td>{contact.email}</td>
                   <td>{contact.phone}</td>
                   <td>{contact.source}</td>

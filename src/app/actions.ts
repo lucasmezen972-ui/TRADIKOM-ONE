@@ -236,6 +236,77 @@ export async function submitSiteLeadAction(slug: string, formData: FormData) {
   redirect(`/sites/${slug}/merci`);
 }
 
+export async function updateContactAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const contactId = text(formData, "contactId");
+  const assignedUserId = text(formData, "assignedUserId");
+
+  await services.updateContact(user.id, tenant.id, contactId, {
+    name: text(formData, "name"),
+    phone: text(formData, "phone"),
+    status: text(formData, "status"),
+    tags: list(formData, "tags"),
+    assignedUserId: assignedUserId || null,
+  });
+  revalidatePath("/contacts");
+  revalidatePath(`/contacts/${contactId}`);
+}
+
+export async function updateContactConsentAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const contactId = text(formData, "contactId");
+
+  await services.updateContactConsent(user.id, tenant.id, contactId, {
+    marketingOptIn: formData.get("marketingOptIn") === "on",
+    privacyNoticeAccepted: formData.get("privacyNoticeAccepted") === "on",
+    dataRetentionUntil: text(formData, "dataRetentionUntil") || undefined,
+  });
+  revalidatePath(`/contacts/${contactId}`);
+}
+
+export async function addContactNoteAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const contactId = text(formData, "contactId");
+
+  await services.addContactNote(user.id, tenant.id, contactId, {
+    body: text(formData, "body"),
+  });
+  revalidatePath(`/contacts/${contactId}`);
+}
+
+export async function createContactTaskAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const contactId = text(formData, "contactId");
+  const assignedUserId = text(formData, "assignedUserId");
+
+  await services.createContactTask(user.id, tenant.id, contactId, {
+    title: text(formData, "title"),
+    dueAt: text(formData, "dueAt"),
+    assignedUserId: assignedUserId || undefined,
+  });
+  revalidatePath("/contacts");
+  revalidatePath(`/contacts/${contactId}`);
+}
+
+export async function completeContactTaskAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const contactId = text(formData, "contactId");
+
+  await services.completeContactTask(
+    user.id,
+    tenant.id,
+    contactId,
+    text(formData, "taskId"),
+  );
+  revalidatePath("/contacts");
+  revalidatePath(`/contacts/${contactId}`);
+}
+
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
@@ -273,4 +344,11 @@ export async function seedDemoAction() {
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function list(formData: FormData, key: string) {
+  return text(formData, key)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
