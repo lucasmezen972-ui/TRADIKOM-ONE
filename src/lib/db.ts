@@ -119,6 +119,7 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "009_opportunity_radar_alerts_rls", sql: opportunityRadarAlertsRlsMigrationSql }]
       : []),
+    { id: "010_workflow_step_attempts", sql: workflowStepAttemptsMigrationSql },
   ];
 }
 
@@ -480,6 +481,11 @@ create table workflow_run_steps (
   action_name text not null,
   status text not null,
   safe_metadata text not null,
+  attempts integer not null default 1,
+  scheduled_at text,
+  started_at text,
+  completed_at text,
+  error text,
   created_at text not null
 );
 
@@ -741,6 +747,15 @@ drop policy if exists tenant_opportunity_radar_alerts on opportunity_radar_alert
 create policy tenant_opportunity_radar_alerts on opportunity_radar_alerts
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const workflowStepAttemptsMigrationSql = `
+alter table workflow_run_steps add column if not exists attempts integer not null default 1;
+alter table workflow_run_steps add column if not exists scheduled_at text;
+alter table workflow_run_steps add column if not exists started_at text;
+alter table workflow_run_steps add column if not exists completed_at text;
+alter table workflow_run_steps add column if not exists error text;
+create index if not exists idx_workflow_run_steps_attempts on workflow_run_steps(tenant_id, workflow_run_id, action_name, created_at desc);
 `;
 
 const rlsMigrationSql = `

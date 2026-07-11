@@ -235,12 +235,30 @@ export async function insertWorkflowRunStep(
     actionName: string;
     status: string;
     metadata: Record<string, unknown>;
+    attempts?: number;
+    scheduledAt?: string | null;
+    startedAt?: string | null;
+    completedAt?: string | null;
+    error?: string | null;
     createdAt: string;
   },
 ) {
   await db.query(
-    `insert into workflow_run_steps (id, tenant_id, workflow_run_id, action_name, status, safe_metadata, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7)`,
+    `insert into workflow_run_steps (
+       id,
+       tenant_id,
+       workflow_run_id,
+       action_name,
+       status,
+       safe_metadata,
+       attempts,
+       scheduled_at,
+       started_at,
+       completed_at,
+       error,
+       created_at
+     )
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       input.id,
       input.tenantId,
@@ -248,9 +266,36 @@ export async function insertWorkflowRunStep(
       input.actionName,
       input.status,
       toJson(input.metadata),
+      input.attempts ?? 1,
+      input.scheduledAt ?? input.createdAt,
+      input.startedAt ?? input.createdAt,
+      input.completedAt ?? input.createdAt,
+      input.error ?? null,
       input.createdAt,
     ],
   );
+}
+
+export async function countWorkflowActionAttempts(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    runId: string;
+    actionIndex: number;
+  },
+) {
+  const needle = `"actionIndex":${input.actionIndex}`;
+  const result = await db.query<{ count: number | string }>(
+    `select count(*)::int as count
+     from workflow_run_steps
+     where tenant_id = $1
+       and workflow_run_id = $2
+       and safe_metadata like $3
+       and status <> $4`,
+    [input.tenantId, input.runId, `%${needle}%`, "skipped"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 export async function findPendingApprovalForRun(

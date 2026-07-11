@@ -36,6 +36,8 @@ WORKER_MODE=poll WORKER_POLL_INTERVAL_MS=5000 WORKER_BATCH_SIZE=25 pnpm worker
 - failed terminal events are visible from Automatisations as tenant-scoped
   incidents with redacted error messages, attempts, correlation IDs, and update
   timestamps.
+- workflow step rows persist action attempt counts, scheduled/start/completion
+  timestamps, and safe error summaries.
 
 The lead workflow is backed by persisted workflow definitions and durable
 `workflow.resume` events. Wait actions, approval decisions, and manual retry now
@@ -43,6 +45,6 @@ resume through the outbox worker rather than a hidden in-memory path.
 
 Remaining work:
 
-- richer persisted action-attempt metadata;
+- richer retry/backoff scheduling metadata;
 - domain-specific async handlers beyond the lead workflow;
 - manual operator recovery controls for failed domain events.

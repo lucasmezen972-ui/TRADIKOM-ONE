@@ -33,6 +33,7 @@ Last completed checkpoint:
 - Durable workflow resumption is implemented through `workflow.resume` domain events: wait actions schedule delayed resumes, approvals enqueue resumes after approval, manual retry replays the failed action, cancelled runs skip queued resumes, and focused tests cover wait, approval, cancellation, and retry behavior.
 - Worker polling mode is implemented with `WORKER_MODE=once|poll`, configurable batch size and interval, structured JSON logs, heartbeat entries, graceful `SIGTERM`/`SIGINT` shutdown, clean database closing, and focused worker tests.
 - Workflow dead-letter visibility is implemented: failed terminal `domain_events` are exposed in Automatisations through tenant-scoped workflow service reads with attempts, correlation IDs, timestamps, redacted error messages, and tenant-isolation coverage.
+- Workflow step attempt metadata is persisted: `workflow_run_steps` now records attempt counts, scheduled/start/completion timestamps, safe error summaries, and tests assert completed action attempts.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
@@ -81,9 +82,10 @@ Current validation note:
 - GitHub Actions passed on PR #1 for worker polling commit `64c9bf3`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the workflow dead-letter checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` hung without output before staging, while `git diff --cached --check` passed after explicit staging.
 - GitHub Actions passed on PR #1 for workflow dead-letter commit `75d5740`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the workflow step-attempt checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-engine.test.ts`) hung without output and was stopped after 30 seconds. Validate this checkpoint through GitHub Actions after push.
 
 Next unfinished task:
 
-1. Continue Phase 2 workflow engine depth: persisted execution attempts, richer retry/backoff metadata, domain-specific async handlers beyond the lead follow-up path, and manual recovery controls for failed domain events.
+1. Continue Phase 2 workflow engine depth: richer retry/backoff metadata, domain-specific async handlers beyond the lead follow-up path, and manual recovery controls for failed domain events.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

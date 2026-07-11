@@ -113,11 +113,12 @@ describe("workflow engine", () => {
     expect(taskCount).toBe(1);
     expect(runCount).toBe(1);
     expect(orderedSteps).toEqual([
-      { action_name: "create_task", status: "succeeded" },
-      { action_name: "add_tag", status: "succeeded" },
-      { action_name: "send_mock_email", status: "succeeded" },
-      { action_name: "create_activity", status: "succeeded" },
+      { action_name: "create_task", status: "succeeded", attempts: 1 },
+      { action_name: "add_tag", status: "succeeded", attempts: 1 },
+      { action_name: "send_mock_email", status: "succeeded", attempts: 1 },
+      { action_name: "create_activity", status: "succeeded", attempts: 1 },
     ]);
+    expect(await countIncompleteStepAttempts(db, "tenant_workflow_a")).toBe(0);
   });
 
   it("records approval-required workflow runs without executing later actions", async () => {
@@ -280,9 +281,12 @@ async function loadOrderedSteps(db: DbClient, tenantId: string) {
   const steps = await db.query<{
     action_name: string;
     status: string;
+    attempts: number;
     safe_metadata: string;
+    started_at: string | null;
+    completed_at: string | null;
   }>(
-    `select action_name, status, safe_metadata
+    `select action_name, status, attempts, safe_metadata, started_at, completed_at
      from workflow_run_steps
      where tenant_id = $1`,
     [tenantId],
@@ -292,10 +296,29 @@ async function loadOrderedSteps(db: DbClient, tenantId: string) {
     .map((step) => ({
       action_name: step.action_name,
       status: step.status,
+      attempts: Number(step.attempts),
       actionIndex: Number(JSON.parse(step.safe_metadata).actionIndex),
+      started: Boolean(step.started_at),
+      completed: Boolean(step.completed_at),
     }))
     .sort((left, right) => left.actionIndex - right.actionIndex)
-    .map(({ action_name, status }) => ({ action_name, status }));
+    .map(({ action_name, status, attempts }) => ({
+      action_name,
+      status,
+      attempts,
+    }));
+}
+
+async function countIncompleteStepAttempts(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number }>(
+    `select count(*)::int as count
+     from workflow_run_steps
+     where tenant_id = $1
+       and (started_at is null or completed_at is null or attempts < 1)`,
+    [tenantId],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 async function countRows(

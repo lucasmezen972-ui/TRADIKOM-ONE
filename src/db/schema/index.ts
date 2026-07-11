@@ -207,6 +207,25 @@ export const workflowRuns = pgTable("workflow_runs", {
   createdAt: text("created_at").notNull(),
 });
 
+export const workflowRunSteps = pgTable("workflow_run_steps", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  workflowRunId: text("workflow_run_id")
+    .notNull()
+    .references(() => workflowRuns.id, { onDelete: "cascade" }),
+  actionName: text("action_name").notNull(),
+  status: text("status").notNull(),
+  safeMetadata: text("safe_metadata").notNull(),
+  attempts: integer("attempts").notNull().default(1),
+  scheduledAt: text("scheduled_at"),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  error: text("error"),
+  createdAt: text("created_at").notNull(),
+});
+
 export const domainEvents = pgTable("domain_events", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),

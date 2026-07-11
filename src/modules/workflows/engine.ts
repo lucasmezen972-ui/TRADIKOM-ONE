@@ -5,6 +5,7 @@ import { WorkflowError } from "@/modules/workflows/errors";
 import {
   findDomainEventById,
   findActiveWorkflowDefinition,
+  countWorkflowActionAttempts,
   findLatestWorkflowActionCursor,
   findSucceededWorkflowStepByIdempotency,
   findWorkflowRunById,
@@ -468,6 +469,7 @@ async function executeAction(
   });
 
   if (existingStep) {
+    const completedAt = nowIso();
     await insertWorkflowRunStep(db, {
       id: id("step"),
       tenantId: input.event.tenantId,
@@ -480,7 +482,11 @@ async function executeAction(
         idempotencyKey,
         reason: "Action deja executee.",
       },
-      createdAt: nowIso(),
+      attempts: 0,
+      scheduledAt: completedAt,
+      startedAt: completedAt,
+      completedAt,
+      createdAt: completedAt,
     });
 
     return {
@@ -489,6 +495,15 @@ async function executeAction(
     };
   }
 
+  const scheduledAt = nowIso();
+  const startedAt = nowIso();
+  const attemptNumber =
+    (await countWorkflowActionAttempts(db, {
+      tenantId: input.event.tenantId,
+      runId: input.runId,
+      actionIndex: input.actionIndex,
+    })) + 1;
+
   try {
     const result = await executeWorkflowAction({
       db,
@@ -496,8 +511,9 @@ async function executeAction(
       event: input.event,
       definition: input.definition,
       action: input.action,
-      now: nowIso(),
+      now: startedAt,
     });
+    const completedAt = nowIso();
 
     await insertWorkflowRunStep(db, {
       id: id("step"),
@@ -509,16 +525,22 @@ async function executeAction(
         eventId: input.event.id,
         actionIndex: input.actionIndex,
         idempotencyKey,
+        attempt: attemptNumber,
         input: input.action.input,
         ...result.metadata,
       },
-      createdAt: nowIso(),
+      attempts: attemptNumber,
+      scheduledAt,
+      startedAt,
+      completedAt,
+      createdAt: completedAt,
     });
 
     return result;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Action workflow echouee.";
+    const completedAt = nowIso();
     await insertWorkflowRunStep(db, {
       id: id("step"),
       tenantId: input.event.tenantId,
@@ -529,10 +551,17 @@ async function executeAction(
         eventId: input.event.id,
         actionIndex: input.actionIndex,
         idempotencyKey,
+        attempt: attemptNumber,
         input: input.action.input,
         error: message,
+        retryPolicy: input.definition.retryPolicy,
       },
-      createdAt: nowIso(),
+      attempts: attemptNumber,
+      scheduledAt,
+      startedAt,
+      completedAt,
+      error: message,
+      createdAt: completedAt,
     });
     throw error;
   }
