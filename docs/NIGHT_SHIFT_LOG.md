@@ -39,3 +39,5 @@
 - Targeted local connectors validation hung without output and was stopped; `git diff --check` passed and GitHub Actions passed for commit `a9a55cf`.
 - Added CRM contact detail and mutation depth in `src/modules/crm/`: profile edits, assignment validation, consent updates, notes, contact tasks, task completion, contact-linked opportunity reads, timeline activity, server actions, contact detail UI, and a tenant-isolation/audit integration test.
 - Targeted local CRM mutation validation hung without output and was stopped; `git diff --check` passed. GitHub Actions first caught a lint issue on commit `ef4cb8c`, the page lint fix was pushed as `5877e3f`, and both PR #1 CI checks passed.
+- Added CRM opportunity depth: listing with search/filter support, opportunity detail page, stage/value/next-action/lost-reason updates, tenant-scoped pipeline stage validation, audit events, contact timeline propagation, and an integration test.
+- Targeted local CRM opportunity validation hung without output and was stopped; unstaged `git diff --check` exited abnormally, staged `git diff --cached --check` passed, and GitHub Actions passed for commit `0c892b2`.

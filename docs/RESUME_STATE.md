@@ -19,6 +19,7 @@ Last completed checkpoint:
 - Public website lead ingestion is extracted into `src/modules/crm/` with schemas, typed errors, repository functions, idempotent form submission handling, contact/lead/opportunity creation, audit events, and workflow dispatch preserved.
 - CRM read models, recent activity reads, and tenant-scoped contact lookup are extracted into `src/modules/crm/` with tenant authorization preserved.
 - CRM contact detail, contact profile updates, consent updates, notes, contact tasks, task completion, contact-linked opportunities, and interaction timeline reads now live in `src/modules/crm/` with tenant authorization, assignment validation, audit events, server actions, UI, and integration coverage.
+- CRM opportunity listing, search/filter support, opportunity detail, stage/value/next-action/lost-reason updates, pipeline-stage tenant validation, audit events, contact timeline propagation, UI, and integration coverage are implemented in `src/modules/crm/`.
 - Website draft, publication, rollback, immutable public snapshot, and workspace reads are extracted into `src/modules/websites/` with schemas, typed errors, repository functions, tenant authorization, and audit events preserved.
 - Connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import rows, and webhook delivery logging are extracted into `src/modules/connectors/` with schemas, typed errors, repository functions, tenant authorization, audit events, and direct module coverage.
 - Invitations can be created, accepted once, listed as pending, and used for non-owner role administration.
@@ -54,10 +55,12 @@ Current validation note:
 - GitHub Actions passed on PR #1 for connectors extraction commit `a9a55cf`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the 2026-07-11 12:13 UTC heartbeat, targeted CRM mutation validation (`pnpm exec vitest run tests/crm-mutations.test.ts tests/crm-module.test.ts`) hung without output and was stopped. `git diff --check` passed.
 - GitHub Actions initially failed CRM mutation commit `ef4cb8c` on page lint, then passed on PR #1 for fix commit `5877e3f`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the same heartbeat, targeted CRM opportunity validation (`pnpm exec vitest run tests/crm-opportunities.test.ts tests/crm-mutations.test.ts`) hung without output and was stopped. `git diff --check` also exited abnormally without output before staging, but `git diff --cached --check` passed after explicit staging.
+- GitHub Actions passed on PR #1 for CRM opportunity mutation commit `0c892b2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Local Node-based validation remained unreliable during this heartbeat; prefer GitHub Actions for confirmation until local filesystem/tooling responsiveness improves.
 
 Next unfinished task:
 
-1. Continue CRM Phase 2 depth with opportunity detail/update mutations, search/filter support, duplicate detection, and duplicate merge before moving to broader Opportunity Radar rules.
+1. Continue CRM Phase 2 depth with duplicate detection, duplicate merge, and broader Opportunity Radar rules with direct action links.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
