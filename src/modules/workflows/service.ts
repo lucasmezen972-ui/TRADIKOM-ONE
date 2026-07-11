@@ -369,6 +369,10 @@ function mapWorkflowDeadLetter(row: {
   attempts: number;
   correlation_id: string;
   last_error: string | null;
+  last_attempted_at: string | null;
+  last_retry_delay_ms: number;
+  failure_classification: string | null;
+  max_attempts: number | null;
   created_at: string;
   updated_at: string;
 }) {
