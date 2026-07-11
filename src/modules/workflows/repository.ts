@@ -42,6 +42,24 @@ export type ApprovalRow = {
   created_at: string;
 };
 
+export type DomainEventRow = {
+  id: string;
+  tenant_id: string;
+  actor_id: string;
+  event_type: string;
+  payload: string;
+  idempotency_key: string;
+  correlation_id: string;
+  causation_id: string | null;
+};
+
+export type WorkflowActionCursor = {
+  actionIndex: number;
+  actionName: string;
+  eventId: string;
+  status: string;
+};
+
 export type StoredWorkflowDefinition = {
   workflowId: string;
   tenantId: string;
@@ -244,6 +262,38 @@ export async function findPendingApprovalForRun(
   return result.rows[0] ?? null;
 }
 
+export async function findDomainEventById(
+  db: DbClient,
+  tenantId: string,
+  eventId: string,
+) {
+  const result = await db.query<DomainEventRow>(
+    `select id, tenant_id, actor_id, event_type, payload, idempotency_key, correlation_id, causation_id
+     from domain_events
+     where tenant_id = $1 and id = $2
+     limit 1`,
+    [tenantId, eventId],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function findLatestWorkflowActionCursor(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  return findWorkflowActionCursor(db, tenantId, runId);
+}
+
+export async function findLatestFailedWorkflowActionCursor(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  return findWorkflowActionCursor(db, tenantId, runId, "failed");
+}
+
 export async function updateApprovalStatus(
   db: DbClient,
   tenantId: string,
@@ -254,6 +304,53 @@ export async function updateApprovalStatus(
     "update approvals set status = $1 where tenant_id = $2 and id = $3",
     [status, tenantId, approvalId],
   );
+}
+
+async function findWorkflowActionCursor(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+  status?: string,
+): Promise<WorkflowActionCursor | null> {
+  const statusClause = status ? "and status = $4" : "";
+  const params = status
+    ? [tenantId, runId, `%"actionIndex":%`, status]
+    : [tenantId, runId, `%"actionIndex":%`];
+  const result = await db.query<{
+    action_name: string;
+    status: string;
+    safe_metadata: string;
+  }>(
+    `select action_name, status, safe_metadata
+     from workflow_run_steps
+     where tenant_id = $1
+       and workflow_run_id = $2
+       and safe_metadata like $3
+       ${statusClause}
+     order by created_at desc
+     limit 1`,
+    params,
+  );
+  const row = result.rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  const metadata = safeJson<Record<string, unknown>>(row.safe_metadata, {});
+  const actionIndex = metadata.actionIndex;
+  const eventId = metadata.eventId;
+
+  if (typeof actionIndex !== "number" || typeof eventId !== "string") {
+    return null;
+  }
+
+  return {
+    actionIndex,
+    actionName: row.action_name,
+    eventId,
+    status: row.status,
+  };
 }
 
 function normalizeStoredWorkflowDefinition(row: WorkflowRow) {

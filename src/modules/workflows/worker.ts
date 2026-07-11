@@ -1,4 +1,8 @@
 import type { DbClient } from "@/lib/db";
+import {
+  resumeWorkflowRun,
+  workflowResumeEventType,
+} from "@/modules/workflows/engine";
 
 export type DomainEvent = {
   id: string;
@@ -91,7 +95,18 @@ export async function processPendingDomainEvents(
     options.processingTimeoutMs,
     defaultProcessingTimeoutMs,
   );
-  const handlers = options.handlers ?? {};
+  const handlers: Record<string, DomainEventHandler> = {
+    [workflowResumeEventType]: async ({ db: handlerDb, event }: {
+      db: DbClient;
+      event: DomainEvent;
+    }) => {
+      await resumeWorkflowRun(handlerDb, {
+        ...event,
+        causationId: event.causationId ?? undefined,
+      });
+    },
+    ...(options.handlers ?? {}),
+  };
 
   const summary: DomainEventWorkerSummary = {
     selected: 0,

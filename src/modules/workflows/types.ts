@@ -49,4 +49,5 @@ export type WorkflowEvent = {
   correlationId: string;
   causationId?: string;
   idempotencyKey: string;
+  nextRunAt?: string;
 };

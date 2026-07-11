@@ -1,10 +1,13 @@
 import type { DbClient } from "@/lib/db";
-import { id, nowIso, toJson } from "@/lib/security";
+import { id, nowIso, safeJson, toJson } from "@/lib/security";
 import { executeWorkflowAction } from "@/modules/workflows/actions";
 import { WorkflowError } from "@/modules/workflows/errors";
 import {
+  findDomainEventById,
   findActiveWorkflowDefinition,
+  findLatestWorkflowActionCursor,
   findSucceededWorkflowStepByIdempotency,
+  findWorkflowRunById,
   insertWorkflowRun,
   insertWorkflowRunStep,
   updateWorkflowRunStatus,
@@ -15,6 +18,8 @@ import {
   type WorkflowDefinition,
   type WorkflowEvent,
 } from "@/modules/workflows/types";
+
+export const workflowResumeEventType = "workflow.resume";
 
 export const leadFollowUpWorkflow: WorkflowDefinition =
   workflowDefinitionSchema.parse({
@@ -68,7 +73,7 @@ export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
       event.idempotencyKey,
       event.correlationId,
       event.causationId ?? null,
-      now,
+      event.nextRunAt ?? now,
       null,
       now,
       now,
@@ -76,6 +81,39 @@ export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
   );
 
   return true;
+}
+
+export async function enqueueWorkflowResumeEvent(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    runId: string;
+    actorId: string;
+    sourceEventId: string;
+    correlationId: string;
+    resumeFromActionIndex: number;
+    nextRunAt?: string;
+    reason: "wait_elapsed" | "approval_granted" | "manual_retry";
+    resumeKey?: string;
+  },
+) {
+  const resumeKey = input.resumeKey ?? input.reason;
+  return enqueueDomainEvent(db, {
+    id: id("event"),
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    type: workflowResumeEventType,
+    payload: {
+      runId: input.runId,
+      sourceEventId: input.sourceEventId,
+      resumeFromActionIndex: input.resumeFromActionIndex,
+      reason: input.reason,
+    },
+    correlationId: input.correlationId,
+    causationId: input.sourceEventId,
+    idempotencyKey: `workflow.resume:${input.runId}:a${input.resumeFromActionIndex}:${resumeKey}`,
+    nextRunAt: input.nextRunAt,
+  });
 }
 
 export async function executeLeadFollowUpWorkflow(
@@ -161,30 +199,17 @@ export async function executeWorkflowDefinition(
   });
 
   try {
-    let terminalStatus = "succeeded";
-    let terminalSummary = `Workflow v${parsedDefinition.version} execute.`;
-
-    for (const [index, action] of parsedDefinition.actions.entries()) {
-      const result = await executeAction(db, {
-        runId,
-        event,
-        definition: parsedDefinition,
-        action,
-        actionIndex: index,
-      });
-
-      if (result.status === "waiting" || result.status === "approval_required") {
-        terminalStatus = result.status;
-        terminalSummary = result.summary;
-        break;
-      }
-    }
-
+    const terminal = await runWorkflowActions(db, {
+      runId,
+      event,
+      definition: parsedDefinition,
+      startActionIndex: 0,
+    });
     await updateWorkflowRunStatus(db, {
       tenantId: event.tenantId,
       runId,
-      status: terminalStatus,
-      summary: terminalSummary,
+      status: terminal.status,
+      summary: terminal.summary,
       error: null,
     });
     await markDomainEventSucceeded(db, event);
@@ -203,6 +228,223 @@ export async function executeWorkflowDefinition(
     await markDomainEventFailed(db, event, message);
     throw error;
   }
+}
+
+export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
+  if (event.type !== workflowResumeEventType) {
+    throw new WorkflowError(
+      "workflow_definition_invalid",
+      "Evenement de reprise workflow invalide.",
+    );
+  }
+
+  const payload = parseResumePayload(event.payload);
+  const run = await findWorkflowRunById(db, event.tenantId, payload.runId);
+
+  if (!run) {
+    throw new WorkflowError(
+      "workflow_run_not_found",
+      "Execution workflow introuvable.",
+    );
+  }
+
+  if (isTerminalRunStatus(run.status)) {
+    await insertWorkflowRunStep(db, {
+      id: id("step"),
+      tenantId: event.tenantId,
+      runId: run.id,
+      actionName: "workflow.resume",
+      status: "skipped",
+      metadata: {
+        eventId: event.id,
+        reason: payload.reason,
+        skippedStatus: run.status,
+      },
+      createdAt: nowIso(),
+    });
+    return null;
+  }
+
+  const storedWorkflow = await findActiveWorkflowDefinition(
+    db,
+    event.tenantId,
+    run.workflow_key,
+  );
+
+  if (!storedWorkflow) {
+    throw new WorkflowError(
+      "workflow_not_found",
+      "Definition workflow introuvable pour la reprise.",
+    );
+  }
+
+  const sourceEvent = await findDomainEventById(
+    db,
+    event.tenantId,
+    payload.sourceEventId,
+  );
+
+  if (!sourceEvent) {
+    throw new WorkflowError(
+      "workflow_run_not_actionable",
+      "Evenement source introuvable pour la reprise workflow.",
+    );
+  }
+
+  await updateWorkflowRunStatus(db, {
+    tenantId: event.tenantId,
+    runId: run.id,
+    status: "running",
+    summary: "Workflow repris par le worker.",
+    error: null,
+  });
+
+  const sourceWorkflowEvent = toWorkflowEvent(sourceEvent);
+
+  try {
+    const terminal = await runWorkflowActions(db, {
+      runId: run.id,
+      event: sourceWorkflowEvent,
+      definition: storedWorkflow.definition,
+      startActionIndex: payload.resumeFromActionIndex,
+    });
+    await updateWorkflowRunStatus(db, {
+      tenantId: event.tenantId,
+      runId: run.id,
+      status: terminal.status,
+      summary: terminal.summary,
+      error: null,
+    });
+    return run.id;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Workflow resume failed";
+    await updateWorkflowRunStatus(db, {
+      tenantId: event.tenantId,
+      runId: run.id,
+      status: "failed",
+      summary: "La reprise workflow a echoue.",
+      error: message,
+      incrementRetry: true,
+    });
+    throw error;
+  }
+}
+
+export async function enqueueResumeForLatestWorkflowAction(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    runId: string;
+    actorId: string;
+    reason: "approval_granted" | "manual_retry";
+    resumeFromActionIndex?: number;
+    resumeKey?: string;
+  },
+) {
+  const cursor = await findLatestWorkflowActionCursor(
+    db,
+    input.tenantId,
+    input.runId,
+  );
+
+  if (!cursor) {
+    throw new WorkflowError(
+      "workflow_run_not_actionable",
+      "Aucune action workflow ne permet de reprendre cette execution.",
+    );
+  }
+
+  return enqueueWorkflowResumeEvent(db, {
+    tenantId: input.tenantId,
+    runId: input.runId,
+    actorId: input.actorId,
+    sourceEventId: cursor.eventId,
+    correlationId: `workflow.resume:${input.runId}`,
+    resumeFromActionIndex:
+      input.resumeFromActionIndex ?? cursor.actionIndex + 1,
+    reason: input.reason,
+    resumeKey: input.resumeKey,
+  });
+}
+
+async function runWorkflowActions(
+  db: DbClient,
+  input: {
+    runId: string;
+    event: WorkflowEvent;
+    definition: WorkflowDefinition;
+    startActionIndex: number;
+  },
+) {
+  if (input.startActionIndex >= input.definition.actions.length) {
+    return {
+      status: "succeeded",
+      summary: `Workflow v${input.definition.version} execute.`,
+    };
+  }
+
+  for (
+    let actionIndex = input.startActionIndex;
+    actionIndex < input.definition.actions.length;
+    actionIndex += 1
+  ) {
+    const currentRun = await findWorkflowRunById(
+      db,
+      input.event.tenantId,
+      input.runId,
+    );
+
+    if (currentRun && isTerminalRunStatus(currentRun.status)) {
+      return {
+        status: currentRun.status,
+        summary: currentRun.summary,
+      };
+    }
+
+    const action = input.definition.actions[actionIndex];
+    if (!action) {
+      break;
+    }
+
+    const result = await executeAction(db, {
+      runId: input.runId,
+      event: input.event,
+      definition: input.definition,
+      action,
+      actionIndex,
+    });
+
+    if (result.status === "waiting") {
+      await enqueueWorkflowResumeEvent(db, {
+        tenantId: input.event.tenantId,
+        runId: input.runId,
+        actorId: "system",
+        sourceEventId: input.event.id,
+        correlationId: input.event.correlationId,
+        resumeFromActionIndex: actionIndex + 1,
+        nextRunAt: stringMetadata(result.metadata, "resumeAt"),
+        reason: "wait_elapsed",
+      });
+
+      return {
+        status: result.status,
+        summary: result.summary,
+      };
+    }
+
+    if (result.status === "approval_required") {
+      return {
+        status: result.status,
+        summary: result.summary,
+      };
+    }
+  }
+
+  return {
+    status: "succeeded",
+    summary: `Workflow v${input.definition.version} execute.`,
+  };
 }
 
 async function executeAction(
@@ -369,4 +611,64 @@ function readPayloadPath(payload: Record<string, unknown>, path: string) {
 
     return (current as Record<string, unknown>)[key];
   }, payload);
+}
+
+function parseResumePayload(payload: Record<string, unknown>) {
+  const runId = payload.runId;
+  const sourceEventId = payload.sourceEventId;
+  const resumeFromActionIndex = payload.resumeFromActionIndex;
+  const reason = payload.reason;
+
+  if (
+    typeof runId !== "string" ||
+    typeof sourceEventId !== "string" ||
+    typeof resumeFromActionIndex !== "number" ||
+    typeof reason !== "string"
+  ) {
+    throw new WorkflowError(
+      "workflow_run_not_actionable",
+      "Payload de reprise workflow invalide.",
+    );
+  }
+
+  return {
+    runId,
+    sourceEventId,
+    resumeFromActionIndex: Math.max(0, Math.floor(resumeFromActionIndex)),
+    reason,
+  };
+}
+
+function toWorkflowEvent(row: {
+  id: string;
+  tenant_id: string;
+  actor_id: string;
+  event_type: string;
+  payload: string;
+  idempotency_key: string;
+  correlation_id: string;
+  causation_id: string | null;
+}): WorkflowEvent {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    actorId: row.actor_id,
+    type: row.event_type,
+    payload: safeJson<Record<string, unknown>>(row.payload, {}),
+    idempotencyKey: row.idempotency_key,
+    correlationId: row.correlation_id,
+    causationId: row.causation_id ?? undefined,
+  };
+}
+
+function stringMetadata(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function isTerminalRunStatus(status: string) {
+  return ["succeeded", "failed", "cancelled", "rejected"].includes(status);
 }

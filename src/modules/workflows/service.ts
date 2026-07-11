@@ -5,6 +5,11 @@ import { recordAuditLog } from "@/modules/audit";
 import { assertTenantAccess } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows/errors";
 import {
+  enqueueResumeForLatestWorkflowAction,
+  enqueueWorkflowResumeEvent,
+} from "@/modules/workflows/engine";
+import {
+  findLatestFailedWorkflowActionCursor,
   findPendingApprovalForRun,
   findWorkflowRunById,
   insertWorkflowRunStep,
@@ -88,6 +93,12 @@ export async function approveWorkflowRun(
     actorId: userId,
     approvalId: approval.id,
   });
+  await enqueueResumeForLatestWorkflowAction(db, {
+    tenantId,
+    runId: run.id,
+    actorId: userId,
+    reason: "approval_granted",
+  });
   await auditWorkflowControl(db, tenantId, userId, "workflow.approved", run.id);
 }
 
@@ -150,6 +161,25 @@ export async function requestManualWorkflowRetry(
   await insertControlStep(db, tenantId, run.id, "workflow.manual_retry", "waiting", {
     actorId: userId,
   });
+  const failedCursor = await findLatestFailedWorkflowActionCursor(
+    db,
+    tenantId,
+    run.id,
+  );
+
+  if (failedCursor) {
+    await enqueueWorkflowResumeEvent(db, {
+      tenantId,
+      runId: run.id,
+      actorId: userId,
+      sourceEventId: failedCursor.eventId,
+      correlationId: `workflow.manual_retry:${run.id}`,
+      resumeFromActionIndex: failedCursor.actionIndex,
+      reason: "manual_retry",
+      resumeKey: `retry${Number(run.retry_count) + 1}`,
+    });
+  }
+
   await auditWorkflowControl(
     db,
     tenantId,
