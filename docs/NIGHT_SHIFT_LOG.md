@@ -56,3 +56,7 @@
 - Added workflow run controls in `src/modules/workflows/`: tenant-authorized cancel, approve, reject, and manual retry services; server actions; Automatisations UI controls; control timeline entries; audit logs; and integration tests for status transitions and tenant isolation.
 - Local Node validation was skipped for the workflow controls checkpoint because the local tooling remained unreliable; the changed files were manually inspected and staged explicitly.
 - GitHub Actions passed for workflow controls commit `73cef7b`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- Added durable workflow resumption through `workflow.resume` domain events: waits schedule delayed resumes, approvals enqueue resumes after approval, manual retry replays the failed action, and cancelled runs skip queued resumes.
+- Added workflow resume integration tests covering delayed resume, approval resume, cancellation blocking resume, and manual retry after a failed action.
+- Local workflow-resume Vitest and one-off TypeScript checks hung and were stopped; tracked `git diff --check` returned clean before push.
+- GitHub Actions initially failed commit `ba42a11` on a legacy controls fixture without an action cursor; commit `a27045a` keeps that historical control path compatible and both PR #1 CI runs passed end-to-end.
