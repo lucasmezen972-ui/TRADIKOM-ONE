@@ -36,6 +36,9 @@ WORKER_MODE=poll WORKER_POLL_INTERVAL_MS=5000 WORKER_BATCH_SIZE=25 pnpm worker
 - failed terminal events are visible from Automatisations as tenant-scoped
   incidents with redacted error messages, attempts, correlation IDs, and update
   timestamps.
+- manager/owner operators can requeue failed terminal events from
+  Automatisations; the retry resets worker attempts, clears the safe error, and
+  records an audit event.
 - workflow step rows persist action attempt counts, scheduled/start/completion
   timestamps, and safe error summaries.
 
@@ -47,4 +50,4 @@ Remaining work:
 
 - richer retry/backoff scheduling metadata;
 - domain-specific async handlers beyond the lead workflow;
-- manual operator recovery controls for failed domain events.
+- deeper delivery/run recovery views beyond the current requeue control.

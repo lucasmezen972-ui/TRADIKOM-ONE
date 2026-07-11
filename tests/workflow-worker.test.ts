@@ -4,7 +4,10 @@ import {
   getPendingDomainEventCount,
   processPendingDomainEvents,
 } from "../src/modules/workflows/worker";
-import { getWorkflowDeadLetters } from "../src/modules/workflows";
+import {
+  getWorkflowDeadLetters,
+  retryWorkflowDeadLetter,
+} from "../src/modules/workflows";
 import {
   parseWorkerConfig,
   runWorkerPoll,
@@ -248,6 +251,49 @@ describe("workflow worker", () => {
       }),
     ]);
   });
+
+  it("requeues failed domain events with tenant authorization and audit", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_requeue_dead_letter", "user_requeue_dead_letter");
+    await seedTenant(
+      db,
+      "tenant_other_requeue_dead_letter",
+      "user_other_requeue_dead_letter",
+    );
+    await insertDomainEvent(db, {
+      id: "event_requeue_dead_letter",
+      tenantId: "tenant_requeue_dead_letter",
+      eventType: "workflow.resume",
+      status: "failed",
+      attempts: 3,
+      lastError: "Worker failed permanently.",
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    await expect(
+      retryWorkflowDeadLetter(
+        db,
+        "user_other_requeue_dead_letter",
+        "tenant_requeue_dead_letter",
+        { eventId: "event_requeue_dead_letter" },
+      ),
+    ).rejects.toThrow("Acces refuse");
+
+    await retryWorkflowDeadLetter(
+      db,
+      "user_requeue_dead_letter",
+      "tenant_requeue_dead_letter",
+      { eventId: "event_requeue_dead_letter" },
+    );
+    const event = await loadEvent(db, "event_requeue_dead_letter");
+
+    expect(event.status).toBe("pending");
+    expect(event.attempts).toBe(0);
+    expect(event.last_error).toBeNull();
+    expect(await countDeadLetterRetryAudits(db, "tenant_requeue_dead_letter")).toBe(
+      1,
+    );
+  });
 });
 
 async function insertDomainEvent(
@@ -332,4 +378,13 @@ async function loadEvent(db: DbClient, eventId: string) {
   );
 
   return result.rows[0];
+}
+
+async function countDeadLetterRetryAudits(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
+    [tenantId, "workflow.dead_letter_retried"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
 }

@@ -66,3 +66,5 @@
 - GitHub Actions passed for workflow dead-letter commit `75d5740`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Added persisted workflow step attempt metadata: migration/schema support for attempts, scheduled/start/completion timestamps, safe error summaries, repository insertion support, engine attempt numbering, and workflow-engine assertions.
 - GitHub Actions passed for workflow step-attempt commit `a510be2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- Added manual dead-letter recovery controls: failed terminal domain events can be requeued from Automatisations by authorized workflow operators, attempts are reset for a fresh worker retry window, safe errors are cleared, and an audit log records the action.
+- Targeted local worker validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` passed, so this checkpoint should be validated through GitHub Actions after push.

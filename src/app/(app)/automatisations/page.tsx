@@ -2,6 +2,7 @@ import {
   approveWorkflowRunAction,
   cancelWorkflowRunAction,
   rejectWorkflowRunAction,
+  retryWorkflowDeadLetterAction,
   retryWorkflowRunAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -94,9 +95,20 @@ function DeadLetterCard({ event }: { event: WorkflowDeadLetterEvent }) {
             Correlation {event.correlationId}
           </p>
         </div>
-        <div className="text-right text-sm text-slate-600">
-          <p>{event.attempts} tentative(s)</p>
-          <p className="text-xs">{event.updatedAt}</p>
+        <div className="flex flex-col items-end gap-2 text-right text-sm text-slate-600">
+          <div>
+            <p>{event.attempts} tentative(s)</p>
+            <p className="text-xs">{event.updatedAt}</p>
+          </div>
+          <form action={retryWorkflowDeadLetterAction}>
+            <input name="eventId" type="hidden" value={event.id} />
+            <button
+              className="rounded-md border border-rose-300 bg-white px-3 py-1 text-sm font-semibold text-rose-700"
+              type="submit"
+            >
+              Relancer
+            </button>
+          </form>
         </div>
       </div>
     </div>

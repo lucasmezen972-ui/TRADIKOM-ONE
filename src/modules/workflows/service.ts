@@ -10,16 +10,20 @@ import {
 } from "@/modules/workflows/engine";
 import {
   findLatestFailedWorkflowActionCursor,
+  findFailedDomainEventRow,
   findPendingApprovalForRun,
   findWorkflowRunById,
   insertWorkflowRunStep,
   listFailedDomainEventRows,
   listWorkflowRunRows,
+  requeueFailedDomainEvent,
   updateApprovalStatus,
   updateWorkflowRunStatus,
 } from "@/modules/workflows/repository";
 import {
+  workflowDeadLetterRetrySchema,
   workflowRunControlSchema,
+  type WorkflowDeadLetterRetryInput,
   type WorkflowRunControlInput,
 } from "@/modules/workflows/schemas";
 
@@ -194,6 +198,52 @@ export async function requestManualWorkflowRetry(
     "workflow.manual_retry_requested",
     run.id,
   );
+}
+
+export async function retryWorkflowDeadLetter(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: WorkflowDeadLetterRetryInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
+  const parsed = workflowDeadLetterRetrySchema.parse(input);
+  const failedEvent = await findFailedDomainEventRow(db, tenantId, parsed.eventId);
+
+  if (!failedEvent) {
+    throw new WorkflowError(
+      "workflow_dead_letter_not_found",
+      "Incident workflow introuvable ou deja relance.",
+    );
+  }
+
+  const requeued = await requeueFailedDomainEvent(db, {
+    tenantId,
+    eventId: parsed.eventId,
+    nextRunAt: nowIso(),
+  });
+
+  if (!requeued) {
+    throw new WorkflowError(
+      "workflow_dead_letter_not_found",
+      "Incident workflow introuvable ou deja relance.",
+    );
+  }
+
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action: "workflow.dead_letter_retried",
+    targetType: "domain_event",
+    targetId: parsed.eventId,
+    metadata: {
+      eventType: failedEvent.event_type,
+      previousAttempts: Number(failedEvent.attempts),
+      correlationId: failedEvent.correlation_id,
+    },
+  });
+
+  return { eventId: parsed.eventId };
 }
 
 async function requireWorkflowRun(

@@ -91,6 +91,7 @@ import {
   getWorkflowRuns,
   leadFollowUpWorkflow,
   rejectWorkflowRun,
+  retryWorkflowDeadLetter,
   requestManualWorkflowRetry,
 } from "@/modules/workflows";
 import {
@@ -336,6 +337,11 @@ export function createServices(db: DbClient) {
       tenantId: string,
       runId: string,
     ) => requestManualWorkflowRetry(db, userId, tenantId, { runId }),
+    retryWorkflowDeadLetter: (
+      userId: string,
+      tenantId: string,
+      eventId: string,
+    ) => retryWorkflowDeadLetter(db, userId, tenantId, { eventId }),
     getAuditLogs: (userId: string, tenantId: string) =>
       getAuditLogs(db, userId, tenantId),
     seedDemo: () => seedDemo(db),

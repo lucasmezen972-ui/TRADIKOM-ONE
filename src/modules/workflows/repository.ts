@@ -359,6 +359,59 @@ export async function listFailedDomainEventRows(
   return result.rows;
 }
 
+export async function findFailedDomainEventRow(
+  db: DbClient,
+  tenantId: string,
+  eventId: string,
+) {
+  const result = await db.query<FailedDomainEventRow>(
+    `select id,
+            tenant_id,
+            event_type,
+            attempts,
+            correlation_id,
+            last_error,
+            created_at,
+            updated_at
+     from domain_events
+     where tenant_id = $1 and id = $2 and status = $3
+     limit 1`,
+    [tenantId, eventId, "failed"],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function requeueFailedDomainEvent(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    nextRunAt: string;
+  },
+) {
+  const result = await db.query<{ id: string }>(
+    `update domain_events
+     set status = $1,
+         attempts = 0,
+         last_error = $2,
+         next_run_at = $3,
+         updated_at = $3
+     where tenant_id = $4 and id = $5 and status = $6
+     returning id`,
+    [
+      "pending",
+      null,
+      input.nextRunAt,
+      input.tenantId,
+      input.eventId,
+      "failed",
+    ],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function findLatestWorkflowActionCursor(
   db: DbClient,
   tenantId: string,

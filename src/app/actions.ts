@@ -416,6 +416,18 @@ export async function retryWorkflowRunAction(formData: FormData) {
   revalidatePath("/aujourdhui");
 }
 
+export async function retryWorkflowDeadLetterAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.retryWorkflowDeadLetter(
+    user.id,
+    tenant.id,
+    text(formData, "eventId"),
+  );
+  revalidatePath("/automatisations");
+  revalidatePath("/aujourdhui");
+}
+
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
