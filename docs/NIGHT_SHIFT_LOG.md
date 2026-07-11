@@ -65,3 +65,4 @@
 - Added workflow dead-letter visibility: failed terminal `domain_events` now appear in Automatisations as tenant-scoped incidents with attempts, correlation IDs, timestamps, redacted errors, and test coverage for tenant isolation.
 - GitHub Actions passed for workflow dead-letter commit `75d5740`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Added persisted workflow step attempt metadata: migration/schema support for attempts, scheduled/start/completion timestamps, safe error summaries, repository insertion support, engine attempt numbering, and workflow-engine assertions.
+- GitHub Actions passed for workflow step-attempt commit `a510be2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.

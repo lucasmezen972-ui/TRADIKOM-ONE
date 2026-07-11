@@ -83,6 +83,7 @@ Current validation note:
 - During the workflow dead-letter checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` hung without output before staging, while `git diff --cached --check` passed after explicit staging.
 - GitHub Actions passed on PR #1 for workflow dead-letter commit `75d5740`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the workflow step-attempt checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-engine.test.ts`) hung without output and was stopped after 30 seconds. Validate this checkpoint through GitHub Actions after push.
+- GitHub Actions passed on PR #1 for workflow step-attempt commit `a510be2`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
