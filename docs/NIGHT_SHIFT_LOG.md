@@ -33,3 +33,5 @@
 - Targeted local public lead validation hung without output and was stopped; continue to use `git diff --check` plus GitHub Actions for this checkpoint.
 - Extracted website draft/publication responsibilities into `src/modules/websites/`, including workspace reads, draft edits, section reordering, publish, restore, immutable public snapshot reads, repository functions, schemas, typed errors, and a direct module test.
 - Targeted local website validation and `git diff --check` both hung without output and were stopped; GitHub Actions passed for commit `033f062`.
+- Extracted CRM read models, recent activity reads, and tenant-scoped contact lookup into `src/modules/crm/`, with a direct cross-tenant isolation test.
+- Targeted local CRM validation hung without output and was stopped; `git diff --check` passed, so this checkpoint should be validated by GitHub Actions.

@@ -18,5 +18,10 @@ export const leadIngestionSchema = z.object({
   websiteId: z.string().optional(),
 });
 
+export const tenantContactLookupSchema = z.object({
+  contactId: z.string().min(1),
+});
+
 export type PublicLeadInput = z.input<typeof publicLeadSchema>;
 export type LeadIngestionInput = z.input<typeof leadIngestionSchema>;
+export type TenantContactLookupInput = z.input<typeof tenantContactLookupSchema>;

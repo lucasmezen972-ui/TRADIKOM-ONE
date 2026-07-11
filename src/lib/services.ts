@@ -11,6 +11,9 @@ import {
 } from "@/modules/connectors/webhooks";
 import {
   createLeadFromPayload,
+  findContactForTenant,
+  getCrm,
+  getTenantActivities,
   submitPublicLead as submitPublicLeadDomain,
 } from "@/modules/crm";
 import {
@@ -63,14 +66,10 @@ import {
   toJson,
 } from "@/lib/security";
 import type {
-  Activity,
   AuditLog,
   BusinessProfile,
   ConnectorCard,
-  Contact,
   DashboardData,
-  Lead,
-  Task,
   User,
   Website,
   WorkflowRun,
@@ -396,7 +395,7 @@ async function getDashboard(db: DbClient, userId: string, tenantId: string) {
      order by pipeline_stages.position asc`,
     [tenantId],
   );
-  const activities = await getActivities(db, tenantId, 8);
+  const activities = await getTenantActivities(db, tenantId, 8);
   const workflowRuns = await getWorkflowRuns(db, userId, tenantId);
   const connectors = await getConnectors(db, userId, tenantId);
   const detectedOpportunities = await detectOpportunities(db, tenantId, website);
@@ -416,52 +415,6 @@ async function getDashboard(db: DbClient, userId: string, tenantId: string) {
     workflowRuns: workflowRuns.slice(0, 5),
     detectedOpportunities,
   } satisfies DashboardData;
-}
-
-async function getCrm(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const contacts = await db.query<{
-    id: string;
-    tenant_id: string;
-    name: string;
-    email: string;
-    phone: string;
-    status: string;
-    source: string;
-    tags: string;
-    assigned_user_id: string | null;
-    created_at: string;
-    updated_at: string;
-  }>("select * from contacts where tenant_id = $1 order by updated_at desc", [tenantId]);
-  const leads = await db.query<{
-    id: string;
-    tenant_id: string;
-    contact_id: string;
-    source: string;
-    status: string;
-    opportunity_value: number;
-    page_path: string;
-    created_at: string;
-  }>("select * from leads where tenant_id = $1 order by created_at desc", [tenantId]);
-  const tasks = await db.query<{
-    id: string;
-    tenant_id: string;
-    title: string;
-    status: "open" | "done";
-    assigned_user_id: string;
-    due_at: string;
-    related_type: string;
-    related_id: string;
-    created_at: string;
-  }>("select * from tasks where tenant_id = $1 order by created_at desc", [tenantId]);
-  const activities = await getActivities(db, tenantId, 20);
-
-  return {
-    contacts: contacts.rows.map(mapContact),
-    leads: leads.rows.map(mapLead),
-    tasks: tasks.rows.map(mapTask),
-    activities,
-  };
 }
 
 async function getConnectors(db: DbClient, userId: string, tenantId: string) {
@@ -714,30 +667,6 @@ async function getAuditLogs(db: DbClient, userId: string, tenantId: string) {
   })) satisfies AuditLog[];
 }
 
-async function findContactForTenant(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  contactId: string,
-) {
-  await assertTenantAccess(db, userId, tenantId);
-  const contact = await db.query<{
-    id: string;
-    tenant_id: string;
-    name: string;
-    email: string;
-    phone: string;
-    status: string;
-    source: string;
-    tags: string;
-    assigned_user_id: string | null;
-    created_at: string;
-    updated_at: string;
-  }>("select * from contacts where tenant_id = $1 and id = $2", [tenantId, contactId]);
-
-  return contact.rows[0] ? mapContact(contact.rows[0]) : null;
-}
-
 async function seedDemo(db: DbClient) {
   const email = "patron@garage-caraibes-auto.example";
   const existing = await db.query<UserRow>("select * from users where email = $1", [email]);
@@ -796,32 +725,6 @@ async function seedDemo(db: DbClient) {
   }
 
   return { user, tenant, password: "Tradikom!2026" };
-}
-
-async function getActivities(db: DbClient, tenantId: string, limit: number) {
-  const rows = await db.query<{
-    id: string;
-    tenant_id: string;
-    type: string;
-    summary: string;
-    target_type: string;
-    target_id: string;
-    created_at: string;
-  }>(
-    `select * from activities where tenant_id = $1 order by created_at desc limit ${Number(
-      limit,
-    )}`,
-    [tenantId],
-  );
-  return rows.rows.map((row) => ({
-    id: row.id,
-    tenantId: row.tenant_id,
-    type: row.type,
-    summary: row.summary,
-    targetType: row.target_type,
-    targetId: row.target_id,
-    createdAt: row.created_at,
-  })) satisfies Activity[];
 }
 
 async function detectOpportunities(
@@ -907,78 +810,4 @@ async function audit(
     targetId,
     metadata,
   });
-}
-
-function mapContact(row: {
-  id: string;
-  tenant_id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
-  source: string;
-  tags: string;
-  assigned_user_id: string | null;
-  created_at: string;
-  updated_at: string;
-}): Contact {
-  return {
-    id: row.id,
-    tenantId: row.tenant_id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    status: row.status,
-    source: row.source,
-    tags: safeJson<string[]>(row.tags, []),
-    assignedUserId: row.assigned_user_id ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-function mapLead(row: {
-  id: string;
-  tenant_id: string;
-  contact_id: string;
-  source: string;
-  status: string;
-  opportunity_value: number;
-  page_path: string;
-  created_at: string;
-}): Lead {
-  return {
-    id: row.id,
-    tenantId: row.tenant_id,
-    contactId: row.contact_id,
-    source: row.source,
-    status: row.status,
-    opportunityValue: row.opportunity_value,
-    pagePath: row.page_path,
-    createdAt: row.created_at,
-  };
-}
-
-function mapTask(row: {
-  id: string;
-  tenant_id: string;
-  title: string;
-  status: "open" | "done";
-  assigned_user_id: string;
-  due_at: string;
-  related_type: string;
-  related_id: string;
-  created_at: string;
-}): Task {
-  return {
-    id: row.id,
-    tenantId: row.tenant_id,
-    title: row.title,
-    status: row.status,
-    assignedUserId: row.assigned_user_id,
-    dueAt: row.due_at,
-    relatedType: row.related_type,
-    relatedId: row.related_id,
-    createdAt: row.created_at,
-  };
 }
