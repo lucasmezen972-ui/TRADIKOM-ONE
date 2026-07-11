@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Website, WebsiteSection } from "@/lib/types";
 
 type SiteRendererProps = {
@@ -91,9 +92,12 @@ function HeroSection({ section }: { section: WebsiteSection }) {
         ) : null}
       </div>
       {section.imageUrl ? (
-        <img
+        <Image
           src={section.imageUrl}
           alt=""
+          width={960}
+          height={720}
+          sizes="(min-width: 768px) 46vw, 100vw"
           className="aspect-[4/3] w-full rounded-[var(--site-radius)] object-cover shadow-2xl"
         />
       ) : null}

@@ -16,3 +16,7 @@
 - Added invitation creation, one-time acceptance, pending invitation display, and non-owner member role updates.
 - Expanded tests from 6 to 10 tests.
 - Added a PostgreSQL-only RLS integration test with a temporary restricted role.
+- Confirmed CI green for commit `bb367bf`, including PostgreSQL RLS coverage.
+- Started a small `next/image` cleanup for the remaining public-site `<img>` warning, but left it uncommitted because local Node-based validation commands hung repeatedly.
+- Retried the `next/image` cleanup validation one hour later; `next/image` import and `git diff --check` passed, but ESLint import and `pnpm typecheck` still hung, so nothing was committed or pushed.
+- Retried again; local Node validation still hung, but manual diff inspection and `git diff --check` passed, so the cleanup was prepared for CI validation on PR #1.
