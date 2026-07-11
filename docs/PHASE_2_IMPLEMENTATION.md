@@ -14,7 +14,7 @@
 - Gated public demo outside local development unless `FEATURE_PUBLIC_DEMO=true`.
 - Introduced workflow definition schema, domain event enqueueing, a workflow action executor, and a worker entry point with durable batch processing, retries, and stale processing requeue.
 - Switched lead follow-up behavior to the workflow engine rather than inline special-case task creation.
-- Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC helper, and AES-256-GCM credential encryption helpers.
+- Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC verification for configured endpoint secrets, and AES-256-GCM credential encryption helpers.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
 - Changed public website rendering to load the last immutable published snapshot.
 - Added explicit public form idempotency keys, honeypot field, and visible consent checkbox.

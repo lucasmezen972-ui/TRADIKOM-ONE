@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { createHmac } from "node:crypto";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
+import {
+  configureWebhookEndpointSecret,
+} from "../src/modules/connectors/webhooks";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -61,4 +65,67 @@ describe("connectors", () => {
       crm.contacts.some((contact) => contact.name === "Cabinet Conseil, Martinique"),
     ).toBe(true);
   });
+
+  it("requires a valid HMAC signature when a webhook endpoint has a secret", async () => {
+    const { db, services } = await setup();
+    const demo = await services.seedDemo();
+    const endpoint = await db.query<{ id: string; token: string }>(
+      "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
+      [demo.tenant.id],
+    );
+    const secret = "whsec_test_secret";
+    const payload = {
+      name: "Client Signe",
+      email: "signed-webhook@example.com",
+      phone: "+596 696 10 20 30",
+      message: "Demande API signee",
+    };
+    const body = JSON.stringify(payload);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+
+    await configureWebhookEndpointSecret(db, {
+      tenantId: demo.tenant.id,
+      endpointId: endpoint.rows[0].id,
+      secret,
+    });
+
+    await expect(
+      services.receiveWebhook(endpoint.rows[0].token, payload),
+    ).rejects.toThrow("Signature webhook manquante.");
+    await expect(
+      services.receiveWebhook(endpoint.rows[0].token, payload, {
+        body,
+        timestamp,
+        signature: "sha256=bad",
+      }),
+    ).rejects.toThrow("Signature webhook invalide.");
+
+    await services.receiveWebhook(endpoint.rows[0].token, payload, {
+      body,
+      timestamp,
+      signature: signWebhookBody(secret, timestamp, body),
+    });
+
+    const crm = await services.getCrm(demo.user.id, demo.tenant.id);
+    const deliveries = await db.query<{ status: string }>(
+      "select status from webhook_deliveries where tenant_id = $1 order by created_at asc",
+      [demo.tenant.id],
+    );
+
+    expect(
+      crm.contacts.some((contact) => contact.email === "signed-webhook@example.com"),
+    ).toBe(true);
+    expect(
+      deliveries.rows.filter((delivery) => delivery.status === "rejected"),
+    ).toHaveLength(2);
+    expect(
+      deliveries.rows.filter((delivery) => delivery.status === "accepted"),
+    ).toHaveLength(1);
+  });
 });
+
+function signWebhookBody(secret: string, timestamp: string, body: string) {
+  return `sha256=${createHmac("sha256", secret)
+    .update(`${timestamp}.${body}`)
+    .digest("hex")}`;
+}

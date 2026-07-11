@@ -23,3 +23,5 @@
 - Pushed the `next/image` cleanup as commit `093080f`; GitHub Actions passed and the previous `<img>` lint warning disappeared.
 - Added durable batch processing for `domain_events`: processing claims, retry backoff, stale processing requeue, terminal failures, and targeted worker tests.
 - Targeted local worker validation hung and `git diff --check` exited abnormally without output, so the worker checkpoint should be confirmed through GitHub Actions.
+- Wired generic webhook HMAC verification to encrypted endpoint secrets with timestamp/signature headers and rejection delivery logs.
+- Targeted local connector validation hung after runner startup, while `git diff --check` passed, so the HMAC checkpoint should be confirmed through GitHub Actions.

@@ -31,8 +31,14 @@ export function verifyWebhookHmac({
   const expected = createHmac("sha256", secret)
     .update(`${timestamp}.${body}`)
     .digest("hex");
+  const normalizedSignature = signature.replace(/^sha256=/, "");
+
+  if (!/^[a-f0-9]{64}$/i.test(normalizedSignature)) {
+    return false;
+  }
+
   const expectedBuffer = Buffer.from(expected, "hex");
-  const actualBuffer = Buffer.from(signature.replace(/^sha256=/, ""), "hex");
+  const actualBuffer = Buffer.from(normalizedSignature, "hex");
 
   if (expectedBuffer.length !== actualBuffer.length) {
     return false;

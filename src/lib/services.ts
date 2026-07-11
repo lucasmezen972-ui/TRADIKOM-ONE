@@ -8,6 +8,10 @@ import {
 import { executeLeadFollowUpWorkflow } from "@/modules/workflows/engine";
 import { parseContactsCsv } from "@/modules/connectors/csv";
 import {
+  verifyWebhookEndpointSignature,
+  type WebhookSignatureInput,
+} from "@/modules/connectors/webhooks";
+import {
   correlationId,
   daysFromNow,
   hashPassword,
@@ -320,8 +324,8 @@ export function createServices(db: DbClient) {
     receiveWebhook: (
       token: string,
       payload: Record<string, unknown>,
-      providedSecret?: string,
-    ) => receiveWebhook(db, token, payload, providedSecret),
+      signatureInput?: WebhookSignatureInput,
+    ) => receiveWebhook(db, token, payload, signatureInput),
     getWorkflowRuns: (userId: string, tenantId: string) =>
       getWorkflowRuns(db, userId, tenantId),
     getAuditLogs: (userId: string, tenantId: string) =>
@@ -1660,7 +1664,7 @@ async function receiveWebhook(
   db: DbClient,
   token: string,
   payload: Record<string, unknown>,
-  providedSecret?: string,
+  signatureInput?: WebhookSignatureInput,
 ) {
   const endpoint = await db.query<{
     id: string;
@@ -1673,9 +1677,26 @@ async function receiveWebhook(
     throw new Error("Webhook invalide.");
   }
 
-  if (row.secret_hash && hashToken(providedSecret ?? "") !== row.secret_hash) {
-    await recordWebhookDelivery(db, row.tenant_id, row.id, payload, "rejected", "Secret invalide");
-    throw new Error("Secret invalide.");
+  const signature = await verifyWebhookEndpointSignature(
+    db,
+    {
+      id: row.id,
+      tenantId: row.tenant_id,
+      secretHash: row.secret_hash,
+    },
+    signatureInput,
+  );
+
+  if (!signature.ok) {
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      payload,
+      "rejected",
+      signature.error,
+    );
+    throw new Error(signature.error);
   }
 
   const mapped = {

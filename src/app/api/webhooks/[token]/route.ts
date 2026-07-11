@@ -11,9 +11,13 @@ export async function POST(
   const services = await getServices();
 
   try {
-    const payload = (await request.json()) as Record<string, unknown>;
-    const secret = request.headers.get("x-tradikom-secret") ?? undefined;
-    const result = await services.receiveWebhook(token, payload, secret);
+    const body = await request.text();
+    const payload = parseWebhookPayload(body);
+    const result = await services.receiveWebhook(token, payload, {
+      body,
+      timestamp: request.headers.get("x-tradikom-timestamp"),
+      signature: request.headers.get("x-tradikom-signature"),
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return NextResponse.json(
@@ -24,4 +28,20 @@ export async function POST(
       { status: 400 },
     );
   }
+}
+
+function parseWebhookPayload(body: string) {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(body) as unknown;
+  } catch {
+    throw new Error("Payload invalide.");
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Payload invalide.");
+  }
+
+  return parsed as Record<string, unknown>;
 }
