@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { syncMockConnectorJob } from "@/modules/connectors";
 import {
   resumeWorkflowRun,
   workflowResumeEventType,
@@ -65,6 +66,7 @@ const defaultLimit = 25;
 const defaultMaxAttempts = 3;
 const defaultBaseBackoffMs = 1_000;
 const defaultProcessingTimeoutMs = 5 * 60 * 1_000;
+const connectorSyncRequestedEventType = "connector.sync_requested";
 
 const selectedColumns = `
   id,
@@ -111,6 +113,16 @@ export async function processPendingDomainEvents(
       await resumeWorkflowRun(handlerDb, {
         ...event,
         causationId: event.causationId ?? undefined,
+      });
+    },
+    [connectorSyncRequestedEventType]: async ({ db: handlerDb, event }) => {
+      if (stringPayload(event.payload.connectorKey) !== "mock_business") {
+        throw new Error("Unsupported connector sync request.");
+      }
+
+      await syncMockConnectorJob(handlerDb, {
+        tenantId: event.tenantId,
+        actorId: event.actorId,
       });
     },
     ...(options.handlers ?? {}),
@@ -367,6 +379,10 @@ function parsePayload(value: string) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Domain event handler failed.";
+}
+
+function stringPayload(value: unknown) {
+  return typeof value === "string" ? value : "";
 }
 
 function positiveInteger(value: number | undefined, fallback: number) {

@@ -216,6 +216,29 @@ describe("workflow worker", () => {
     ).toEqual({ mode: "once", batchSize: 25, pollIntervalMs: 100 });
   });
 
+  it("dispatches connector sync requests through a domain-specific handler", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_connector_worker", "user_connector_worker");
+    await seedMockConnector(db, "tenant_connector_worker");
+    await insertDomainEvent(db, {
+      id: "event_connector_sync",
+      tenantId: "tenant_connector_worker",
+      eventType: "connector.sync_requested",
+      payload: { connectorKey: "mock_business" },
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+    });
+    const connector = await loadMockConnector(db, "tenant_connector_worker");
+
+    expect(summary.succeeded).toBe(1);
+    expect(connector).toEqual({ status: "Connecté", health: "healthy" });
+    expect(await countConnectorSyncRuns(db, "tenant_connector_worker")).toBe(1);
+    expect(await countConnectorSyncAudits(db, "tenant_connector_worker")).toBe(1);
+  });
+
   it("lists failed domain events as tenant-isolated dead letters", async () => {
     const { db } = await setup();
     await seedTenant(db, "tenant_dead_letters", "user_dead_letters");
@@ -381,6 +404,34 @@ async function seedTenant(db: DbClient, tenantId: string, userId: string) {
   );
 }
 
+async function seedMockConnector(db: DbClient, tenantId: string) {
+  const now = "2026-07-11T09:00:00.000Z";
+  await db.query(
+    `insert into connectors (
+       id,
+       tenant_id,
+       connector_key,
+       status,
+       health,
+       safe_config,
+       last_sync_at,
+       created_at,
+       updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      "connector_worker_mock",
+      tenantId,
+      "mock_business",
+      "Configuration requise",
+      "warning",
+      "{}",
+      null,
+      now,
+      now,
+    ],
+  );
+}
+
 async function loadEvent(db: DbClient, eventId: string) {
   const result = await db.query<{
     status: string;
@@ -412,6 +463,33 @@ async function countDeadLetterRetryAudits(db: DbClient, tenantId: string) {
   const result = await db.query<{ count: number | string }>(
     "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
     [tenantId, "workflow.dead_letter_retried"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function loadMockConnector(db: DbClient, tenantId: string) {
+  const result = await db.query<{ status: string; health: string }>(
+    "select status, health from connectors where tenant_id = $1 and connector_key = $2",
+    [tenantId, "mock_business"],
+  );
+
+  return result.rows[0];
+}
+
+async function countConnectorSyncRuns(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from connector_sync_runs where tenant_id = $1 and connector_key = $2",
+    [tenantId, "mock_business"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countConnectorSyncAudits(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
+    [tenantId, "connector.sync_completed"],
   );
 
   return Number(result.rows[0]?.count ?? 0);

@@ -159,9 +159,19 @@ export async function syncMockConnector(
   tenantId: string,
 ) {
   await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
+  await syncMockConnectorJob(db, { tenantId, actorId: userId });
+}
+
+export async function syncMockConnectorJob(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    actorId: string;
+  },
+) {
   const now = nowIso();
   await updateConnectorSyncState(db, {
-    tenantId,
+    tenantId: input.tenantId,
     connectorKey: "mock_business",
     status: "Connecté",
     health: "healthy",
@@ -169,7 +179,7 @@ export async function syncMockConnector(
   });
   await insertConnectorSyncRun(db, {
     id: id("sync"),
-    tenantId,
+    tenantId: input.tenantId,
     connectorKey: "mock_business",
     status: "succeeded",
     summary: "3 clients, 2 rendez-vous et 1 devis simules synchronises.",
@@ -177,7 +187,7 @@ export async function syncMockConnector(
   });
   await insertConnectorActivity(db, {
     id: id("activity"),
-    tenantId,
+    tenantId: input.tenantId,
     type: "connector.sync_completed",
     summary: "Synchronisation demo terminee.",
     targetType: "connector",
@@ -185,8 +195,8 @@ export async function syncMockConnector(
     createdAt: now,
   });
   await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
+    tenantId: input.tenantId,
+    actorId: input.actorId,
     action: "connector.sync_completed",
     targetType: "connector",
     targetId: "mock_business",

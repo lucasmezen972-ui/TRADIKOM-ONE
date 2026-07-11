@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-1. Continue workflow engine depth: domain-specific async handlers beyond the lead workflow and deeper recovery views beyond the current dead-letter requeue control.
+1. Continue workflow engine depth: additional domain-specific async handlers beyond the lead workflow and deeper recovery views beyond the current dead-letter requeue control.
 2. Expand Playwright for draft edit while published site remains available.
 3. Add real email delivery for password reset and invitation links.
 4. Adopt `withTenantTransaction` across tenant service paths.

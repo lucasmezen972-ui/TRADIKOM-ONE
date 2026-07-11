@@ -43,6 +43,8 @@ WORKER_MODE=poll WORKER_POLL_INTERVAL_MS=5000 WORKER_BATCH_SIZE=25 pnpm worker
   timestamps, and safe error summaries.
 - domain events persist worker attempt metadata: last attempted time, retry delay,
   failure classification, and configured max attempts.
+- the worker now includes a domain-specific `connector.sync_requested` handler
+  that runs the mock connector sync asynchronously through the outbox path.
 
 The lead workflow is backed by persisted workflow definitions and durable
 `workflow.resume` events. Wait actions, approval decisions, and manual retry now
@@ -50,5 +52,5 @@ resume through the outbox worker rather than a hidden in-memory path.
 
 Remaining work:
 
-- domain-specific async handlers beyond the lead workflow;
+- additional domain-specific async handlers beyond the lead workflow;
 - deeper delivery/run recovery views beyond the current requeue control.
