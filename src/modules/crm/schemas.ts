@@ -50,6 +50,25 @@ export const completeTaskSchema = z.object({
   taskId: z.string().min(1),
 });
 
+export const opportunityLookupSchema = z.object({
+  opportunityId: z.string().min(1),
+});
+
+export const opportunityFiltersSchema = z.object({
+  search: z.string().optional(),
+  stageId: z.string().optional(),
+});
+
+export const opportunityUpdateSchema = z.object({
+  stageId: z.string().min(1),
+  valueCents: z.number().int().min(0),
+  nextFollowUpAt: z
+    .string()
+    .optional()
+    .refine((value) => !value || !Number.isNaN(Date.parse(value))),
+  lostReason: z.string().optional(),
+});
+
 export type PublicLeadInput = z.input<typeof publicLeadSchema>;
 export type LeadIngestionInput = z.input<typeof leadIngestionSchema>;
 export type TenantContactLookupInput = z.input<typeof tenantContactLookupSchema>;
@@ -58,3 +77,5 @@ export type ContactConsentInput = z.input<typeof contactConsentSchema>;
 export type ContactNoteInput = z.input<typeof contactNoteSchema>;
 export type ContactTaskInput = z.input<typeof contactTaskSchema>;
 export type CompleteTaskInput = z.input<typeof completeTaskSchema>;
+export type OpportunityFiltersInput = z.input<typeof opportunityFiltersSchema>;
+export type OpportunityUpdateInput = z.input<typeof opportunityUpdateSchema>;

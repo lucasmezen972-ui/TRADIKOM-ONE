@@ -75,8 +75,22 @@ type OpportunityRow = {
   stage_name: string;
   value_cents: number;
   next_follow_up_at: string | null;
+  lost_reason: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type PipelineStageRow = {
+  id: string;
+  tenant_id: string;
+  pipeline_id: string;
+  name: string;
+  position: number;
+};
+
+type OpportunityListRow = OpportunityRow & {
+  contact_name: string;
+  contact_email: string;
 };
 
 export async function listContacts(db: DbClient, tenantId: string) {
@@ -381,10 +395,16 @@ export async function listContactActivities(
              select id from leads where tenant_id = $1 and contact_id = $3
            )
          )
+         or (
+           target_type = $5
+           and target_id in (
+             select id from opportunities where tenant_id = $1 and contact_id = $3
+           )
+         )
        )
      order by created_at desc
      limit 40`,
-    [tenantId, "contact", contactId, "lead"],
+    [tenantId, "contact", contactId, "lead", "opportunity"],
   );
 
   return result.rows.map(mapActivity);
@@ -405,6 +425,113 @@ export async function listContactOpportunities(
   );
 
   return result.rows.map(mapOpportunity);
+}
+
+export async function listPipelineStages(db: DbClient, tenantId: string) {
+  const result = await db.query<PipelineStageRow>(
+    "select * from pipeline_stages where tenant_id = $1 order by position asc",
+    [tenantId],
+  );
+
+  return result.rows.map(mapPipelineStage);
+}
+
+export async function findPipelineStageById(
+  db: DbClient,
+  tenantId: string,
+  stageId: string,
+) {
+  const result = await db.query<PipelineStageRow>(
+    "select * from pipeline_stages where tenant_id = $1 and id = $2",
+    [tenantId, stageId],
+  );
+
+  return result.rows[0] ? mapPipelineStage(result.rows[0]) : null;
+}
+
+export async function listOpportunities(
+  db: DbClient,
+  tenantId: string,
+  filters: { search?: string; stageId?: string },
+) {
+  const params: unknown[] = [tenantId];
+  const where = ["opportunities.tenant_id = $1"];
+
+  if (filters.stageId) {
+    params.push(filters.stageId);
+    where.push(`opportunities.stage_id = $${params.length}`);
+  }
+
+  if (filters.search) {
+    params.push(`%${filters.search.toLowerCase()}%`);
+    where.push(
+      `(lower(contacts.name) like $${params.length} or lower(contacts.email) like $${params.length})`,
+    );
+  }
+
+  const result = await db.query<OpportunityListRow>(
+    `select opportunities.*, pipeline_stages.name as stage_name, contacts.name as contact_name, contacts.email as contact_email
+     from opportunities
+     join pipeline_stages on pipeline_stages.id = opportunities.stage_id
+     join contacts on contacts.id = opportunities.contact_id and contacts.tenant_id = opportunities.tenant_id
+     where ${where.join(" and ")}
+     order by opportunities.updated_at desc
+     limit 100`,
+    params,
+  );
+
+  return result.rows.map(mapOpportunityListItem);
+}
+
+export async function findOpportunityById(
+  db: DbClient,
+  tenantId: string,
+  opportunityId: string,
+) {
+  const result = await db.query<OpportunityListRow>(
+    `select opportunities.*, pipeline_stages.name as stage_name, contacts.name as contact_name, contacts.email as contact_email
+     from opportunities
+     join pipeline_stages on pipeline_stages.id = opportunities.stage_id
+     join contacts on contacts.id = opportunities.contact_id and contacts.tenant_id = opportunities.tenant_id
+     where opportunities.tenant_id = $1 and opportunities.id = $2
+     limit 1`,
+    [tenantId, opportunityId],
+  );
+
+  return result.rows[0] ? mapOpportunityListItem(result.rows[0]) : null;
+}
+
+export async function updateOpportunityRecord(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    opportunityId: string;
+    stageId: string;
+    valueCents: number;
+    nextFollowUpAt: string | null;
+    lostReason: string | null;
+    updatedAt: string;
+  },
+) {
+  const result = await db.query<OpportunityRow>(
+    `update opportunities
+     set stage_id = $1, value_cents = $2, next_follow_up_at = $3, lost_reason = $4, updated_at = $5
+     where tenant_id = $6 and id = $7
+     returning opportunities.*, (
+       select name from pipeline_stages where pipeline_stages.id = opportunities.stage_id
+     ) as stage_name`,
+    [
+      input.stageId,
+      input.valueCents,
+      input.nextFollowUpAt,
+      input.lostReason,
+      input.updatedAt,
+      input.tenantId,
+      input.opportunityId,
+    ],
+  );
+
+  return result.rows[0] ? mapOpportunity(result.rows[0]) : null;
 }
 
 export async function findFormSubmissionByIdempotency(
@@ -694,7 +821,26 @@ function mapOpportunity(row: OpportunityRow) {
     stageName: row.stage_name,
     valueCents: row.value_cents,
     nextFollowUpAt: row.next_follow_up_at ?? undefined,
+    lostReason: row.lost_reason ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function mapPipelineStage(row: PipelineStageRow) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    pipelineId: row.pipeline_id,
+    name: row.name,
+    position: row.position,
+  };
+}
+
+function mapOpportunityListItem(row: OpportunityListRow) {
+  return {
+    ...mapOpportunity(row),
+    contactName: row.contact_name,
+    contactEmail: row.contact_email,
   };
 }

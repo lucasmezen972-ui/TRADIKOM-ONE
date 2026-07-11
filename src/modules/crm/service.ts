@@ -8,6 +8,8 @@ import {
   findContactById,
   findContactConsent,
   findContactTaskById,
+  findOpportunityById,
+  findPipelineStageById,
   insertActivity,
   insertContactConsent,
   insertContactNote,
@@ -19,9 +21,12 @@ import {
   listContactTasks,
   listContacts,
   listLeads,
+  listOpportunities,
+  listPipelineStages,
   listTasks,
   updateContact,
   updateContactConsent,
+  updateOpportunityRecord,
 } from "@/modules/crm/repository";
 import {
   completeTaskSchema,
@@ -29,12 +34,17 @@ import {
   contactNoteSchema,
   contactTaskSchema,
   contactUpdateSchema,
+  opportunityFiltersSchema,
+  opportunityLookupSchema,
+  opportunityUpdateSchema,
   tenantContactLookupSchema,
   type CompleteTaskInput,
   type ContactConsentInput,
   type ContactNoteInput,
   type ContactTaskInput,
   type ContactUpdateInput,
+  type OpportunityFiltersInput,
+  type OpportunityUpdateInput,
 } from "@/modules/crm/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
 
@@ -360,6 +370,113 @@ export async function completeContactTask(
     targetId: task.id,
     metadata: { contactId: parsedContactId },
   });
+}
+
+export async function getOpportunities(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: OpportunityFiltersInput = {},
+) {
+  await assertTenantAccess(db, userId, tenantId);
+  const parsed = opportunityFiltersSchema.parse(input);
+  const filters = {
+    search: parsed.search?.trim() || undefined,
+    stageId: parsed.stageId?.trim() || undefined,
+  };
+  const [stages, opportunities] = await Promise.all([
+    listPipelineStages(db, tenantId),
+    listOpportunities(db, tenantId, filters),
+  ]);
+
+  return { stages, opportunities };
+}
+
+export async function getOpportunityDetail(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  opportunityId: string,
+) {
+  await assertTenantAccess(db, userId, tenantId);
+  const parsed = opportunityLookupSchema.parse({ opportunityId });
+  const [opportunity, stages] = await Promise.all([
+    findOpportunityById(db, tenantId, parsed.opportunityId),
+    listPipelineStages(db, tenantId),
+  ]);
+
+  if (!opportunity) {
+    return null;
+  }
+
+  return { opportunity, stages };
+}
+
+export async function updateOpportunity(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  opportunityId: string,
+  input: OpportunityUpdateInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, crmWriteRoles);
+  const parsedOpportunityId = opportunityLookupSchema.parse({
+    opportunityId,
+  }).opportunityId;
+  const parsed = opportunityUpdateSchema.parse(input);
+  const [existing, stage] = await Promise.all([
+    findOpportunityById(db, tenantId, parsedOpportunityId),
+    findPipelineStageById(db, tenantId, parsed.stageId),
+  ]);
+
+  if (!existing) {
+    throw new CrmError("opportunity_not_found", "Opportunite introuvable.");
+  }
+
+  if (!stage) {
+    throw new CrmError("stage_not_found", "Etape de pipeline introuvable.");
+  }
+
+  const updated = await updateOpportunityRecord(db, {
+    tenantId,
+    opportunityId: existing.id,
+    stageId: stage.id,
+    valueCents: parsed.valueCents,
+    nextFollowUpAt: parsed.nextFollowUpAt
+      ? new Date(parsed.nextFollowUpAt).toISOString()
+      : null,
+    lostReason: parsed.lostReason?.trim() || null,
+    updatedAt: nowIso(),
+  });
+
+  if (!updated) {
+    throw new CrmError("opportunity_not_found", "Opportunite introuvable.");
+  }
+
+  await insertActivity(db, {
+    id: id("activity"),
+    tenantId,
+    type: "opportunity.updated",
+    summary: `Opportunite deplacee vers ${stage.name}.`,
+    targetType: "opportunity",
+    targetId: updated.id,
+    createdAt: nowIso(),
+  });
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action: "opportunity.updated",
+    targetType: "opportunity",
+    targetId: updated.id,
+    metadata: {
+      previousStageId: existing.stageId,
+      stageId: stage.id,
+      valueCents: parsed.valueCents,
+      hasLostReason: Boolean(parsed.lostReason?.trim()),
+    },
+  });
+
+  return updated;
 }
 
 async function ensureContact(

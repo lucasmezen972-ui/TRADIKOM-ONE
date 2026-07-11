@@ -23,9 +23,14 @@ import {
   findContactForTenant,
   getContactDetail,
   getCrm,
+  getOpportunities,
+  getOpportunityDetail,
   getTenantActivities,
+  opportunityFiltersSchema,
+  opportunityUpdateSchema,
   submitPublicLead as submitPublicLeadDomain,
   updateContactProfile,
+  updateOpportunity,
   upsertContactConsent,
 } from "@/modules/crm";
 import {
@@ -215,6 +220,22 @@ export function createServices(db: DbClient) {
     getDashboard: (userId: string, tenantId: string) =>
       getDashboard(db, userId, tenantId),
     getCrm: (userId: string, tenantId: string) => getCrm(db, userId, tenantId),
+    getOpportunities: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof opportunityFiltersSchema> = {},
+    ) => getOpportunities(db, userId, tenantId, input),
+    getOpportunityDetail: (
+      userId: string,
+      tenantId: string,
+      opportunityId: string,
+    ) => getOpportunityDetail(db, userId, tenantId, opportunityId),
+    updateOpportunity: (
+      userId: string,
+      tenantId: string,
+      opportunityId: string,
+      input: z.input<typeof opportunityUpdateSchema>,
+    ) => updateOpportunity(db, userId, tenantId, opportunityId, input),
     getContactDetail: (userId: string, tenantId: string, contactId: string) =>
       getContactDetail(db, userId, tenantId, contactId),
     updateContact: (

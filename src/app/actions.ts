@@ -307,6 +307,27 @@ export async function completeContactTaskAction(formData: FormData) {
   revalidatePath(`/contacts/${contactId}`);
 }
 
+export async function updateOpportunityAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const opportunityId = text(formData, "opportunityId");
+  const opportunity = await services.updateOpportunity(
+    user.id,
+    tenant.id,
+    opportunityId,
+    {
+      stageId: text(formData, "stageId"),
+      valueCents: moneyToCents(text(formData, "valueEuros")),
+      nextFollowUpAt: text(formData, "nextFollowUpAt") || undefined,
+      lostReason: text(formData, "lostReason") || undefined,
+    },
+  );
+
+  revalidatePath("/opportunites");
+  revalidatePath(`/opportunites/${opportunityId}`);
+  revalidatePath(`/contacts/${opportunity.contactId}`);
+}
+
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
@@ -351,4 +372,9 @@ function list(formData: FormData, key: string) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function moneyToCents(value: string) {
+  const amount = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
 }

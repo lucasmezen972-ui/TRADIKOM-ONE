@@ -110,6 +110,7 @@ function getMigrations(enableRls: boolean) {
     { id: "002_phase2_foundation", sql: phase2FoundationMigrationSql },
     ...(enableRls ? [{ id: "003_rls", sql: rlsMigrationSql }] : []),
     { id: "004_auth_flows", sql: authFlowsMigrationSql },
+    { id: "005_crm_opportunity_depth", sql: crmOpportunityDepthMigrationSql },
   ];
 }
 
@@ -273,6 +274,7 @@ create table opportunities (
   stage_id text not null references pipeline_stages(id),
   value_cents integer not null,
   next_follow_up_at text,
+  lost_reason text,
   created_at text not null,
   updated_at text not null
 );
@@ -639,6 +641,10 @@ create unique index if not exists idx_password_reset_tokens_token_hash on passwo
 create index if not exists idx_password_reset_tokens_user on password_reset_tokens(user_id);
 create unique index if not exists idx_invitations_token_hash on invitations(token_hash);
 create index if not exists idx_invitations_tenant_email_status on invitations(tenant_id, email, status);
+`;
+
+const crmOpportunityDepthMigrationSql = `
+alter table opportunities add column if not exists lost_reason text;
 `;
 
 const rlsMigrationSql = `
