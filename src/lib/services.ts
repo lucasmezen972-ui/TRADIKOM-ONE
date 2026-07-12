@@ -76,7 +76,6 @@ import {
 import { createDefaultTenantResources } from "@/modules/tenants/provisioning";
 import {
   getPublishedSite,
-  getWebsite,
   getWebsiteWorkspace,
   moveWebsiteSection,
   publishWebsite,

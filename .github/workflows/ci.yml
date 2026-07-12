@@ -29,6 +29,7 @@ jobs:
           --health-retries 10
 
     env:
+      APP_URL: http://127.0.0.1:3000
       DATABASE_URL: postgres://tradikom:tradikom_local@localhost:5432/tradikom_one_test
       FEATURE_PUBLIC_DEMO: "true"
       CONNECTOR_ENCRYPTION_KEY: "ci-ci-ci-ci-ci-ci-ci-ci-ci-ci-ci-32"

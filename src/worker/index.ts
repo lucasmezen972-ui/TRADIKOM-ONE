@@ -1,10 +1,12 @@
 import { closeDb } from "@/lib/db";
+import { validateEnvironment } from "@/lib/environment";
 import {
   runWorkerFromEnvironment,
   writeStructuredWorkerLog,
 } from "@/worker/runtime";
 
 async function main() {
+  validateEnvironment(process.env);
   const shutdown = new AbortController();
 
   for (const signal of ["SIGTERM", "SIGINT"] satisfies NodeJS.Signals[]) {

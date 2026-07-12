@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { validateEnvironment } from "./src/lib/environment";
+
+validateEnvironment(process.env);
 
 const noStoreRoutes = [
   "/mot-de-passe-oublie/:path*",

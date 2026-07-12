@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { closePgPool, getDatabaseUrl, pgPoolAsSqlClient } from "@/db/client";
+import { validateEnvironment } from "@/lib/environment";
 
 export type QueryResult<T = Record<string, unknown>> = {
   rows: T[];
@@ -20,6 +21,7 @@ let pglitePromise: Promise<PGlite> | null = null;
 
 export async function getDb(): Promise<DbClient> {
   if (!dbPromise) {
+    validateEnvironment(process.env);
     dbPromise = createRuntimeDb();
   }
 
