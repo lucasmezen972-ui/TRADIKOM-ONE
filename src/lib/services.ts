@@ -57,6 +57,7 @@ import {
   onboardingSchema,
   saveBusinessTwin,
 } from "@/modules/business-twin";
+import { getAuditLogs } from "@/modules/audit";
 import {
   acceptInvitation,
   acceptInvitationForUser,
@@ -100,8 +101,7 @@ import {
   retryWorkflowDeadLetter,
   requestManualWorkflowRetry,
 } from "@/modules/workflows";
-import { safeJson } from "@/lib/security";
-import type { AuditLog, DashboardData, User } from "@/lib/types";
+import type { DashboardData, User } from "@/lib/types";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
   authLinkPreviewEnabled,
@@ -430,35 +430,6 @@ async function getDashboard(db: DbClient, userId: string, tenantId: string) {
     workflowRuns: workflowRuns.slice(0, 5),
     detectedOpportunities,
   } satisfies DashboardData;
-}
-
-async function getAuditLogs(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const logs = await db.query<{
-    id: string;
-    tenant_id: string;
-    actor_id: string;
-    action: string;
-    target_type: string;
-    target_id: string;
-    safe_metadata: string;
-    correlation_id: string;
-    created_at: string;
-  }>("select * from audit_logs where tenant_id = $1 order by created_at desc limit 40", [
-    tenantId,
-  ]);
-
-  return logs.rows.map((row) => ({
-    id: row.id,
-    tenantId: row.tenant_id,
-    actorId: row.actor_id,
-    action: row.action,
-    targetType: row.target_type,
-    targetId: row.target_id,
-    metadata: safeJson(row.safe_metadata, {}),
-    correlationId: row.correlation_id,
-    createdAt: row.created_at,
-  })) satisfies AuditLog[];
 }
 
 async function seedDemo(db: DbClient) {
