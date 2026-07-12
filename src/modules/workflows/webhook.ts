@@ -1,3 +1,6 @@
+import { lookup } from "node:dns/promises";
+import { request } from "node:https";
+import { isIP } from "node:net";
 import { z } from "zod";
 import type { DbClient } from "@/lib/db";
 import { id, nowIso, toJson } from "@/lib/security";
@@ -20,6 +23,10 @@ export type WorkflowWebhookFetch = (
   url: string,
   init: RequestInit,
 ) => Promise<{ ok: boolean; status: number }>;
+
+export type WorkflowDnsLookup = (
+  hostname: string,
+) => Promise<Array<{ address: string; family: number }>>;
 
 export async function queueWorkflowWebhook(
   db: DbClient,
@@ -185,6 +192,7 @@ function validateWebhookPayload(value: unknown) {
     target.username ||
     target.password ||
     target.search ||
+    target.hash ||
     isPrivateHostname(target.hostname)
   ) {
     throw new WorkflowError(
@@ -258,6 +266,61 @@ function isPrivateHostname(hostname: string) {
     return true;
   }
 
+  return isIP(normalized) !== 0 && isPrivateAddress(normalized);
+}
+
+export async function resolvePublicWebhookAddress(
+  hostname: string,
+  lookupImpl: WorkflowDnsLookup = defaultDnsLookup,
+) {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const family = isIP(normalized);
+  const addresses = family
+    ? [{ address: normalized, family }]
+    : await lookupImpl(normalized);
+
+  if (
+    addresses.length === 0 ||
+    addresses.some((address) => isPrivateAddress(address.address))
+  ) {
+    throw new WorkflowError(
+      "workflow_action_failed",
+      "URL webhook non autorisee.",
+    );
+  }
+
+  return addresses[0]!;
+}
+
+function isPrivateAddress(address: string) {
+  const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
+
+  if (normalized.startsWith("::ffff:")) {
+    const mapped = normalized.slice("::ffff:".length);
+    const hexadecimal = mapped.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+    if (hexadecimal) {
+      const high = Number.parseInt(hexadecimal[1]!, 16);
+      const low = Number.parseInt(hexadecimal[2]!, 16);
+      return isPrivateAddress(
+        `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`,
+      );
+    }
+
+    return isPrivateAddress(mapped);
+  }
+
+  if (isIP(normalized) === 6) {
+    return (
+      normalized === "::" ||
+      normalized === "::1" ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      /^fe[89ab]/.test(normalized) ||
+      normalized.startsWith("ff") ||
+      normalized.startsWith("2001:db8:")
+    );
+  }
+
   const parts = normalized.split(".").map(Number);
   if (
     parts.length !== 4 ||
@@ -269,13 +332,51 @@ function isPrivateHostname(hostname: string) {
   return (
     parts[0] === 0 ||
     parts[0] === 10 ||
+    (parts[0] === 100 && parts[1]! >= 64 && parts[1]! <= 127) ||
     parts[0] === 127 ||
     (parts[0] === 169 && parts[1] === 254) ||
     (parts[0] === 172 && parts[1]! >= 16 && parts[1]! <= 31) ||
-    (parts[0] === 192 && parts[1] === 168)
+    (parts[0] === 192 && parts[1] === 0) ||
+    (parts[0] === 192 && parts[1] === 168) ||
+    (parts[0] === 198 && (parts[1] === 18 || parts[1] === 19)) ||
+    parts[0]! >= 224
   );
 }
 
 async function defaultWebhookFetch(url: string, init: RequestInit) {
-  return fetch(url, init);
+  const target = new URL(url);
+  const address = await resolvePublicWebhookAddress(target.hostname);
+  const headers = Object.fromEntries(new Headers(init.headers).entries());
+  headers.host = target.host;
+
+  return new Promise<{ ok: boolean; status: number }>((resolve, reject) => {
+    const outbound = request(
+      {
+        protocol: "https:",
+        hostname: address.address,
+        family: address.family,
+        port: target.port ? Number(target.port) : 443,
+        path: target.pathname || "/",
+        method: init.method ?? "POST",
+        headers,
+        servername: isIP(target.hostname) ? undefined : target.hostname,
+        signal: init.signal ?? undefined,
+      },
+      (response) => {
+        response.resume();
+        const status = response.statusCode ?? 0;
+        resolve({ ok: status >= 200 && status < 300, status });
+      },
+    );
+
+    outbound.once("error", reject);
+    if (typeof init.body === "string" || Buffer.isBuffer(init.body)) {
+      outbound.write(init.body);
+    }
+    outbound.end();
+  });
+}
+
+async function defaultDnsLookup(hostname: string) {
+  return lookup(hostname, { all: true, verbatim: true });
 }

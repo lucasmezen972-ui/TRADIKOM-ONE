@@ -12,6 +12,7 @@ import {
   leadFollowUpWorkflow,
   executeWorkflowAction,
   queueWorkflowWebhook,
+  resolvePublicWebhookAddress,
   retryWorkflowDeadLetter,
   workflowWebhookRequestedEventType,
 } from "../src/modules/workflows";
@@ -35,6 +36,33 @@ afterEach(async () => {
 });
 
 describe("workflow worker", () => {
+  it("rejects DNS rebinding answers before outbound webhook delivery", async () => {
+    await expect(
+      resolvePublicWebhookAddress("hooks.example.com", async () => [
+        { address: "93.184.216.34", family: 4 },
+        { address: "169.254.169.254", family: 4 },
+      ]),
+    ).rejects.toThrow("URL webhook non autorisee.");
+
+    await expect(
+      resolvePublicWebhookAddress("hooks.example.com", async () => [
+        { address: "::ffff:127.0.0.1", family: 6 },
+      ]),
+    ).rejects.toThrow("URL webhook non autorisee.");
+
+    await expect(
+      resolvePublicWebhookAddress("hooks.example.com", async () => [
+        { address: "::ffff:7f00:1", family: 6 },
+      ]),
+    ).rejects.toThrow("URL webhook non autorisee.");
+
+    await expect(
+      resolvePublicWebhookAddress("hooks.example.com", async () => [
+        { address: "93.184.216.34", family: 4 },
+      ]),
+    ).resolves.toEqual({ address: "93.184.216.34", family: 4 });
+  });
+
   it("dispatches due pending domain events and marks them succeeded", async () => {
     const { db } = await setup();
     const now = new Date("2026-07-11T10:00:00.000Z");
