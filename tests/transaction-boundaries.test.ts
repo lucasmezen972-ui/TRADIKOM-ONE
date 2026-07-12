@@ -110,6 +110,88 @@ describe("critical transaction boundaries", () => {
 
     expect(await tableCount(db, "users")).toBe(1);
   });
+
+  it("rolls back publication snapshot, live pointer, record, and audit", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const user = await services.registerUser({
+      name: "Publication Rollback",
+      email: "publication-rollback@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(user.id, {
+      name: "Site Rollback",
+      category: "Garage automobile",
+    });
+    await services.saveOnboarding(
+      user.id,
+      tenant.id,
+      defaultGarageOnboarding(),
+    );
+    const versionsBefore = await tableCount(db, "website_versions");
+    const auditsBefore = await tableCount(db, "audit_logs");
+    const failingDb = failQuery(db, "insert into website_publications");
+
+    await expect(
+      createServices(failingDb).publishWebsite(user.id, tenant.id),
+    ).rejects.toThrow("simulated transaction failure");
+
+    expect(await tableCount(db, "website_versions")).toBe(versionsBefore);
+    expect(await tableCount(db, "website_publications")).toBe(0);
+    expect(await tableCount(db, "audit_logs")).toBe(auditsBefore);
+    const website = await db.query<{
+      status: string;
+      current_published_version_id: string | null;
+    }>("select status, current_published_version_id from websites where tenant_id = $1", [
+      tenant.id,
+    ]);
+    expect(website.rows[0]).toMatchObject({
+      status: "draft",
+      current_published_version_id: null,
+    });
+  });
+
+  it("rolls back public CRM writes and durable event when form persistence fails", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const user = await services.registerUser({
+      name: "Lead Rollback",
+      email: "lead-rollback@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(user.id, {
+      name: "Lead Rollback Garage",
+      category: "Garage automobile",
+    });
+    await services.saveOnboarding(
+      user.id,
+      tenant.id,
+      defaultGarageOnboarding(),
+    );
+    await services.publishWebsite(user.id, tenant.id);
+    const auditsBefore = await tableCount(db, "audit_logs");
+    const failingDb = failQuery(db, "insert into form_submissions");
+
+    await expect(
+      createServices(failingDb).submitPublicLead(tenant.slug, {
+        name: "Lead transaction",
+        email: "lead-transaction@example.com",
+        phone: "0696000000",
+        message: "Je souhaite être rappelé.",
+        idempotencyKey: "transaction-lead-key",
+      }),
+    ).rejects.toThrow("simulated transaction failure");
+
+    expect(await tableCount(db, "contacts")).toBe(0);
+    expect(await tableCount(db, "leads")).toBe(0);
+    expect(await tableCount(db, "opportunities")).toBe(0);
+    expect(await tableCount(db, "activities")).toBe(0);
+    expect(await tableCount(db, "domain_events")).toBe(0);
+    expect(await tableCount(db, "form_submissions")).toBe(0);
+    expect(await tableCount(db, "audit_logs")).toBe(auditsBefore);
+  });
 });
 
 async function tableCount(db: DbClient, table: string) {
@@ -117,4 +199,15 @@ async function tableCount(db: DbClient, table: string) {
     `select count(*) as count from ${table}`,
   );
   return Number(result.rows[0]?.count ?? 0);
+}
+
+function failQuery(db: DbClient, fragment: string): DbClient {
+  return {
+    async query<T>(sql: string, params?: unknown[]) {
+      if (sql.includes(fragment)) {
+        throw new Error("simulated transaction failure");
+      }
+      return db.query<T>(sql, params);
+    },
+  };
 }

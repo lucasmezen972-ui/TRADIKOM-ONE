@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import {
   correlationId,
   daysFromNow,
@@ -77,35 +78,44 @@ export async function submitPublicLead(
     windowSeconds: rateLimitPolicies.publicForm.windowSeconds,
   });
 
-  const result = await createLeadFromPayload(db, tenantId, {
-    name: parsed.name,
-    email: parsed.email,
-    phone: parsed.phone,
-    message: parsed.message,
-    source: "website",
-    pagePath: `/sites/${slug}`,
-    websiteId,
-  });
+  return withTenantDbTransaction(db, tenantId, "system", async (transaction) => {
+    const duplicate = await findFormSubmissionByIdempotency(
+      transaction,
+      tenantId,
+      idempotencyKey,
+    );
+    if (duplicate) return duplicate.id;
 
-  await insertFormSubmission(db, {
-    id: id("submission"),
-    tenantId,
-    websiteId,
-    payload: toJson(parsed),
-    contactId: result.contactId,
-    idempotencyKey,
-    createdAt: nowIso(),
-  });
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: "system",
-    action: "form.submitted",
-    targetType: "website",
-    targetId: websiteId,
-    metadata: { source: "website" },
-  });
+    const result = await createLeadFromPayload(transaction, tenantId, {
+      name: parsed.name,
+      email: parsed.email,
+      phone: parsed.phone,
+      message: parsed.message,
+      source: "website",
+      pagePath: `/sites/${slug}`,
+      websiteId,
+    });
 
-  return result.leadId;
+    await insertFormSubmission(transaction, {
+      id: id("submission"),
+      tenantId,
+      websiteId,
+      payload: toJson(parsed),
+      contactId: result.contactId,
+      idempotencyKey,
+      createdAt: nowIso(),
+    });
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: "system",
+      action: "form.submitted",
+      targetType: "website",
+      targetId: websiteId,
+      metadata: { source: "website" },
+    });
+
+    return result.leadId;
+  });
 }
 
 export async function createLeadFromPayload(

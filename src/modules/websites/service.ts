@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import { createWebsiteDraft } from "@/lib/generation";
 import { id, nowIso, safeJson, toJson } from "@/lib/security";
 import type { BusinessProfile, Website, WebsiteSection } from "@/lib/types";
@@ -188,47 +189,53 @@ export async function moveWebsiteSection(
 }
 
 export async function publishWebsite(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  const website = await findWebsite(db, tenantId);
-  if (!website) {
-    throw new WebsiteError("website_not_found", "Aucun site a publier.");
-  }
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [
+      "owner",
+      "administrator",
+      "manager",
+    ]);
+    const website = await findWebsite(transaction, tenantId);
+    if (!website) {
+      throw new WebsiteError("website_not_found", "Aucun site a publier.");
+    }
 
-  const versionId = await snapshotWebsite(
-    db,
-    tenantId,
-    website.id,
-    "publication",
-    "published",
-  );
-  const tenant = await getTenantById(db, tenantId);
-  const now = nowIso();
-  const localUrl = `/sites/${tenant.slug}`;
+    const versionId = await snapshotWebsite(
+      transaction,
+      tenantId,
+      website.id,
+      "publication",
+      "published",
+    );
+    const tenant = await getTenantById(transaction, tenantId);
+    const now = nowIso();
+    const localUrl = `/sites/${tenant.slug}`;
 
-  await publishWebsiteVersion(db, {
-    tenantId,
-    websiteId: website.id,
-    versionId,
-    publishedAt: now,
-  });
-  await insertWebsitePublication(db, {
-    id: id("publication"),
-    tenantId,
-    websiteId: website.id,
-    versionId,
-    localUrl,
-    publishedAt: now,
-  });
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "website.published",
-    targetType: "website",
-    targetId: website.id,
-    metadata: { localUrl },
-  });
+    await publishWebsiteVersion(transaction, {
+      tenantId,
+      websiteId: website.id,
+      versionId,
+      publishedAt: now,
+    });
+    await insertWebsitePublication(transaction, {
+      id: id("publication"),
+      tenantId,
+      websiteId: website.id,
+      versionId,
+      localUrl,
+      publishedAt: now,
+    });
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "website.published",
+      targetType: "website",
+      targetId: website.id,
+      metadata: { localUrl },
+    });
 
-  return localUrl;
+    return localUrl;
+  });
 }
 
 export async function restoreWebsiteVersion(
@@ -237,39 +244,49 @@ export async function restoreWebsiteVersion(
   tenantId: string,
   versionId: string,
 ) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
   const parsed = restoreWebsiteVersionSchema.parse({ versionId });
-  const version = await findWebsiteVersionSnapshot(db, tenantId, parsed.versionId);
-  if (!version) {
-    throw new WebsiteError("version_not_found", "Version introuvable.");
-  }
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [
+      "owner",
+      "administrator",
+      "manager",
+    ]);
+    const version = await findWebsiteVersionSnapshot(
+      transaction,
+      tenantId,
+      parsed.versionId,
+    );
+    if (!version) {
+      throw new WebsiteError("version_not_found", "Version introuvable.");
+    }
 
-  const snapshot = safeJson<{ sections: WebsiteSection[] }>(version.snapshot, {
-    sections: [],
-  });
-  await deleteWebsiteSections(db, tenantId, version.website_id);
+    const snapshot = safeJson<{ sections: WebsiteSection[] }>(version.snapshot, {
+      sections: [],
+    });
+    await deleteWebsiteSections(transaction, tenantId, version.website_id);
 
-  for (const section of snapshot.sections) {
-    await insertWebsiteSection(db, {
-      ...section,
-      id: id("section"),
+    for (const section of snapshot.sections) {
+      await insertWebsiteSection(transaction, {
+        ...section,
+        id: id("section"),
+        tenantId,
+        websiteId: version.website_id,
+      });
+    }
+
+    await markWebsiteDraft(transaction, {
       tenantId,
       websiteId: version.website_id,
+      updatedAt: nowIso(),
     });
-  }
-
-  await markWebsiteDraft(db, {
-    tenantId,
-    websiteId: version.website_id,
-    updatedAt: nowIso(),
-  });
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "website.version_restored",
-    targetType: "website_version",
-    targetId: parsed.versionId,
-    metadata: {},
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "website.version_restored",
+      targetType: "website_version",
+      targetId: parsed.versionId,
+      metadata: {},
+    });
   });
 }
 
