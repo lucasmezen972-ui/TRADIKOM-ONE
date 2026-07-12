@@ -7,16 +7,23 @@ import {
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
-import type { WorkflowDeadLetterEvent, WorkflowRun } from "@/lib/types";
+import type {
+  WorkflowDeadLetterEvent,
+  WorkflowQueueEvent,
+  WorkflowQueueOverview,
+  WorkflowQueueStatus,
+  WorkflowRun,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function AutomationsPage() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const [runs, deadLetters] = await Promise.all([
+  const [runs, deadLetters, queue] = await Promise.all([
     services.getWorkflowRuns(user.id, tenant.id),
     services.getWorkflowDeadLetters(user.id, tenant.id),
+    services.getWorkflowQueueOverview(user.id, tenant.id),
   ]);
 
   return (
@@ -37,6 +44,7 @@ export default async function AutomationsPage() {
           ))}
         </div>
       </section>
+      <WorkflowQueuePanel queue={queue} />
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -84,6 +92,82 @@ export default async function AutomationsPage() {
   );
 }
 
+function WorkflowQueuePanel({ queue }: { queue: WorkflowQueueOverview }) {
+  return (
+    <section className="rounded-lg bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">File d'evenements</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Suivi des evenements durables avant traitement par le worker.
+          </p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+          {queue.activeEvents.length} actif(s)
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-5">
+        {queue.summary.map((item) => (
+          <div
+            key={item.status}
+            className="rounded-md border border-slate-200 px-3 py-3"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+              {workflowQueueStatusLabel(item.status)}
+            </p>
+            <p className="mt-2 text-2xl font-bold">{item.count}</p>
+            {item.oldestNextRunAt ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Prochain {item.oldestNextRunAt}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-3">
+        {queue.activeEvents.length === 0 ? (
+          <p className="rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-500">
+            Aucun evenement actif dans la file.
+          </p>
+        ) : (
+          queue.activeEvents.map((event) => (
+            <WorkflowQueueEventRow key={event.id} event={event} />
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function WorkflowQueueEventRow({ event }: { event: WorkflowQueueEvent }) {
+  return (
+    <div className="rounded-md border border-slate-200 px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">{event.eventType}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {workflowQueueStatusLabel(event.status)} - {event.attempts} tentative(s)
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Correlation {event.correlationId}
+          </p>
+        </div>
+        <div className="text-right text-sm text-slate-600">
+          <p>Prochain passage {event.nextRunAt}</p>
+          {event.lastRetryDelayMs > 0 ? (
+            <p className="text-xs">Delai {event.lastRetryDelayMs} ms</p>
+          ) : null}
+          {event.failureClassification ? (
+            <p className="text-xs">
+              Cause {deadLetterFailureLabel(event.failureClassification)}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DeadLetterCard({ event }: { event: WorkflowDeadLetterEvent }) {
   return (
     <div className="rounded-md border border-rose-200 bg-rose-50/40 px-4 py-3">
@@ -121,6 +205,26 @@ function DeadLetterCard({ event }: { event: WorkflowDeadLetterEvent }) {
       </div>
     </div>
   );
+}
+
+function workflowQueueStatusLabel(status: WorkflowQueueStatus) {
+  if (status === "pending") {
+    return "En attente";
+  }
+
+  if (status === "processing") {
+    return "En traitement";
+  }
+
+  if (status === "succeeded") {
+    return "Reussis";
+  }
+
+  if (status === "failed") {
+    return "Echoues";
+  }
+
+  return "Ignores";
 }
 
 function deadLetterFailureLabel(value: string) {

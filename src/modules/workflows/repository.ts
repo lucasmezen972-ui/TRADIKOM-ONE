@@ -68,6 +68,28 @@ export type FailedDomainEventRow = {
   updated_at: string;
 };
 
+export type DomainEventQueueSummaryRow = {
+  status: string;
+  count: number | string;
+  oldest_next_run_at: string | null;
+  latest_updated_at: string | null;
+};
+
+export type DomainEventQueueRow = {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  status: string;
+  attempts: number;
+  next_run_at: string;
+  last_attempted_at: string | null;
+  last_retry_delay_ms: number;
+  failure_classification: string | null;
+  correlation_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkflowActionCursor = {
   actionIndex: number;
   actionName: string;
@@ -336,6 +358,54 @@ export async function findDomainEventById(
   );
 
   return result.rows[0] ?? null;
+}
+
+export async function listDomainEventQueueSummaryRows(
+  db: DbClient,
+  tenantId: string,
+) {
+  const result = await db.query<DomainEventQueueSummaryRow>(
+    `select status,
+            count(*)::int as count,
+            min(next_run_at) as oldest_next_run_at,
+            max(updated_at) as latest_updated_at
+     from domain_events
+     where tenant_id = $1
+     group by status
+     order by status asc`,
+    [tenantId],
+  );
+
+  return result.rows;
+}
+
+export async function listActiveDomainEventQueueRows(
+  db: DbClient,
+  tenantId: string,
+  limit: number,
+) {
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const result = await db.query<DomainEventQueueRow>(
+    `select id,
+            tenant_id,
+            event_type,
+            status,
+            attempts,
+            next_run_at,
+            last_attempted_at,
+            last_retry_delay_ms,
+            failure_classification,
+            correlation_id,
+            created_at,
+            updated_at
+     from domain_events
+     where tenant_id = $1 and status in ($2, $3)
+     order by next_run_at asc, updated_at desc
+     limit ${safeLimit}`,
+    [tenantId, "pending", "processing"],
+  );
+
+  return result.rows;
 }
 
 export async function listFailedDomainEventRows(

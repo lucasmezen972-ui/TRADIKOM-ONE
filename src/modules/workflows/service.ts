@@ -1,6 +1,14 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
-import type { Role, WorkflowDeadLetterEvent, WorkflowRun } from "@/lib/types";
+import type {
+  Role,
+  WorkflowDeadLetterEvent,
+  WorkflowQueueEvent,
+  WorkflowQueueOverview,
+  WorkflowQueueStatus,
+  WorkflowQueueSummary,
+  WorkflowRun,
+} from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import { assertTenantAccess } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows/errors";
@@ -14,6 +22,8 @@ import {
   findPendingApprovalForRun,
   findWorkflowRunById,
   insertWorkflowRunStep,
+  listActiveDomainEventQueueRows,
+  listDomainEventQueueSummaryRows,
   listFailedDomainEventRows,
   listWorkflowRunRows,
   requeueFailedDomainEvent,
@@ -49,6 +59,23 @@ export async function getWorkflowDeadLetters(
   const events = await listFailedDomainEventRows(db, tenantId, 20);
 
   return events.map(mapWorkflowDeadLetter) satisfies WorkflowDeadLetterEvent[];
+}
+
+export async function getWorkflowQueueOverview(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  await assertTenantAccess(db, userId, tenantId);
+  const [summaryRows, activeRows] = await Promise.all([
+    listDomainEventQueueSummaryRows(db, tenantId),
+    listActiveDomainEventQueueRows(db, tenantId, 12),
+  ]);
+
+  return {
+    summary: normalizeQueueSummary(summaryRows.map(mapWorkflowQueueSummary)),
+    activeEvents: activeRows.map(mapWorkflowQueueEvent),
+  } satisfies WorkflowQueueOverview;
 }
 
 export async function cancelWorkflowRun(
@@ -390,6 +417,82 @@ function mapWorkflowDeadLetter(row: {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapWorkflowQueueSummary(row: {
+  status: string;
+  count: number | string;
+  oldest_next_run_at: string | null;
+  latest_updated_at: string | null;
+}) {
+  return {
+    status: workflowQueueStatus(row.status),
+    count: Number(row.count),
+    oldestNextRunAt: row.oldest_next_run_at,
+    latestUpdatedAt: row.latest_updated_at,
+  } satisfies WorkflowQueueSummary;
+}
+
+function mapWorkflowQueueEvent(row: {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  status: string;
+  attempts: number;
+  next_run_at: string;
+  last_attempted_at: string | null;
+  last_retry_delay_ms: number;
+  failure_classification: string | null;
+  correlation_id: string;
+  created_at: string;
+  updated_at: string;
+}) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    eventType: row.event_type,
+    status: workflowQueueStatus(row.status),
+    attempts: Number(row.attempts),
+    nextRunAt: row.next_run_at,
+    lastAttemptedAt: row.last_attempted_at,
+    lastRetryDelayMs: Number(row.last_retry_delay_ms ?? 0),
+    failureClassification: row.failure_classification,
+    correlationId: row.correlation_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  } satisfies WorkflowQueueEvent;
+}
+
+function normalizeQueueSummary(summary: WorkflowQueueSummary[]) {
+  const byStatus = new Map(summary.map((item) => [item.status, item]));
+  const statuses: WorkflowQueueStatus[] = [
+    "pending",
+    "processing",
+    "failed",
+    "succeeded",
+    "skipped",
+  ];
+
+  return statuses.map((status) => ({
+    status,
+    count: byStatus.get(status)?.count ?? 0,
+    oldestNextRunAt: byStatus.get(status)?.oldestNextRunAt ?? null,
+    latestUpdatedAt: byStatus.get(status)?.latestUpdatedAt ?? null,
+  }));
+}
+
+function workflowQueueStatus(value: string): WorkflowQueueStatus {
+  if (
+    value === "pending" ||
+    value === "processing" ||
+    value === "succeeded" ||
+    value === "failed" ||
+    value === "skipped"
+  ) {
+    return value;
+  }
+
+  return "pending";
 }
 
 function safeDeadLetterError(value: string | null) {

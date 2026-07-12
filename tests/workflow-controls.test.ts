@@ -3,6 +3,7 @@ import { createMemoryDb, type DbClient } from "../src/lib/db";
 import {
   approveWorkflowRun,
   cancelWorkflowRun,
+  getWorkflowQueueOverview,
   rejectWorkflowRun,
   requestManualWorkflowRetry,
 } from "../src/modules/workflows";
@@ -71,6 +72,61 @@ describe("workflow controls", () => {
     expect(await countWorkflowSteps(db, "tenant_controls")).toBe(4);
     expect(await countAuditLogs(db, "tenant_controls")).toBe(4);
   });
+
+  it("exposes tenant-scoped workflow queue health", async () => {
+    const { db } = await setup();
+    await seedDomainEvent(db, {
+      id: "event_pending_controls",
+      tenantId: "tenant_controls",
+      eventType: "lead.created",
+      status: "pending",
+      nextRunAt: "2026-07-11T14:31:00.000Z",
+    });
+    await seedDomainEvent(db, {
+      id: "event_processing_controls",
+      tenantId: "tenant_controls",
+      eventType: "workflow.resume",
+      status: "processing",
+      attempts: 1,
+      nextRunAt: "2026-07-11T14:32:00.000Z",
+    });
+    await seedDomainEvent(db, {
+      id: "event_failed_controls",
+      tenantId: "tenant_controls",
+      eventType: "connector.sync_requested",
+      status: "failed",
+      attempts: 3,
+      nextRunAt: "2026-07-11T14:33:00.000Z",
+    });
+    await seedDomainEvent(db, {
+      id: "event_other_controls",
+      tenantId: "tenant_other_controls",
+      eventType: "lead.created",
+      status: "pending",
+      nextRunAt: "2026-07-11T14:34:00.000Z",
+    });
+
+    const overview = await getWorkflowQueueOverview(
+      db,
+      "user_controls",
+      "tenant_controls",
+    );
+
+    await expect(
+      getWorkflowQueueOverview(db, "user_other_controls", "tenant_controls"),
+    ).rejects.toThrow("Acces refuse");
+
+    expect(statusCount(overview.summary, "pending")).toBe(1);
+    expect(statusCount(overview.summary, "processing")).toBe(1);
+    expect(statusCount(overview.summary, "failed")).toBe(1);
+    expect(overview.activeEvents.map((event) => event.id)).toEqual([
+      "event_pending_controls",
+      "event_processing_controls",
+    ]);
+    expect(
+      overview.activeEvents.every((event) => event.tenantId === "tenant_controls"),
+    ).toBe(true);
+  });
 });
 
 async function seedTenant(db: DbClient, tenantId: string, userId: string) {
@@ -134,6 +190,53 @@ async function seedApproval(
   );
 }
 
+async function seedDomainEvent(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    eventType: string;
+    status: string;
+    nextRunAt: string;
+    attempts?: number;
+  },
+) {
+  await db.query(
+    `insert into domain_events (
+       id,
+       tenant_id,
+       actor_id,
+       event_type,
+       payload,
+       status,
+       attempts,
+       idempotency_key,
+       correlation_id,
+       causation_id,
+       next_run_at,
+       last_error,
+       created_at,
+       updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [
+      input.id,
+      input.tenantId,
+      "system",
+      input.eventType,
+      "{}",
+      input.status,
+      input.attempts ?? 0,
+      `${input.id}:idempotency`,
+      `${input.id}:correlation`,
+      null,
+      input.nextRunAt,
+      input.status === "failed" ? "Failure" : null,
+      "2026-07-11T14:30:00.000Z",
+      input.nextRunAt,
+    ],
+  );
+}
+
 async function loadRunStatus(db: DbClient, tenantId: string, runId: string) {
   const result = await db.query<{ status: string }>(
     "select status from workflow_runs where tenant_id = $1 and id = $2",
@@ -172,4 +275,11 @@ async function countAuditLogs(db: DbClient, tenantId: string) {
   );
 
   return Number(result.rows[0]?.count ?? 0);
+}
+
+function statusCount(
+  summary: Array<{ status: string; count: number }>,
+  status: string,
+) {
+  return summary.find((item) => item.status === status)?.count ?? 0;
 }

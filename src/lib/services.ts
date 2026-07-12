@@ -88,6 +88,7 @@ import {
   approveWorkflowRun,
   cancelWorkflowRun,
   getWorkflowDeadLetters,
+  getWorkflowQueueOverview,
   getWorkflowRuns,
   leadFollowUpWorkflow,
   rejectWorkflowRun,
@@ -326,6 +327,8 @@ export function createServices(db: DbClient) {
       getWorkflowRuns(db, userId, tenantId),
     getWorkflowDeadLetters: (userId: string, tenantId: string) =>
       getWorkflowDeadLetters(db, userId, tenantId),
+    getWorkflowQueueOverview: (userId: string, tenantId: string) =>
+      getWorkflowQueueOverview(db, userId, tenantId),
     cancelWorkflowRun: (userId: string, tenantId: string, runId: string) =>
       cancelWorkflowRun(db, userId, tenantId, { runId }),
     approveWorkflowRun: (userId: string, tenantId: string, runId: string) =>

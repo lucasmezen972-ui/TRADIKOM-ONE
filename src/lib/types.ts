@@ -211,6 +211,40 @@ export type WorkflowDeadLetterEvent = {
   updatedAt: string;
 };
 
+export type WorkflowQueueStatus =
+  | "pending"
+  | "processing"
+  | "succeeded"
+  | "failed"
+  | "skipped";
+
+export type WorkflowQueueSummary = {
+  status: WorkflowQueueStatus;
+  count: number;
+  oldestNextRunAt: string | null;
+  latestUpdatedAt: string | null;
+};
+
+export type WorkflowQueueEvent = {
+  id: string;
+  tenantId: string;
+  eventType: string;
+  status: WorkflowQueueStatus;
+  attempts: number;
+  nextRunAt: string;
+  lastAttemptedAt: string | null;
+  lastRetryDelayMs: number;
+  failureClassification: string | null;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkflowQueueOverview = {
+  summary: WorkflowQueueSummary[];
+  activeEvents: WorkflowQueueEvent[];
+};
+
 export type ConnectorCard = {
   key: string;
   name: string;
