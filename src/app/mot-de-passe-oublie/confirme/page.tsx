@@ -4,7 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 type ConfirmPageProps = {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; lien?: string }>;
 };
 
 export default async function ForgotPasswordConfirmPage({
@@ -30,6 +30,14 @@ export default async function ForgotPasswordConfirmPage({
           Si un compte existe pour {params.email || "cet email"}, un lien de
           réinitialisation sécurisé vient d&apos;être préparé.
         </p>
+        {params.lien ? (
+          <a
+            href={params.lien}
+            className="mt-4 block rounded-md border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950"
+          >
+            Ouvrir le lien de développement
+          </a>
+        ) : null}
         <Link
           href="/"
           className="mt-5 inline-flex rounded-md bg-[#08111f] px-5 py-3 font-semibold text-white"

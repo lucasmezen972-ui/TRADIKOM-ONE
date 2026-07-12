@@ -11,6 +11,7 @@ import { recordAuditLog } from "@/modules/audit";
 import { TenantError } from "@/modules/tenants/errors";
 import {
   findMembershipRole,
+  findPendingInvitationForTenant,
   findPendingInvitationByTokenHash,
   findTenantById,
   findTenantBySlug,
@@ -22,9 +23,11 @@ import {
   listTenantMembers,
   listUserTenantRows,
   markInvitationAccepted,
+  replacePendingInvitationToken,
   revokePendingInvitationsForEmail,
   tenantMemberExistsByEmail,
   tenantSlugExists,
+  updateInvitationDelivery,
   updateMembershipRole,
   type InvitationRow,
   type TenantRow,
@@ -40,6 +43,16 @@ import {
   type UpdateMemberRoleInput,
 } from "@/modules/tenants/schemas";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
+import {
+  deliverInvitationEmail,
+  type EmailProvider,
+} from "@/modules/email";
+
+export type InvitationDeliveryDependencies = {
+  emailProvider: EmailProvider;
+  appUrl: string;
+  revealAuthLink?: boolean;
+};
 
 const allTenantRoles: Role[] = [
   "owner",
@@ -153,6 +166,11 @@ export async function getPendingInvitations(
     email: row.email,
     role: row.role,
     status: row.status,
+    deliveryStatus: row.delivery_status,
+    deliveryProvider: row.delivery_provider,
+    deliveryAttempts: row.delivery_attempts,
+    deliveryLastAttemptAt: row.delivery_last_attempt_at,
+    deliveryErrorCode: row.delivery_error_code,
     expiresAt: row.expires_at,
     createdAt: row.created_at,
   }));
@@ -163,6 +181,7 @@ export async function createInvitation(
   userId: string,
   tenantId: string,
   input: CreateInvitationInput,
+  dependencies: InvitationDeliveryDependencies,
 ) {
   const actorRole = await assertTenantAccess(db, userId, tenantId, [
     "owner",
@@ -207,21 +226,130 @@ export async function createInvitation(
     expiresAt,
     createdAt: now,
   });
+  const tenant = await getTenantById(db, tenantId);
+  const delivery = await deliverInvitationEmail(dependencies.emailProvider, {
+    to: email,
+    token: invitationToken,
+    appUrl: dependencies.appUrl,
+    expiresAt,
+    organizationName: tenant.name,
+    roleLabel: invitationRoleLabel(parsed.role),
+    tenantId,
+    invitationId,
+  });
+  await updateInvitationDelivery(db, {
+    tenantId,
+    invitationId,
+    status: delivery.outcome.status,
+    provider: delivery.outcome.provider,
+    attemptedAt: nowIso(),
+    errorCode: delivery.outcome.errorCode,
+  });
   await recordAuditLog(db, {
     tenantId,
     actorId: userId,
     action: "team.invitation_created",
     targetType: "invitation",
     targetId: invitationId,
-    metadata: { email, role: parsed.role },
+    metadata: {
+      email,
+      role: parsed.role,
+      deliveryStatus: delivery.outcome.status,
+      deliveryProvider: delivery.outcome.provider,
+      deliveryErrorCode: delivery.outcome.errorCode,
+    },
   });
 
   return {
     id: invitationId,
     email,
     role: parsed.role,
-    invitationToken,
     expiresAt,
+    deliveryStatus: delivery.outcome.status,
+    ...(dependencies.revealAuthLink
+      ? { developmentLink: delivery.link }
+      : {}),
+  };
+}
+
+export async function resendInvitation(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  invitationId: string,
+  dependencies: InvitationDeliveryDependencies,
+) {
+  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator"]);
+  const invitation = await findPendingInvitationForTenant(
+    db,
+    tenantId,
+    invitationId,
+  );
+
+  if (!invitation) {
+    throw new TenantError(
+      "invalid_invitation",
+      "Invitation introuvable ou déjà utilisée.",
+    );
+  }
+
+  await enforceRateLimit(db, {
+    operationKey: "invitation.resend",
+    subjectKey: invitation.email,
+    scopeKey: tenantId,
+    limit: rateLimitPolicies.invitationCreate.limit,
+    windowSeconds: rateLimitPolicies.invitationCreate.windowSeconds,
+  });
+
+  const invitationToken = secureToken();
+  const expiresAt = daysFromNow(7);
+  await replacePendingInvitationToken(db, {
+    tenantId,
+    invitationId,
+    tokenHash: hashToken(invitationToken),
+    expiresAt,
+  });
+
+  const tenant = await getTenantById(db, tenantId);
+  const delivery = await deliverInvitationEmail(dependencies.emailProvider, {
+    to: invitation.email,
+    token: invitationToken,
+    appUrl: dependencies.appUrl,
+    expiresAt,
+    organizationName: tenant.name,
+    roleLabel: invitationRoleLabel(invitation.role),
+    tenantId,
+    invitationId,
+  });
+  await updateInvitationDelivery(db, {
+    tenantId,
+    invitationId,
+    status: delivery.outcome.status,
+    provider: delivery.outcome.provider,
+    attemptedAt: nowIso(),
+    errorCode: delivery.outcome.errorCode,
+  });
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action: "team.invitation_resent",
+    targetType: "invitation",
+    targetId: invitationId,
+    metadata: {
+      deliveryStatus: delivery.outcome.status,
+      deliveryProvider: delivery.outcome.provider,
+      deliveryErrorCode: delivery.outcome.errorCode,
+    },
+  });
+
+  return {
+    id: invitationId,
+    email: invitation.email,
+    expiresAt,
+    deliveryStatus: delivery.outcome.status,
+    ...(dependencies.revealAuthLink
+      ? { developmentLink: delivery.link }
+      : {}),
   };
 }
 
@@ -460,4 +588,19 @@ function mapTenant(row: TenantRow): Tenant {
     category: row.category,
     createdAt: row.created_at,
   };
+}
+
+function invitationRoleLabel(role: Role) {
+  switch (role) {
+    case "administrator":
+      return "administrateur";
+    case "manager":
+      return "manager";
+    case "collaborator":
+      return "collaborateur";
+    case "read-only":
+      return "lecture seule";
+    case "owner":
+      return "propriétaire";
+  }
 }

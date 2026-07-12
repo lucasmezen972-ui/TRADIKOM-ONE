@@ -38,6 +38,16 @@ import {
   enforceRateLimit,
   rateLimitPolicies,
 } from "@/modules/rate-limit";
+import {
+  deliverPasswordResetEmail,
+  type EmailProvider,
+} from "@/modules/email";
+
+export type PasswordResetDeliveryDependencies = {
+  emailProvider: EmailProvider;
+  appUrl: string;
+  revealAuthLink?: boolean;
+};
 
 export async function registerUser(db: DbClient, input: RegistrationInput) {
   const parsed = registrationSchema.parse(input);
@@ -141,6 +151,7 @@ export async function revokeSession(db: DbClient, sessionToken?: string) {
 export async function requestPasswordReset(
   db: DbClient,
   input: PasswordResetRequestInput,
+  dependencies: PasswordResetDeliveryDependencies,
 ) {
   const parsed = passwordResetRequestSchema.parse(input);
   const email = parsed.email.toLowerCase();
@@ -151,15 +162,13 @@ export async function requestPasswordReset(
     windowSeconds: rateLimitPolicies.passwordReset.windowSeconds,
   });
 
-  if (!rateLimit.allowed) {
-    return { accepted: true };
-  }
+  const accepted = { accepted: true as const };
+
+  if (!rateLimit.allowed) return accepted;
 
   const user = await findUserByEmail(db, email);
 
-  if (!user) {
-    return { accepted: true };
-  }
+  if (!user) return accepted;
 
   const resetToken = secureToken();
   const now = nowIso();
@@ -173,7 +182,16 @@ export async function requestPasswordReset(
     expiresAt,
   });
 
-  return { accepted: true, resetToken, expiresAt, email };
+  const delivery = await deliverPasswordResetEmail(dependencies.emailProvider, {
+    to: email,
+    token: resetToken,
+    appUrl: dependencies.appUrl,
+    expiresAt,
+  });
+
+  return dependencies.revealAuthLink
+    ? { ...accepted, developmentLink: delivery.link }
+    : accepted;
 }
 
 export async function resetPassword(db: DbClient, input: PasswordResetInput) {

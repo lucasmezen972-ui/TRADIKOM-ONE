@@ -68,6 +68,11 @@ export const invitations = pgTable("invitations", {
   status: text("status").notNull(),
   tokenHash: text("token_hash").notNull().unique(),
   expiresAt: text("expires_at").notNull(),
+  deliveryStatus: text("delivery_status").notNull().default("pending"),
+  deliveryProvider: text("delivery_provider"),
+  deliveryAttempts: integer("delivery_attempts").notNull().default(0),
+  deliveryLastAttemptAt: text("delivery_last_attempt_at"),
+  deliveryErrorCode: text("delivery_error_code"),
   createdAt: text("created_at").notNull(),
 });
 

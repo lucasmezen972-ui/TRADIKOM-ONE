@@ -17,6 +17,11 @@ export type InvitationRow = {
   status: string;
   token_hash: string;
   expires_at: string;
+  delivery_status: string;
+  delivery_provider: string | null;
+  delivery_attempts: number;
+  delivery_last_attempt_at: string | null;
+  delivery_error_code: string | null;
   created_at: string;
 };
 
@@ -184,6 +189,73 @@ export async function insertInvitation(
       invitation.tokenHash,
       invitation.expiresAt,
       invitation.createdAt,
+    ],
+  );
+}
+
+export async function findPendingInvitationForTenant(
+  db: DbClient,
+  tenantId: string,
+  invitationId: string,
+) {
+  const result = await db.query<InvitationRow>(
+    `select * from invitations
+     where id = $1 and tenant_id = $2 and status = $3`,
+    [invitationId, tenantId, "pending"],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function replacePendingInvitationToken(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    invitationId: string;
+    tokenHash: string;
+    expiresAt: string;
+  },
+) {
+  await db.query(
+    `update invitations
+     set token_hash = $1, expires_at = $2, delivery_status = $3,
+         delivery_provider = null, delivery_error_code = null
+     where id = $4 and tenant_id = $5 and status = $6`,
+    [
+      input.tokenHash,
+      input.expiresAt,
+      "pending",
+      input.invitationId,
+      input.tenantId,
+      "pending",
+    ],
+  );
+}
+
+export async function updateInvitationDelivery(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    invitationId: string;
+    status: string;
+    provider: string;
+    attemptedAt: string;
+    errorCode?: string;
+  },
+) {
+  await db.query(
+    `update invitations
+     set delivery_status = $1, delivery_provider = $2,
+         delivery_attempts = delivery_attempts + 1,
+         delivery_last_attempt_at = $3, delivery_error_code = $4
+     where id = $5 and tenant_id = $6`,
+    [
+      input.status,
+      input.provider,
+      input.attemptedAt,
+      input.errorCode ?? null,
+      input.invitationId,
+      input.tenantId,
     ],
   );
 }

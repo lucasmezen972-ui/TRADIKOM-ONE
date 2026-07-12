@@ -40,8 +40,12 @@ export async function loginAction(formData: FormData) {
 export async function requestPasswordResetAction(formData: FormData) {
   const services = await getServices();
   const email = text(formData, "email").toLowerCase();
-  await services.requestPasswordReset({ email });
-  redirect(`/mot-de-passe-oublie/confirme?email=${encodeURIComponent(email)}`);
+  const result = await services.requestPasswordReset({ email });
+  const preview =
+    "developmentLink" in result ? `&lien=${encodeURIComponent(result.developmentLink)}` : "";
+  redirect(
+    `/mot-de-passe-oublie/confirme?email=${encodeURIComponent(email)}${preview}`,
+  );
 }
 
 export async function resetPasswordAction(formData: FormData) {
@@ -94,15 +98,36 @@ export async function createInvitationAction(formData: FormData) {
     email: text(formData, "email"),
     role: text(formData, "role") as Exclude<Role, "owner">,
   });
-  const invitationUrl = `/invitation?token=${encodeURIComponent(
-    invitation.invitationToken,
-  )}`;
+  revalidatePath("/parametres");
+  const preview =
+    "developmentLink" in invitation
+      ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
+      : "";
+  redirect(
+    `/parametres?invitationEnvoyee=1&inviteEmail=${encodeURIComponent(
+      invitation.email,
+    )}${preview}`,
+  );
+}
+
+export async function resendInvitationAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const invitation = await services.resendInvitation(
+    user.id,
+    tenant.id,
+    text(formData, "invitationId"),
+  );
 
   revalidatePath("/parametres");
+  const preview =
+    "developmentLink" in invitation
+      ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
+      : "";
   redirect(
-    `/parametres?invitation=${encodeURIComponent(
-      invitationUrl,
-    )}&inviteEmail=${encodeURIComponent(invitation.email)}`,
+    `/parametres?invitationEnvoyee=1&inviteEmail=${encodeURIComponent(
+      invitation.email,
+    )}${preview}`,
   );
 }
 

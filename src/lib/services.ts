@@ -72,6 +72,7 @@ import {
   getUserTenants,
   invitationSchema,
   orgSchema,
+  resendInvitation,
   updateMemberRole,
   updateMemberRoleSchema,
   acceptInvitationSchema,
@@ -115,6 +116,18 @@ import type {
   User,
 } from "@/lib/types";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
+import {
+  authLinkPreviewEnabled,
+  createRuntimeEmailProvider,
+  resolveAppUrl,
+  type EmailProvider,
+} from "@/modules/email";
+
+export type ServiceDependencies = {
+  emailProvider?: EmailProvider;
+  appUrl?: string;
+  revealAuthLinks?: boolean;
+};
 
 const pipelineStages = [
   "Nouveau contact",
@@ -154,13 +167,23 @@ export async function getServices() {
   return createServices(db);
 }
 
-export function createServices(db: DbClient) {
+export function createServices(
+  db: DbClient,
+  dependencies: ServiceDependencies = {},
+) {
+  const authDelivery = {
+    emailProvider: dependencies.emailProvider ?? createRuntimeEmailProvider(),
+    appUrl: resolveAppUrl(dependencies.appUrl),
+    revealAuthLink:
+      dependencies.revealAuthLinks ?? authLinkPreviewEnabled(),
+  };
+
   return {
     registerUser: (input: z.input<typeof registrationSchema>) =>
       registerUser(db, input),
     loginUser: (input: z.input<typeof loginSchema>) => loginUser(db, input),
     requestPasswordReset: (input: z.input<typeof passwordResetRequestSchema>) =>
-      requestPasswordReset(db, input),
+      requestPasswordReset(db, input, authDelivery),
     resetPassword: (input: z.input<typeof passwordResetSchema>) =>
       resetPassword(db, input),
     createSession: (userId: string) => createSession(db, userId),
@@ -183,7 +206,12 @@ export function createServices(db: DbClient) {
       userId: string,
       tenantId: string,
       input: z.input<typeof invitationSchema>,
-    ) => createInvitation(db, userId, tenantId, input),
+    ) => createInvitation(db, userId, tenantId, input, authDelivery),
+    resendInvitation: (
+      userId: string,
+      tenantId: string,
+      invitationId: string,
+    ) => resendInvitation(db, userId, tenantId, invitationId, authDelivery),
     acceptInvitation: (input: z.input<typeof acceptInvitationSchema>) =>
       acceptInvitation(db, input),
     acceptInvitationForUser: (userId: string, token: string) =>

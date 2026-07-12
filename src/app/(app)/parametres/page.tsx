@@ -1,5 +1,6 @@
 import {
   createInvitationAction,
+  resendInvitationAction,
   updateMemberRoleAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -16,7 +17,11 @@ const editableRoles: Exclude<Role, "owner">[] = [
 ];
 
 type SettingsPageProps = {
-  searchParams: Promise<{ invitation?: string; inviteEmail?: string }>;
+  searchParams: Promise<{
+    invitationEnvoyee?: string;
+    inviteEmail?: string;
+    lien?: string;
+  }>;
 };
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
@@ -98,16 +103,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </form>
           ) : null}
         </div>
-        {params.invitation ? (
+        {params.invitationEnvoyee ? (
           <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-4">
             <p className="text-sm font-semibold text-emerald-900">
-              Invitation prête pour {params.inviteEmail}
+              Invitation envoyée à {params.inviteEmail}
             </p>
-            <input
-              readOnly
-              value={params.invitation}
-              className="mt-2 w-full rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm"
-            />
+            {params.lien ? (
+              <a
+                href={params.lien}
+                className="mt-2 block text-sm font-semibold text-emerald-950 underline"
+              >
+                Ouvrir le lien de développement
+              </a>
+            ) : null}
           </div>
         ) : null}
         <div className="mt-5 grid gap-3">
@@ -162,8 +170,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   key={invitation.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 px-4 py-3 text-sm"
                 >
-                  <span>{invitation.email}</span>
-                  <span className="font-semibold">{roleLabel(invitation.role)}</span>
+                  <span>
+                    {invitation.email} · {roleLabel(invitation.role)}
+                  </span>
+                  <span className="font-semibold">
+                    {deliveryLabel(invitation.deliveryStatus)}
+                  </span>
+                  <form action={resendInvitationAction}>
+                    <input type="hidden" name="invitationId" value={invitation.id} />
+                    <button className="rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700">
+                      Renvoyer
+                    </button>
+                  </form>
                 </div>
               ))}
             </div>
@@ -199,5 +217,18 @@ function roleLabel(role: Role) {
       return "Collaborateur";
     case "read-only":
       return "Lecture seule";
+  }
+}
+
+function deliveryLabel(status: string) {
+  switch (status) {
+    case "sent":
+      return "Envoyée";
+    case "retryable_failure":
+      return "Envoi à relancer";
+    case "permanent_failure":
+      return "Échec de l'envoi";
+    default:
+      return "En attente";
   }
 }

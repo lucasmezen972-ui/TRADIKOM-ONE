@@ -123,6 +123,7 @@ function getMigrations(enableRls: boolean) {
     { id: "011_domain_event_attempt_metadata", sql: domainEventAttemptMetadataMigrationSql },
     { id: "012_webhook_delivery_idempotency", sql: webhookDeliveryIdempotencyMigrationSql },
     { id: "013_rate_limit_scopes", sql: rateLimitScopesMigrationSql },
+    { id: "014_invitation_delivery", sql: invitationDeliveryMigrationSql },
   ];
 }
 
@@ -789,6 +790,17 @@ alter table rate_limits add column if not exists subject_hash text not null defa
 alter table rate_limits add column if not exists scope_hash text not null default '';
 create index if not exists idx_rate_limits_operation_scope on rate_limits(operation_key, scope_hash, reset_at);
 create index if not exists idx_rate_limits_cleanup on rate_limits(reset_at);
+`;
+
+const invitationDeliveryMigrationSql = `
+alter table invitations add column if not exists delivery_status text not null default 'pending';
+alter table invitations add column if not exists delivery_provider text;
+alter table invitations add column if not exists delivery_attempts integer not null default 0;
+alter table invitations add column if not exists delivery_last_attempt_at text;
+alter table invitations add column if not exists delivery_error_code text;
+
+create index if not exists idx_invitations_delivery_status
+  on invitations(tenant_id, delivery_status, created_at desc);
 `;
 
 const rlsMigrationSql = `

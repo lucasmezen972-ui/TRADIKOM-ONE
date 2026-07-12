@@ -1,13 +1,26 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
+import {
+  createTestEmailProvider,
+  type EmailKind,
+  type TestEmailProvider,
+} from "../src/modules/email";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
 async function setup() {
   const db = await createMemoryDb();
   opened.push(db);
-  return { db, services: createServices(db) };
+  const emailProvider = createTestEmailProvider();
+  return {
+    db,
+    emailProvider,
+    services: createServices(db, {
+      emailProvider,
+      appUrl: "https://app.tradikom.test",
+    }),
+  };
 }
 
 afterEach(async () => {
@@ -16,7 +29,7 @@ afterEach(async () => {
 
 describe("auth flows", () => {
   it("resets a password with a hashed single-use token and revokes sessions", async () => {
-    const { db, services } = await setup();
+    const { db, emailProvider, services } = await setup();
     const user = await services.registerUser({
       name: "Malia Reset",
       email: "malia.reset@example.com",
@@ -26,22 +39,19 @@ describe("auth flows", () => {
     const reset = await services.requestPasswordReset({
       email: "MALIA.RESET@example.com",
     });
+    const resetToken = emailToken(emailProvider, "password_reset");
 
-    expect(reset.accepted).toBe(true);
-    expect(reset.resetToken).toBeTypeOf("string");
-    if (!reset.resetToken) {
-      throw new Error("Expected a reset token for an existing account.");
-    }
+    expect(reset).toEqual({ accepted: true });
 
     const rows = await db.query<{ token_hash: string; used_at: string | null }>(
       "select token_hash, used_at from password_reset_tokens where user_id = $1",
       [user.id],
     );
-    expect(rows.rows[0]?.token_hash).not.toBe(reset.resetToken);
+    expect(rows.rows[0]?.token_hash).not.toBe(resetToken);
     expect(rows.rows[0]?.used_at).toBeNull();
 
     await services.resetPassword({
-      token: reset.resetToken,
+      token: resetToken,
       password: "NewPassword!2",
     });
 
@@ -60,23 +70,24 @@ describe("auth flows", () => {
     expect(await services.getSessionUser(session.sessionToken)).toBeNull();
     await expect(
       services.resetPassword({
-        token: reset.resetToken,
+        token: resetToken,
         password: "AnotherPassword!3",
       }),
     ).rejects.toThrow("Lien de réinitialisation invalide ou expiré.");
   });
 
   it("does not reveal whether a password reset email exists", async () => {
-    const { services } = await setup();
+    const { emailProvider, services } = await setup();
     const reset = await services.requestPasswordReset({
       email: "absent@example.com",
     });
 
     expect(reset).toEqual({ accepted: true });
+    expect(emailProvider.messages).toHaveLength(0);
   });
 
   it("accepts an invitation once and creates the expected membership", async () => {
-    const { db, services } = await setup();
+    const { db, emailProvider, services } = await setup();
     const owner = await services.registerUser({
       name: "Malia Owner",
       email: "owner@example.com",
@@ -91,16 +102,17 @@ describe("auth flows", () => {
       role: "manager",
     });
 
-    expect(invitation.invitationToken).toBeTypeOf("string");
+    const invitationToken = emailToken(emailProvider, "team_invitation");
+    expect(invitation).not.toHaveProperty("invitationToken");
     const rows = await db.query<{ token_hash: string; status: string }>(
       "select token_hash, status from invitations where id = $1",
       [invitation.id],
     );
-    expect(rows.rows[0]?.token_hash).not.toBe(invitation.invitationToken);
+    expect(rows.rows[0]?.token_hash).not.toBe(invitationToken);
     expect(rows.rows[0]?.status).toBe("pending");
 
     const accepted = await services.acceptInvitation({
-      token: invitation.invitationToken,
+      token: invitationToken,
       name: "Nouveau Membre",
       password: "Password!2",
     });
@@ -111,7 +123,7 @@ describe("auth flows", () => {
     expect(tenants[0]?.membership.role).toBe("manager");
     await expect(
       services.acceptInvitation({
-        token: invitation.invitationToken,
+        token: invitationToken,
         name: "Nouveau Membre",
         password: "Password!2",
       }),
@@ -119,7 +131,7 @@ describe("auth flows", () => {
   });
 
   it("lets owners update non-owner member roles", async () => {
-    const { services } = await setup();
+    const { emailProvider, services } = await setup();
     const owner = await services.registerUser({
       name: "Owner Role",
       email: "owner-role@example.com",
@@ -133,8 +145,9 @@ describe("auth flows", () => {
       email: "role-member@example.com",
       role: "collaborator",
     });
+    const invitationToken = emailToken(emailProvider, "team_invitation");
     const accepted = await services.acceptInvitation({
-      token: invitation.invitationToken,
+      token: invitationToken,
       name: "Role Member",
       password: "Password!2",
     });
@@ -148,3 +161,17 @@ describe("auth flows", () => {
     expect(tenants[0]?.membership.role).toBe("read-only");
   });
 });
+
+function emailToken(provider: TestEmailProvider, kind: EmailKind) {
+  const message = [...provider.messages]
+    .reverse()
+    .find((item) => item.kind === kind);
+  const link = message?.text.match(/https?:\/\/\S+/)?.[0];
+  const token = link ? new URL(link).searchParams.get("token") : null;
+
+  if (!token) {
+    throw new Error(`Expected a token in ${kind} test email.`);
+  }
+
+  return token;
+}
