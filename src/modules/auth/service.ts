@@ -33,10 +33,21 @@ import {
   type PasswordResetRequestInput,
   type RegistrationInput,
 } from "@/modules/auth/schemas";
+import {
+  createDatabaseRateLimiter,
+  enforceRateLimit,
+  rateLimitPolicies,
+} from "@/modules/rate-limit";
 
 export async function registerUser(db: DbClient, input: RegistrationInput) {
   const parsed = registrationSchema.parse(input);
   const email = parsed.email.toLowerCase();
+  await enforceRateLimit(db, {
+    operationKey: "auth.registration",
+    subjectKey: email,
+    limit: rateLimitPolicies.registration.limit,
+    windowSeconds: rateLimitPolicies.registration.windowSeconds,
+  });
   const existing = await findUserByEmail(db, email);
 
   if (existing) {
@@ -64,7 +75,14 @@ export async function registerUser(db: DbClient, input: RegistrationInput) {
 
 export async function loginUser(db: DbClient, input: LoginInput) {
   const parsed = loginSchema.parse(input);
-  const user = await findUserByEmail(db, parsed.email.toLowerCase());
+  const email = parsed.email.toLowerCase();
+  await enforceRateLimit(db, {
+    operationKey: "auth.login",
+    subjectKey: email,
+    limit: rateLimitPolicies.login.limit,
+    windowSeconds: rateLimitPolicies.login.windowSeconds,
+  });
+  const user = await findUserByEmail(db, email);
 
   if (!user || !verifyPassword(parsed.password, user.password_hash)) {
     throw new AuthError(
@@ -126,6 +144,17 @@ export async function requestPasswordReset(
 ) {
   const parsed = passwordResetRequestSchema.parse(input);
   const email = parsed.email.toLowerCase();
+  const rateLimit = await createDatabaseRateLimiter(db).consume({
+    operationKey: "auth.password_reset",
+    subjectKey: email,
+    limit: rateLimitPolicies.passwordReset.limit,
+    windowSeconds: rateLimitPolicies.passwordReset.windowSeconds,
+  });
+
+  if (!rateLimit.allowed) {
+    return { accepted: true };
+  }
+
   const user = await findUserByEmail(db, email);
 
   if (!user) {

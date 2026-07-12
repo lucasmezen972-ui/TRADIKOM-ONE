@@ -5,6 +5,7 @@ import { createServices } from "../src/lib/services";
 import {
   configureWebhookEndpointSecret,
 } from "../src/modules/connectors/webhooks";
+import { buildRateLimitKey } from "../src/modules/rate-limit";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -422,7 +423,11 @@ describe("connectors", () => {
        values ($1, $2, $3, $4, $5, $6)`,
       [
         "rate_webhook_demo_limit",
-        `webhook:${demoEndpoint.id}`,
+        buildRateLimitKey({
+          operationKey: "webhook.receive",
+          subjectKey: demoEndpoint.id,
+          scopeKey: demo.tenant.id,
+        }),
         60,
         new Date(Date.now() + 60_000).toISOString(),
         now,
@@ -435,12 +440,17 @@ describe("connectors", () => {
       phone: "+596 696 57 58 59",
       secret: "rate-limit-secret",
     };
-    await expect(
-      services.receiveWebhook(demoEndpoint.token, limitedPayload, {
+    const limitedError = await services
+      .receiveWebhook(demoEndpoint.token, limitedPayload, {
         body: JSON.stringify(limitedPayload),
         idempotencyKey: "rate-limited-redacted",
-      }),
-    ).rejects.toThrow("Trop de requetes webhook.");
+      })
+      .catch((error: unknown) => error);
+    expect(limitedError).toMatchObject({
+      code: "webhook_rate_limited",
+      message: "Trop de requetes webhook.",
+      retryAfterSeconds: expect.any(Number),
+    });
 
     const otherRotation = await services.generateWebhookEndpointSecret(
       other.id,

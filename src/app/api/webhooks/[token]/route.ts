@@ -22,12 +22,19 @@ export async function POST(
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
+    const retryAfter =
+      error instanceof ConnectorError && error.retryAfterSeconds
+        ? String(error.retryAfterSeconds)
+        : undefined;
     return NextResponse.json(
       {
         ok: false,
         error: safeWebhookError(error),
       },
-      { status: webhookErrorStatus(error) },
+      {
+        status: webhookErrorStatus(error),
+        headers: retryAfter ? { "Retry-After": retryAfter } : undefined,
+      },
     );
   }
 }

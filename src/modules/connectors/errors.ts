@@ -12,6 +12,7 @@ export class ConnectorError extends Error {
   constructor(
     public readonly code: ConnectorErrorCode,
     message: string,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "ConnectorError";

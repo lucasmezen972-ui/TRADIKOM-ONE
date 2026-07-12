@@ -5,7 +5,6 @@ import { connectorCatalog } from "@/modules/connectors/catalog";
 import { parseContactsCsv } from "@/modules/connectors/csv";
 import { ConnectorError } from "@/modules/connectors/errors";
 import {
-  consumeRateLimit,
   findAcceptedWebhookDeliveryByIdempotencyKey,
   findImportedContactByEmail,
   findWebhookEndpointByToken,
@@ -43,12 +42,14 @@ import {
 } from "@/modules/connectors/webhooks";
 import { createLeadFromPayload } from "@/modules/crm";
 import { assertTenantAccess } from "@/modules/tenants";
+import {
+  createDatabaseRateLimiter,
+  rateLimitPolicies,
+} from "@/modules/rate-limit";
 
 export type { WebhookSignatureInput } from "@/modules/connectors/webhooks";
 
 const webhookMaxPayloadBytes = 64 * 1024;
-const webhookRateLimitMax = 60;
-const webhookRateLimitWindowSeconds = 60;
 const connectorAdminRoles = ["owner", "administrator", "manager"] as const;
 
 export async function getConnectors(
@@ -416,13 +417,12 @@ export async function receiveWebhook(
     );
   }
 
-  const now = nowIso();
-  const rateLimit = await consumeRateLimit(db, {
-    id: id("rate"),
-    key: `webhook:${row.id}`,
-    limit: webhookRateLimitMax,
-    windowSeconds: webhookRateLimitWindowSeconds,
-    now,
+  const rateLimit = await createDatabaseRateLimiter(db).consume({
+    operationKey: "webhook.receive",
+    subjectKey: row.id,
+    scopeKey: row.tenant_id,
+    limit: rateLimitPolicies.inboundWebhook.limit,
+    windowSeconds: rateLimitPolicies.inboundWebhook.windowSeconds,
   });
 
   if (!rateLimit.allowed) {
@@ -435,7 +435,11 @@ export async function receiveWebhook(
       "rejected",
       "Trop de requetes webhook.",
     );
-    throw new ConnectorError("webhook_rate_limited", "Trop de requetes webhook.");
+    throw new ConnectorError(
+      "webhook_rate_limited",
+      "Trop de requetes webhook.",
+      rateLimit.retryAfterSeconds,
+    );
   }
 
   const signature = await verifyWebhookEndpointSignature(

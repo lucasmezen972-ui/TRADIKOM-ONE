@@ -39,6 +39,7 @@ import {
   type CreateTenantInput,
   type UpdateMemberRoleInput,
 } from "@/modules/tenants/schemas";
+import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 
 const allTenantRoles: Role[] = [
   "owner",
@@ -169,6 +170,13 @@ export async function createInvitation(
   ]);
   const parsed = invitationSchema.parse(input);
   const email = parsed.email.toLowerCase();
+  await enforceRateLimit(db, {
+    operationKey: "invitation.create",
+    subjectKey: email,
+    scopeKey: tenantId,
+    limit: rateLimitPolicies.invitationCreate.limit,
+    windowSeconds: rateLimitPolicies.invitationCreate.windowSeconds,
+  });
 
   if (parsed.role === "administrator" && actorRole !== "owner") {
     throw new TenantError(
@@ -222,6 +230,12 @@ export async function acceptInvitation(
   input: AcceptInvitationInput,
 ) {
   const parsed = acceptInvitationSchema.parse(input);
+  await enforceRateLimit(db, {
+    operationKey: "invitation.accept",
+    subjectKey: hashToken(parsed.token),
+    limit: rateLimitPolicies.invitationAccept.limit,
+    windowSeconds: rateLimitPolicies.invitationAccept.windowSeconds,
+  });
   const invitation = await findPendingInvitation(db, parsed.token);
 
   if (!invitation) {
@@ -253,6 +267,12 @@ export async function acceptInvitationForUser(
   userId: string,
   token: string,
 ) {
+  await enforceRateLimit(db, {
+    operationKey: "invitation.accept_authenticated",
+    subjectKey: hashToken(token),
+    limit: rateLimitPolicies.invitationAccept.limit,
+    windowSeconds: rateLimitPolicies.invitationAccept.windowSeconds,
+  });
   const invitation = await findPendingInvitation(db, token);
 
   if (!invitation) {

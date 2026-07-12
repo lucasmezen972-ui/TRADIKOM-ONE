@@ -246,3 +246,15 @@ export const domainEvents = pgTable("domain_events", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const rateLimits = pgTable("rate_limits", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  operationKey: text("operation_key").notNull(),
+  subjectHash: text("subject_hash").notNull(),
+  scopeHash: text("scope_hash").notNull(),
+  count: integer("count").notNull(),
+  resetAt: text("reset_at").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

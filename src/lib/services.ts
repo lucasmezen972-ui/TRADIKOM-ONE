@@ -114,6 +114,7 @@ import type {
   DashboardData,
   User,
 } from "@/lib/types";
+import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 
 const pipelineStages = [
   "Nouveau contact",
@@ -581,6 +582,13 @@ async function getAuditLogs(db: DbClient, userId: string, tenantId: string) {
 }
 
 async function seedDemo(db: DbClient) {
+  await enforceRateLimit(db, {
+    operationKey: "demo.seed",
+    subjectKey: "shared-public-demo",
+    scopeKey: process.env.NODE_ENV ?? "development",
+    limit: rateLimitPolicies.publicDemo.limit,
+    windowSeconds: rateLimitPolicies.publicDemo.windowSeconds,
+  });
   const email = "patron@garage-caraibes-auto.example";
   const existing = await db.query<UserRow>("select * from users where email = $1", [email]);
   let user: User;

@@ -122,6 +122,7 @@ function getMigrations(enableRls: boolean) {
     { id: "010_workflow_step_attempts", sql: workflowStepAttemptsMigrationSql },
     { id: "011_domain_event_attempt_metadata", sql: domainEventAttemptMetadataMigrationSql },
     { id: "012_webhook_delivery_idempotency", sql: webhookDeliveryIdempotencyMigrationSql },
+    { id: "013_rate_limit_scopes", sql: rateLimitScopesMigrationSql },
   ];
 }
 
@@ -780,6 +781,14 @@ create index if not exists idx_webhook_deliveries_endpoint_idempotency
 create unique index if not exists idx_webhook_deliveries_accepted_idempotency
   on webhook_deliveries(webhook_endpoint_id, idempotency_key)
   where idempotency_key is not null and status = 'accepted';
+`;
+
+const rateLimitScopesMigrationSql = `
+alter table rate_limits add column if not exists operation_key text not null default 'legacy';
+alter table rate_limits add column if not exists subject_hash text not null default '';
+alter table rate_limits add column if not exists scope_hash text not null default '';
+create index if not exists idx_rate_limits_operation_scope on rate_limits(operation_key, scope_hash, reset_at);
+create index if not exists idx_rate_limits_cleanup on rate_limits(reset_at);
 `;
 
 const rlsMigrationSql = `

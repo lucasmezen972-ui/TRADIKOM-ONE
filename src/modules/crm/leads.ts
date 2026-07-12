@@ -29,6 +29,7 @@ import {
 } from "@/modules/crm/schemas";
 import { getTenantOwnerId } from "@/modules/tenants";
 import { enqueueLeadFollowUpWorkflow } from "@/modules/workflows/engine";
+import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 
 export type PublishedSiteLookup = {
   tenant: Tenant;
@@ -67,6 +68,14 @@ export async function submitPublicLead(
   if (existing) {
     return existing.id;
   }
+
+  await enforceRateLimit(db, {
+    operationKey: "public_form.submit",
+    subjectKey: parsed.email.toLowerCase(),
+    scopeKey: tenantId,
+    limit: rateLimitPolicies.publicForm.limit,
+    windowSeconds: rateLimitPolicies.publicForm.windowSeconds,
+  });
 
   const result = await createLeadFromPayload(db, tenantId, {
     name: parsed.name,
