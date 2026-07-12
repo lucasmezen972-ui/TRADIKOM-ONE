@@ -28,7 +28,6 @@ import {
   getDuplicatePairDetail,
   getOpportunities,
   getOpportunityDetail,
-  getTenantActivities,
   mergeContacts,
   opportunityFiltersSchema,
   opportunityUpdateSchema,
@@ -58,6 +57,7 @@ import {
   saveBusinessTwin,
 } from "@/modules/business-twin";
 import { getAuditLogs } from "@/modules/audit";
+import { getDashboardData } from "@/modules/dashboard";
 import {
   acceptInvitation,
   acceptInvitationForUser,
@@ -65,7 +65,6 @@ import {
   createInvitation,
   createTenant as createTenantDomain,
   getPendingInvitations,
-  getTenantById,
   getTenantContext,
   getTenantMembers,
   getUserTenants,
@@ -86,22 +85,18 @@ import {
   restoreWebsiteVersion,
   updateWebsiteSection,
 } from "@/modules/websites";
-import {
-  dismissOpportunityRadarAlert,
-  getOpportunityRadar,
-} from "@/modules/opportunity-radar";
+import { dismissOpportunityRadarAlert } from "@/modules/opportunity-radar";
 import {
   approveWorkflowRun,
   cancelWorkflowQueueEvent,
   cancelWorkflowRun,
   getWorkflowDeadLetters,
   getWorkflowQueueOverview,
-  getWorkflowRuns,
   rejectWorkflowRun,
   retryWorkflowDeadLetter,
   requestManualWorkflowRetry,
 } from "@/modules/workflows";
-import type { DashboardData, User } from "@/lib/types";
+import type { User } from "@/lib/types";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
   authLinkPreviewEnabled,
@@ -226,7 +221,7 @@ export function createServices(
         getPublishedSite,
       }),
     getDashboard: (userId: string, tenantId: string) =>
-      getDashboard(db, userId, tenantId),
+      getDashboardData(db, userId, tenantId),
     getOpportunityRadar: (userId: string, tenantId: string) =>
       getOpportunityRadar(db, userId, tenantId),
     dismissOpportunityRadarAlert: (
@@ -376,60 +371,6 @@ export function createServices(
       contactId: string,
     ) => findContactForTenant(db, userId, tenantId, contactId),
   };
-}
-
-async function getDashboard(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const tenant = await getTenantById(db, tenantId);
-  const website = await getWebsite(db, tenantId);
-  const [leadRows, contactRows, taskRows, submissionRows] = await Promise.all([
-    db.query<{ count: number }>("select count(*)::int as count from leads where tenant_id = $1", [
-      tenantId,
-    ]),
-    db.query<{ count: number }>(
-      "select count(*)::int as count from contacts where tenant_id = $1",
-      [tenantId],
-    ),
-    db.query<{ count: number }>(
-      "select count(*)::int as count from tasks where tenant_id = $1 and status = $2",
-      [tenantId, "open"],
-    ),
-    db.query<{ count: number }>(
-      "select count(*)::int as count from form_submissions where tenant_id = $1",
-      [tenantId],
-    ),
-  ]);
-  const stages = await db.query<{ stage: string; count: number }>(
-    `select pipeline_stages.name as stage, count(opportunities.id)::int as count
-     from pipeline_stages
-     left join opportunities on opportunities.stage_id = pipeline_stages.id and opportunities.tenant_id = pipeline_stages.tenant_id
-     where pipeline_stages.tenant_id = $1
-     group by pipeline_stages.name, pipeline_stages.position
-     order by pipeline_stages.position asc`,
-    [tenantId],
-  );
-  const activities = await getTenantActivities(db, tenantId, 8);
-  const workflowRuns = await getWorkflowRuns(db, userId, tenantId);
-  const connectors = await getConnectors(db, userId, tenantId);
-  const detectedOpportunities = (
-    await getOpportunityRadar(db, userId, tenantId)
-  ).filter((alert) => alert.status === "active");
-
-  return {
-    tenant,
-    metrics: {
-      newLeads: leadRows.rows[0]?.count ?? 0,
-      contacts: contactRows.rows[0]?.count ?? 0,
-      pendingTasks: taskRows.rows[0]?.count ?? 0,
-      formSubmissions: submissionRows.rows[0]?.count ?? 0,
-    },
-    websiteStatus: website?.status === "published" ? "Publie" : "Brouillon",
-    opportunitiesByStage: stages.rows,
-    connectorHealth: connectors,
-    recentActivities: activities,
-    workflowRuns: workflowRuns.slice(0, 5),
-    detectedOpportunities,
-  } satisfies DashboardData;
 }
 
 async function seedDemo(db: DbClient) {
