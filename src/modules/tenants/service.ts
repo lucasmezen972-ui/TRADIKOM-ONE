@@ -373,24 +373,53 @@ export async function acceptInvitation(
     throw new TenantError("invalid_invitation", "Invitation invalide ou expirée.");
   }
 
-  const existingUser = await findUserByEmail(db, invitation.email);
+  return withTenantDbTransaction(
+    db,
+    invitation.tenant_id,
+    "system",
+    async (transaction) => {
+      const currentInvitation = await findPendingInvitation(
+        transaction,
+        parsed.token,
+      );
 
-  if (existingUser) {
-    throw new TenantError(
-      "invitation_account_exists",
-      "Ce compte existe déjà. Connectez-vous puis ouvrez à nouveau le lien d'invitation.",
-    );
-  }
+      if (!currentInvitation) {
+        throw new TenantError(
+          "invalid_invitation",
+          "Invitation invalide ou expirée.",
+        );
+      }
 
-  const user = await registerUser(db, {
-    name: parsed.name,
-    email: invitation.email,
-    password: parsed.password,
-  });
-  const membership = await completeInvitation(db, invitation, user.id);
-  const tenant = await getTenantById(db, invitation.tenant_id);
+      const existingUser = await findUserByEmail(
+        transaction,
+        currentInvitation.email,
+      );
 
-  return { user, tenant, membership };
+      if (existingUser) {
+        throw new TenantError(
+          "invitation_account_exists",
+          "Ce compte existe déjà. Connectez-vous puis ouvrez à nouveau le lien d'invitation.",
+        );
+      }
+
+      const user = await registerUser(transaction, {
+        name: parsed.name,
+        email: currentInvitation.email,
+        password: parsed.password,
+      });
+      const membership = await completeInvitation(
+        transaction,
+        currentInvitation,
+        user.id,
+      );
+      const tenant = await getTenantById(
+        transaction,
+        currentInvitation.tenant_id,
+      );
+
+      return { user, tenant, membership };
+    },
+  );
 }
 
 export async function acceptInvitationForUser(
@@ -410,19 +439,42 @@ export async function acceptInvitationForUser(
     throw new TenantError("invalid_invitation", "Invitation invalide ou expirée.");
   }
 
-  const user = await findUserById(db, userId);
+  return withTenantDbTransaction(
+    db,
+    invitation.tenant_id,
+    userId,
+    async (transaction) => {
+      const currentInvitation = await findPendingInvitation(transaction, token);
 
-  if (!user || user.email !== invitation.email) {
-    throw new TenantError(
-      "invitation_account_mismatch",
-      "Cette invitation ne correspond pas au compte connecté.",
-    );
-  }
+      if (!currentInvitation) {
+        throw new TenantError(
+          "invalid_invitation",
+          "Invitation invalide ou expirée.",
+        );
+      }
 
-  const membership = await completeInvitation(db, invitation, userId);
-  const tenant = await getTenantById(db, invitation.tenant_id);
+      const user = await findUserById(transaction, userId);
 
-  return { user: mapUser(user), tenant, membership };
+      if (!user || user.email !== currentInvitation.email) {
+        throw new TenantError(
+          "invitation_account_mismatch",
+          "Cette invitation ne correspond pas au compte connecté.",
+        );
+      }
+
+      const membership = await completeInvitation(
+        transaction,
+        currentInvitation,
+        userId,
+      );
+      const tenant = await getTenantById(
+        transaction,
+        currentInvitation.tenant_id,
+      );
+
+      return { user: mapUser(user), tenant, membership };
+    },
+  );
 }
 
 export async function updateMemberRole(
