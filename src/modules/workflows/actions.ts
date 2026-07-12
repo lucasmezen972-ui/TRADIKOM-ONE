@@ -2,6 +2,7 @@ import type { DbClient } from "@/lib/db";
 import { id, safeJson, toJson } from "@/lib/security";
 import { queueWorkflowNotification } from "@/modules/notifications";
 import { WorkflowError } from "@/modules/workflows/errors";
+import { queueWorkflowWebhook } from "@/modules/workflows/webhook";
 import type {
   WorkflowAction,
   WorkflowDefinition,
@@ -26,6 +27,8 @@ export type WorkflowActionContext = {
   event: WorkflowEvent;
   definition: WorkflowDefinition;
   action: WorkflowAction;
+  actionIndex: number;
+  actionIdempotencyKey: string;
   now: string;
 };
 
@@ -291,29 +294,47 @@ async function callWebhookAction({
   runId,
   event,
   action,
+  actionIdempotencyKey,
   now,
 }: WorkflowActionContext): Promise<WorkflowActionResult> {
-  await db.query(
-    "insert into activities (id, tenant_id, type, summary, target_type, target_id, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      id("activity"),
-      event.tenantId,
-      "workflow.webhook_mock",
-      "Appel webhook simule par le moteur workflow.",
-      "workflow_run",
-      runId,
-      now,
-    ],
-  );
+  const targetUrl = stringInput(action.input.url, "");
+  const body = recordInput(action.input.body, {
+    eventId: event.id,
+    eventType: event.type,
+    runId,
+    correlationId: event.correlationId,
+  });
+  const eventId = await queueWorkflowWebhook(db, {
+    tenantId: event.tenantId,
+    actorId: event.actorId,
+    runId,
+    targetUrl,
+    body,
+    actionIdempotencyKey,
+    correlationId: event.correlationId,
+    causationId: event.id,
+    createdAt: now,
+  });
 
   return {
     status: "succeeded",
-    summary: "Webhook simule.",
+    summary: "Webhook mis en file.",
     metadata: {
-      urlConfigured:
-        typeof action.input.url === "string" && action.input.url.length > 0,
+      deliveryEventId: eventId,
+      targetHost: new URL(targetUrl).hostname,
     },
   };
+}
+
+function recordInput(
+  value: unknown,
+  fallback: Record<string, unknown>,
+): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return fallback;
 }
 
 async function waitForDurationAction({

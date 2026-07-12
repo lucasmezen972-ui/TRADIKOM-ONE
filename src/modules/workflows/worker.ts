@@ -14,6 +14,11 @@ import {
   resumeWorkflowRun,
   workflowResumeEventType,
 } from "@/modules/workflows/engine";
+import {
+  dispatchWorkflowWebhook,
+  type WorkflowWebhookFetch,
+  workflowWebhookRequestedEventType,
+} from "@/modules/workflows/webhook";
 
 export type DomainEvent = {
   id: string;
@@ -39,6 +44,7 @@ export type DomainEventWorkerOptions = {
   baseBackoffMs?: number;
   processingTimeoutMs?: number;
   handlers?: Record<string, DomainEventHandler>;
+  webhookFetch?: WorkflowWebhookFetch;
 };
 
 export type DomainEventWorkerSummary = {
@@ -158,6 +164,17 @@ export async function processPendingDomainEvents(
         actorId: event.actorId,
         payload: event.payload,
         correlationId: event.correlationId,
+      });
+    },
+    [workflowWebhookRequestedEventType]: async ({ db: handlerDb, event }) => {
+      await dispatchWorkflowWebhook(handlerDb, {
+        tenantId: event.tenantId,
+        actorId: event.actorId,
+        eventId: event.id,
+        idempotencyKey: event.idempotencyKey,
+        correlationId: event.correlationId,
+        payload: event.payload,
+        fetchImpl: options.webhookFetch,
       });
     },
     ...(options.handlers ?? {}),

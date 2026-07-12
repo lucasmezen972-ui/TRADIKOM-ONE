@@ -606,6 +606,8 @@ async function executeAction(
       event: input.event,
       definition: input.definition,
       action: input.action,
+      actionIndex: input.actionIndex,
+      actionIdempotencyKey: idempotencyKey,
       now: startedAt,
     });
     const completedAt = nowIso();

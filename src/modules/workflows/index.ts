@@ -5,3 +5,4 @@ export * from "@/modules/workflows/repository";
 export * from "@/modules/workflows/schemas";
 export * from "@/modules/workflows/service";
 export * from "@/modules/workflows/types";
+export * from "@/modules/workflows/webhook";

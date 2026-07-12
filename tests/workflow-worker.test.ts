@@ -10,7 +10,10 @@ import {
 import {
   getWorkflowDeadLetters,
   leadFollowUpWorkflow,
+  executeWorkflowAction,
+  queueWorkflowWebhook,
   retryWorkflowDeadLetter,
+  workflowWebhookRequestedEventType,
 } from "../src/modules/workflows";
 import { opportunityRadarSyncRequestedEventType } from "../src/modules/opportunity-radar";
 import {
@@ -396,6 +399,120 @@ describe("workflow worker", () => {
     ).toBe(0);
   });
 
+  it("queues and dispatches workflow webhooks idempotently", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_webhook_worker", "user_webhook_worker");
+    const actionContext = {
+      db,
+      runId: "run_webhook_worker",
+      event: {
+        id: "event_lead_worker",
+        tenantId: "tenant_webhook_worker",
+        actorId: "user_webhook_worker",
+        type: "lead.created",
+        payload: {},
+        correlationId: "correlation_webhook_worker",
+        idempotencyKey: "lead-webhook-worker",
+      },
+      definition: leadFollowUpWorkflow,
+      action: {
+        type: "call_webhook" as const,
+        input: {
+          url: "https://hooks.example.com/tradikom",
+          body: { contactId: "contact_webhook_worker" },
+        },
+      },
+      actionIndex: 0,
+      actionIdempotencyKey: "lead-action-1",
+      now: "2026-07-11T10:00:00.000Z",
+    };
+    const firstResult = await executeWorkflowAction(actionContext);
+    const duplicateResult = await executeWorkflowAction(actionContext);
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+      webhookFetch: async (url, init) => {
+        calls.push({ url, init });
+        return { ok: true, status: 204 };
+      },
+    });
+
+    expect(firstResult).toMatchObject({
+      status: "succeeded",
+      summary: "Webhook mis en file.",
+    });
+    expect(duplicateResult.metadata?.deliveryEventId).toBe(
+      firstResult.metadata?.deliveryEventId,
+    );
+    expect(summary.succeeded).toBe(1);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe("https://hooks.example.com/tradikom");
+    expect(calls[0]?.init).toMatchObject({
+      method: "POST",
+      redirect: "error",
+    });
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+      contactId: "contact_webhook_worker",
+    });
+    expect(await countWorkflowWebhookEvents(db, "tenant_webhook_worker")).toBe(1);
+    expect(await countWorkflowWebhookAudits(db, "tenant_webhook_worker")).toBe(1);
+  });
+
+  it("retries failed workflow webhook deliveries and rejects unsafe targets", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_webhook_retry", "user_webhook_retry");
+
+    await expect(
+      queueWorkflowWebhook(db, {
+        tenantId: "tenant_webhook_retry",
+        actorId: "user_webhook_retry",
+        runId: "run_webhook_unsafe",
+        targetUrl: "http://127.0.0.1/internal",
+        body: {},
+        actionIdempotencyKey: "unsafe",
+        correlationId: "correlation_unsafe",
+        causationId: "event_unsafe",
+      }),
+    ).rejects.toThrow("URL webhook non autorisee");
+    await expect(
+      queueWorkflowWebhook(db, {
+        tenantId: "tenant_webhook_retry",
+        actorId: "user_webhook_retry",
+        runId: "run_webhook_sensitive",
+        targetUrl: "https://hooks.example.com/tradikom",
+        body: { nested: { apiKey: "must-not-be-persisted" } },
+        actionIdempotencyKey: "sensitive",
+        correlationId: "correlation_sensitive",
+        causationId: "event_sensitive",
+      }),
+    ).rejects.toThrow("champ sensible interdit");
+
+    const eventId = await queueWorkflowWebhook(db, {
+      tenantId: "tenant_webhook_retry",
+      actorId: "user_webhook_retry",
+      runId: "run_webhook_retry",
+      targetUrl: "https://hooks.example.com/tradikom",
+      body: { leadId: "lead_webhook_retry" },
+      actionIdempotencyKey: "retry",
+      correlationId: "correlation_retry",
+      causationId: "event_retry_source",
+      createdAt: "2026-07-11T10:00:00.000Z",
+    });
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+      maxAttempts: 2,
+      webhookFetch: async () => ({ ok: false, status: 503 }),
+    });
+    const event = await loadEvent(db, eventId);
+
+    expect(summary.retried).toBe(1);
+    expect(event.status).toBe("pending");
+    expect(event.attempts).toBe(1);
+    expect(event.last_error).toBe("Appel webhook echoue (HTTP 503).");
+    expect(event.event_type).toBe(workflowWebhookRequestedEventType);
+  });
+
   it("lists failed domain events as tenant-isolated dead letters", async () => {
     const { db } = await setup();
     await seedTenant(db, "tenant_dead_letters", "user_dead_letters");
@@ -715,6 +832,7 @@ async function seedOverdueRadarTask(
 
 async function loadEvent(db: DbClient, eventId: string) {
   const result = await db.query<{
+    event_type: string;
     status: string;
     attempts: number;
     next_run_at: string;
@@ -724,7 +842,8 @@ async function loadEvent(db: DbClient, eventId: string) {
     failure_classification: string | null;
     max_attempts: number | null;
   }>(
-    `select status,
+    `select event_type,
+            status,
             attempts,
             next_run_at,
             last_error,
@@ -869,6 +988,24 @@ async function countNotificationDispatchAudits(db: DbClient, tenantId: string) {
   const result = await db.query<{ count: number | string }>(
     "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
     [tenantId, "notification.dispatched"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countWorkflowWebhookEvents(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from domain_events where tenant_id = $1 and event_type = $2",
+    [tenantId, workflowWebhookRequestedEventType],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function countWorkflowWebhookAudits(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
+    [tenantId, "workflow.webhook_dispatched"],
   );
 
   return Number(result.rows[0]?.count ?? 0);
