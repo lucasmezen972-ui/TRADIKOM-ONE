@@ -53,6 +53,44 @@ describeIfPostgres("PostgreSQL RLS", () => {
     await insertContact(ownerDb, tenantA.id, ownerA.id, "alpha@example.com");
     await insertContact(ownerDb, tenantB.id, ownerB.id, "bravo@example.com");
 
+    const policyGaps = await ownerPool.query<{ table_name: string }>(`
+      select columns.table_name
+      from information_schema.columns as columns
+      join pg_class as tables on tables.relname = columns.table_name
+      join pg_namespace as namespaces on namespaces.oid = tables.relnamespace
+      where columns.table_schema = 'public'
+        and columns.column_name = 'tenant_id'
+        and namespaces.nspname = 'public'
+        and (
+          not tables.relrowsecurity
+          or not exists (
+            select 1
+            from pg_policies as policies
+            where policies.schemaname = 'public'
+              and policies.tablename = columns.table_name
+              and policies.cmd = 'ALL'
+          )
+        )
+      order by columns.table_name
+    `);
+    expect(policyGaps.rows).toEqual([]);
+
+    const tenantPolicy = await ownerPool.query<{ relrowsecurity: boolean }>(`
+      select tables.relrowsecurity
+      from pg_class as tables
+      join pg_namespace as namespaces on namespaces.oid = tables.relnamespace
+      where namespaces.nspname = 'public'
+        and tables.relname = 'tenants'
+        and exists (
+          select 1
+          from pg_policies as policies
+          where policies.schemaname = 'public'
+            and policies.tablename = 'tenants'
+            and policies.cmd = 'ALL'
+        )
+    `);
+    expect(tenantPolicy.rows).toEqual([{ relrowsecurity: true }]);
+
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
     const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
@@ -63,6 +101,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
     );
     expect(noContext.rows).toEqual([]);
 
+    const attemptedSystemBypass = await withSystemAccessFlag(
+      restrictedPool,
+      async (client) =>
+        client.query<{ email: string }>("select email from contacts order by email"),
+    );
+    expect(attemptedSystemBypass.rows).toEqual([]);
+
     const tenantARows = await withTenantContext(
       restrictedPool,
       tenantA.id,
@@ -72,6 +117,43 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(tenantARows.rows.map((row) => row.email)).toEqual([
       "alpha@example.com",
     ]);
+
+    const criticalTenantRows = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => {
+        const tenants = await client.query<{ id: string }>(
+          "select id from tenants order by id",
+        );
+        const memberships = await client.query<{ tenant_id: string }>(
+          "select distinct tenant_id from memberships order by tenant_id",
+        );
+        const workflows = await client.query<{ tenant_id: string }>(
+          "select distinct tenant_id from workflows order by tenant_id",
+        );
+        const webhookEndpoints = await client.query<{ tenant_id: string }>(
+          "select distinct tenant_id from webhook_endpoints order by tenant_id",
+        );
+        const connectorSecrets = await client.query<{ tenant_id: string }>(
+          "select distinct tenant_id from connector_secret_versions order by tenant_id",
+        );
+
+        return {
+          tenants: tenants.rows,
+          memberships: memberships.rows,
+          workflows: workflows.rows,
+          webhookEndpoints: webhookEndpoints.rows,
+          connectorSecrets: connectorSecrets.rows,
+        };
+      },
+    );
+    expect(criticalTenantRows).toEqual({
+      tenants: [{ id: tenantA.id }],
+      memberships: [{ tenant_id: tenantA.id }],
+      workflows: [{ tenant_id: tenantA.id }],
+      webhookEndpoints: [{ tenant_id: tenantA.id }],
+      connectorSecrets: [{ tenant_id: tenantA.id }],
+    });
 
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
@@ -89,6 +171,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
             toJson(["test"]),
             ownerA.id,
             nowIso(),
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into workflow_runs (id, tenant_id, workflow_key, trigger_name, status, summary, error, retry_count, created_at)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            id("workflow_run"),
+            tenantB.id,
+            "lead_follow_up",
+            "lead.created",
+            "running",
+            "Cross tenant write",
+            null,
+            0,
             nowIso(),
           ],
         ),
@@ -163,6 +265,26 @@ async function withTenantContext<T>(
   try {
     await client.query("begin");
     await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+    const result = await callback(client);
+    await client.query("commit");
+    return result;
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function withSystemAccessFlag<T>(
+  pool: Pool,
+  callback: (client: PoolClient) => Promise<T>,
+) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("begin");
+    await client.query("select set_config('app.system_access', 'true', true)");
     const result = await callback(client);
     await client.query("commit");
     return result;
