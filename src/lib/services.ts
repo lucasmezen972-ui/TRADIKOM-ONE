@@ -86,6 +86,7 @@ import {
 } from "@/modules/opportunity-radar";
 import {
   approveWorkflowRun,
+  cancelWorkflowQueueEvent,
   cancelWorkflowRun,
   getWorkflowDeadLetters,
   getWorkflowQueueOverview,
@@ -345,6 +346,11 @@ export function createServices(db: DbClient) {
       tenantId: string,
       eventId: string,
     ) => retryWorkflowDeadLetter(db, userId, tenantId, { eventId }),
+    cancelWorkflowQueueEvent: (
+      userId: string,
+      tenantId: string,
+      eventId: string,
+    ) => cancelWorkflowQueueEvent(db, userId, tenantId, { eventId }),
     getAuditLogs: (userId: string, tenantId: string) =>
       getAuditLogs(db, userId, tenantId),
     seedDemo: () => seedDemo(db),

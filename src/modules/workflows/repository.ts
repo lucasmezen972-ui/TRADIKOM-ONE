@@ -408,6 +408,70 @@ export async function listActiveDomainEventQueueRows(
   return result.rows;
 }
 
+export async function findActiveDomainEventQueueRow(
+  db: DbClient,
+  tenantId: string,
+  eventId: string,
+) {
+  const result = await db.query<DomainEventQueueRow>(
+    `select id,
+            tenant_id,
+            event_type,
+            status,
+            attempts,
+            next_run_at,
+            last_attempted_at,
+            last_retry_delay_ms,
+            failure_classification,
+            correlation_id,
+            created_at,
+            updated_at
+     from domain_events
+     where tenant_id = $1
+       and id = $2
+       and status in ($3, $4)
+     limit 1`,
+    [tenantId, eventId, "pending", "processing"],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function cancelActiveDomainEvent(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    updatedAt: string;
+  },
+) {
+  const result = await db.query<{ id: string }>(
+    `update domain_events
+     set status = $1,
+         last_error = $2,
+         last_retry_delay_ms = 0,
+         failure_classification = $3,
+         next_run_at = $4,
+         updated_at = $4
+     where tenant_id = $5
+       and id = $6
+       and status in ($7, $8)
+     returning id`,
+    [
+      "skipped",
+      "Cancelled manually by workflow operator.",
+      "operator_cancelled",
+      input.updatedAt,
+      input.tenantId,
+      input.eventId,
+      "pending",
+      "processing",
+    ],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function listFailedDomainEventRows(
   db: DbClient,
   tenantId: string,

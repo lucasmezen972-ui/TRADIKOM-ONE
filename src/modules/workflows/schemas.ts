@@ -13,3 +13,11 @@ export const workflowDeadLetterRetrySchema = z.object({
 export type WorkflowDeadLetterRetryInput = z.infer<
   typeof workflowDeadLetterRetrySchema
 >;
+
+export const workflowQueueEventControlSchema = z.object({
+  eventId: z.string().min(1),
+});
+
+export type WorkflowQueueEventControlInput = z.infer<
+  typeof workflowQueueEventControlSchema
+>;

@@ -17,6 +17,8 @@ import {
   enqueueWorkflowResumeEvent,
 } from "@/modules/workflows/engine";
 import {
+  cancelActiveDomainEvent,
+  findActiveDomainEventQueueRow,
   findLatestFailedWorkflowActionCursor,
   findFailedDomainEventRow,
   findPendingApprovalForRun,
@@ -32,8 +34,10 @@ import {
 } from "@/modules/workflows/repository";
 import {
   workflowDeadLetterRetrySchema,
+  workflowQueueEventControlSchema,
   workflowRunControlSchema,
   type WorkflowDeadLetterRetryInput,
+  type WorkflowQueueEventControlInput,
   type WorkflowRunControlInput,
 } from "@/modules/workflows/schemas";
 
@@ -267,6 +271,57 @@ export async function retryWorkflowDeadLetter(
       eventType: failedEvent.event_type,
       previousAttempts: Number(failedEvent.attempts),
       correlationId: failedEvent.correlation_id,
+    },
+  });
+
+  return { eventId: parsed.eventId };
+}
+
+export async function cancelWorkflowQueueEvent(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: WorkflowQueueEventControlInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
+  const parsed = workflowQueueEventControlSchema.parse(input);
+  const activeEvent = await findActiveDomainEventQueueRow(
+    db,
+    tenantId,
+    parsed.eventId,
+  );
+
+  if (!activeEvent) {
+    throw new WorkflowError(
+      "workflow_queue_event_not_found",
+      "Evenement workflow introuvable ou deja termine.",
+    );
+  }
+
+  const cancelled = await cancelActiveDomainEvent(db, {
+    tenantId,
+    eventId: parsed.eventId,
+    updatedAt: nowIso(),
+  });
+
+  if (!cancelled) {
+    throw new WorkflowError(
+      "workflow_queue_event_not_found",
+      "Evenement workflow introuvable ou deja termine.",
+    );
+  }
+
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action: "workflow.queue_event_cancelled",
+    targetType: "domain_event",
+    targetId: parsed.eventId,
+    metadata: {
+      eventType: activeEvent.event_type,
+      previousStatus: activeEvent.status,
+      attempts: Number(activeEvent.attempts),
+      correlationId: activeEvent.correlation_id,
     },
   });
 

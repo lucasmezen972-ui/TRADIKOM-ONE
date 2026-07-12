@@ -428,6 +428,18 @@ export async function retryWorkflowDeadLetterAction(formData: FormData) {
   revalidatePath("/aujourdhui");
 }
 
+export async function cancelWorkflowQueueEventAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.cancelWorkflowQueueEvent(
+    user.id,
+    tenant.id,
+    text(formData, "eventId"),
+  );
+  revalidatePath("/automatisations");
+  revalidatePath("/aujourdhui");
+}
+
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

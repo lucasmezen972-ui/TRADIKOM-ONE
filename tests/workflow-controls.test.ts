@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
 import {
   approveWorkflowRun,
+  cancelWorkflowQueueEvent,
   cancelWorkflowRun,
   getWorkflowQueueOverview,
   rejectWorkflowRun,
@@ -126,6 +127,45 @@ describe("workflow controls", () => {
     expect(
       overview.activeEvents.every((event) => event.tenantId === "tenant_controls"),
     ).toBe(true);
+
+    await expect(
+      cancelWorkflowQueueEvent(
+        db,
+        "user_other_controls",
+        "tenant_controls",
+        { eventId: "event_pending_controls" },
+      ),
+    ).rejects.toThrow("Acces refuse");
+    await expect(
+      cancelWorkflowQueueEvent(db, "user_controls", "tenant_controls", {
+        eventId: "event_failed_controls",
+      }),
+    ).rejects.toThrow("Evenement workflow introuvable");
+
+    await cancelWorkflowQueueEvent(db, "user_controls", "tenant_controls", {
+      eventId: "event_pending_controls",
+    });
+    await cancelWorkflowQueueEvent(db, "user_controls", "tenant_controls", {
+      eventId: "event_processing_controls",
+    });
+
+    const updated = await getWorkflowQueueOverview(
+      db,
+      "user_controls",
+      "tenant_controls",
+    );
+
+    expect(statusCount(updated.summary, "pending")).toBe(0);
+    expect(statusCount(updated.summary, "processing")).toBe(0);
+    expect(statusCount(updated.summary, "skipped")).toBe(2);
+    expect(updated.activeEvents).toEqual([]);
+    expect(await loadDomainEventStatus(db, "event_pending_controls")).toBe(
+      "skipped",
+    );
+    expect(await loadDomainEventStatus(db, "event_processing_controls")).toBe(
+      "skipped",
+    );
+    expect(await countAuditLogs(db, "tenant_controls")).toBe(2);
   });
 });
 
@@ -254,6 +294,15 @@ async function loadApprovalStatus(
   const result = await db.query<{ status: string }>(
     "select status from approvals where tenant_id = $1 and id = $2",
     [tenantId, approvalId],
+  );
+
+  return result.rows[0]?.status;
+}
+
+async function loadDomainEventStatus(db: DbClient, eventId: string) {
+  const result = await db.query<{ status: string }>(
+    "select status from domain_events where id = $1",
+    [eventId],
   );
 
   return result.rows[0]?.status;

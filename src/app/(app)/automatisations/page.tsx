@@ -1,5 +1,6 @@
 import {
   approveWorkflowRunAction,
+  cancelWorkflowQueueEventAction,
   cancelWorkflowRunAction,
   rejectWorkflowRunAction,
   retryWorkflowDeadLetterAction,
@@ -152,16 +153,27 @@ function WorkflowQueueEventRow({ event }: { event: WorkflowQueueEvent }) {
             Correlation {event.correlationId}
           </p>
         </div>
-        <div className="text-right text-sm text-slate-600">
-          <p>Prochain passage {event.nextRunAt}</p>
-          {event.lastRetryDelayMs > 0 ? (
-            <p className="text-xs">Delai {event.lastRetryDelayMs} ms</p>
-          ) : null}
-          {event.failureClassification ? (
-            <p className="text-xs">
-              Cause {deadLetterFailureLabel(event.failureClassification)}
-            </p>
-          ) : null}
+        <div className="flex flex-col items-end gap-2 text-right text-sm text-slate-600">
+          <div>
+            <p>Prochain passage {event.nextRunAt}</p>
+            {event.lastRetryDelayMs > 0 ? (
+              <p className="text-xs">Delai {event.lastRetryDelayMs} ms</p>
+            ) : null}
+            {event.failureClassification ? (
+              <p className="text-xs">
+                Cause {deadLetterFailureLabel(event.failureClassification)}
+              </p>
+            ) : null}
+          </div>
+          <form action={cancelWorkflowQueueEventAction}>
+            <input name="eventId" type="hidden" value={event.id} />
+            <button
+              className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-semibold text-slate-700"
+              type="submit"
+            >
+              Annuler
+            </button>
+          </form>
         </div>
       </div>
     </div>
