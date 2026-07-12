@@ -54,6 +54,7 @@ Last completed checkpoint:
 - Bounded maintenance now covers expired/revoked sessions, expired/consumed reset tokens, expired/completed invitations, old rate-limit buckets, form-submission idempotency retention, and webhook idempotency-key clearing while retaining delivery/audit history. It is available as a one-shot command and worker-compatible handler.
 - Tenant-aware transaction orchestration now reuses injected or already-open clients safely, applies PostgreSQL tenant context transaction-locally, and no longer selects PostgreSQL from `DATABASE_URL` alone. Tenant creation/default provisioning, onboarding/Business Twin/site generation, website publication, public lead CRM writes, form persistence, audit, and durable event enqueue now roll back atomically.
 - Invitation acceptance now atomically creates or reuses the account, creates membership, consumes the invitation, and records its audit event. Website restore rollback is covered across draft sections, website state, and audit writes.
+- CSV imports now commit contacts, per-row outcomes, the final report, and audit together. Accepted webhooks now commit CRM writes, durable workflow enqueue, accepted delivery history, and audit together while rejected security outcomes remain independently durable.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -127,6 +128,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Complete remaining transaction boundaries for CSV finalization, accepted webhooks, and multi-write workflow transitions.
+1. Complete remaining transaction boundaries for multi-write workflow transitions.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
