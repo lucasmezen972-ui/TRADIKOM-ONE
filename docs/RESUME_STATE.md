@@ -42,6 +42,7 @@ Last completed checkpoint:
 - Workflow queue recovery now includes tenant-authorized cancellation for active `pending`/`processing` domain events from Automatisations; cancelled events move to `skipped`, disappear from the active queue, and produce audit logs.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets, timestamped signatures, replay-window rejection, idempotency keys, duplicate-delivery rejection, request-size limits, endpoint rate limiting, safe public route errors, redacted delivery payload logs, and accepted/rejected delivery outcomes.
 - Webhook endpoint configuration is tenant-scoped in Connexions: authorized operators can view endpoint status/signature state, rotate the HMAC secret, disable and re-enable the endpoint, and every sensitive action is audited with tenant-isolation coverage.
+- Webhook endpoints now receive HMAC secrets by default for new tenants, lazily secure older endpoints that had no secret, reject unsigned deliveries, and expose a generated one-time reveal rotation control in Connexions without storing cleartext secrets.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -101,9 +102,10 @@ Current validation note:
 - During the workflow queue cancellation checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-controls.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions passed for commit `5b6d282`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the webhook intake hardening checkpoint, targeted local validation (`pnpm exec vitest run tests/connectors.test.ts tests/connectors-module.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions passed for commit `56c241e`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the webhook endpoint controls checkpoint, targeted local validation (`pnpm exec vitest run tests/connectors-module.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions passed for commit `491f8ce`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the webhook default secret checkpoint, targeted local validation (`pnpm exec vitest run tests/connectors.test.ts tests/connectors-module.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions passed for commit `29e5e55` on both runs (`29175559572` push and `29175560449` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Continue webhook security completion: endpoint secrets by default, stronger secret rotation ergonomics/one-time reveal strategy, and deeper tests for tenant isolation plus disabled endpoint delivery behavior.
+1. Continue webhook security completion: record disabled endpoint rejections as delivery outcomes, add old-secret/new-secret rotation regression coverage, and expand tenant-isolation/rate-limit edge tests.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
