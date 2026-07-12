@@ -97,7 +97,7 @@ function WorkflowQueuePanel({ queue }: { queue: WorkflowQueueOverview }) {
     <section className="rounded-lg bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">File d'evenements</h2>
+          <h2 className="text-xl font-bold">File des evenements</h2>
           <p className="mt-1 text-sm text-slate-500">
             Suivi des evenements durables avant traitement par le worker.
           </p>
