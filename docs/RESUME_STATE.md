@@ -1,6 +1,6 @@
 # Resume State
 
-Branch: `codex/phase-2-production-foundation`
+Branch: `main`
 
 Last completed checkpoint:
 
@@ -138,7 +138,12 @@ Current validation note:
 - Transaction checkpoint `bbce832` passed both CI runs (`29206498702` push and `29206499888` pull_request); publication/lead checkpoint `5647305` passed both runs (`29206706057` push and `29206707430` pull_request). Coverage includes forced rollback after partial provisioning, website generation, publication snapshots, CRM writes, and durable event enqueue.
 - Tenant-integrity checkpoint `4224ae0` passed both complete CI runs (`29212253981` push and `29212254840` pull_request), including ordered migration verification, PostgreSQL restricted-role and rate-limit concurrency tests, lint, typecheck, production build, and Playwright E2E.
 
+Phase 2 closure:
+
+- PR #1 was squash-merged into `main` as `860f0719e9acc13b58636d5817dcbd8952b346b0` on 2026-07-12.
+- Main validation run `29212598708` passed ordered migrations on PostgreSQL 17, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- Phase 2 is complete. PR #2 remains an isolated draft and was not included in the foundation merge.
+
 Next unfinished task:
 
-1. Run the documentation-only closure CI, update PR #1 with the final head and limitations, and confirm no check is pending.
-2. Mark PR #1 ready, perform the final self-review, squash-merge it, and verify `main` without touching PR #2.
+1. Stop Phase 2 work. Rebase or recreate PR #2 from the new `main` and review it separately as a product/UI change before any merge.
