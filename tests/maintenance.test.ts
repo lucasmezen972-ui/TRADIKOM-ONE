@@ -85,9 +85,27 @@ describe("scheduled maintenance", () => {
       now: new Date(old),
     });
 
-    const website = await db.query<{ id: string }>(
-      "select id from websites where tenant_id = $1 limit 1",
-      [tenant.id],
+    const websiteId = "website_maintenance";
+    await db.query(
+      `insert into websites (
+         id, tenant_id, name, template_key, theme, status,
+         current_version_id, current_draft_version_id,
+         current_published_version_id, published_at, created_at, updated_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        websiteId,
+        tenant.id,
+        "Site maintenance",
+        "artisan",
+        "{}",
+        "draft",
+        null,
+        null,
+        null,
+        null,
+        old,
+        old,
+      ],
     );
     await db.query(
       `insert into form_submissions (
@@ -98,7 +116,7 @@ describe("scheduled maintenance", () => {
         "submission_old",
         tenant.id,
         null,
-        website.rows[0]?.id,
+        websiteId,
         "{}",
         null,
         "old-form-key",
