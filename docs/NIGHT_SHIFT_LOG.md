@@ -113,3 +113,4 @@
 - Made CSV finalization and accepted webhook processing atomic across their contact/import/CRM/event/delivery/audit effects. Forced-failure coverage passed both CI runs for commit `97a3765` (`29207421435`, `29207422831`).
 - Made all workflow operator controls atomic across state transitions, timeline/resume effects, and audits. Approval rollback coverage passed both CI runs for commit `98c09c6` (`29207729222`, `29207730754`).
 - Extracted Business Twin onboarding from `src/lib/services.ts` into a bounded schema/repository/service module with tenant isolation and transactional website generation. Commit `1888e31` passed both CI runs (`29208097369`, `29208099178`).
+- Extracted tenant default provisioning from `src/lib/services.ts` into repository-backed tenant modules for pipelines, workflow definitions, connectors, and secure webhook setup. Commit `c57dbb5` passed both CI runs (`29208943951`, `29208945552`).
