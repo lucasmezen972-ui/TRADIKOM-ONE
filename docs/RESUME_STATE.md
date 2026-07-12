@@ -65,6 +65,7 @@ Last completed checkpoint:
 - PostgreSQL RLS completion migration now enables a full tenant-isolation policy on every table carrying `tenant_id`, protects the `tenants` table itself, and restricts `app.system_access` to the database-owner role. Catalog coverage and restricted-role tests cover memberships, workflows, webhook endpoints, connector secret versions, cross-tenant reads/writes, and attempted system-flag bypass.
 - Demo seeding now requires an explicit local feature flag, is rejected at both the public action and domain-service boundaries in production, and production startup rejects unsafe demo/cookie combinations. The SQL migration mirror is aligned with runtime RLS migration `015`, and a static regression test prevents direct business SQL from returning to `src/lib/services.ts`.
 - Outbound workflow webhooks now resolve every DNS answer, reject mixed/private results, pin the HTTPS connection to the validated public address while preserving TLS hostname checks, and retain timeout/redirect/payload protections. Production responses add HSTS without affecting local HTTP development.
+- PostgreSQL now enforces tenant consistency for critical parent/child relations through migration `016_tenant_integrity`, and every tenant-owned table has a tenant-scoped index. Restricted-role coverage rejects cross-tenant relations, while a PostgreSQL concurrency test verifies atomic rate-limit consumption under parallel requests.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -135,9 +136,9 @@ Current validation note:
 - During the safe request-context checkpoint, targeted local Vitest hung and was stopped after 30 seconds; staged diff validation passed. Commit `39aecb6` passed both CI runs (`29197265337` push and `29197266627` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - GitHub Actions caught a missing website fixture in maintenance commit `0159f3f`; fix `8fe156e` passed both CI runs (`29197685897` push and `29197687372` pull_request), including maintenance tests, migration verification, lint, typecheck, production build, and Playwright E2E.
 - Transaction checkpoint `bbce832` passed both CI runs (`29206498702` push and `29206499888` pull_request); publication/lead checkpoint `5647305` passed both runs (`29206706057` push and `29206707430` pull_request). Coverage includes forced rollback after partial provisioning, website generation, publication snapshots, CRM writes, and durable event enqueue.
+- Tenant-integrity checkpoint `4224ae0` passed both complete CI runs (`29212253981` push and `29212254840` pull_request), including ordered migration verification, PostgreSQL restricted-role and rate-limit concurrency tests, lint, typecheck, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Update PR #1 with the final limitations and CI evidence, run the closure gates, mark it ready only if every check is green, then merge and verify `main`.
-2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
-3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
+1. Run the documentation-only closure CI, update PR #1 with the final head and limitations, and confirm no check is pending.
+2. Mark PR #1 ready, perform the final self-review, squash-merge it, and verify `main` without touching PR #2.

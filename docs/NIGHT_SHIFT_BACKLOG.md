@@ -1,3 +1,3 @@
 # Night Shift Backlog
 
-1. Update PR #1, run the final closure CI, mark it ready, merge it safely, and verify `main` without touching PR #2.
+1. Run the documentation-only closure CI, mark PR #1 ready after the final self-review, squash-merge it, and verify `main` without touching PR #2.
