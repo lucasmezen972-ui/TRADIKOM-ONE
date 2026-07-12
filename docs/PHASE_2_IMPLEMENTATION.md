@@ -36,6 +36,7 @@
 - Hardened generic webhook delivery intake with required idempotency keys, duplicate accepted-delivery rejection, replay-window timestamp checks, request-size limits, endpoint rate limiting, redacted delivery payload logs, accepted/rejected outcome storage, and safe public route errors.
 - Added tenant-scoped webhook endpoint controls in Connexions for status/signature visibility, HMAC secret rotation, disable/re-enable actions, server-side authorization, audit logging, and tenant-isolation coverage.
 - Added secure webhook secrets by default: new tenant endpoints receive generated encrypted/hashed HMAC material, legacy null-secret endpoints are secured lazily before use, unsigned deliveries are rejected, and Connexions exposes generated one-time reveal rotation.
+- Added disabled webhook rejected-delivery recording, safe public 403 status mapping, and regression coverage for old-secret rejection after HMAC rotation.
 - Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import row persistence, and webhook delivery logging into `src/modules/connectors/`.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
 - Changed public website rendering to load the last immutable published snapshot.
@@ -46,5 +47,5 @@
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- Webhook security still needs disabled-endpoint rejected-delivery recording and deeper old-secret/new-secret rotation, tenant-isolation, and rate-limit edge coverage.
+- Webhook security still needs deeper tenant-isolation/rate-limit edge coverage, operator delivery-history visibility, and broader rejected-delivery redaction assertions.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.
