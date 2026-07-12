@@ -300,6 +300,33 @@ export async function insertWebhookDelivery(
   );
 }
 
+export async function listWebhookDeliveriesForEndpoint(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    endpointId: string;
+    limit: number;
+  },
+) {
+  const deliveries = await db.query<{
+    id: string;
+    status: string;
+    idempotency_key: string | null;
+    payload: string;
+    error: string | null;
+    created_at: string;
+  }>(
+    `select id, status, idempotency_key, payload, error, created_at
+     from webhook_deliveries
+     where tenant_id = $1 and webhook_endpoint_id = $2
+     order by created_at desc
+     limit $3`,
+    [input.tenantId, input.endpointId, input.limit],
+  );
+
+  return deliveries.rows;
+}
+
 export async function consumeRateLimit(
   db: DbClient,
   input: {

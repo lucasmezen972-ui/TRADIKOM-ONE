@@ -103,6 +103,44 @@ export default async function ConnectionsPage() {
               {webhook.status === "active" ? "Desactiver" : "Reactiver"}
             </button>
           </form>
+          <div className="mt-5">
+            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">
+              Livraisons recentes
+            </h3>
+            <div className="mt-3 divide-y divide-slate-100 rounded-md border border-slate-200">
+              {webhook.recentDeliveries.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-slate-500">
+                  Aucune livraison
+                </p>
+              ) : (
+                webhook.recentDeliveries.map((delivery) => (
+                  <div key={delivery.id} className="grid gap-1 px-3 py-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900">
+                        {delivery.status === "accepted" ? "acceptee" : "rejetee"}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(delivery.createdAt).toLocaleString("fr-FR")}
+                      </span>
+                    </div>
+                    <p className="break-all text-xs text-slate-500">
+                      Idempotence: {delivery.idempotencyKey ?? "-"}
+                    </p>
+                    {delivery.error ? (
+                      <p className="text-xs font-semibold text-red-700">
+                        {delivery.error}
+                      </p>
+                    ) : null}
+                    {delivery.payloadKeys.length > 0 ? (
+                      <p className="text-xs text-slate-500">
+                        Champs: {delivery.payloadKeys.join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="rounded-lg bg-white p-5 shadow-sm">

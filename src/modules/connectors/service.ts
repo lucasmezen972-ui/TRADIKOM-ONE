@@ -1,5 +1,5 @@
 import type { DbClient } from "@/lib/db";
-import { id, nowIso } from "@/lib/security";
+import { id, nowIso, safeJson } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import { connectorCatalog } from "@/modules/connectors/catalog";
 import { parseContactsCsv } from "@/modules/connectors/csv";
@@ -16,6 +16,7 @@ import {
   insertImportRow,
   insertImportRun,
   insertWebhookDelivery,
+  listWebhookDeliveriesForEndpoint,
   listConnectorStates,
   updateConnectorSyncState,
   updateWebhookEndpointStatus,
@@ -235,6 +236,11 @@ export async function getWebhookEndpointConfig(
     tenantId: endpoint.tenant_id,
     secretHash: endpoint.secret_hash,
   });
+  const recentDeliveries = await listWebhookDeliveriesForEndpoint(db, {
+    tenantId,
+    endpointId: endpoint.id,
+    limit: 10,
+  });
 
   return {
     id: endpoint.id,
@@ -242,6 +248,18 @@ export async function getWebhookEndpointConfig(
     status: endpoint.status as "active" | "disabled",
     hasSecret: Boolean(secured.secretHash),
     createdAt: endpoint.created_at,
+    recentDeliveries: recentDeliveries.map((delivery) => {
+      const payload = safeJson<Record<string, unknown>>(delivery.payload, {});
+
+      return {
+        id: delivery.id,
+        status: delivery.status as "accepted" | "rejected",
+        idempotencyKey: delivery.idempotency_key,
+        error: delivery.error,
+        createdAt: delivery.created_at,
+        payloadKeys: Object.keys(payload).slice(0, 6),
+      };
+    }),
   };
 }
 

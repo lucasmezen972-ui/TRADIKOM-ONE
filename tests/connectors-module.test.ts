@@ -100,6 +100,10 @@ describe("connectors module", () => {
 
     expect(config.status).toBe("active");
     expect(config.hasSecret).toBe(true);
+    expect(config.recentDeliveries).toHaveLength(0);
+    await expect(
+      getWebhookEndpointConfig(db, other.id, demo.tenant.id),
+    ).rejects.toThrow("Acces refuse");
     await expect(
       rotateWebhookEndpointSecret(db, other.id, demo.tenant.id, {
         endpointId: config.id,
@@ -166,6 +170,12 @@ describe("connectors module", () => {
       demo.tenant.id,
     );
     expect(reenabled.status).toBe("active");
+    expect(reenabled.recentDeliveries[0]).toMatchObject({
+      status: "rejected",
+      idempotencyKey: "disabled-webhook",
+      error: "Webhook desactive.",
+    });
+    expect(reenabled.recentDeliveries[0]?.payloadKeys).toContain("email");
     expect(await countWebhookConfigAudits(db, demo.tenant.id)).toBe(3);
   });
 });
