@@ -50,15 +50,18 @@
 - Added reusable atomic rate limiting with hashed subject and tenant scope keys, deterministic test support, bounded cleanup, retry metadata, and policies for auth, invitations, public forms, demo seeding, and inbound webhooks.
 - Added bounded password-reset and invitation email delivery with French templates, APP_URL links, safe console/test providers, retryable outcomes, no raw-token response/log persistence, invitation delivery state, and authorized token-replacing resend.
 - Added request correlation IDs, typed safe public errors, structured redacted logs, protected sensitive actions, safe webhook/health responses, Retry-After metadata, no-store token pages, and hardened CSP/security headers.
+- Added production-only HSTS and DNS-rebinding-resistant outbound workflow webhooks that reject mixed/private resolutions and connect to a validated pinned address while preserving TLS hostname verification.
 - Added centralized Zod environment validation at Next.js, worker, and database startup boundaries. Production requires PostgreSQL, a secure public URL, and a non-placeholder connector encryption key; malformed feature flags, numeric settings, database schemes, and AI configuration fail with value-safe errors.
 - Added bounded session/token/invitation/rate-limit/idempotency maintenance with explicit retention, a one-shot command, a worker-compatible handler, structured output, and tests preserving audit/delivery history.
 - Added injected-client-aware tenant transactions with transaction-local PostgreSQL context and rollback coverage for tenant/default provisioning, onboarding/Business Twin/site generation, website publication/restoration, invitation acceptance, public lead and accepted webhook CRM/form/audit/domain-event writes, and CSV finalization.
 - Added atomic workflow operator controls for run cancellation, approval, rejection, manual retry, dead-letter retry, and queue cancellation, including state, timeline/resume, and audit rollback coverage.
 - Added tests for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV values.
 
-## Still incomplete
+## Known production limitations
 
-- The legacy `src/lib/services.ts` surface remains as a compatibility adapter over bounded modules; new Phase 2 behavior no longer belongs there.
-- A static regression test rejects direct SQL in the legacy services compatibility facade.
-- Email delivery for auth links and connector UI mapping are not complete.
-- The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.
+- `src/lib/services.ts` remains a compatibility composition facade; a static regression test rejects direct business SQL there.
+- Email delivery has safe console/test providers and retryable production-unavailable behavior, but no external production provider is configured.
+- Email, SMS, WhatsApp workflow actions and business connector sync remain explicitly mock/deterministic; they are not claimed as external production delivery.
+- OpenAI is optional behind an abstraction; deterministic generation remains the default and no real provider call is required for Phase 2.
+- Upload/storage interfaces are not implemented, so no production upload claim is made.
+- RLS deployment requires a non-owner runtime database role and a separate privileged migration role.

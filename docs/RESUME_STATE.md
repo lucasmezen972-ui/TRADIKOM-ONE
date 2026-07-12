@@ -64,6 +64,7 @@ Last completed checkpoint:
 - Startup environment validation now uses a centralized Zod schema for web, worker, and database-backed scripts; production requires PostgreSQL, a secure public URL, and a non-placeholder connector encryption key, while malformed flags, numeric settings, database schemes, and AI configuration fail safely without exposing values.
 - PostgreSQL RLS completion migration now enables a full tenant-isolation policy on every table carrying `tenant_id`, protects the `tenants` table itself, and restricts `app.system_access` to the database-owner role. Catalog coverage and restricted-role tests cover memberships, workflows, webhook endpoints, connector secret versions, cross-tenant reads/writes, and attempted system-flag bypass.
 - Demo seeding now requires an explicit local feature flag, is rejected at both the public action and domain-service boundaries in production, and production startup rejects unsafe demo/cookie combinations. The SQL migration mirror is aligned with runtime RLS migration `015`, and a static regression test prevents direct business SQL from returning to `src/lib/services.ts`.
+- Outbound workflow webhooks now resolve every DNS answer, reject mixed/private results, pin the HTTPS connection to the validated public address while preserving TLS hostname checks, and retain timeout/redirect/payload protections. Production responses add HSTS without affecting local HTTP development.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -137,6 +138,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Complete the remaining full-diff security findings and documentation review, then run the Phase 2 closure gates without merging while any limitation remains.
+1. Update PR #1 with the final limitations and CI evidence, run the closure gates, mark it ready only if every check is green, then merge and verify `main`.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

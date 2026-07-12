@@ -15,10 +15,9 @@
 
 ## Prochaines priorites
 
-- Generaliser les transactions tenant-aware sur les services metier.
-- Brancher l'envoi email pour reset password et invitations.
+- Brancher un fournisseur email de production pour reset password et invitations.
 - Ajouter file upload valide pour logo/photos.
-- Transformer le worker outbox en dispatcher durable.
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
+- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves.
 - Ajouter exports de donnees et suppression de compte.
