@@ -9,6 +9,7 @@ export type SqlQueryResult<T = Record<string, unknown>> = {
 
 export type SqlClient = {
   __runtime?: "postgres";
+  __transaction?: boolean;
   query: <T = Record<string, unknown>>(
     sql: string,
     params?: unknown[],
@@ -66,6 +67,7 @@ export function pgPoolAsSqlClient(pgPool = getPgPool()): SqlClient {
 export function pgClientAsSqlClient(client: PoolClient): SqlClient {
   return {
     __runtime: "postgres",
+    __transaction: true,
     async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []) {
       const result = await client.query<QueryResultRow>(sql, params);
       return {

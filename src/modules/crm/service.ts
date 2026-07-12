@@ -1,5 +1,4 @@
-import { getDatabaseUrl } from "@/db/client";
-import { withTenantTransaction } from "@/db/tenant-context";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { id, nowIso, toJson } from "@/lib/security";
 import type { Contact, Role } from "@/lib/types";
@@ -967,21 +966,5 @@ async function runTenantAwareTransaction<T>(
   actorId: string,
   callback: (client: DbClient) => Promise<T>,
 ) {
-  if (getDatabaseUrl() && isPostgresClient(db)) {
-    return withTenantTransaction(tenantId, actorId, callback);
-  }
-
-  await db.query("begin");
-  try {
-    const result = await callback(db);
-    await db.query("commit");
-    return result;
-  } catch (error) {
-    await db.query("rollback");
-    throw error;
-  }
-}
-
-function isPostgresClient(db: DbClient) {
-  return (db as DbClient & { __runtime?: string }).__runtime === "postgres";
+  return withTenantDbTransaction(db, tenantId, actorId, callback);
 }

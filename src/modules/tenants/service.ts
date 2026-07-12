@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import { daysFromNow, hashToken, id, nowIso, secureToken, slugify } from "@/lib/security";
 import type { Membership, Role, Tenant } from "@/lib/types";
 import {
@@ -72,39 +73,41 @@ export async function createTenant(
 ) {
   const parsed = orgSchema.parse(input);
   const tenantId = id("tenant");
-  const now = nowIso();
-  const slug = await uniqueSlug(db, parsed.name);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    const now = nowIso();
+    const slug = await uniqueSlug(transaction, parsed.name);
 
-  await insertTenant(db, {
-    id: tenantId,
-    name: parsed.name,
-    slug,
-    category: parsed.category,
-    createdAt: now,
-  });
-  await insertMembership(db, {
-    tenantId,
-    userId,
-    role: "owner",
-    createdAt: now,
-  });
-  await dependencies.createDefaults(db, tenantId);
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "organization.created",
-    targetType: "tenant",
-    targetId: tenantId,
-    metadata: { name: parsed.name },
-  });
+    await insertTenant(transaction, {
+      id: tenantId,
+      name: parsed.name,
+      slug,
+      category: parsed.category,
+      createdAt: now,
+    });
+    await insertMembership(transaction, {
+      tenantId,
+      userId,
+      role: "owner",
+      createdAt: now,
+    });
+    await dependencies.createDefaults(transaction, tenantId);
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "organization.created",
+      targetType: "tenant",
+      targetId: tenantId,
+      metadata: { name: parsed.name },
+    });
 
-  return {
-    id: tenantId,
-    name: parsed.name,
-    slug,
-    category: parsed.category,
-    createdAt: now,
-  } satisfies Tenant;
+    return {
+      id: tenantId,
+      name: parsed.name,
+      slug,
+      category: parsed.category,
+      createdAt: now,
+    } satisfies Tenant;
+  });
 }
 
 export async function getUserTenants(db: DbClient, userId: string) {

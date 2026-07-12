@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import { getDb, migrate, type DbClient } from "@/lib/db";
 import {
   buildBusinessTwin,
@@ -490,28 +491,36 @@ async function saveOnboarding(
   tenantId: string,
   input: z.input<typeof onboardingSchema>,
 ) {
-  await assertTenantAccess(db, userId, tenantId, [
-    "owner",
-    "administrator",
-    "manager",
-  ]);
   const parsed = onboardingSchema.parse(input);
   const profile = buildBusinessTwin(parsed);
-  const now = nowIso();
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [
+      "owner",
+      "administrator",
+      "manager",
+    ]);
+    const now = nowIso();
 
-  await db.query(
-    `insert into business_profiles (tenant_id, data, onboarding_step, completed_at, updated_at)
-     values ($1, $2, $3, $4, $5)
-     on conflict (tenant_id) do update set data = excluded.data, onboarding_step = excluded.onboarding_step, completed_at = excluded.completed_at, updated_at = excluded.updated_at`,
-    [tenantId, toJson(profile), 4, now, now],
-  );
+    await transaction.query(
+      `insert into business_profiles (tenant_id, data, onboarding_step, completed_at, updated_at)
+       values ($1, $2, $3, $4, $5)
+       on conflict (tenant_id) do update set data = excluded.data, onboarding_step = excluded.onboarding_step, completed_at = excluded.completed_at, updated_at = excluded.updated_at`,
+      [tenantId, toJson(profile), 4, now, now],
+    );
 
-  await generateOrReplaceWebsite(db, tenantId, profile);
-  await audit(db, tenantId, userId, "onboarding.completed", "business_profile", tenantId, {
-    category: profile.identity.category,
+    await generateOrReplaceWebsite(transaction, tenantId, profile);
+    await audit(
+      transaction,
+      tenantId,
+      userId,
+      "onboarding.completed",
+      "business_profile",
+      tenantId,
+      { category: profile.identity.category },
+    );
+
+    return profile;
   });
-
-  return profile;
 }
 
 async function getOnboarding(db: DbClient, userId: string, tenantId: string) {
