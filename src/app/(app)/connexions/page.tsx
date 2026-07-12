@@ -1,12 +1,12 @@
-import { KeyRound, Power, RotateCcw } from "lucide-react";
+import { Power, RotateCcw } from "lucide-react";
 import {
   importCsvAction,
-  rotateWebhookSecretAction,
   setWebhookEndpointStatusAction,
   syncMockConnectorAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
+import { WebhookSecretRotationForm } from "./webhook-secret-rotation-form";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +78,7 @@ export default async function ConnectionsPage() {
             <p>
               Signature:{" "}
               <span className="font-semibold text-slate-900">
-                {webhook.hasSecret ? "HMAC configure" : "secret a configurer"}
+                {webhook.hasSecret ? "HMAC configure" : "secret indisponible"}
               </span>
             </p>
             <p>
@@ -86,21 +86,7 @@ export default async function ConnectionsPage() {
               x-tradikom-idempotency-key
             </p>
           </div>
-          <form action={rotateWebhookSecretAction} className="mt-4 grid gap-3">
-            <input name="endpointId" type="hidden" value={webhook.id} />
-            <input
-              name="secret"
-              type="password"
-              minLength={16}
-              maxLength={256}
-              placeholder="Secret HMAC, 16 caracteres minimum"
-              className="rounded-md border border-slate-200 px-4 py-3 text-sm"
-            />
-            <button className="inline-flex items-center justify-center gap-2 rounded-md bg-[#08111f] px-4 py-3 text-sm font-semibold text-white">
-              <KeyRound size={16} aria-hidden />
-              Enregistrer le secret
-            </button>
-          </form>
+          <WebhookSecretRotationForm endpointId={webhook.id} />
           <form action={setWebhookEndpointStatusAction} className="mt-3">
             <input name="endpointId" type="hidden" value={webhook.id} />
             <input

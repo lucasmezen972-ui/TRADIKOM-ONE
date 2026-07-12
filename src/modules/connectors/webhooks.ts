@@ -1,5 +1,5 @@
 import type { DbClient } from "@/lib/db";
-import { hashToken, id, nowIso } from "@/lib/security";
+import { hashToken, id, nowIso, secureToken } from "@/lib/security";
 import {
   decryptConnectorSecret,
   encryptConnectorSecret,
@@ -26,6 +26,29 @@ export type WebhookVerificationResult =
 const genericWebhookConnectorKey = "generic_webhook";
 const webhookReplayWindowSeconds = 300;
 
+export function generateWebhookEndpointSecretValue() {
+  return `whsec_${secureToken(32)}`;
+}
+
+export async function ensureWebhookEndpointSecret(
+  db: DbClient,
+  endpoint: WebhookEndpointSecurity,
+) {
+  if (endpoint.secretHash) {
+    return { ...endpoint, secretHash: endpoint.secretHash };
+  }
+
+  const generatedSecret = generateWebhookEndpointSecretValue();
+  const result = await persistWebhookEndpointSecret(db, {
+    tenantId: endpoint.tenantId,
+    endpointId: endpoint.id,
+    secret: generatedSecret,
+    onlyIfMissing: true,
+  });
+
+  return { ...endpoint, secretHash: result.secretHash };
+}
+
 export async function configureWebhookEndpointSecret(
   db: DbClient,
   input: {
@@ -38,12 +61,50 @@ export async function configureWebhookEndpointSecret(
     throw new Error("Secret webhook trop court.");
   }
 
-  const now = nowIso();
+  await persistWebhookEndpointSecret(db, {
+    tenantId: input.tenantId,
+    endpointId: input.endpointId,
+    secret: input.secret,
+    onlyIfMissing: false,
+  });
+}
 
-  await db.query(
-    "update webhook_endpoints set secret_hash = $1 where tenant_id = $2 and id = $3",
-    [hashToken(input.secret), input.tenantId, input.endpointId],
+async function persistWebhookEndpointSecret(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    endpointId: string;
+    secret: string;
+    onlyIfMissing: boolean;
+  },
+) {
+  const secretHash = hashToken(input.secret);
+  const result = await db.query<{ secret_hash: string }>(
+    `update webhook_endpoints
+     set secret_hash = $1
+     where tenant_id = $2
+       and id = $3
+       ${input.onlyIfMissing ? "and secret_hash is null" : ""}
+     returning secret_hash`,
+    [secretHash, input.tenantId, input.endpointId],
   );
+
+  if (!result.rows[0] && input.onlyIfMissing) {
+    const existing = await db.query<{ secret_hash: string | null }>(
+      "select secret_hash from webhook_endpoints where tenant_id = $1 and id = $2",
+      [input.tenantId, input.endpointId],
+    );
+    const existingHash = existing.rows[0]?.secret_hash;
+
+    if (existingHash) {
+      return { secretHash: existingHash };
+    }
+  }
+
+  if (!result.rows[0]) {
+    throw new Error("Webhook invalide.");
+  }
+
   await db.query(
     `insert into connector_secret_versions (
       id,
@@ -59,9 +120,11 @@ export async function configureWebhookEndpointSecret(
       genericWebhookConnectorKey,
       input.endpointId,
       encryptConnectorSecret(input.secret),
-      now,
+      nowIso(),
     ],
   );
+
+  return { secretHash };
 }
 
 export async function verifyWebhookEndpointSignature(

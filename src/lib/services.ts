@@ -6,6 +6,9 @@ import {
 } from "@/lib/generation";
 import {
   connectorCatalog,
+  configureWebhookEndpointSecret,
+  generateWebhookEndpointSecretRotation,
+  generateWebhookEndpointSecretValue,
   getConnectors,
   getWebhookEndpointConfig,
   importCsvContacts,
@@ -334,6 +337,14 @@ export function createServices(db: DbClient) {
         endpointId,
         secret,
       }),
+    generateWebhookEndpointSecret: (
+      userId: string,
+      tenantId: string,
+      endpointId: string,
+    ) =>
+      generateWebhookEndpointSecretRotation(db, userId, tenantId, {
+        endpointId,
+      }),
     setWebhookEndpointStatus: (
       userId: string,
       tenantId: string,
@@ -432,10 +443,16 @@ async function createTenantDefaults(db: DbClient, tenantId: string) {
     );
   }
 
+  const webhookEndpointId = id("webhook");
   await db.query(
     "insert into webhook_endpoints (id, tenant_id, token, secret_hash, status, created_at) values ($1, $2, $3, $4, $5, $6)",
-    [id("webhook"), tenantId, id("wh"), null, "active", now],
+    [webhookEndpointId, tenantId, id("wh"), null, "active", now],
   );
+  await configureWebhookEndpointSecret(db, {
+    tenantId,
+    endpointId: webhookEndpointId,
+    secret: generateWebhookEndpointSecretValue(),
+  });
 }
 
 async function saveOnboarding(

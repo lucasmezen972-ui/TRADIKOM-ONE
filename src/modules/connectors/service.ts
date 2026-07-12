@@ -24,15 +24,19 @@ import {
 import {
   csvImportSchema,
   webhookEndpointStatusSchema,
+  webhookGeneratedSecretRotationSchema,
   webhookIdempotencyKeySchema,
   webhookPayloadSchema,
   webhookSecretRotationSchema,
   webhookTokenSchema,
   type WebhookEndpointStatusInput,
+  type WebhookGeneratedSecretRotationInput,
   type WebhookSecretRotationInput,
 } from "@/modules/connectors/schemas";
 import {
   configureWebhookEndpointSecret,
+  ensureWebhookEndpointSecret,
+  generateWebhookEndpointSecretValue,
   verifyWebhookEndpointSignature,
   type WebhookSignatureInput,
 } from "@/modules/connectors/webhooks";
@@ -226,12 +230,17 @@ export async function getWebhookEndpointConfig(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const endpoint = await requireTenantWebhookEndpoint(db, tenantId);
+  const secured = await ensureWebhookEndpointSecret(db, {
+    id: endpoint.id,
+    tenantId: endpoint.tenant_id,
+    secretHash: endpoint.secret_hash,
+  });
 
   return {
     id: endpoint.id,
     url: `/api/webhooks/${endpoint.token}`,
     status: endpoint.status as "active" | "disabled",
-    hasSecret: Boolean(endpoint.secret_hash),
+    hasSecret: Boolean(secured.secretHash),
     createdAt: endpoint.created_at,
   };
 }
@@ -265,6 +274,22 @@ export async function rotateWebhookEndpointSecret(
   });
 
   return { endpointId: parsed.endpointId };
+}
+
+export async function generateWebhookEndpointSecretRotation(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: WebhookGeneratedSecretRotationInput,
+) {
+  const parsed = webhookGeneratedSecretRotationSchema.parse(input);
+  const secret = generateWebhookEndpointSecretValue();
+  const result = await rotateWebhookEndpointSecret(db, userId, tenantId, {
+    endpointId: parsed.endpointId,
+    secret,
+  });
+
+  return { ...result, secret };
 }
 
 export async function setWebhookEndpointStatus(
@@ -318,6 +343,11 @@ export async function receiveWebhook(
   if (!row || row.status !== "active") {
     throw new ConnectorError("webhook_invalid", "Webhook invalide.");
   }
+  const securedEndpoint = await ensureWebhookEndpointSecret(db, {
+    id: row.id,
+    tenantId: row.tenant_id,
+    secretHash: row.secret_hash,
+  });
   const idempotencyKey = parseWebhookIdempotencyKey(
     signatureInput?.idempotencyKey,
   );
@@ -381,7 +411,7 @@ export async function receiveWebhook(
     {
       id: row.id,
       tenantId: row.tenant_id,
-      secretHash: row.secret_hash,
+      secretHash: securedEndpoint.secretHash,
     },
     signatureInput,
   );

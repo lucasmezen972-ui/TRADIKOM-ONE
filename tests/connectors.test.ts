@@ -31,9 +31,14 @@ describe("connectors", () => {
     expect(report.imported).toBe(1);
     expect(report.invalid).toBe(1);
 
-    const endpoint = await db.query<{ token: string }>(
-      "select token from webhook_endpoints where tenant_id = $1 limit 1",
+    const endpoint = await db.query<{ id: string; token: string }>(
+      "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
       [demo.tenant.id],
+    );
+    const rotation = await services.generateWebhookEndpointSecret(
+      demo.user.id,
+      demo.tenant.id,
+      endpoint.rows[0].id,
     );
     const payload = {
       name: "Client Webhook",
@@ -41,8 +46,12 @@ describe("connectors", () => {
       phone: "+596 696 77 88 99",
       message: "Demande API",
     };
+    const body = JSON.stringify(payload);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
     await services.receiveWebhook(endpoint.rows[0].token, payload, {
-      body: JSON.stringify(payload),
+      body,
+      timestamp,
+      signature: signWebhookBody(rotation.secret, timestamp, body),
       idempotencyKey: "webhook-basic",
     });
 
@@ -159,6 +168,40 @@ describe("connectors", () => {
         (delivery) => delivery.idempotency_key === "signed-valid",
       ),
     ).toBe(true);
+  });
+
+  it("creates webhook secrets by default and rejects unsigned deliveries", async () => {
+    const { db, services } = await setup();
+    const demo = await services.seedDemo();
+    const config = await services.getWebhookEndpointConfig(
+      demo.user.id,
+      demo.tenant.id,
+    );
+    const endpoint = await db.query<{
+      token: string;
+      secret_hash: string | null;
+    }>(
+      "select token, secret_hash from webhook_endpoints where tenant_id = $1 limit 1",
+      [demo.tenant.id],
+    );
+    const versions = await db.query<{ count: number | string }>(
+      "select count(*)::int as count from connector_secret_versions where tenant_id = $1 and connector_key = $2",
+      [demo.tenant.id, "generic_webhook"],
+    );
+
+    expect(config.hasSecret).toBe(true);
+    expect(endpoint.rows[0]!.secret_hash).toBeTruthy();
+    expect(Number(versions.rows[0]!.count)).toBeGreaterThanOrEqual(1);
+    await expect(
+      services.receiveWebhook(
+        endpoint.rows[0]!.token,
+        { email: "unsigned-webhook@example.com" },
+        {
+          body: "{\"email\":\"unsigned-webhook@example.com\"}",
+          idempotencyKey: "unsigned-default-secret",
+        },
+      ),
+    ).rejects.toThrow("Signature webhook manquante.");
   });
 
   it("rejects oversized webhook payloads and redacts sensitive delivery data", async () => {

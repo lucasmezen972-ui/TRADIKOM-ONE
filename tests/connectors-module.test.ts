@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { createHmac } from "node:crypto";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import {
+  generateWebhookEndpointSecretRotation,
   getConnectors,
   getWebhookEndpointConfig,
   importCsvContacts,
@@ -43,9 +45,15 @@ describe("connectors module", () => {
       connectors.find((connector) => connector.key === "mock_business")?.health,
     ).toBe("healthy");
 
-    const endpoint = await db.query<{ token: string }>(
-      "select token from webhook_endpoints where tenant_id = $1 limit 1",
+    const endpoint = await db.query<{ id: string; token: string }>(
+      "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
       [demo.tenant.id],
+    );
+    const rotation = await generateWebhookEndpointSecretRotation(
+      db,
+      demo.user.id,
+      demo.tenant.id,
+      { endpointId: endpoint.rows[0]!.id },
     );
     const payload = {
       name: "Module Webhook",
@@ -53,8 +61,12 @@ describe("connectors module", () => {
       phone: "+596 696 10 11 12",
       message: "Demande module",
     };
+    const body = JSON.stringify(payload);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
     await receiveWebhook(db, endpoint.rows[0]!.token, payload, {
-      body: JSON.stringify(payload),
+      body,
+      timestamp,
+      signature: signWebhookBody(rotation.secret, timestamp, body),
       idempotencyKey: "module-webhook",
     });
 
@@ -87,7 +99,7 @@ describe("connectors module", () => {
     const secret = "whsec_module_rotation";
 
     expect(config.status).toBe("active");
-    expect(config.hasSecret).toBe(false);
+    expect(config.hasSecret).toBe(true);
     await expect(
       rotateWebhookEndpointSecret(db, other.id, demo.tenant.id, {
         endpointId: config.id,
@@ -101,16 +113,19 @@ describe("connectors module", () => {
       }),
     ).rejects.toThrow("Webhook invalide.");
 
-    await rotateWebhookEndpointSecret(db, demo.user.id, demo.tenant.id, {
-      endpointId: config.id,
-      secret,
-    });
+    const generated = await generateWebhookEndpointSecretRotation(
+      db,
+      demo.user.id,
+      demo.tenant.id,
+      { endpointId: config.id },
+    );
     const secured = await getWebhookEndpointConfig(
       db,
       demo.user.id,
       demo.tenant.id,
     );
     expect(secured.hasSecret).toBe(true);
+    expect(generated.secret).toMatch(/^whsec_[A-Za-z0-9_-]+$/);
 
     await setWebhookEndpointStatus(db, demo.user.id, demo.tenant.id, {
       endpointId: config.id,
@@ -157,4 +172,10 @@ async function countWebhookConfigAudits(
   );
 
   return Number(result.rows[0]?.count ?? 0);
+}
+
+function signWebhookBody(secret: string, timestamp: string, body: string) {
+  return `sha256=${createHmac("sha256", secret)
+    .update(`${timestamp}.${body}`)
+    .digest("hex")}`;
 }

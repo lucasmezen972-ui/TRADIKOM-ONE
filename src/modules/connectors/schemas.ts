@@ -22,6 +22,10 @@ export const webhookSecretRotationSchema = z.object({
   secret: z.string().min(16).max(256),
 });
 
+export const webhookGeneratedSecretRotationSchema = z.object({
+  endpointId: z.string().min(1),
+});
+
 export const webhookEndpointStatusSchema = z.object({
   endpointId: z.string().min(1),
   status: z.enum(["active", "disabled"]),
@@ -30,6 +34,9 @@ export const webhookEndpointStatusSchema = z.object({
 export type CsvImportInput = z.input<typeof csvImportSchema>;
 export type WebhookSecretRotationInput = z.input<
   typeof webhookSecretRotationSchema
+>;
+export type WebhookGeneratedSecretRotationInput = z.input<
+  typeof webhookGeneratedSecretRotationSchema
 >;
 export type WebhookEndpointStatusInput = z.input<
   typeof webhookEndpointStatusSchema

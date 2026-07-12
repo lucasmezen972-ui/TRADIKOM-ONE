@@ -468,6 +468,31 @@ export async function rotateWebhookSecretAction(formData: FormData) {
   revalidatePath("/connexions");
 }
 
+export type GeneratedWebhookSecretState = {
+  secret: string | null;
+  error: string | null;
+};
+
+export async function generateWebhookSecretAction(
+  _state: GeneratedWebhookSecretState,
+  formData: FormData,
+): Promise<GeneratedWebhookSecretState> {
+  try {
+    const { user, tenant } = await requireTenantContext();
+    const services = await getServices();
+    const result = await services.generateWebhookEndpointSecret(
+      user.id,
+      tenant.id,
+      text(formData, "endpointId"),
+    );
+    revalidatePath("/connexions");
+
+    return { secret: result.secret, error: null };
+  } catch {
+    return { secret: null, error: "Rotation du secret impossible." };
+  }
+}
+
 export async function setWebhookEndpointStatusAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
