@@ -191,7 +191,7 @@ describe("connectors", () => {
     );
 
     expect(config.hasSecret).toBe(true);
-    expect(endpoint.rows[0]!.secret_hash).toBeTruthy();
+    expect(endpoint.rows[0]!.secret_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(Number(versions.rows[0]!.count)).toBeGreaterThanOrEqual(1);
     await expect(
       services.receiveWebhook(

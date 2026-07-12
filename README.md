@@ -19,16 +19,19 @@ TRADIKOM ONE est un MVP SaaS en francais pour les entreprises locales : compte u
 ```bash
 pnpm install
 cp .env.example .env.local
+# Activer uniquement la demo locale explicite : FEATURE_PUBLIC_DEMO=true
 pnpm db:migrate
 pnpm db:seed
 pnpm dev
 ```
 
-Demo :
+Demo locale uniquement (`FEATURE_PUBLIC_DEMO=true`) :
 
 - Email : `patron@garage-caraibes-auto.example`
 - Mot de passe : `Tradikom!2026`
 - Site local : `/sites/garage-caraibes-auto`
+
+Le seed et ces identifiants partages sont refuses en production.
 
 ## Commandes
 

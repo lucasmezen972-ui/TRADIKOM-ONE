@@ -276,8 +276,8 @@ describe("critical transaction boundaries", () => {
     const workspace = await services.getWebsiteWorkspace(user.id, tenant.id);
     const versionId = workspace.versions[0]?.id;
     const hero = workspace.sections.find((section) => section.type === "hero");
-    expect(versionId).toBeTruthy();
-    expect(hero).toBeTruthy();
+    expect(versionId).toMatch(/^version_/);
+    expect(hero?.type).toBe("hero");
     await services.updateWebsiteSection(user.id, tenant.id, hero!.id, {
       title: "Brouillon à conserver",
       body: hero!.body,

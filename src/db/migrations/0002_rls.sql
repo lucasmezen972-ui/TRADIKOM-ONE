@@ -13,7 +13,13 @@ returns boolean
 language sql
 stable
 as $$
-  select coalesce(nullif(current_setting('app.system_access', true), ''), 'false') = 'true'
+  select
+    coalesce(nullif(current_setting('app.system_access', true), ''), 'false') = 'true'
+    and pg_has_role(
+      current_user,
+      (select relowner from pg_class where oid = 'public.tenants'::regclass),
+      'MEMBER'
+    )
 $$;
 
 alter table business_profiles enable row level security;

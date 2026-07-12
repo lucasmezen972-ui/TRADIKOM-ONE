@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
-import { seedDemo } from "../src/modules/demo";
+import {
+  isPublicDemoEnabled,
+  seedDemo,
+} from "../src/modules/demo";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -9,6 +12,46 @@ afterEach(async () => {
 });
 
 describe("demo module", () => {
+  it("requires an explicit local flag and always rejects production", () => {
+    expect(
+      isPublicDemoEnabled({
+        NODE_ENV: "development",
+        FEATURE_PUBLIC_DEMO: "true",
+      }),
+    ).toBe(true);
+    expect(
+      isPublicDemoEnabled({
+        NODE_ENV: "development",
+        FEATURE_PUBLIC_DEMO: "false",
+      }),
+    ).toBe(false);
+    expect(
+      isPublicDemoEnabled({
+        NODE_ENV: "production",
+        FEATURE_PUBLIC_DEMO: "true",
+      }),
+    ).toBe(false);
+  });
+
+  it("refuses production seed calls before writing data", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+
+    await expect(
+      seedDemo(db, {}, {
+        environment: {
+          NODE_ENV: "production",
+          FEATURE_PUBLIC_DEMO: "true",
+        },
+      }),
+    ).rejects.toThrow("La demonstration locale est desactivee.");
+
+    const users = await db.query<{ count: number | string }>(
+      "select count(*)::int as count from users",
+    );
+    expect(Number(users.rows[0]!.count)).toBe(0);
+  });
+
   it("seeds the vertical slice idempotently", async () => {
     const db = await createMemoryDb();
     opened.push(db);

@@ -15,6 +15,7 @@ import {
   demoSeedSchema,
   type DemoSeedInput,
 } from "@/modules/demo/schemas";
+import { isDemoSeedEnabled } from "@/modules/demo/availability";
 import { submitPublicLead } from "@/modules/crm";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
@@ -31,7 +32,15 @@ import {
 export async function seedDemo(
   db: DbClient,
   input: DemoSeedInput = {},
+  options: { environment?: Record<string, string | undefined> } = {},
 ) {
+  if (!isDemoSeedEnabled(options.environment)) {
+    throw new DemoError(
+      "demo_disabled",
+      "La demonstration locale est desactivee.",
+    );
+  }
+
   const parsed = demoSeedSchema.parse(input);
   await enforceRateLimit(db, {
     operationKey: "demo.seed",

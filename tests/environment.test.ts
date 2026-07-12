@@ -83,4 +83,14 @@ describe("environment validation", () => {
       }),
     ).toThrowError(/DATABASE_POOL_MAX, DATABASE_URL, FEATURE_PUBLIC_DEMO/);
   });
+
+  it("rejects unsafe production demo and cookie combinations", () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        FEATURE_PUBLIC_DEMO: "true",
+        COOKIE_SECURE: "false",
+      }),
+    ).toThrowError(/COOKIE_SECURE, FEATURE_PUBLIC_DEMO/);
+  });
 });

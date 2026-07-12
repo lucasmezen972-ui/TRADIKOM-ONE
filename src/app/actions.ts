@@ -16,6 +16,7 @@ import {
   signInUser,
 } from "@/lib/session";
 import type { Role, WebsiteTemplateKey } from "@/lib/types";
+import { isPublicDemoEnabled } from "@/modules/demo";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -576,11 +577,7 @@ export async function setWebhookEndpointStatusAction(formData: FormData) {
 }
 
 export async function seedDemoAction() {
-  const demoEnabled =
-    process.env.NODE_ENV !== "production" ||
-    process.env.FEATURE_PUBLIC_DEMO === "true";
-
-  if (!demoEnabled) {
+  if (!isPublicDemoEnabled()) {
     throw new Error("La démonstration publique est désactivée.");
   }
 

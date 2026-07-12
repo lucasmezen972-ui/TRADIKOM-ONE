@@ -89,7 +89,7 @@ export async function setSessionCookie(sessionId: string, expiresAt: string) {
   cookieStore.set(sessionCookieName, sessionId, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookieEnabled(),
     path: "/",
     expires: new Date(expiresAt),
   });
@@ -110,9 +110,17 @@ export async function setTenantCookie(tenantId: string) {
   cookieStore.set(tenantCookieName, tenantId, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookieEnabled(),
     path: "/",
   });
+}
+
+export function secureCookieEnabled(
+  environment: Record<string, string | undefined> = process.env,
+) {
+  return (
+    environment.NODE_ENV === "production" || environment.COOKIE_SECURE === "true"
+  );
 }
 
 export async function getTenantIdFromCookie() {

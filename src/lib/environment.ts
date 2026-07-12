@@ -34,6 +34,7 @@ const environmentSchema = z
     FEATURE_LIVE_INTEGRATIONS: booleanString.optional(),
     FEATURE_AI_GENERATION: booleanString.optional(),
     ALLOW_CONSOLE_EMAIL_IN_PRODUCTION: booleanString.optional(),
+    COOKIE_SECURE: booleanString.optional(),
     WORKER_MODE: z.enum(["once", "poll"]).optional(),
     WORKER_BATCH_SIZE: positiveIntegerString.optional(),
     WORKER_POLL_INTERVAL_MS: positiveIntegerString.optional(),
@@ -89,6 +90,22 @@ const environmentSchema = z
         code: "custom",
         path: ["ALLOW_CONSOLE_EMAIL_IN_PRODUCTION"],
         message: "Console email delivery requires explicit production opt-in.",
+      });
+    }
+
+    if (environment.FEATURE_PUBLIC_DEMO === "true") {
+      context.addIssue({
+        code: "custom",
+        path: ["FEATURE_PUBLIC_DEMO"],
+        message: "Public demo cannot be enabled in production.",
+      });
+    }
+
+    if (environment.COOKIE_SECURE === "false") {
+      context.addIssue({
+        code: "custom",
+        path: ["COOKIE_SECURE"],
+        message: "Production cookies must remain secure.",
       });
     }
   });

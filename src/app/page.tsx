@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Building2, KeyRound, Sparkles } from "lucide-react";
 import { getCurrentSession } from "@/lib/session";
 import { loginAction, registerAction, seedDemoAction } from "@/app/actions";
+import { isPublicDemoEnabled } from "@/modules/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,7 @@ type HomeProps = {
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const session = await getCurrentSession();
-  const demoEnabled =
-    process.env.NODE_ENV !== "production" ||
-    process.env.FEATURE_PUBLIC_DEMO === "true";
+  const demoEnabled = isPublicDemoEnabled();
 
   if (session) {
     redirect("/aujourdhui");
