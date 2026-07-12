@@ -63,6 +63,7 @@ Last completed checkpoint:
 - Demo seeding now lives in `src/modules/demo/` with bounded configuration, repository-backed existence checks, tenant/default provisioning reuse, idempotent lead creation, and direct repeat-run coverage.
 - Startup environment validation now uses a centralized Zod schema for web, worker, and database-backed scripts; production requires PostgreSQL, a secure public URL, and a non-placeholder connector encryption key, while malformed flags, numeric settings, database schemes, and AI configuration fail safely without exposing values.
 - PostgreSQL RLS completion migration now enables a full tenant-isolation policy on every table carrying `tenant_id`, protects the `tenants` table itself, and restricts `app.system_access` to the database-owner role. Catalog coverage and restricted-role tests cover memberships, workflows, webhook endpoints, connector secret versions, cross-tenant reads/writes, and attempted system-flag bypass.
+- Demo seeding now requires an explicit local feature flag, is rejected at both the public action and domain-service boundaries in production, and production startup rejects unsafe demo/cookie combinations. The SQL migration mirror is aligned with runtime RLS migration `015`, and a static regression test prevents direct business SQL from returning to `src/lib/services.ts`.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
