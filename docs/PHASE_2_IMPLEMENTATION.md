@@ -8,6 +8,7 @@
 - Added Phase 2 migrations for hashed session tokens, published/draft website version pointers, domain events, rate limits, generation records, and encrypted connector secret versions.
 - Added RLS migration draft with tenant context helpers and policies for key tenant-owned tables.
 - Added PostgreSQL RLS integration coverage that runs with `DATABASE_URL` and verifies restricted-role tenant isolation plus cross-tenant write rejection.
+- Added an additive RLS completion migration that protects every table carrying `tenant_id` plus `tenants`, limits system-access bypass to the database-owner role, and verifies catalog policy coverage and critical tenant families with a restricted PostgreSQL role.
 - Hardened sessions so cookies store raw tokens while the database stores token hashes; logout revokes the database session.
 - Added password reset request and completion flows with hashed single-use tokens and session revocation after password change.
 - Extracted authentication and session logic into `src/modules/auth/` with schemas, typed errors, repository functions, and a domain service while keeping `src/lib/services.ts` as the legacy adapter.

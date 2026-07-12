@@ -62,6 +62,7 @@ Last completed checkpoint:
 - Dashboard composition now lives in `src/modules/dashboard/` with typed access errors, bounded query options, tenant-scoped metric/stage repositories, and integration coverage comparing populated and empty tenants.
 - Demo seeding now lives in `src/modules/demo/` with bounded configuration, repository-backed existence checks, tenant/default provisioning reuse, idempotent lead creation, and direct repeat-run coverage.
 - Startup environment validation now uses a centralized Zod schema for web, worker, and database-backed scripts; production requires PostgreSQL, a secure public URL, and a non-placeholder connector encryption key, while malformed flags, numeric settings, database schemes, and AI configuration fail safely without exposing values.
+- PostgreSQL RLS completion migration now enables a full tenant-isolation policy on every table carrying `tenant_id`, protects the `tenants` table itself, and restricts `app.system_access` to the database-owner role. Catalog coverage and restricted-role tests cover memberships, workflows, webhook endpoints, connector secret versions, cross-tenant reads/writes, and attempted system-flag bypass.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -135,6 +136,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Complete the final RLS/authorization and full-diff security review, then run the Phase 2 closure gates without merging while any limitation remains.
+1. Complete the remaining full-diff security findings and documentation review, then run the Phase 2 closure gates without merging while any limitation remains.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
