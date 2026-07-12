@@ -45,11 +45,12 @@
 - Added bounded password-reset and invitation email delivery with French templates, APP_URL links, safe console/test providers, retryable outcomes, no raw-token response/log persistence, invitation delivery state, and authorized token-replacing resend.
 - Added request correlation IDs, typed safe public errors, structured redacted logs, protected sensitive actions, safe webhook/health responses, Retry-After metadata, no-store token pages, and hardened CSP/security headers.
 - Added bounded session/token/invitation/rate-limit/idempotency maintenance with explicit retention, a one-shot command, a worker-compatible handler, structured output, and tests preserving audit/delivery history.
+- Added injected-client-aware tenant transactions with transaction-local PostgreSQL context and rollback coverage for tenant/default provisioning, onboarding/Business Twin/site generation, website publication, and public lead CRM/form/audit/domain-event writes.
 - Added tests for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV values.
 
 ## Still incomplete
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- Remaining critical multi-write transaction boundaries are still incomplete.
+- Invitation acceptance, website restore, CSV finalization, accepted webhook effects, and selected workflow transitions still need final transaction coverage.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.

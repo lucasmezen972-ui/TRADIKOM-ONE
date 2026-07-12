@@ -52,6 +52,7 @@ Last completed checkpoint:
 - Password reset and team invitation links now use `src/modules/email/` with French HTML/text templates, APP_URL-based links, safe console and deterministic test providers, retryable outcomes, hashed database tokens, invitation delivery state, authorized resend with token replacement, and explicit development-only browser previews.
 - Public request handling now has correlation IDs, typed French error mapping, safe structured logs without internal messages/stacks, protected server-action calls for auth/invitations/forms/connectors/workflows, safe health/webhook responses, Retry-After propagation, no-store token routes, and hardened CSP/security headers.
 - Bounded maintenance now covers expired/revoked sessions, expired/consumed reset tokens, expired/completed invitations, old rate-limit buckets, form-submission idempotency retention, and webhook idempotency-key clearing while retaining delivery/audit history. It is available as a one-shot command and worker-compatible handler.
+- Tenant-aware transaction orchestration now reuses injected or already-open clients safely, applies PostgreSQL tenant context transaction-locally, and no longer selects PostgreSQL from `DATABASE_URL` alone. Tenant creation/default provisioning, onboarding/Business Twin/site generation, website publication, public lead CRM writes, form persistence, audit, and durable event enqueue now roll back atomically.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -121,9 +122,10 @@ Current validation note:
 - During the auth email checkpoint, targeted local Vitest and the unstaged diff check hung and were stopped; staged diff validation passed. GitHub Actions caught two optional-link typing errors and one stale test variable in `234fe8e`; fix `9dc30da` passed both CI runs (`29196880873` push and `29196881800` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the safe request-context checkpoint, targeted local Vitest hung and was stopped after 30 seconds; staged diff validation passed. Commit `39aecb6` passed both CI runs (`29197265337` push and `29197266627` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - GitHub Actions caught a missing website fixture in maintenance commit `0159f3f`; fix `8fe156e` passed both CI runs (`29197685897` push and `29197687372` pull_request), including maintenance tests, migration verification, lint, typecheck, production build, and Playwright E2E.
+- Transaction checkpoint `bbce832` passed both CI runs (`29206498702` push and `29206499888` pull_request); publication/lead checkpoint `5647305` passed both runs (`29206706057` push and `29206707430` pull_request). Coverage includes forced rollback after partial provisioning, website generation, publication snapshots, CRM writes, and durable event enqueue.
 
 Next unfinished task:
 
-1. Complete critical tenant transaction boundaries.
+1. Complete remaining transaction boundaries for invitation acceptance, website restore, CSV finalization, accepted webhooks, and multi-write workflow transitions.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
