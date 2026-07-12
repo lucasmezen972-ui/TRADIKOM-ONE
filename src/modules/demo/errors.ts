@@ -1,4 +1,4 @@
-export type DemoErrorCode = "demo_tenant_unavailable";
+export type DemoErrorCode = "demo_disabled" | "demo_tenant_unavailable";
 
 export class DemoError extends Error {
   constructor(
