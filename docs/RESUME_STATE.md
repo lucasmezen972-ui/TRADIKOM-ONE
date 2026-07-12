@@ -60,6 +60,7 @@ Last completed checkpoint:
 - Tenant default provisioning now lives in bounded tenant provisioning modules with repository functions for pipelines, stages, workflows, connectors, and secure webhook endpoints; two-tenant coverage verifies resource and encrypted-secret isolation.
 - Audit reads now use a bounded Zod query, typed access errors, tenant-scoped repository functions, and direct cross-tenant coverage; audit writes use the same repository boundary.
 - Dashboard composition now lives in `src/modules/dashboard/` with typed access errors, bounded query options, tenant-scoped metric/stage repositories, and integration coverage comparing populated and empty tenants.
+- Demo seeding now lives in `src/modules/demo/` with bounded configuration, repository-backed existence checks, tenant/default provisioning reuse, idempotent lead creation, and direct repeat-run coverage.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -133,6 +134,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Extract demo seeding from `src/lib/services.ts`.
+1. Add startup environment validation for the web runtime, worker, and production-sensitive configuration.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

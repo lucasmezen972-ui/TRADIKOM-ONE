@@ -23,6 +23,7 @@
 - Extracted tenant default provisioning into repository-backed tenant modules for pipelines/stages, the persisted lead workflow, connector defaults, and encrypted webhook secret setup, with two-tenant isolation coverage.
 - Extracted audit reads and writes behind a tenant-scoped repository with bounded query validation, typed access errors, and direct cross-tenant coverage.
 - Extracted dashboard composition into `src/modules/dashboard/` with bounded read options, tenant-scoped metric and pipeline-stage repositories, typed access errors, and populated-versus-empty tenant integration coverage.
+- Extracted demo seeding into `src/modules/demo/` with bounded configuration, repository-backed existence checks, tenant/default provisioning reuse, idempotent public-lead creation, and repeat-run coverage.
 - Added invitation creation, acceptance, pending invitation display, and member role updates for non-owner roles.
 - Gated public demo outside local development unless `FEATURE_PUBLIC_DEMO=true`.
 - Introduced workflow definition schema, domain event enqueueing, a workflow action executor, and a worker entry point with durable batch processing, retries, and stale processing requeue.
@@ -55,6 +56,6 @@
 
 ## Still incomplete
 
-- Full service modularization is in progress; the remaining orchestration in `src/lib/services.ts` is demo seeding.
+- The legacy `src/lib/services.ts` surface remains as a compatibility adapter over bounded modules; new Phase 2 behavior no longer belongs there.
 - Email delivery for auth links and connector UI mapping are not complete.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.
