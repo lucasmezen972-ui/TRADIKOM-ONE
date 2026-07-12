@@ -125,6 +125,34 @@ describe("workflow controls", () => {
     expect(await countAuditLogs(db, "tenant_controls")).toBe(4);
   });
 
+  it("rolls back approval state, timeline, resume event, and audit together", async () => {
+    const { db } = await setup();
+    await seedRun(db, "tenant_controls", "run_approval_rollback", "approval_required");
+    await seedApproval(
+      db,
+      "tenant_controls",
+      "approval_rollback",
+      "run_approval_rollback",
+    );
+    const failingDb = failAuditAction(db, "workflow.approved");
+
+    await expect(
+      approveWorkflowRun(failingDb, "user_controls", "tenant_controls", {
+        runId: "run_approval_rollback",
+      }),
+    ).rejects.toThrow("simulated workflow audit failure");
+
+    expect(
+      await loadRunStatus(db, "tenant_controls", "run_approval_rollback"),
+    ).toBe("approval_required");
+    expect(
+      await loadApprovalStatus(db, "tenant_controls", "approval_rollback"),
+    ).toBe("pending");
+    expect(await countWorkflowSteps(db, "tenant_controls")).toBe(0);
+    expect(await countDomainEvents(db, "tenant_controls")).toBe(0);
+    expect(await countAuditLogs(db, "tenant_controls")).toBe(0);
+  });
+
   it("exposes tenant-scoped workflow queue health", async () => {
     const { db } = await setup();
     await seedDomainEvent(db, {
@@ -413,6 +441,15 @@ async function countWorkflowSteps(db: DbClient, tenantId: string) {
   return Number(result.rows[0]?.count ?? 0);
 }
 
+async function countDomainEvents(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number }>(
+    "select count(*)::int as count from domain_events where tenant_id = $1",
+    [tenantId],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
 async function countAuditLogs(db: DbClient, tenantId: string) {
   const result = await db.query<{ count: number }>(
     "select count(*)::int as count from audit_logs where tenant_id = $1 and action like $2",
@@ -427,4 +464,15 @@ function statusCount(
   status: string,
 ) {
   return summary.find((item) => item.status === status)?.count ?? 0;
+}
+
+function failAuditAction(db: DbClient, action: string): DbClient {
+  return {
+    async query<T>(sql: string, params?: unknown[]) {
+      if (sql.includes("insert into audit_logs") && params?.includes(action)) {
+        throw new Error("simulated workflow audit failure");
+      }
+      return db.query<T>(sql, params);
+    },
+  };
 }

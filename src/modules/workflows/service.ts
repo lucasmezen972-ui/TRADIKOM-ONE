@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import { id, nowIso } from "@/lib/security";
 import type {
   Role,
@@ -104,27 +105,40 @@ export async function cancelWorkflowRun(
   tenantId: string,
   input: WorkflowRunControlInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
-  const run = await requireWorkflowRun(db, tenantId, input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
+    const run = await requireWorkflowRun(transaction, tenantId, input);
 
-  if (isTerminalStatus(run.status)) {
-    throw new WorkflowError(
-      "workflow_run_not_actionable",
-      "Cette execution workflow est deja terminee.",
+    if (isTerminalStatus(run.status)) {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Cette execution workflow est deja terminee.",
+      );
+    }
+
+    await updateWorkflowRunStatus(transaction, {
+      tenantId,
+      runId: run.id,
+      status: "cancelled",
+      summary: "Execution workflow annulee manuellement.",
+      error: null,
+    });
+    await insertControlStep(
+      transaction,
+      tenantId,
+      run.id,
+      "workflow.cancelled",
+      "cancelled",
+      { actorId: userId },
     );
-  }
-
-  await updateWorkflowRunStatus(db, {
-    tenantId,
-    runId: run.id,
-    status: "cancelled",
-    summary: "Execution workflow annulee manuellement.",
-    error: null,
+    await auditWorkflowControl(
+      transaction,
+      tenantId,
+      userId,
+      "workflow.cancelled",
+      run.id,
+    );
   });
-  await insertControlStep(db, tenantId, run.id, "workflow.cancelled", "cancelled", {
-    actorId: userId,
-  });
-  await auditWorkflowControl(db, tenantId, userId, "workflow.cancelled", run.id);
 }
 
 export async function approveWorkflowRun(
@@ -133,31 +147,48 @@ export async function approveWorkflowRun(
   tenantId: string,
   input: WorkflowRunControlInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
-  const run = await requireWorkflowRun(db, tenantId, input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
+    const run = await requireWorkflowRun(transaction, tenantId, input);
 
-  if (run.status !== "approval_required") {
-    throw new WorkflowError(
-      "workflow_run_not_actionable",
-      "Cette execution workflow n'attend pas d'approbation.",
+    if (run.status !== "approval_required") {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Cette execution workflow n'attend pas d'approbation.",
+      );
+    }
+
+    const approval = await requirePendingApproval(transaction, tenantId, run.id);
+    await updateApprovalStatus(transaction, tenantId, approval.id, "approved");
+    await updateWorkflowRunStatus(transaction, {
+      tenantId,
+      runId: run.id,
+      status: "waiting",
+      summary: "Workflow approuve; reprise en attente.",
+      error: null,
+    });
+    await insertControlStep(
+      transaction,
+      tenantId,
+      run.id,
+      "workflow.approved",
+      "succeeded",
+      { actorId: userId, approvalId: approval.id },
     );
-  }
-
-  const approval = await requirePendingApproval(db, tenantId, run.id);
-  await updateApprovalStatus(db, tenantId, approval.id, "approved");
-  await updateWorkflowRunStatus(db, {
-    tenantId,
-    runId: run.id,
-    status: "waiting",
-    summary: "Workflow approuve; reprise en attente.",
-    error: null,
+    await enqueueApprovalResumeWhenPossible(
+      transaction,
+      tenantId,
+      run.id,
+      userId,
+    );
+    await auditWorkflowControl(
+      transaction,
+      tenantId,
+      userId,
+      "workflow.approved",
+      run.id,
+    );
   });
-  await insertControlStep(db, tenantId, run.id, "workflow.approved", "succeeded", {
-    actorId: userId,
-    approvalId: approval.id,
-  });
-  await enqueueApprovalResumeWhenPossible(db, tenantId, run.id, userId);
-  await auditWorkflowControl(db, tenantId, userId, "workflow.approved", run.id);
 }
 
 export async function rejectWorkflowRun(
@@ -166,30 +197,42 @@ export async function rejectWorkflowRun(
   tenantId: string,
   input: WorkflowRunControlInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
-  const run = await requireWorkflowRun(db, tenantId, input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
+    const run = await requireWorkflowRun(transaction, tenantId, input);
 
-  if (run.status !== "approval_required") {
-    throw new WorkflowError(
-      "workflow_run_not_actionable",
-      "Cette execution workflow n'attend pas d'approbation.",
+    if (run.status !== "approval_required") {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Cette execution workflow n'attend pas d'approbation.",
+      );
+    }
+
+    const approval = await requirePendingApproval(transaction, tenantId, run.id);
+    await updateApprovalStatus(transaction, tenantId, approval.id, "rejected");
+    await updateWorkflowRunStatus(transaction, {
+      tenantId,
+      runId: run.id,
+      status: "rejected",
+      summary: "Workflow rejete manuellement.",
+      error: "Approval rejected.",
+    });
+    await insertControlStep(
+      transaction,
+      tenantId,
+      run.id,
+      "workflow.rejected",
+      "failed",
+      { actorId: userId, approvalId: approval.id },
     );
-  }
-
-  const approval = await requirePendingApproval(db, tenantId, run.id);
-  await updateApprovalStatus(db, tenantId, approval.id, "rejected");
-  await updateWorkflowRunStatus(db, {
-    tenantId,
-    runId: run.id,
-    status: "rejected",
-    summary: "Workflow rejete manuellement.",
-    error: "Approval rejected.",
+    await auditWorkflowControl(
+      transaction,
+      tenantId,
+      userId,
+      "workflow.rejected",
+      run.id,
+    );
   });
-  await insertControlStep(db, tenantId, run.id, "workflow.rejected", "failed", {
-    actorId: userId,
-    approvalId: approval.id,
-  });
-  await auditWorkflowControl(db, tenantId, userId, "workflow.rejected", run.id);
 }
 
 export async function requestManualWorkflowRetry(
@@ -198,53 +241,60 @@ export async function requestManualWorkflowRetry(
   tenantId: string,
   input: WorkflowRunControlInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
-  const run = await requireWorkflowRun(db, tenantId, input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
+    const run = await requireWorkflowRun(transaction, tenantId, input);
 
-  if (!["failed", "rejected", "cancelled"].includes(run.status)) {
-    throw new WorkflowError(
-      "workflow_run_not_actionable",
-      "Cette execution workflow ne peut pas etre relancee manuellement.",
-    );
-  }
+    if (!["failed", "rejected", "cancelled"].includes(run.status)) {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Cette execution workflow ne peut pas etre relancee manuellement.",
+      );
+    }
 
-  await updateWorkflowRunStatus(db, {
-    tenantId,
-    runId: run.id,
-    status: "waiting",
-    summary: "Retry manuel demande; reprise en attente.",
-    error: null,
-    incrementRetry: true,
-  });
-  await insertControlStep(db, tenantId, run.id, "workflow.manual_retry", "waiting", {
-    actorId: userId,
-  });
-  const failedCursor = await findLatestFailedWorkflowActionCursor(
-    db,
-    tenantId,
-    run.id,
-  );
-
-  if (failedCursor) {
-    await enqueueWorkflowResumeEvent(db, {
+    await updateWorkflowRunStatus(transaction, {
       tenantId,
       runId: run.id,
-      actorId: userId,
-      sourceEventId: failedCursor.eventId,
-      correlationId: `workflow.manual_retry:${run.id}`,
-      resumeFromActionIndex: failedCursor.actionIndex,
-      reason: "manual_retry",
-      resumeKey: `retry${Number(run.retry_count) + 1}`,
+      status: "waiting",
+      summary: "Retry manuel demande; reprise en attente.",
+      error: null,
+      incrementRetry: true,
     });
-  }
+    await insertControlStep(
+      transaction,
+      tenantId,
+      run.id,
+      "workflow.manual_retry",
+      "waiting",
+      { actorId: userId },
+    );
+    const failedCursor = await findLatestFailedWorkflowActionCursor(
+      transaction,
+      tenantId,
+      run.id,
+    );
 
-  await auditWorkflowControl(
-    db,
-    tenantId,
-    userId,
-    "workflow.manual_retry_requested",
-    run.id,
-  );
+    if (failedCursor) {
+      await enqueueWorkflowResumeEvent(transaction, {
+        tenantId,
+        runId: run.id,
+        actorId: userId,
+        sourceEventId: failedCursor.eventId,
+        correlationId: `workflow.manual_retry:${run.id}`,
+        resumeFromActionIndex: failedCursor.actionIndex,
+        reason: "manual_retry",
+        resumeKey: `retry${Number(run.retry_count) + 1}`,
+      });
+    }
+
+    await auditWorkflowControl(
+      transaction,
+      tenantId,
+      userId,
+      "workflow.manual_retry_requested",
+      run.id,
+    );
+  });
 }
 
 export async function retryWorkflowDeadLetter(
@@ -253,44 +303,50 @@ export async function retryWorkflowDeadLetter(
   tenantId: string,
   input: WorkflowDeadLetterRetryInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
-  const parsed = workflowDeadLetterRetrySchema.parse(input);
-  const failedEvent = await findFailedDomainEventRow(db, tenantId, parsed.eventId);
-
-  if (!failedEvent) {
-    throw new WorkflowError(
-      "workflow_dead_letter_not_found",
-      "Incident workflow introuvable ou deja relance.",
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
+    const parsed = workflowDeadLetterRetrySchema.parse(input);
+    const failedEvent = await findFailedDomainEventRow(
+      transaction,
+      tenantId,
+      parsed.eventId,
     );
-  }
 
-  const requeued = await requeueFailedDomainEvent(db, {
-    tenantId,
-    eventId: parsed.eventId,
-    nextRunAt: nowIso(),
+    if (!failedEvent) {
+      throw new WorkflowError(
+        "workflow_dead_letter_not_found",
+        "Incident workflow introuvable ou deja relance.",
+      );
+    }
+
+    const requeued = await requeueFailedDomainEvent(transaction, {
+      tenantId,
+      eventId: parsed.eventId,
+      nextRunAt: nowIso(),
+    });
+
+    if (!requeued) {
+      throw new WorkflowError(
+        "workflow_dead_letter_not_found",
+        "Incident workflow introuvable ou deja relance.",
+      );
+    }
+
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "workflow.dead_letter_retried",
+      targetType: "domain_event",
+      targetId: parsed.eventId,
+      metadata: {
+        eventType: failedEvent.event_type,
+        previousAttempts: Number(failedEvent.attempts),
+        correlationId: failedEvent.correlation_id,
+      },
+    });
+
+    return { eventId: parsed.eventId };
   });
-
-  if (!requeued) {
-    throw new WorkflowError(
-      "workflow_dead_letter_not_found",
-      "Incident workflow introuvable ou deja relance.",
-    );
-  }
-
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "workflow.dead_letter_retried",
-    targetType: "domain_event",
-    targetId: parsed.eventId,
-    metadata: {
-      eventType: failedEvent.event_type,
-      previousAttempts: Number(failedEvent.attempts),
-      correlationId: failedEvent.correlation_id,
-    },
-  });
-
-  return { eventId: parsed.eventId };
 }
 
 export async function cancelWorkflowQueueEvent(
@@ -299,49 +355,51 @@ export async function cancelWorkflowQueueEvent(
   tenantId: string,
   input: WorkflowQueueEventControlInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, workflowControlRoles);
-  const parsed = workflowQueueEventControlSchema.parse(input);
-  const activeEvent = await findActiveDomainEventQueueRow(
-    db,
-    tenantId,
-    parsed.eventId,
-  );
-
-  if (!activeEvent) {
-    throw new WorkflowError(
-      "workflow_queue_event_not_found",
-      "Evenement workflow introuvable ou deja termine.",
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
+    const parsed = workflowQueueEventControlSchema.parse(input);
+    const activeEvent = await findActiveDomainEventQueueRow(
+      transaction,
+      tenantId,
+      parsed.eventId,
     );
-  }
 
-  const cancelled = await cancelActiveDomainEvent(db, {
-    tenantId,
-    eventId: parsed.eventId,
-    updatedAt: nowIso(),
+    if (!activeEvent) {
+      throw new WorkflowError(
+        "workflow_queue_event_not_found",
+        "Evenement workflow introuvable ou deja termine.",
+      );
+    }
+
+    const cancelled = await cancelActiveDomainEvent(transaction, {
+      tenantId,
+      eventId: parsed.eventId,
+      updatedAt: nowIso(),
+    });
+
+    if (!cancelled) {
+      throw new WorkflowError(
+        "workflow_queue_event_not_found",
+        "Evenement workflow introuvable ou deja termine.",
+      );
+    }
+
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "workflow.queue_event_cancelled",
+      targetType: "domain_event",
+      targetId: parsed.eventId,
+      metadata: {
+        eventType: activeEvent.event_type,
+        previousStatus: activeEvent.status,
+        attempts: Number(activeEvent.attempts),
+        correlationId: activeEvent.correlation_id,
+      },
+    });
+
+    return { eventId: parsed.eventId };
   });
-
-  if (!cancelled) {
-    throw new WorkflowError(
-      "workflow_queue_event_not_found",
-      "Evenement workflow introuvable ou deja termine.",
-    );
-  }
-
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "workflow.queue_event_cancelled",
-    targetType: "domain_event",
-    targetId: parsed.eventId,
-    metadata: {
-      eventType: activeEvent.event_type,
-      previousStatus: activeEvent.status,
-      attempts: Number(activeEvent.attempts),
-      correlationId: activeEvent.correlation_id,
-    },
-  });
-
-  return { eventId: parsed.eventId };
 }
 
 async function requireWorkflowRun(
