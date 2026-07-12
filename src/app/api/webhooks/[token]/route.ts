@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServices } from "@/lib/services";
-import { ConnectorError } from "@/modules/connectors";
+import {
+  logServerError,
+  resolveCorrelationId,
+} from "@/modules/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +12,12 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  const services = await getServices();
+  const correlationId = resolveCorrelationId(
+    request.headers.get("x-correlation-id"),
+  );
 
   try {
+    const services = await getServices();
     const body = await request.text();
     const payload = parseWebhookPayload(body);
     const result = await services.receiveWebhook(token, payload, {
@@ -20,20 +26,31 @@ export async function POST(
       signature: request.headers.get("x-tradikom-signature"),
       idempotencyKey: request.headers.get("x-tradikom-idempotency-key"),
     });
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json(
+      { ok: true, ...result },
+      { headers: { "x-correlation-id": correlationId } },
+    );
   } catch (error) {
-    const retryAfter =
-      error instanceof ConnectorError && error.retryAfterSeconds
-        ? String(error.retryAfterSeconds)
-        : undefined;
+    const mapped = logServerError({
+      operation: "webhook.receive",
+      correlationId,
+      error,
+    });
+    const headers: Record<string, string> = {
+      "x-correlation-id": correlationId,
+    };
+    if (mapped.retryAfterSeconds) {
+      headers["Retry-After"] = String(mapped.retryAfterSeconds);
+    }
     return NextResponse.json(
       {
         ok: false,
-        error: safeWebhookError(error),
+        error: mapped.message,
+        correlationId,
       },
       {
-        status: webhookErrorStatus(error),
-        headers: retryAfter ? { "Retry-After": retryAfter } : undefined,
+        status: mapped.status,
+        headers,
       },
     );
   }
@@ -53,46 +70,4 @@ function parseWebhookPayload(body: string) {
   }
 
   return parsed as Record<string, unknown>;
-}
-
-function safeWebhookError(error: unknown) {
-  if (error instanceof ConnectorError) {
-    if (error.code === "webhook_rate_limited") {
-      return "Webhook temporairement limite.";
-    }
-
-    if (error.code === "webhook_duplicate") {
-      return "Livraison webhook deja recue.";
-    }
-
-    if (error.code === "webhook_oversized") {
-      return "Payload webhook trop volumineux.";
-    }
-
-    return "Webhook rejete.";
-  }
-
-  return "Payload invalide.";
-}
-
-function webhookErrorStatus(error: unknown) {
-  if (error instanceof ConnectorError) {
-    if (error.code === "webhook_rate_limited") {
-      return 429;
-    }
-
-    if (error.code === "webhook_duplicate") {
-      return 409;
-    }
-
-    if (error.code === "webhook_oversized") {
-      return 413;
-    }
-
-    if (error.code === "webhook_disabled") {
-      return 403;
-    }
-  }
-
-  return 400;
 }

@@ -8,6 +8,7 @@ import {
   setTenantCookie,
 } from "@/lib/security";
 import { getServices } from "@/lib/services";
+import { safeServerAction } from "@/lib/public-action";
 import {
   getCurrentSession,
   requireTenantContext,
@@ -18,21 +19,25 @@ import type { Role, WebsiteTemplateKey } from "@/lib/types";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
-  const user = await services.registerUser({
-    name: text(formData, "name"),
-    email: text(formData, "email"),
-    password: text(formData, "password"),
-  });
+  const user = await safeServerAction("auth.register", () =>
+    services.registerUser({
+      name: text(formData, "name"),
+      email: text(formData, "email"),
+      password: text(formData, "password"),
+    }),
+  );
   const context = await signInUser(user.id);
   redirect(context ? "/aujourdhui" : "/creer-organisation");
 }
 
 export async function loginAction(formData: FormData) {
   const services = await getServices();
-  const user = await services.loginUser({
-    email: text(formData, "email"),
-    password: text(formData, "password"),
-  });
+  const user = await safeServerAction("auth.login", () =>
+    services.loginUser({
+      email: text(formData, "email"),
+      password: text(formData, "password"),
+    }),
+  );
   const context = await signInUser(user.id);
   redirect(context ? "/aujourdhui" : "/creer-organisation");
 }
@@ -40,7 +45,9 @@ export async function loginAction(formData: FormData) {
 export async function requestPasswordResetAction(formData: FormData) {
   const services = await getServices();
   const email = text(formData, "email").toLowerCase();
-  const result = await services.requestPasswordReset({ email });
+  const result = await safeServerAction("auth.password_reset_request", () =>
+    services.requestPasswordReset({ email }),
+  );
   const developmentLink =
     "developmentLink" in result ? result.developmentLink : undefined;
   const preview = developmentLink
@@ -59,10 +66,12 @@ export async function resetPasswordAction(formData: FormData) {
     throw new Error("La confirmation du mot de passe ne correspond pas.");
   }
 
-  await services.resetPassword({
-    token: text(formData, "token"),
-    password,
-  });
+  await safeServerAction("auth.password_reset", () =>
+    services.resetPassword({
+      token: text(formData, "token"),
+      password,
+    }),
+  );
   redirect("/?motdepasse=reinitialise");
 }
 
@@ -97,10 +106,12 @@ export async function switchTenantAction(formData: FormData) {
 export async function createInvitationAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const invitation = await services.createInvitation(user.id, tenant.id, {
-    email: text(formData, "email"),
-    role: text(formData, "role") as Exclude<Role, "owner">,
-  });
+  const invitation = await safeServerAction("invitation.create", () =>
+    services.createInvitation(user.id, tenant.id, {
+      email: text(formData, "email"),
+      role: text(formData, "role") as Exclude<Role, "owner">,
+    }),
+  );
   revalidatePath("/parametres");
   const preview = invitation.developmentLink
     ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
@@ -115,10 +126,12 @@ export async function createInvitationAction(formData: FormData) {
 export async function resendInvitationAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const invitation = await services.resendInvitation(
-    user.id,
-    tenant.id,
-    text(formData, "invitationId"),
+  const invitation = await safeServerAction("invitation.resend", () =>
+    services.resendInvitation(
+      user.id,
+      tenant.id,
+      text(formData, "invitationId"),
+    ),
   );
 
   revalidatePath("/parametres");
@@ -141,13 +154,15 @@ export async function acceptInvitationAction(formData: FormData) {
     throw new Error("La confirmation du mot de passe ne correspond pas.");
   }
 
-  const accepted = session
-    ? await services.acceptInvitationForUser(session.user.id, token)
-    : await services.acceptInvitation({
-        token,
-        name: text(formData, "name"),
-        password: text(formData, "password"),
-      });
+  const accepted = await safeServerAction("invitation.accept", () =>
+    session
+      ? services.acceptInvitationForUser(session.user.id, token)
+      : services.acceptInvitation({
+          token,
+          name: text(formData, "name"),
+          password: text(formData, "password"),
+        }),
+  );
 
   if (!session) {
     await signInUser(accepted.user.id);
@@ -159,10 +174,12 @@ export async function acceptInvitationAction(formData: FormData) {
 export async function updateMemberRoleAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.updateMemberRole(user.id, tenant.id, {
-    targetUserId: text(formData, "targetUserId"),
-    role: text(formData, "role") as Exclude<Role, "owner">,
-  });
+  await safeServerAction("invitation.member_role_update", () =>
+    services.updateMemberRole(user.id, tenant.id, {
+      targetUserId: text(formData, "targetUserId"),
+      role: text(formData, "role") as Exclude<Role, "owner">,
+    }),
+  );
   revalidatePath("/parametres");
   redirect("/parametres");
 }
@@ -251,13 +268,15 @@ export async function submitSiteLeadAction(slug: string, formData: FormData) {
   }
 
   const services = await getServices();
-  await services.submitPublicLead(slug, {
-    name: text(formData, "name"),
-    email: text(formData, "email"),
-    phone: text(formData, "phone"),
-    message: text(formData, "message"),
-    idempotencyKey: text(formData, "idempotencyKey"),
-  });
+  await safeServerAction("public_form.submit", () =>
+    services.submitPublicLead(slug, {
+      name: text(formData, "name"),
+      email: text(formData, "email"),
+      phone: text(formData, "phone"),
+      message: text(formData, "message"),
+      idempotencyKey: text(formData, "idempotencyKey"),
+    }),
+  );
   revalidatePath(`/sites/${slug}`);
   redirect(`/sites/${slug}/merci`);
 }
@@ -409,7 +428,9 @@ export async function dismissOpportunityRadarAlertAction(formData: FormData) {
 export async function cancelWorkflowRunAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.cancelWorkflowRun(user.id, tenant.id, text(formData, "runId"));
+  await safeServerAction("workflow.cancel", () =>
+    services.cancelWorkflowRun(user.id, tenant.id, text(formData, "runId")),
+  );
   revalidatePath("/automatisations");
   revalidatePath("/aujourdhui");
 }
@@ -417,7 +438,9 @@ export async function cancelWorkflowRunAction(formData: FormData) {
 export async function approveWorkflowRunAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.approveWorkflowRun(user.id, tenant.id, text(formData, "runId"));
+  await safeServerAction("workflow.approve", () =>
+    services.approveWorkflowRun(user.id, tenant.id, text(formData, "runId")),
+  );
   revalidatePath("/automatisations");
   revalidatePath("/aujourdhui");
 }
@@ -425,7 +448,9 @@ export async function approveWorkflowRunAction(formData: FormData) {
 export async function rejectWorkflowRunAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.rejectWorkflowRun(user.id, tenant.id, text(formData, "runId"));
+  await safeServerAction("workflow.reject", () =>
+    services.rejectWorkflowRun(user.id, tenant.id, text(formData, "runId")),
+  );
   revalidatePath("/automatisations");
   revalidatePath("/aujourdhui");
 }
@@ -433,10 +458,12 @@ export async function rejectWorkflowRunAction(formData: FormData) {
 export async function retryWorkflowRunAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.requestManualWorkflowRetry(
-    user.id,
-    tenant.id,
-    text(formData, "runId"),
+  await safeServerAction("workflow.retry", () =>
+    services.requestManualWorkflowRetry(
+      user.id,
+      tenant.id,
+      text(formData, "runId"),
+    ),
   );
   revalidatePath("/automatisations");
   revalidatePath("/aujourdhui");
@@ -445,10 +472,12 @@ export async function retryWorkflowRunAction(formData: FormData) {
 export async function retryWorkflowDeadLetterAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.retryWorkflowDeadLetter(
-    user.id,
-    tenant.id,
-    text(formData, "eventId"),
+  await safeServerAction("workflow.dead_letter_retry", () =>
+    services.retryWorkflowDeadLetter(
+      user.id,
+      tenant.id,
+      text(formData, "eventId"),
+    ),
   );
   revalidatePath("/automatisations");
   revalidatePath("/aujourdhui");
@@ -457,10 +486,12 @@ export async function retryWorkflowDeadLetterAction(formData: FormData) {
 export async function cancelWorkflowQueueEventAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.cancelWorkflowQueueEvent(
-    user.id,
-    tenant.id,
-    text(formData, "eventId"),
+  await safeServerAction("workflow.queue_cancel", () =>
+    services.cancelWorkflowQueueEvent(
+      user.id,
+      tenant.id,
+      text(formData, "eventId"),
+    ),
   );
   revalidatePath("/automatisations");
   revalidatePath("/aujourdhui");
@@ -469,7 +500,9 @@ export async function cancelWorkflowQueueEventAction(formData: FormData) {
 export async function importCsvAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.importCsvContacts(user.id, tenant.id, text(formData, "csvText"));
+  await safeServerAction("connector.csv_import", () =>
+    services.importCsvContacts(user.id, tenant.id, text(formData, "csvText")),
+  );
   revalidatePath("/connexions");
   revalidatePath("/contacts");
 }
@@ -477,7 +510,9 @@ export async function importCsvAction(formData: FormData) {
 export async function syncMockConnectorAction() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.syncMockConnector(user.id, tenant.id);
+  await safeServerAction("connector.mock_sync", () =>
+    services.syncMockConnector(user.id, tenant.id),
+  );
   revalidatePath("/connexions");
   revalidatePath("/aujourdhui");
 }
@@ -485,11 +520,13 @@ export async function syncMockConnectorAction() {
 export async function rotateWebhookSecretAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.rotateWebhookEndpointSecret(
-    user.id,
-    tenant.id,
-    text(formData, "endpointId"),
-    text(formData, "secret"),
+  await safeServerAction("connector.webhook_secret_rotate", () =>
+    services.rotateWebhookEndpointSecret(
+      user.id,
+      tenant.id,
+      text(formData, "endpointId"),
+      text(formData, "secret"),
+    ),
   );
   revalidatePath("/connexions");
 }
@@ -506,10 +543,14 @@ export async function generateWebhookSecretAction(
   try {
     const { user, tenant } = await requireTenantContext();
     const services = await getServices();
-    const result = await services.generateWebhookEndpointSecret(
-      user.id,
-      tenant.id,
-      text(formData, "endpointId"),
+    const result = await safeServerAction(
+      "connector.webhook_secret_generate",
+      () =>
+        services.generateWebhookEndpointSecret(
+          user.id,
+          tenant.id,
+          text(formData, "endpointId"),
+        ),
     );
     revalidatePath("/connexions");
 
@@ -522,11 +563,13 @@ export async function generateWebhookSecretAction(
 export async function setWebhookEndpointStatusAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.setWebhookEndpointStatus(
-    user.id,
-    tenant.id,
-    text(formData, "endpointId"),
-    text(formData, "status") as "active" | "disabled",
+  await safeServerAction("connector.webhook_status", () =>
+    services.setWebhookEndpointStatus(
+      user.id,
+      tenant.id,
+      text(formData, "endpointId"),
+      text(formData, "status") as "active" | "disabled",
+    ),
   );
   revalidatePath("/connexions");
   revalidatePath("/aujourdhui");
