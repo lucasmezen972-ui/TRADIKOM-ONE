@@ -43,11 +43,12 @@
 - Added explicit public form idempotency keys, honeypot field, and visible consent checkbox.
 - Added reusable atomic rate limiting with hashed subject and tenant scope keys, deterministic test support, bounded cleanup, retry metadata, and policies for auth, invitations, public forms, demo seeding, and inbound webhooks.
 - Added bounded password-reset and invitation email delivery with French templates, APP_URL links, safe console/test providers, retryable outcomes, no raw-token response/log persistence, invitation delivery state, and authorized token-replacing resend.
+- Added request correlation IDs, typed safe public errors, structured redacted logs, protected sensitive actions, safe webhook/health responses, Retry-After metadata, no-store token pages, and hardened CSP/security headers.
 - Added tests for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV values.
 
 ## Still incomplete
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- Public error mapping, correlation IDs, and remaining secure headers are still incomplete.
+- Session, token, rate-limit, and idempotency maintenance is still incomplete.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.

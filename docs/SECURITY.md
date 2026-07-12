@@ -20,6 +20,7 @@ Risques principaux : fuite cross-tenant, vol de session, injection SQL, XSS via 
 - Aucune cle reelle commitee.
 - Limitation de debit atomique et partagee pour authentification, invitations, formulaires publics, demo et webhooks, avec cles de sujet et de tenant hachees.
 - Liens de reinitialisation et d'invitation remis uniquement au fournisseur e-mail; jetons bruts absents des logs, de la base et des reponses ordinaires.
+- Identifiants de correlation, erreurs publiques francaises mappees, logs structures sans message interne, pages de jeton non cachees et en-tetes CSP/nosniff/referrer/frame.
 
 ## Production hardening
 

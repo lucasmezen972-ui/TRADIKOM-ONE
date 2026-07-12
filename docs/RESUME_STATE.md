@@ -50,6 +50,7 @@ Last completed checkpoint:
 - Connexions now exposes tenant-scoped webhook delivery history for operators, including accepted/rejected status, safe reasons, idempotency metadata, and redacted payloads. Integration coverage confirms disabled, invalid-signature, and rate-limited rejections redact sensitive fields and that rate limits remain endpoint-scoped across tenants.
 - Reusable atomic rate limiting now lives in `src/modules/rate-limit/` with PostgreSQL/PGlite and deterministic memory adapters, hashed subject/scope keys, bounded cleanup, retry metadata, and tenant/operation isolation. Registration, login, password reset, invitation creation/acceptance, public forms, demo seeding, and inbound webhooks all use it.
 - Password reset and team invitation links now use `src/modules/email/` with French HTML/text templates, APP_URL-based links, safe console and deterministic test providers, retryable outcomes, hashed database tokens, invitation delivery state, authorized resend with token replacement, and explicit development-only browser previews.
+- Public request handling now has correlation IDs, typed French error mapping, safe structured logs without internal messages/stacks, protected server-action calls for auth/invitations/forms/connectors/workflows, safe health/webhook responses, Retry-After propagation, no-store token routes, and hardened CSP/security headers.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -117,9 +118,10 @@ Current validation note:
 - During the durable workflow webhook checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped; staged `git diff --cached --check` passed. Commit `32daccd` passed both CI runs (`29195174902` push and `29195175983` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the reusable rate-limit checkpoint, targeted local Vitest hung without output and was stopped after a reasonable wait; `git diff --check` and staged `git diff --cached --check` passed. Commit `0d84f39` passed both CI runs (`29196188525` push and `29196189381` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the auth email checkpoint, targeted local Vitest and the unstaged diff check hung and were stopped; staged diff validation passed. GitHub Actions caught two optional-link typing errors and one stale test variable in `234fe8e`; fix `9dc30da` passed both CI runs (`29196880873` push and `29196881800` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the safe request-context checkpoint, targeted local Vitest hung and was stopped after 30 seconds; staged diff validation passed. Commit `39aecb6` passed both CI runs (`29197265337` push and `29197266627` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Add safe public error mapping, request correlation IDs, and remaining secure headers.
+1. Add session/token/idempotency maintenance commands and worker handling.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
