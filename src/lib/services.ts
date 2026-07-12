@@ -7,8 +7,11 @@ import {
 import {
   connectorCatalog,
   getConnectors,
+  getWebhookEndpointConfig,
   importCsvContacts,
   receiveWebhook,
+  rotateWebhookEndpointSecret,
+  setWebhookEndpointStatus,
   syncMockConnector,
   type WebhookSignatureInput,
 } from "@/modules/connectors";
@@ -319,6 +322,24 @@ export function createServices(db: DbClient) {
       importCsvContacts(db, userId, tenantId, csvText),
     syncMockConnector: (userId: string, tenantId: string) =>
       syncMockConnector(db, userId, tenantId),
+    getWebhookEndpointConfig: (userId: string, tenantId: string) =>
+      getWebhookEndpointConfig(db, userId, tenantId),
+    rotateWebhookEndpointSecret: (
+      userId: string,
+      tenantId: string,
+      endpointId: string,
+      secret: string,
+    ) =>
+      rotateWebhookEndpointSecret(db, userId, tenantId, {
+        endpointId,
+        secret,
+      }),
+    setWebhookEndpointStatus: (
+      userId: string,
+      tenantId: string,
+      endpointId: string,
+      status: "active" | "disabled",
+    ) => setWebhookEndpointStatus(db, userId, tenantId, { endpointId, status }),
     receiveWebhook: (
       token: string,
       payload: Record<string, unknown>,

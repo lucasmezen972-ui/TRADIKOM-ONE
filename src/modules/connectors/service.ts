@@ -9,6 +9,7 @@ import {
   findAcceptedWebhookDeliveryByIdempotencyKey,
   findImportedContactByEmail,
   findWebhookEndpointByToken,
+  findWebhookEndpointForTenant,
   insertConnectorActivity,
   insertConnectorSyncRun,
   insertImportedContact,
@@ -17,15 +18,21 @@ import {
   insertWebhookDelivery,
   listConnectorStates,
   updateConnectorSyncState,
+  updateWebhookEndpointStatus,
   updateImportRun,
 } from "@/modules/connectors/repository";
 import {
   csvImportSchema,
+  webhookEndpointStatusSchema,
   webhookIdempotencyKeySchema,
   webhookPayloadSchema,
+  webhookSecretRotationSchema,
   webhookTokenSchema,
+  type WebhookEndpointStatusInput,
+  type WebhookSecretRotationInput,
 } from "@/modules/connectors/schemas";
 import {
+  configureWebhookEndpointSecret,
   verifyWebhookEndpointSignature,
   type WebhookSignatureInput,
 } from "@/modules/connectors/webhooks";
@@ -37,6 +44,7 @@ export type { WebhookSignatureInput } from "@/modules/connectors/webhooks";
 const webhookMaxPayloadBytes = 64 * 1024;
 const webhookRateLimitMax = 60;
 const webhookRateLimitWindowSeconds = 60;
+const connectorAdminRoles = ["owner", "administrator", "manager"] as const;
 
 export async function getConnectors(
   db: DbClient,
@@ -209,6 +217,93 @@ export async function syncMockConnectorJob(
     targetId: "mock_business",
     metadata: {},
   });
+}
+
+export async function getWebhookEndpointConfig(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  await assertTenantAccess(db, userId, tenantId);
+  const endpoint = await requireTenantWebhookEndpoint(db, tenantId);
+
+  return {
+    id: endpoint.id,
+    url: `/api/webhooks/${endpoint.token}`,
+    status: endpoint.status as "active" | "disabled",
+    hasSecret: Boolean(endpoint.secret_hash),
+    createdAt: endpoint.created_at,
+  };
+}
+
+export async function rotateWebhookEndpointSecret(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: WebhookSecretRotationInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, [...connectorAdminRoles]);
+  const parsed = webhookSecretRotationSchema.parse(input);
+  const endpoint = await requireTenantWebhookEndpoint(db, tenantId);
+
+  if (endpoint.id !== parsed.endpointId) {
+    throw new ConnectorError("webhook_invalid", "Webhook invalide.");
+  }
+
+  await configureWebhookEndpointSecret(db, {
+    tenantId,
+    endpointId: parsed.endpointId,
+    secret: parsed.secret,
+  });
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action: "connector.webhook_secret_rotated",
+    targetType: "webhook_endpoint",
+    targetId: parsed.endpointId,
+    metadata: { hasSecret: true },
+  });
+
+  return { endpointId: parsed.endpointId };
+}
+
+export async function setWebhookEndpointStatus(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: WebhookEndpointStatusInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, [...connectorAdminRoles]);
+  const parsed = webhookEndpointStatusSchema.parse(input);
+  const endpoint = await requireTenantWebhookEndpoint(db, tenantId);
+
+  if (endpoint.id !== parsed.endpointId) {
+    throw new ConnectorError("webhook_invalid", "Webhook invalide.");
+  }
+
+  const updated = await updateWebhookEndpointStatus(db, {
+    tenantId,
+    endpointId: parsed.endpointId,
+    status: parsed.status,
+  });
+
+  if (!updated) {
+    throw new ConnectorError("webhook_invalid", "Webhook invalide.");
+  }
+
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action:
+      parsed.status === "active"
+        ? "connector.webhook_enabled"
+        : "connector.webhook_disabled",
+    targetType: "webhook_endpoint",
+    targetId: parsed.endpointId,
+    metadata: { status: parsed.status },
+  });
+
+  return { endpointId: parsed.endpointId, status: parsed.status };
 }
 
 export async function receiveWebhook(
@@ -444,4 +539,14 @@ function sanitizeWebhookValue(value: unknown): unknown {
 
 function sensitiveWebhookKey(key: string) {
   return /authorization|password|secret|token|api[_-]?key/i.test(key);
+}
+
+async function requireTenantWebhookEndpoint(db: DbClient, tenantId: string) {
+  const endpoint = await findWebhookEndpointForTenant(db, tenantId);
+
+  if (!endpoint) {
+    throw new ConnectorError("webhook_invalid", "Webhook invalide.");
+  }
+
+  return endpoint;
 }

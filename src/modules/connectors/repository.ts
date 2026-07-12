@@ -210,6 +210,48 @@ export async function findWebhookEndpointByToken(db: DbClient, token: string) {
   return endpoint.rows[0] ?? null;
 }
 
+export async function findWebhookEndpointForTenant(
+  db: DbClient,
+  tenantId: string,
+) {
+  const endpoint = await db.query<{
+    id: string;
+    tenant_id: string;
+    token: string;
+    secret_hash: string | null;
+    status: string;
+    created_at: string;
+  }>(
+    `select id, tenant_id, token, secret_hash, status, created_at
+     from webhook_endpoints
+     where tenant_id = $1
+     order by created_at asc
+     limit 1`,
+    [tenantId],
+  );
+
+  return endpoint.rows[0] ?? null;
+}
+
+export async function updateWebhookEndpointStatus(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    endpointId: string;
+    status: "active" | "disabled";
+  },
+) {
+  const result = await db.query<{ id: string }>(
+    `update webhook_endpoints
+     set status = $1
+     where tenant_id = $2 and id = $3
+     returning id`,
+    [input.status, input.tenantId, input.endpointId],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function findAcceptedWebhookDeliveryByIdempotencyKey(
   db: DbClient,
   input: {

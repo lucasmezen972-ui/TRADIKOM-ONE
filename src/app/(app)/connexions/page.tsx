@@ -1,4 +1,10 @@
-import { importCsvAction, syncMockConnectorAction } from "@/app/actions";
+import { KeyRound, Power, RotateCcw } from "lucide-react";
+import {
+  importCsvAction,
+  rotateWebhookSecretAction,
+  setWebhookEndpointStatusAction,
+  syncMockConnectorAction,
+} from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
 
@@ -8,7 +14,7 @@ export default async function ConnectionsPage() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
   const connectors = await services.getConnectors(user.id, tenant.id);
-  const webhook = await getWebhookUrl(tenant.id);
+  const webhook = await services.getWebhookEndpointConfig(user.id, tenant.id);
 
   return (
     <div className="grid gap-6">
@@ -60,8 +66,57 @@ export default async function ConnectionsPage() {
             contact, un lead, une activite et une relance.
           </p>
           <code className="mt-4 block overflow-x-auto rounded-md bg-slate-950 px-4 py-3 text-sm text-white">
-            {webhook}
+            {webhook.url}
           </code>
+          <div className="mt-4 grid gap-2 text-sm text-slate-600">
+            <p>
+              Statut:{" "}
+              <span className="font-semibold text-slate-900">
+                {webhook.status === "active" ? "actif" : "desactive"}
+              </span>
+            </p>
+            <p>
+              Signature:{" "}
+              <span className="font-semibold text-slate-900">
+                {webhook.hasSecret ? "HMAC configure" : "secret a configurer"}
+              </span>
+            </p>
+            <p>
+              Headers: x-tradikom-timestamp, x-tradikom-signature,
+              x-tradikom-idempotency-key
+            </p>
+          </div>
+          <form action={rotateWebhookSecretAction} className="mt-4 grid gap-3">
+            <input name="endpointId" type="hidden" value={webhook.id} />
+            <input
+              name="secret"
+              type="password"
+              minLength={16}
+              maxLength={256}
+              placeholder="Secret HMAC, 16 caracteres minimum"
+              className="rounded-md border border-slate-200 px-4 py-3 text-sm"
+            />
+            <button className="inline-flex items-center justify-center gap-2 rounded-md bg-[#08111f] px-4 py-3 text-sm font-semibold text-white">
+              <KeyRound size={16} aria-hidden />
+              Enregistrer le secret
+            </button>
+          </form>
+          <form action={setWebhookEndpointStatusAction} className="mt-3">
+            <input name="endpointId" type="hidden" value={webhook.id} />
+            <input
+              name="status"
+              type="hidden"
+              value={webhook.status === "active" ? "disabled" : "active"}
+            />
+            <button className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+              {webhook.status === "active" ? (
+                <Power size={16} aria-hidden />
+              ) : (
+                <RotateCcw size={16} aria-hidden />
+              )}
+              {webhook.status === "active" ? "Desactiver" : "Reactiver"}
+            </button>
+          </form>
         </div>
 
         <div className="rounded-lg bg-white p-5 shadow-sm">
@@ -81,19 +136,4 @@ export default async function ConnectionsPage() {
       </section>
     </div>
   );
-}
-
-async function getWebhookUrl(tenantId: string) {
-  const { getServices } = await import("@/lib/services");
-  const { getDb } = await import("@/lib/db");
-  const db = await getDb();
-  const services = await getServices();
-  const tenantContext = tenantId;
-  void services;
-  const result = await db.query<{ token: string }>(
-    "select token from webhook_endpoints where tenant_id = $1 limit 1",
-    [tenantContext],
-  );
-  const token = result.rows[0]?.token ?? "wh_indisponible";
-  return `/api/webhooks/${token}`;
 }

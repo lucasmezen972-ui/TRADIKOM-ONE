@@ -456,6 +456,31 @@ export async function syncMockConnectorAction() {
   revalidatePath("/aujourdhui");
 }
 
+export async function rotateWebhookSecretAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.rotateWebhookEndpointSecret(
+    user.id,
+    tenant.id,
+    text(formData, "endpointId"),
+    text(formData, "secret"),
+  );
+  revalidatePath("/connexions");
+}
+
+export async function setWebhookEndpointStatusAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await services.setWebhookEndpointStatus(
+    user.id,
+    tenant.id,
+    text(formData, "endpointId"),
+    text(formData, "status") as "active" | "disabled",
+  );
+  revalidatePath("/connexions");
+  revalidatePath("/aujourdhui");
+}
+
 export async function seedDemoAction() {
   const demoEnabled =
     process.env.NODE_ENV !== "production" ||
