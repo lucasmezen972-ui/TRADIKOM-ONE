@@ -1,12 +1,21 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, Building2, KeyRound, Sparkles } from "lucide-react";
 import { getCurrentSession } from "@/lib/session";
 import { loginAction, registerAction, seedDemoAction } from "@/app/actions";
+import { isPublicDemoEnabled } from "@/modules/demo";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+type HomeProps = {
+  searchParams: Promise<{ motdepasse?: string }>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
   const session = await getCurrentSession();
+  const demoEnabled = isPublicDemoEnabled();
+
   if (session) {
     redirect("/aujourdhui");
   }
@@ -20,16 +29,16 @@ export default async function Home() {
             TRADIKOM ONE
           </div>
           <h1 className="text-5xl font-bold leading-tight md:text-7xl">
-            Donnez un cerveau a vos outils metier.
+            Donnez un cerveau à vos outils métier.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-white/70">
-            Sites, leads, CRM, relances, connexions et activite commerciale
+            Sites, leads, CRM, relances, connexions et activité commerciale
             dans un poste de pilotage clair pour les entreprises locales.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {[
-              "Site genere et publiable",
-              "Lead transforme en tache",
+              "Site généré et publiable",
+              "Lead transformé en tâche",
               "Audit et isolation tenant",
             ].map((item) => (
               <div
@@ -40,19 +49,21 @@ export default async function Home() {
               </div>
             ))}
           </div>
-          <form action={seedDemoAction} className="mt-8">
-            <button className="inline-flex items-center gap-2 rounded-md bg-[#19c6b7] px-5 py-3 font-semibold text-[#08111f]">
-              Ouvrir la demo Garage Caraibes Auto
-              <Sparkles size={18} aria-hidden />
-            </button>
-          </form>
+          {demoEnabled ? (
+            <form action={seedDemoAction} className="mt-8">
+              <button className="inline-flex items-center gap-2 rounded-md bg-[#19c6b7] px-5 py-3 font-semibold text-[#08111f]">
+                Ouvrir la démo Garage Caraïbes Auto
+                <Sparkles size={18} aria-hidden />
+              </button>
+            </form>
+          ) : null}
         </section>
 
         <section className="grid gap-4">
           <div className="rounded-lg bg-[#fffaf1] p-5 text-slate-950 shadow-2xl">
             <div className="mb-5 flex items-center gap-2">
               <KeyRound size={20} aria-hidden />
-              <h2 className="text-xl font-bold">Creer un compte</h2>
+              <h2 className="text-xl font-bold">Créer un compte</h2>
             </div>
             <form action={registerAction} className="grid gap-3">
               <input
@@ -85,25 +96,36 @@ export default async function Home() {
 
           <div className="rounded-lg border border-white/10 bg-white/[0.06] p-5">
             <h2 className="text-lg font-bold">Connexion</h2>
+            {params.motdepasse === "reinitialise" ? (
+              <p className="mt-3 rounded-md border border-emerald-300/30 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-50">
+                Votre mot de passe a été mis à jour.
+              </p>
+            ) : null}
             <form action={loginAction} className="mt-4 grid gap-3">
               <input
                 required
                 type="email"
                 name="email"
-                placeholder="patron@garage-caraibes-auto.example"
+                placeholder="Email professionnel"
                 className="rounded-md border border-white/10 bg-white px-4 py-3 text-slate-950"
               />
               <input
                 required
                 type="password"
                 name="password"
-                placeholder="Tradikom!2026"
+                placeholder="Mot de passe"
                 className="rounded-md border border-white/10 bg-white px-4 py-3 text-slate-950"
               />
               <button className="rounded-md bg-white px-5 py-3 font-semibold text-[#08111f]">
                 Se connecter
               </button>
             </form>
+            <Link
+              href="/mot-de-passe-oublie"
+              className="mt-4 block text-sm font-semibold text-white/75"
+            >
+              Mot de passe oublié ?
+            </Link>
           </div>
         </section>
       </div>

@@ -184,9 +184,78 @@ export type WorkflowRun = {
   tenantId: string;
   workflowKey: string;
   triggerName: string;
-  status: "succeeded" | "failed" | "waiting";
+  status:
+    | "running"
+    | "succeeded"
+    | "failed"
+    | "waiting"
+    | "approval_required"
+    | "cancelled"
+    | "rejected";
   summary: string;
   createdAt: string;
+  steps: WorkflowRunStep[];
+};
+
+export type WorkflowRunStep = {
+  id: string;
+  actionName: string;
+  status: string;
+  attempts: number;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+  createdAt: string;
+};
+
+export type WorkflowDeadLetterEvent = {
+  id: string;
+  tenantId: string;
+  eventType: string;
+  attempts: number;
+  lastError: string;
+  lastAttemptedAt: string | null;
+  lastRetryDelayMs: number;
+  failureClassification: string | null;
+  maxAttempts: number | null;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkflowQueueStatus =
+  | "pending"
+  | "processing"
+  | "succeeded"
+  | "failed"
+  | "skipped";
+
+export type WorkflowQueueSummary = {
+  status: WorkflowQueueStatus;
+  count: number;
+  oldestNextRunAt: string | null;
+  latestUpdatedAt: string | null;
+};
+
+export type WorkflowQueueEvent = {
+  id: string;
+  tenantId: string;
+  eventType: string;
+  status: WorkflowQueueStatus;
+  attempts: number;
+  nextRunAt: string;
+  lastAttemptedAt: string | null;
+  lastRetryDelayMs: number;
+  failureClassification: string | null;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkflowQueueOverview = {
+  summary: WorkflowQueueSummary[];
+  activeEvents: WorkflowQueueEvent[];
 };
 
 export type ConnectorCard = {
@@ -211,6 +280,34 @@ export type AuditLog = {
   createdAt: string;
 };
 
+export type OpportunityRadarRuleKey =
+  | "lead_sla_missed"
+  | "overdue_task"
+  | "opportunity_without_activity"
+  | "unassigned_contact"
+  | "failed_workflow"
+  | "connector_error"
+  | "unpublished_draft_changes"
+  | "failed_form_processing"
+  | "likely_duplicate_contact";
+
+export type OpportunityRadarAlert = {
+  id: string;
+  tenantId: string;
+  ruleKey: OpportunityRadarRuleKey;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  explanation: string;
+  entityType: string;
+  entityId: string;
+  detectedAt: string;
+  actionLabel: string;
+  actionHref: string;
+  status: "active" | "dismissed" | "resolved";
+  dismissedAt?: string;
+  resolvedAt?: string;
+};
+
 export type DashboardData = {
   tenant: Tenant;
   metrics: {
@@ -224,5 +321,5 @@ export type DashboardData = {
   connectorHealth: ConnectorCard[];
   recentActivities: Activity[];
   workflowRuns: WorkflowRun[];
-  detectedOpportunities: string[];
+  detectedOpportunities: OpportunityRadarAlert[];
 };

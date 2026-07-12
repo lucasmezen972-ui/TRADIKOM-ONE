@@ -10,14 +10,14 @@
 - Site public `/sites/{tenant-slug}` avec formulaire.
 - Creation automatique contact, lead, opportunite, activite, tache et notification mock.
 - Dashboard, CRM, workflows, connecteurs, import CSV, webhook et audit log.
+- Reset password securise, invitations d'equipe et administration des roles non-owner.
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
 
-- Remplacer PGlite par PostgreSQL managé avec RLS activee.
-- Ajouter reset password complet et invitations par email.
+- Brancher un fournisseur email de production pour reset password et invitations.
 - Ajouter file upload valide pour logo/photos.
-- Ajouter vrais workers et queue Redis-compatible.
 - Ajouter connecteurs OAuth reels.
-- Ajouter provider OpenAI structure derriere l'abstraction.
+- Brancher les vrais appels OpenAI structures derriere l'abstraction.
+- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves.
 - Ajouter exports de donnees et suppression de compte.

@@ -1,6 +1,12 @@
-import { importCsvAction, syncMockConnectorAction } from "@/app/actions";
+import { Power, RotateCcw } from "lucide-react";
+import {
+  importCsvAction,
+  setWebhookEndpointStatusAction,
+  syncMockConnectorAction,
+} from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
+import { WebhookSecretRotationForm } from "./webhook-secret-rotation-form";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +14,7 @@ export default async function ConnectionsPage() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
   const connectors = await services.getConnectors(user.id, tenant.id);
-  const webhook = await getWebhookUrl(tenant.id);
+  const webhook = await services.getWebhookEndpointConfig(user.id, tenant.id);
 
   return (
     <div className="grid gap-6">
@@ -60,8 +66,81 @@ export default async function ConnectionsPage() {
             contact, un lead, une activite et une relance.
           </p>
           <code className="mt-4 block overflow-x-auto rounded-md bg-slate-950 px-4 py-3 text-sm text-white">
-            {webhook}
+            {webhook.url}
           </code>
+          <div className="mt-4 grid gap-2 text-sm text-slate-600">
+            <p>
+              Statut:{" "}
+              <span className="font-semibold text-slate-900">
+                {webhook.status === "active" ? "actif" : "desactive"}
+              </span>
+            </p>
+            <p>
+              Signature:{" "}
+              <span className="font-semibold text-slate-900">
+                {webhook.hasSecret ? "HMAC configure" : "secret indisponible"}
+              </span>
+            </p>
+            <p>
+              Headers: x-tradikom-timestamp, x-tradikom-signature,
+              x-tradikom-idempotency-key
+            </p>
+          </div>
+          <WebhookSecretRotationForm endpointId={webhook.id} />
+          <form action={setWebhookEndpointStatusAction} className="mt-3">
+            <input name="endpointId" type="hidden" value={webhook.id} />
+            <input
+              name="status"
+              type="hidden"
+              value={webhook.status === "active" ? "disabled" : "active"}
+            />
+            <button className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+              {webhook.status === "active" ? (
+                <Power size={16} aria-hidden />
+              ) : (
+                <RotateCcw size={16} aria-hidden />
+              )}
+              {webhook.status === "active" ? "Desactiver" : "Reactiver"}
+            </button>
+          </form>
+          <div className="mt-5">
+            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">
+              Livraisons recentes
+            </h3>
+            <div className="mt-3 divide-y divide-slate-100 rounded-md border border-slate-200">
+              {webhook.recentDeliveries.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-slate-500">
+                  Aucune livraison
+                </p>
+              ) : (
+                webhook.recentDeliveries.map((delivery) => (
+                  <div key={delivery.id} className="grid gap-1 px-3 py-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900">
+                        {delivery.status === "accepted" ? "acceptee" : "rejetee"}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(delivery.createdAt).toLocaleString("fr-FR")}
+                      </span>
+                    </div>
+                    <p className="break-all text-xs text-slate-500">
+                      Idempotence: {delivery.idempotencyKey ?? "-"}
+                    </p>
+                    {delivery.error ? (
+                      <p className="text-xs font-semibold text-red-700">
+                        {delivery.error}
+                      </p>
+                    ) : null}
+                    {delivery.payloadKeys.length > 0 ? (
+                      <p className="text-xs text-slate-500">
+                        Champs: {delivery.payloadKeys.join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="rounded-lg bg-white p-5 shadow-sm">
@@ -81,19 +160,4 @@ export default async function ConnectionsPage() {
       </section>
     </div>
   );
-}
-
-async function getWebhookUrl(tenantId: string) {
-  const { getServices } = await import("@/lib/services");
-  const { getDb } = await import("@/lib/db");
-  const db = await getDb();
-  const services = await getServices();
-  const tenantContext = tenantId;
-  void services;
-  const result = await db.query<{ token: string }>(
-    "select token from webhook_endpoints where tenant_id = $1 limit 1",
-    [tenantContext],
-  );
-  const token = result.rows[0]?.token ?? "wh_indisponible";
-  return `/api/webhooks/${token}`;
 }

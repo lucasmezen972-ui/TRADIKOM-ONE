@@ -12,6 +12,6 @@ Decision : utiliser PGlite local. Raison : Docker absent dans l'environnement co
 
 Decision : generer Business Twin et site sans API IA. Raison : le MVP doit fonctionner sans credentials payants. L'architecture prepare un provider OpenAI futur.
 
-## ADR-004 : Workflow synchrone MVP
+## ADR-004 : Workflow durable Phase 2
 
-Decision : executer le workflow de lead dans la meme transaction applicative logique. Raison : demonstrabilite locale. Les tables preparent worker, retries et dead-letter.
+Decision : persister les definitions, executions, reprises et evenements avant traitement par un worker durable. Raison : idempotence, retries, approbations, reprise apres redemarrage et visibilite dead-letter sans chemin special cache.

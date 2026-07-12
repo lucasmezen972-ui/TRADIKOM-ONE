@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import { defaultGarageOnboarding } from "../src/lib/generation";
+import { processPendingDomainEvents } from "../src/modules/workflows/worker";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -17,7 +18,7 @@ afterEach(async () => {
 
 describe("vertical slice", () => {
   it("turns onboarding into a published site and a lead workflow", async () => {
-    const { services } = await setup();
+    const { db, services } = await setup();
     const user = await services.registerUser({
       name: "Malia Occo",
       email: "malia@example.com",
@@ -43,6 +44,7 @@ describe("vertical slice", () => {
       phone: "+596 696 11 22 33",
       message: "Je veux un devis pour la climatisation.",
     });
+    await processPendingDomainEvents(db);
 
     const crm = await services.getCrm(user.id, tenant.id);
     const runs = await services.getWorkflowRuns(user.id, tenant.id);

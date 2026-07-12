@@ -39,7 +39,7 @@ export async function requireTenantContext() {
 export async function signInUser(userId: string) {
   const services = await getServices();
   const session = await services.createSession(userId);
-  await setSessionCookie(session.sessionId, session.expiresAt);
+  await setSessionCookie(session.sessionToken, session.expiresAt);
   const context = await services.getTenantContext(userId);
   if (context) {
     await setTenantCookie(context.tenant.id);

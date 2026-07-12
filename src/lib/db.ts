@@ -1,6 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { closePgPool, getDatabaseUrl, pgPoolAsSqlClient } from "@/db/client";
+import { validateEnvironment } from "@/lib/environment";
 
 export type QueryResult<T = Record<string, unknown>> = {
   rows: T[];
@@ -14,11 +16,13 @@ export type DbClient = {
   ) => Promise<QueryResult<T>>;
 };
 
-let dbPromise: Promise<PGlite> | null = null;
+let dbPromise: Promise<DbClient> | null = null;
+let pglitePromise: Promise<PGlite> | null = null;
 
-export async function getDb(): Promise<PGlite> {
+export async function getDb(): Promise<DbClient> {
   if (!dbPromise) {
-    dbPromise = createPersistentDb();
+    validateEnvironment(process.env);
+    dbPromise = createRuntimeDb();
   }
 
   return dbPromise;
@@ -35,25 +39,45 @@ export async function closeDb() {
     return;
   }
 
-  const db = await dbPromise;
-  await db.close();
+  if (pglitePromise) {
+    const db = await pglitePromise;
+    await db.close();
+  }
+
+  await closePgPool();
+
   dbPromise = null;
+  pglitePromise = null;
 }
 
 export const closeDbForTests = closeDb;
 
-async function createPersistentDb() {
+async function createRuntimeDb() {
+  if (getDatabaseUrl()) {
+    const db = pgPoolAsSqlClient();
+    await migrate(db, { enableRls: true });
+    return db;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("DATABASE_URL must be configured in production.");
+  }
+
   const dataDir =
     process.env.PGLITE_DATA_DIR ??
     path.join(process.cwd(), ".data", "tradikom-one-pglite");
 
   await mkdir(dataDir, { recursive: true });
-  const db = new PGlite(dataDir);
-  await migrate(db);
+  pglitePromise = Promise.resolve(new PGlite(dataDir));
+  const db = await pglitePromise;
+  await migrate(db, { enableRls: false });
   return db;
 }
 
-export async function migrate(db: DbClient) {
+export async function migrate(
+  db: DbClient,
+  options: { enableRls?: boolean } = {},
+) {
   await db.query(`
     create table if not exists schema_migrations (
       id text primary key,
@@ -61,25 +85,90 @@ export async function migrate(db: DbClient) {
     );
   `);
 
-  const applied = await db.query<{ id: string }>(
-    "select id from schema_migrations where id = $1",
-    ["001_initial"],
-  );
+  for (const migration of getMigrations(options.enableRls ?? false)) {
+    const applied = await db.query<{ id: string }>(
+      "select id from schema_migrations where id = $1",
+      [migration.id],
+    );
 
-  if (applied.rows.length > 0) {
-    return;
+    if (applied.rows.length > 0) {
+      continue;
+    }
+
+    for (const statement of splitSqlStatements(migration.sql)) {
+      await db.query(statement);
+    }
+
+    await db.query(
+      "insert into schema_migrations (id, applied_at) values ($1, $2)",
+      [migration.id, new Date().toISOString()],
+    );
+  }
+}
+
+function getMigrations(enableRls: boolean) {
+  return [
+    { id: "001_initial", sql: initialMigrationSql },
+    { id: "002_phase2_foundation", sql: phase2FoundationMigrationSql },
+    ...(enableRls ? [{ id: "003_rls", sql: rlsMigrationSql }] : []),
+    { id: "004_auth_flows", sql: authFlowsMigrationSql },
+    { id: "005_crm_opportunity_depth", sql: crmOpportunityDepthMigrationSql },
+    { id: "006_crm_contact_merges", sql: crmContactMergesMigrationSql },
+    ...(enableRls
+      ? [{ id: "007_crm_contact_merges_rls", sql: crmContactMergesRlsMigrationSql }]
+      : []),
+    { id: "008_opportunity_radar_alerts", sql: opportunityRadarAlertsMigrationSql },
+    ...(enableRls
+      ? [{ id: "009_opportunity_radar_alerts_rls", sql: opportunityRadarAlertsRlsMigrationSql }]
+      : []),
+    { id: "010_workflow_step_attempts", sql: workflowStepAttemptsMigrationSql },
+    { id: "011_domain_event_attempt_metadata", sql: domainEventAttemptMetadataMigrationSql },
+    { id: "012_webhook_delivery_idempotency", sql: webhookDeliveryIdempotencyMigrationSql },
+    { id: "013_rate_limit_scopes", sql: rateLimitScopesMigrationSql },
+    { id: "014_invitation_delivery", sql: invitationDeliveryMigrationSql },
+    ...(enableRls
+      ? [{ id: "015_rls_policy_completion", sql: rlsPolicyCompletionMigrationSql }]
+      : []),
+    ...(enableRls
+      ? [{ id: "016_tenant_integrity", sql: tenantIntegrityMigrationSql }]
+      : []),
+  ];
+}
+
+function splitSqlStatements(sql: string) {
+  const statements: string[] = [];
+  let current = "";
+  let inDollarQuote = false;
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    const pair = sql.slice(index, index + 2);
+
+    if (pair === "$$") {
+      inDollarQuote = !inDollarQuote;
+      current += pair;
+      index += 1;
+      continue;
+    }
+
+    if (char === ";" && !inDollarQuote) {
+      const statement = current.trim();
+      if (statement) {
+        statements.push(statement);
+      }
+      current = "";
+      continue;
+    }
+
+    current += char;
   }
 
-  for (const statement of initialMigrationSql
-    .split(";")
-    .map((item) => item.trim())
-    .filter(Boolean)) {
-    await db.query(statement);
+  const finalStatement = current.trim();
+  if (finalStatement) {
+    statements.push(finalStatement);
   }
-  await db.query(
-    "insert into schema_migrations (id, applied_at) values ($1, $2)",
-    ["001_initial", new Date().toISOString()],
-  );
+
+  return statements;
 }
 
 const initialMigrationSql = `
@@ -94,7 +183,9 @@ create table users (
 create table sessions (
   id text primary key,
   user_id text not null references users(id) on delete cascade,
+  token_hash text not null unique,
   expires_at text not null,
+  revoked_at text,
   created_at text not null
 );
 
@@ -180,6 +271,39 @@ create table contacts (
   unique (tenant_id, email)
 );
 
+create table contact_merge_records (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  survivor_contact_id text not null,
+  merged_contact_id text not null,
+  reason text not null,
+  selected_fields text not null,
+  merged_snapshot text not null,
+  created_by text not null,
+  created_at text not null,
+  unique (tenant_id, merged_contact_id)
+);
+
+create table opportunity_radar_alerts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  rule_key text not null,
+  severity text not null,
+  title text not null,
+  explanation text not null,
+  entity_type text not null,
+  entity_id text not null,
+  action_label text not null,
+  action_href text not null,
+  status text not null,
+  detected_at text not null,
+  dismissed_at text,
+  resolved_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, rule_key, entity_type, entity_id)
+);
+
 create table companies (
   id text primary key,
   tenant_id text not null references tenants(id) on delete cascade,
@@ -204,6 +328,7 @@ create table opportunities (
   stage_id text not null references pipeline_stages(id),
   value_cents integer not null,
   next_follow_up_at text,
+  lost_reason text,
   created_at text not null,
   updated_at text not null
 );
@@ -368,6 +493,11 @@ create table workflow_run_steps (
   action_name text not null,
   status text not null,
   safe_metadata text not null,
+  attempts integer not null default 1,
+  scheduled_at text,
+  started_at text,
+  completed_at text,
+  error text,
   created_at text not null
 );
 
@@ -435,6 +565,7 @@ create table webhook_deliveries (
   tenant_id text not null references tenants(id) on delete cascade,
   webhook_endpoint_id text not null references webhook_endpoints(id),
   status text not null,
+  idempotency_key text,
   payload text not null,
   error text,
   created_at text not null
@@ -499,4 +630,504 @@ create index idx_activities_tenant on activities(tenant_id);
 create index idx_website_sections_tenant on website_sections(tenant_id, website_id);
 create index idx_audit_logs_tenant on audit_logs(tenant_id, created_at desc);
 create index idx_webhook_token on webhook_endpoints(token);
+`;
+
+const phase2FoundationMigrationSql = `
+alter table sessions add column if not exists token_hash text;
+alter table sessions add column if not exists revoked_at text;
+create unique index if not exists idx_sessions_token_hash on sessions(token_hash);
+
+alter table websites add column if not exists current_draft_version_id text;
+alter table websites add column if not exists current_published_version_id text;
+alter table website_versions add column if not exists version_type text not null default 'draft';
+
+create table if not exists domain_events (
+  id text primary key,
+  tenant_id text not null,
+  actor_id text not null,
+  event_type text not null,
+  payload text not null,
+  status text not null,
+  attempts integer not null default 0,
+  idempotency_key text not null,
+  correlation_id text not null,
+  causation_id text,
+  next_run_at text not null,
+  last_error text,
+  last_attempted_at text,
+  last_retry_delay_ms integer not null default 0,
+  failure_classification text,
+  max_attempts integer,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, idempotency_key)
+);
+
+create table if not exists rate_limits (
+  id text primary key,
+  key text not null unique,
+  count integer not null,
+  reset_at text not null,
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists generation_records (
+  id text primary key,
+  tenant_id text not null,
+  provider text not null,
+  model text not null,
+  prompt_version text not null,
+  generation_type text not null,
+  input_refs text not null,
+  output text not null,
+  usage_metadata text not null,
+  approval_status text not null,
+  created_at text not null
+);
+
+create table if not exists connector_secret_versions (
+  id text primary key,
+  tenant_id text not null,
+  connector_key text not null,
+  key_version text not null,
+  encrypted_payload text not null,
+  created_at text not null
+);
+
+create index if not exists idx_domain_events_status on domain_events(status, next_run_at);
+create index if not exists idx_generation_records_tenant on generation_records(tenant_id, created_at desc);
+create index if not exists idx_connector_secret_versions_tenant on connector_secret_versions(tenant_id, connector_key);
+`;
+
+const authFlowsMigrationSql = `
+create unique index if not exists idx_password_reset_tokens_token_hash on password_reset_tokens(token_hash);
+create index if not exists idx_password_reset_tokens_user on password_reset_tokens(user_id);
+create unique index if not exists idx_invitations_token_hash on invitations(token_hash);
+create index if not exists idx_invitations_tenant_email_status on invitations(tenant_id, email, status);
+`;
+
+const crmOpportunityDepthMigrationSql = `
+alter table opportunities add column if not exists lost_reason text;
+`;
+
+const crmContactMergesMigrationSql = `
+create table if not exists contact_merge_records (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  survivor_contact_id text not null,
+  merged_contact_id text not null,
+  reason text not null,
+  selected_fields text not null,
+  merged_snapshot text not null,
+  created_by text not null,
+  created_at text not null,
+  unique (tenant_id, merged_contact_id)
+);
+`;
+
+const crmContactMergesRlsMigrationSql = `
+alter table contact_merge_records enable row level security;
+
+drop policy if exists tenant_contact_merge_records on contact_merge_records;
+create policy tenant_contact_merge_records on contact_merge_records
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const opportunityRadarAlertsMigrationSql = `
+create table if not exists opportunity_radar_alerts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  rule_key text not null,
+  severity text not null,
+  title text not null,
+  explanation text not null,
+  entity_type text not null,
+  entity_id text not null,
+  action_label text not null,
+  action_href text not null,
+  status text not null,
+  detected_at text not null,
+  dismissed_at text,
+  resolved_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, rule_key, entity_type, entity_id)
+);
+`;
+
+const opportunityRadarAlertsRlsMigrationSql = `
+alter table opportunity_radar_alerts enable row level security;
+
+drop policy if exists tenant_opportunity_radar_alerts on opportunity_radar_alerts;
+create policy tenant_opportunity_radar_alerts on opportunity_radar_alerts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const workflowStepAttemptsMigrationSql = `
+alter table workflow_run_steps add column if not exists attempts integer not null default 1;
+alter table workflow_run_steps add column if not exists scheduled_at text;
+alter table workflow_run_steps add column if not exists started_at text;
+alter table workflow_run_steps add column if not exists completed_at text;
+alter table workflow_run_steps add column if not exists error text;
+create index if not exists idx_workflow_run_steps_attempts on workflow_run_steps(tenant_id, workflow_run_id, action_name, created_at desc);
+`;
+
+const domainEventAttemptMetadataMigrationSql = `
+alter table domain_events add column if not exists last_attempted_at text;
+alter table domain_events add column if not exists last_retry_delay_ms integer not null default 0;
+alter table domain_events add column if not exists failure_classification text;
+alter table domain_events add column if not exists max_attempts integer;
+create index if not exists idx_domain_events_failure on domain_events(tenant_id, status, failure_classification, updated_at desc);
+`;
+
+const webhookDeliveryIdempotencyMigrationSql = `
+alter table webhook_deliveries add column if not exists idempotency_key text;
+create index if not exists idx_webhook_deliveries_endpoint_idempotency
+  on webhook_deliveries(webhook_endpoint_id, idempotency_key);
+create unique index if not exists idx_webhook_deliveries_accepted_idempotency
+  on webhook_deliveries(webhook_endpoint_id, idempotency_key)
+  where idempotency_key is not null and status = 'accepted';
+`;
+
+const rateLimitScopesMigrationSql = `
+alter table rate_limits add column if not exists operation_key text not null default 'legacy';
+alter table rate_limits add column if not exists subject_hash text not null default '';
+alter table rate_limits add column if not exists scope_hash text not null default '';
+create index if not exists idx_rate_limits_operation_scope on rate_limits(operation_key, scope_hash, reset_at);
+create index if not exists idx_rate_limits_cleanup on rate_limits(reset_at);
+`;
+
+const invitationDeliveryMigrationSql = `
+alter table invitations add column if not exists delivery_status text not null default 'pending';
+alter table invitations add column if not exists delivery_provider text;
+alter table invitations add column if not exists delivery_attempts integer not null default 0;
+alter table invitations add column if not exists delivery_last_attempt_at text;
+alter table invitations add column if not exists delivery_error_code text;
+
+create index if not exists idx_invitations_delivery_status
+  on invitations(tenant_id, delivery_status, created_at desc);
+`;
+
+const rlsMigrationSql = `
+create or replace function app_current_tenant_id()
+returns text
+language sql
+stable
+as $$
+  select nullif(current_setting('app.tenant_id', true), '')
+$$;
+
+create or replace function app_is_system()
+returns boolean
+language sql
+stable
+as $$
+  select
+    coalesce(nullif(current_setting('app.system_access', true), ''), 'false') = 'true'
+    and pg_has_role(
+      current_user,
+      (select relowner from pg_class where oid = 'public.tenants'::regclass),
+      'MEMBER'
+    )
+$$;
+
+alter table business_profiles enable row level security;
+alter table knowledge_documents enable row level security;
+alter table contacts enable row level security;
+alter table contact_merge_records enable row level security;
+alter table opportunity_radar_alerts enable row level security;
+alter table companies enable row level security;
+alter table contact_consents enable row level security;
+alter table pipelines enable row level security;
+alter table pipeline_stages enable row level security;
+alter table opportunities enable row level security;
+alter table leads enable row level security;
+alter table activities enable row level security;
+alter table notes enable row level security;
+alter table tasks enable row level security;
+alter table websites enable row level security;
+alter table website_pages enable row level security;
+alter table website_sections enable row level security;
+alter table website_versions enable row level security;
+alter table website_publications enable row level security;
+alter table forms enable row level security;
+alter table form_fields enable row level security;
+alter table form_submissions enable row level security;
+alter table workflows enable row level security;
+alter table workflow_runs enable row level security;
+alter table workflow_run_steps enable row level security;
+alter table approvals enable row level security;
+alter table connectors enable row level security;
+alter table connector_accounts enable row level security;
+alter table connector_credentials enable row level security;
+alter table connector_sync_runs enable row level security;
+alter table webhook_endpoints enable row level security;
+alter table webhook_deliveries enable row level security;
+alter table external_record_mappings enable row level security;
+alter table imports enable row level security;
+alter table import_rows enable row level security;
+alter table notifications enable row level security;
+alter table audit_logs enable row level security;
+alter table domain_events enable row level security;
+alter table generation_records enable row level security;
+alter table connector_secret_versions enable row level security;
+
+drop policy if exists tenant_contacts on contacts;
+create policy tenant_contacts on contacts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_contact_merge_records on contact_merge_records;
+create policy tenant_contact_merge_records on contact_merge_records
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_opportunity_radar_alerts on opportunity_radar_alerts;
+create policy tenant_opportunity_radar_alerts on opportunity_radar_alerts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_leads on leads;
+create policy tenant_leads on leads
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_tasks on tasks;
+create policy tenant_tasks on tasks
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_websites on websites;
+create policy tenant_websites on websites
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_website_versions on website_versions;
+create policy tenant_website_versions on website_versions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_audit_logs on audit_logs;
+create policy tenant_audit_logs on audit_logs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const rlsPolicyCompletionMigrationSql = `
+create or replace function app_is_system()
+returns boolean
+language sql
+stable
+as $$
+  select
+    coalesce(nullif(current_setting('app.system_access', true), ''), 'false') = 'true'
+    and pg_has_role(
+      current_user,
+      (select relowner from pg_class where oid = 'public.tenants'::regclass),
+      'MEMBER'
+    )
+$$;
+
+do $$
+declare
+  tenant_table record;
+begin
+  for tenant_table in
+    select columns.table_name
+    from information_schema.columns as columns
+    where columns.table_schema = 'public'
+      and columns.column_name = 'tenant_id'
+  loop
+    execute format(
+      'alter table public.%I enable row level security',
+      tenant_table.table_name
+    );
+    execute format(
+      'drop policy if exists tenant_isolation on public.%I',
+      tenant_table.table_name
+    );
+    execute format(
+      'create policy tenant_isolation on public.%I using (app_is_system() or tenant_id = app_current_tenant_id()) with check (app_is_system() or tenant_id = app_current_tenant_id())',
+      tenant_table.table_name
+    );
+  end loop;
+end
+$$;
+
+alter table tenants enable row level security;
+drop policy if exists tenant_isolation on tenants;
+create policy tenant_isolation on tenants
+  using (app_is_system() or id = app_current_tenant_id())
+  with check (app_is_system() or id = app_current_tenant_id());
+`;
+
+const tenantIntegrityMigrationSql = `
+create or replace function app_enforce_related_tenant()
+returns trigger
+language plpgsql
+as $$
+declare
+  related_id text;
+  related_tenant_id text;
+begin
+  related_id := to_jsonb(new) ->> tg_argv[1];
+  if related_id is null or related_id = '' then
+    return new;
+  end if;
+
+  execute format(
+    'select tenant_id from public.%I where id = $1',
+    tg_argv[0]
+  ) into related_tenant_id using related_id;
+
+  if related_tenant_id is null then
+    raise exception using
+      errcode = '23503',
+      message = 'Related tenant row not found.';
+  end if;
+
+  if related_tenant_id <> new.tenant_id then
+    raise exception using
+      errcode = '23514',
+      message = 'Cross-tenant relation rejected.';
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists pipeline_stages_tenant_integrity on pipeline_stages;
+create trigger pipeline_stages_tenant_integrity
+  before insert or update of tenant_id, pipeline_id on pipeline_stages
+  for each row execute function app_enforce_related_tenant('pipelines', 'pipeline_id');
+
+drop trigger if exists contact_consents_tenant_integrity on contact_consents;
+create trigger contact_consents_tenant_integrity
+  before insert or update of tenant_id, contact_id on contact_consents
+  for each row execute function app_enforce_related_tenant('contacts', 'contact_id');
+
+drop trigger if exists opportunities_contact_tenant_integrity on opportunities;
+create trigger opportunities_contact_tenant_integrity
+  before insert or update of tenant_id, contact_id on opportunities
+  for each row execute function app_enforce_related_tenant('contacts', 'contact_id');
+
+drop trigger if exists opportunities_stage_tenant_integrity on opportunities;
+create trigger opportunities_stage_tenant_integrity
+  before insert or update of tenant_id, stage_id on opportunities
+  for each row execute function app_enforce_related_tenant('pipeline_stages', 'stage_id');
+
+drop trigger if exists leads_tenant_integrity on leads;
+create trigger leads_tenant_integrity
+  before insert or update of tenant_id, contact_id on leads
+  for each row execute function app_enforce_related_tenant('contacts', 'contact_id');
+
+drop trigger if exists website_pages_tenant_integrity on website_pages;
+create trigger website_pages_tenant_integrity
+  before insert or update of tenant_id, website_id on website_pages
+  for each row execute function app_enforce_related_tenant('websites', 'website_id');
+
+drop trigger if exists website_sections_tenant_integrity on website_sections;
+create trigger website_sections_tenant_integrity
+  before insert or update of tenant_id, website_id on website_sections
+  for each row execute function app_enforce_related_tenant('websites', 'website_id');
+
+drop trigger if exists website_versions_tenant_integrity on website_versions;
+create trigger website_versions_tenant_integrity
+  before insert or update of tenant_id, website_id on website_versions
+  for each row execute function app_enforce_related_tenant('websites', 'website_id');
+
+drop trigger if exists websites_draft_tenant_integrity on websites;
+create trigger websites_draft_tenant_integrity
+  before insert or update of tenant_id, current_draft_version_id on websites
+  for each row execute function app_enforce_related_tenant('website_versions', 'current_draft_version_id');
+
+drop trigger if exists websites_published_tenant_integrity on websites;
+create trigger websites_published_tenant_integrity
+  before insert or update of tenant_id, current_published_version_id on websites
+  for each row execute function app_enforce_related_tenant('website_versions', 'current_published_version_id');
+
+drop trigger if exists website_publications_website_tenant_integrity on website_publications;
+create trigger website_publications_website_tenant_integrity
+  before insert or update of tenant_id, website_id on website_publications
+  for each row execute function app_enforce_related_tenant('websites', 'website_id');
+
+drop trigger if exists website_publications_version_tenant_integrity on website_publications;
+create trigger website_publications_version_tenant_integrity
+  before insert or update of tenant_id, version_id on website_publications
+  for each row execute function app_enforce_related_tenant('website_versions', 'version_id');
+
+drop trigger if exists forms_tenant_integrity on forms;
+create trigger forms_tenant_integrity
+  before insert or update of tenant_id, website_id on forms
+  for each row execute function app_enforce_related_tenant('websites', 'website_id');
+
+drop trigger if exists form_fields_tenant_integrity on form_fields;
+create trigger form_fields_tenant_integrity
+  before insert or update of tenant_id, form_id on form_fields
+  for each row execute function app_enforce_related_tenant('forms', 'form_id');
+
+drop trigger if exists form_submissions_form_tenant_integrity on form_submissions;
+create trigger form_submissions_form_tenant_integrity
+  before insert or update of tenant_id, form_id on form_submissions
+  for each row execute function app_enforce_related_tenant('forms', 'form_id');
+
+drop trigger if exists form_submissions_website_tenant_integrity on form_submissions;
+create trigger form_submissions_website_tenant_integrity
+  before insert or update of tenant_id, website_id on form_submissions
+  for each row execute function app_enforce_related_tenant('websites', 'website_id');
+
+drop trigger if exists form_submissions_contact_tenant_integrity on form_submissions;
+create trigger form_submissions_contact_tenant_integrity
+  before insert or update of tenant_id, created_contact_id on form_submissions
+  for each row execute function app_enforce_related_tenant('contacts', 'created_contact_id');
+
+drop trigger if exists workflow_run_steps_tenant_integrity on workflow_run_steps;
+create trigger workflow_run_steps_tenant_integrity
+  before insert or update of tenant_id, workflow_run_id on workflow_run_steps
+  for each row execute function app_enforce_related_tenant('workflow_runs', 'workflow_run_id');
+
+drop trigger if exists webhook_deliveries_tenant_integrity on webhook_deliveries;
+create trigger webhook_deliveries_tenant_integrity
+  before insert or update of tenant_id, webhook_endpoint_id on webhook_deliveries
+  for each row execute function app_enforce_related_tenant('webhook_endpoints', 'webhook_endpoint_id');
+
+drop trigger if exists import_rows_tenant_integrity on import_rows;
+create trigger import_rows_tenant_integrity
+  before insert or update of tenant_id, import_id on import_rows
+  for each row execute function app_enforce_related_tenant('imports', 'import_id');
+
+do $$
+declare
+  tenant_table record;
+  has_tenant_index boolean;
+begin
+  for tenant_table in
+    select columns.table_name
+    from information_schema.columns as columns
+    where columns.table_schema = 'public'
+      and columns.column_name = 'tenant_id'
+  loop
+    select exists (
+      select 1
+      from pg_index as indexes
+      join pg_attribute as attributes
+        on attributes.attrelid = indexes.indrelid
+       and attributes.attnum = any(indexes.indkey)
+      where indexes.indrelid = format('public.%I', tenant_table.table_name)::regclass
+        and attributes.attname = 'tenant_id'
+    ) into has_tenant_index;
+
+    if not has_tenant_index then
+      execute format(
+        'create index %I on public.%I (tenant_id)',
+        'idx_' || tenant_table.table_name || '_tenant_scope',
+        tenant_table.table_name
+      );
+    end if;
+  end loop;
+end
+$$;
 `;

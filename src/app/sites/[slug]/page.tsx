@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { submitSiteLeadAction } from "@/app/actions";
 import { SiteRenderer } from "@/components/site-renderer";
 import { getServices } from "@/lib/services";
+import { id } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function PublicSitePage({
         website={site.website}
         sections={site.sections}
         formAction={action}
+        formIdempotencyKey={id("formidem")}
       />
     </main>
   );

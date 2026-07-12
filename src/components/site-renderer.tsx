@@ -1,9 +1,11 @@
+import Image from "next/image";
 import type { Website, WebsiteSection } from "@/lib/types";
 
 type SiteRendererProps = {
   website: Website;
   sections: WebsiteSection[];
   formAction?: (formData: FormData) => void | Promise<void>;
+  formIdempotencyKey?: string;
   preview?: boolean;
 };
 
@@ -11,6 +13,7 @@ export function SiteRenderer({
   website,
   sections,
   formAction,
+  formIdempotencyKey,
   preview = false,
 }: SiteRendererProps) {
   const style = {
@@ -54,6 +57,7 @@ export function SiteRenderer({
                 key={section.id}
                 section={section}
                 action={formAction}
+                idempotencyKey={formIdempotencyKey}
                 preview={preview}
               />
             );
@@ -88,9 +92,12 @@ function HeroSection({ section }: { section: WebsiteSection }) {
         ) : null}
       </div>
       {section.imageUrl ? (
-        <img
+        <Image
           src={section.imageUrl}
           alt=""
+          width={960}
+          height={720}
+          sizes="(min-width: 768px) 46vw, 100vw"
           className="aspect-[4/3] w-full rounded-[var(--site-radius)] object-cover shadow-2xl"
         />
       ) : null}
@@ -164,10 +171,12 @@ function FaqSection({ section }: { section: WebsiteSection }) {
 function ContactSection({
   section,
   action,
+  idempotencyKey,
   preview,
 }: {
   section: WebsiteSection;
   action?: (formData: FormData) => void | Promise<void>;
+  idempotencyKey?: string;
   preview: boolean;
 }) {
   return (
@@ -182,6 +191,11 @@ function ContactSection({
         </div>
         <form action={action} className="grid gap-3">
           <input type="hidden" name="preview" value={preview ? "1" : "0"} />
+          <input type="hidden" name="idempotencyKey" value={idempotencyKey ?? ""} />
+          <label className="hidden">
+            Ne pas remplir
+            <input name="website" tabIndex={-1} autoComplete="off" />
+          </label>
           <input
             required
             name="name"
@@ -210,6 +224,10 @@ function ContactSection({
             rows={4}
             className="rounded-[var(--site-radius)] border border-white/15 bg-white px-4 py-3 text-slate-950"
           />
+          <label className="flex items-start gap-2 text-sm text-white/80">
+            <input required name="privacyConsent" type="checkbox" className="mt-1" />
+            J&apos;accepte que mes informations soient utilisées pour répondre à ma demande.
+          </label>
           <button
             disabled={preview}
             className="rounded-[var(--site-radius)] bg-[var(--site-accent)] px-5 py-3 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
