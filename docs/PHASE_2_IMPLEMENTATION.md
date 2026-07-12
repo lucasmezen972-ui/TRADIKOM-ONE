@@ -33,6 +33,7 @@
 - Added the first domain-specific async worker handler beyond workflow resume: `connector.sync_requested` dispatches the mock connector sync through the durable outbox path with connector state updates, sync/activity rows, and audit logging.
 - Added active queue cancellation controls: pending/processing domain events can be tenant-authorized, skipped from Automatisations, removed from active processing, and audited.
 - Added Connector SDK contracts, registry, robust CSV parsing, webhook HMAC verification for configured endpoint secrets, and AES-256-GCM credential encryption helpers.
+- Hardened generic webhook delivery intake with required idempotency keys, duplicate accepted-delivery rejection, replay-window timestamp checks, request-size limits, endpoint rate limiting, redacted delivery payload logs, accepted/rejected outcome storage, and safe public route errors.
 - Extracted connector catalog, connector state reads, CSV imports, mock sync, webhook receipt, import row persistence, and webhook delivery logging into `src/modules/connectors/`.
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
 - Changed public website rendering to load the last immutable published snapshot.
@@ -43,4 +44,5 @@
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
+- Webhook security still needs endpoint secrets by default, secret rotation UI, disabling/re-enabling controls, and tenant-scoped endpoint configuration UI.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.

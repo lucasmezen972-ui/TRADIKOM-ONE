@@ -1,9 +1,9 @@
 # Night Shift Backlog
 
-1. Continue workflow engine depth: add more domain-specific async handlers beyond lead, connector sync, Radar sync, and notification dispatch, plus recovery actions beyond dead-letter requeue and active queue cancellation.
-2. Expand Playwright for draft edit while published site remains available.
-3. Add real email delivery for password reset and invitation links.
-4. Adopt `withTenantTransaction` across tenant service paths.
-5. Add endpoint secret rotation UI.
+1. Continue webhook security completion: endpoint secrets by default, secret rotation UI, disabling/re-enabling endpoint configuration, tenant-scoped configuration UI, and deeper tenant-isolation coverage.
+2. Continue workflow engine depth with more domain-specific async handlers and recovery views beyond dead-letter requeue and active queue cancellation.
+3. Expand Playwright for draft edit while published site remains available.
+4. Add real email delivery for password reset and invitation links.
+5. Adopt `withTenantTransaction` across tenant service paths.
 6. Investigate why local Node-based lint/typecheck/build sometimes hang even when CI is green.
 7. Keep PR #1 updated as each coherent checkpoint lands.

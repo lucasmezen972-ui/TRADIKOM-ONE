@@ -40,7 +40,7 @@ Last completed checkpoint:
 - Workflow queue operations visibility is implemented: Automatisations now exposes tenant-scoped queue health by status, pending/processing event details, retry/backoff metadata, safe error labels, and direct coverage for cross-tenant isolation.
 - Workflow notification dispatch is now durable: mock workflow notification actions create queued notification records and enqueue `notification.dispatch_requested`, while the worker marks tenant-scoped notifications as sent, records audit logs, and rejects cross-tenant delivery attempts.
 - Workflow queue recovery now includes tenant-authorized cancellation for active `pending`/`processing` domain events from Automatisations; cancelled events move to `skipped`, disappear from the active queue, and produce audit logs.
-- Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
+- Generic webhook endpoints can now enforce encrypted HMAC secrets, timestamped signatures, replay-window rejection, idempotency keys, duplicate-delivery rejection, request-size limits, endpoint rate limiting, safe public route errors, redacted delivery payload logs, and accepted/rejected delivery outcomes.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -98,9 +98,10 @@ Current validation note:
 - During the workflow queue operations checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-controls.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions initially failed commit `1e24768` on a JSX text lint issue, then passed for fix commit `b3a0f01`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the notification dispatch worker checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. Unstaged `git diff --check` and `git diff --stat` also hung and were stopped, while staged `git diff --cached --check` passed. GitHub Actions passed for commit `7e4c4b6`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the workflow queue cancellation checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-controls.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions passed for commit `5b6d282`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the webhook intake hardening checkpoint, targeted local validation (`pnpm exec vitest run tests/connectors.test.ts tests/connectors-module.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions passed for commit `56c241e`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Continue Phase 2 workflow engine depth: add more domain-specific async handlers beyond lead, connector sync, Radar sync, and notification dispatch, plus recovery actions beyond dead-letter requeue and active queue cancellation.
+1. Continue webhook security completion: endpoint secrets by default, secret rotation UI, disabling/re-enabling endpoint configuration, tenant-scoped configuration UI, and deeper tenant-isolation coverage.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
