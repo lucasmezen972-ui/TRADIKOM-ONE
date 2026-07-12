@@ -58,6 +58,8 @@ Last completed checkpoint:
 - Workflow operator controls now commit run/approval or queue state, timeline steps, resume events, and audit records atomically for cancellation, approval, rejection, manual retry, dead-letter retry, and queue cancellation.
 - Business Twin onboarding now lives in `src/modules/business-twin/` with a Zod schema, typed error, tenant-scoped repository, transactional service, thin legacy adapter, and direct tenant-isolation coverage.
 - Tenant default provisioning now lives in bounded tenant provisioning modules with repository functions for pipelines, stages, workflows, connectors, and secure webhook endpoints; two-tenant coverage verifies resource and encrypted-secret isolation.
+- Audit reads now use a bounded Zod query, typed access errors, tenant-scoped repository functions, and direct cross-tenant coverage; audit writes use the same repository boundary.
+- Dashboard composition now lives in `src/modules/dashboard/` with typed access errors, bounded query options, tenant-scoped metric/stage repositories, and integration coverage comparing populated and empty tenants.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -131,6 +133,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Extract dashboard/audit reads and demo seeding from `src/lib/services.ts`.
+1. Extract demo seeding from `src/lib/services.ts`.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
