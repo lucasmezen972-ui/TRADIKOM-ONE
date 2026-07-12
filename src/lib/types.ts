@@ -194,6 +194,19 @@ export type WorkflowRun = {
     | "rejected";
   summary: string;
   createdAt: string;
+  steps: WorkflowRunStep[];
+};
+
+export type WorkflowRunStep = {
+  id: string;
+  actionName: string;
+  status: string;
+  attempts: number;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+  createdAt: string;
 };
 
 export type WorkflowDeadLetterEvent = {

@@ -14,6 +14,7 @@ import type {
   WorkflowQueueOverview,
   WorkflowQueueStatus,
   WorkflowRun,
+  WorkflowRunStep,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -85,12 +86,61 @@ export default async function AutomationsPage() {
                 </div>
                 <WorkflowRunControls run={run} />
               </div>
+              <WorkflowTimeline steps={run.steps} />
             </div>
           ))}
         </div>
       </section>
     </div>
   );
+}
+
+function WorkflowTimeline({ steps }: { steps: WorkflowRunStep[] }) {
+  if (steps.length === 0) {
+    return null;
+  }
+
+  return (
+    <details className="mt-3 border-t border-slate-200 pt-3">
+      <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+        Timeline ({steps.length})
+      </summary>
+      <ol className="mt-3 grid gap-3 border-l border-slate-200 pl-4">
+        {steps.map((step) => (
+          <li key={step.id}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">{step.actionName}</p>
+                <p className="text-xs text-slate-500">
+                  {workflowStepStatusLabel(step.status)} - {step.attempts}{" "}
+                  tentative(s)
+                </p>
+              </div>
+              <time className="text-xs text-slate-500">
+                {step.completedAt ??
+                  step.startedAt ??
+                  step.scheduledAt ??
+                  step.createdAt}
+              </time>
+            </div>
+            {step.error ? (
+              <p className="mt-1 text-xs text-rose-700">{step.error}</p>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+function workflowStepStatusLabel(status: string) {
+  if (status === "succeeded") return "Reussie";
+  if (status === "failed") return "Echouee";
+  if (status === "waiting") return "En attente";
+  if (status === "approval_required") return "Approbation requise";
+  if (status === "cancelled") return "Annulee";
+  if (status === "skipped") return "Ignoree";
+  return "En cours";
 }
 
 function WorkflowQueuePanel({ queue }: { queue: WorkflowQueueOverview }) {

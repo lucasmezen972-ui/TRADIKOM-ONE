@@ -31,6 +31,20 @@ export type WorkflowRunRow = {
   created_at: string;
 };
 
+export type WorkflowRunStepRow = {
+  id: string;
+  tenant_id: string;
+  workflow_run_id: string;
+  action_name: string;
+  status: string;
+  attempts: number;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+  created_at: string;
+};
+
 export type ApprovalRow = {
   id: string;
   tenant_id: string;
@@ -177,6 +191,37 @@ export async function listWorkflowRunRows(
   );
 
   return runs.rows;
+}
+
+export async function listWorkflowRunStepRows(
+  db: DbClient,
+  tenantId: string,
+  runIds: string[],
+) {
+  if (runIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = runIds.map((_, index) => `$${index + 2}`).join(", ");
+  const result = await db.query<WorkflowRunStepRow>(
+    `select id,
+            tenant_id,
+            workflow_run_id,
+            action_name,
+            status,
+            attempts,
+            scheduled_at,
+            started_at,
+            completed_at,
+            error,
+            created_at
+     from workflow_run_steps
+     where tenant_id = $1 and workflow_run_id in (${placeholders})
+     order by created_at asc, id asc`,
+    [tenantId, ...runIds],
+  );
+
+  return result.rows;
 }
 
 export async function findWorkflowRunById(

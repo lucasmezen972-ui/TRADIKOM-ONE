@@ -4,6 +4,7 @@ import {
   approveWorkflowRun,
   cancelWorkflowQueueEvent,
   cancelWorkflowRun,
+  getWorkflowRuns,
   getWorkflowQueueOverview,
   rejectWorkflowRun,
   requestManualWorkflowRetry,
@@ -24,6 +25,56 @@ afterEach(async () => {
 });
 
 describe("workflow controls", () => {
+  it("exposes a tenant-scoped execution timeline", async () => {
+    const { db } = await setup();
+    await seedRun(db, "tenant_controls", "run_timeline", "succeeded");
+    await seedRun(db, "tenant_other_controls", "run_other_timeline", "failed");
+    await seedWorkflowStep(db, {
+      id: "step_timeline_first",
+      tenantId: "tenant_controls",
+      runId: "run_timeline",
+      actionName: "create_task",
+      status: "succeeded",
+      attempts: 1,
+      createdAt: "2026-07-11T14:30:01.000Z",
+    });
+    await seedWorkflowStep(db, {
+      id: "step_timeline_second",
+      tenantId: "tenant_controls",
+      runId: "run_timeline",
+      actionName: "send_mock_email",
+      status: "failed",
+      attempts: 3,
+      error: "token=should-not-leak",
+      createdAt: "2026-07-11T14:30:02.000Z",
+    });
+    await seedWorkflowStep(db, {
+      id: "step_other_timeline",
+      tenantId: "tenant_other_controls",
+      runId: "run_other_timeline",
+      actionName: "create_activity",
+      status: "failed",
+      attempts: 1,
+      createdAt: "2026-07-11T14:30:03.000Z",
+    });
+
+    const runs = await getWorkflowRuns(db, "user_controls", "tenant_controls");
+    const timeline = runs.find((run) => run.id === "run_timeline")?.steps;
+
+    expect(timeline?.map((step) => step.actionName)).toEqual([
+      "create_task",
+      "send_mock_email",
+    ]);
+    expect(timeline?.[1]).toMatchObject({
+      attempts: 3,
+      error: "token=[redacted]",
+    });
+    expect(runs.some((run) => run.id === "run_other_timeline")).toBe(false);
+    await expect(
+      getWorkflowRuns(db, "user_other_controls", "tenant_controls"),
+    ).rejects.toThrow("Acces refuse");
+  });
+
   it("approves, rejects, cancels, retries, and keeps tenant isolation", async () => {
     const { db } = await setup();
     await seedRun(db, "tenant_controls", "run_approval", "approval_required");
@@ -273,6 +324,51 @@ async function seedDomainEvent(
       input.status === "failed" ? "Failure" : null,
       "2026-07-11T14:30:00.000Z",
       input.nextRunAt,
+    ],
+  );
+}
+
+async function seedWorkflowStep(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    runId: string;
+    actionName: string;
+    status: string;
+    attempts: number;
+    error?: string;
+    createdAt: string;
+  },
+) {
+  await db.query(
+    `insert into workflow_run_steps (
+       id,
+       tenant_id,
+       workflow_run_id,
+       action_name,
+       status,
+       safe_metadata,
+       attempts,
+       scheduled_at,
+       started_at,
+       completed_at,
+       error,
+       created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    [
+      input.id,
+      input.tenantId,
+      input.runId,
+      input.actionName,
+      input.status,
+      "{}",
+      input.attempts,
+      input.createdAt,
+      input.createdAt,
+      input.createdAt,
+      input.error ?? null,
+      input.createdAt,
     ],
   );
 }

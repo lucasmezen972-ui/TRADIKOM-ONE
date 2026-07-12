@@ -27,6 +27,7 @@ import {
   listActiveDomainEventQueueRows,
   listDomainEventQueueSummaryRows,
   listFailedDomainEventRows,
+  listWorkflowRunStepRows,
   listWorkflowRunRows,
   requeueFailedDomainEvent,
   updateApprovalStatus,
@@ -50,8 +51,23 @@ export async function getWorkflowRuns(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const runs = await listWorkflowRunRows(db, tenantId, 20);
+  const steps = await listWorkflowRunStepRows(
+    db,
+    tenantId,
+    runs.map((run) => run.id),
+  );
+  const stepsByRun = new Map<string, ReturnType<typeof mapWorkflowRunStep>[]>();
 
-  return runs.map(mapWorkflowRun) satisfies WorkflowRun[];
+  for (const step of steps) {
+    const timeline = stepsByRun.get(step.workflow_run_id) ?? [];
+    timeline.push(mapWorkflowRunStep(step));
+    stepsByRun.set(step.workflow_run_id, timeline);
+  }
+
+  return runs.map((run) => ({
+    ...mapWorkflowRun(run),
+    steps: stepsByRun.get(run.id) ?? [],
+  })) satisfies WorkflowRun[];
 }
 
 export async function getWorkflowDeadLetters(
@@ -440,6 +456,31 @@ function mapWorkflowRun(row: {
     triggerName: row.trigger_name,
     status: row.status as WorkflowRun["status"],
     summary: row.summary,
+    createdAt: row.created_at,
+    steps: [],
+  };
+}
+
+function mapWorkflowRunStep(row: {
+  id: string;
+  action_name: string;
+  status: string;
+  attempts: number;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+  created_at: string;
+}) {
+  return {
+    id: row.id,
+    actionName: row.action_name,
+    status: row.status,
+    attempts: Number(row.attempts),
+    scheduledAt: row.scheduled_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    error: row.error ? safeDeadLetterError(row.error) : null,
     createdAt: row.created_at,
   };
 }
