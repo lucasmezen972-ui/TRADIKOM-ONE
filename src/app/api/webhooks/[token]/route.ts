@@ -81,6 +81,10 @@ function webhookErrorStatus(error: unknown) {
     if (error.code === "webhook_oversized") {
       return 413;
     }
+
+    if (error.code === "webhook_disabled") {
+      return 403;
+    }
   }
 
   return 400;

@@ -204,6 +204,69 @@ describe("connectors", () => {
     ).rejects.toThrow("Signature webhook manquante.");
   });
 
+  it("rejects old webhook secrets after rotation", async () => {
+    const { db, services } = await setup();
+    const demo = await services.seedDemo();
+    const endpoint = await db.query<{ id: string; token: string }>(
+      "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
+      [demo.tenant.id],
+    );
+    const initial = await services.generateWebhookEndpointSecret(
+      demo.user.id,
+      demo.tenant.id,
+      endpoint.rows[0]!.id,
+    );
+    const firstPayload = {
+      name: "Avant Rotation",
+      email: "before-rotation-webhook@example.com",
+      message: "Avant rotation",
+    };
+    const firstBody = JSON.stringify(firstPayload);
+    const firstTimestamp = Math.floor(Date.now() / 1000).toString();
+
+    await services.receiveWebhook(endpoint.rows[0]!.token, firstPayload, {
+      body: firstBody,
+      timestamp: firstTimestamp,
+      signature: signWebhookBody(initial.secret, firstTimestamp, firstBody),
+      idempotencyKey: "rotation-before",
+    });
+
+    const rotated = await services.generateWebhookEndpointSecret(
+      demo.user.id,
+      demo.tenant.id,
+      endpoint.rows[0]!.id,
+    );
+    const secondPayload = {
+      name: "Apres Rotation",
+      email: "after-rotation-webhook@example.com",
+      message: "Apres rotation",
+    };
+    const secondBody = JSON.stringify(secondPayload);
+    const secondTimestamp = Math.floor(Date.now() / 1000).toString();
+
+    await expect(
+      services.receiveWebhook(endpoint.rows[0]!.token, secondPayload, {
+        body: secondBody,
+        timestamp: secondTimestamp,
+        signature: signWebhookBody(initial.secret, secondTimestamp, secondBody),
+        idempotencyKey: "rotation-old-secret",
+      }),
+    ).rejects.toThrow("Signature webhook invalide.");
+    await services.receiveWebhook(endpoint.rows[0]!.token, secondPayload, {
+      body: secondBody,
+      timestamp: secondTimestamp,
+      signature: signWebhookBody(rotated.secret, secondTimestamp, secondBody),
+      idempotencyKey: "rotation-new-secret",
+    });
+
+    const crm = await services.getCrm(demo.user.id, demo.tenant.id);
+    expect(
+      crm.contacts.some(
+        (contact) => contact.email === "after-rotation-webhook@example.com",
+      ),
+    ).toBe(true);
+  });
+
   it("rejects oversized webhook payloads and redacts sensitive delivery data", async () => {
     const { db, services } = await setup();
     const demo = await services.seedDemo();

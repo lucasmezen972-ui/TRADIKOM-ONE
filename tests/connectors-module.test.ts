@@ -141,7 +141,20 @@ describe("connectors module", () => {
           idempotencyKey: "disabled-webhook",
         },
       ),
-    ).rejects.toThrow("Webhook invalide.");
+    ).rejects.toThrow("Webhook desactive.");
+    const disabledDelivery = await db.query<{
+      status: string;
+      idempotency_key: string | null;
+      error: string | null;
+    }>(
+      "select status, idempotency_key, error from webhook_deliveries where tenant_id = $1 order by created_at desc limit 1",
+      [demo.tenant.id],
+    );
+    expect(disabledDelivery.rows[0]).toMatchObject({
+      status: "rejected",
+      idempotency_key: "disabled-webhook",
+      error: "Webhook desactive.",
+    });
 
     await setWebhookEndpointStatus(db, demo.user.id, demo.tenant.id, {
       endpointId: config.id,

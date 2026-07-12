@@ -340,17 +340,31 @@ export async function receiveWebhook(
   const parsedToken = webhookTokenSchema.parse({ token });
   const parsedPayload = webhookPayloadSchema.parse(payload);
   const row = await findWebhookEndpointByToken(db, parsedToken.token);
-  if (!row || row.status !== "active") {
+  if (!row) {
     throw new ConnectorError("webhook_invalid", "Webhook invalide.");
   }
+  const idempotencyKey = parseWebhookIdempotencyKey(
+    signatureInput?.idempotencyKey,
+  );
+
+  if (row.status !== "active") {
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      idempotencyKey,
+      parsedPayload,
+      "rejected",
+      "Webhook desactive.",
+    );
+    throw new ConnectorError("webhook_disabled", "Webhook desactive.");
+  }
+
   const securedEndpoint = await ensureWebhookEndpointSecret(db, {
     id: row.id,
     tenantId: row.tenant_id,
     secretHash: row.secret_hash,
   });
-  const idempotencyKey = parseWebhookIdempotencyKey(
-    signatureInput?.idempotencyKey,
-  );
 
   if (!idempotencyKey) {
     await recordWebhookDelivery(
