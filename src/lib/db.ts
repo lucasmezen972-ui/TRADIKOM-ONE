@@ -121,6 +121,7 @@ function getMigrations(enableRls: boolean) {
       : []),
     { id: "010_workflow_step_attempts", sql: workflowStepAttemptsMigrationSql },
     { id: "011_domain_event_attempt_metadata", sql: domainEventAttemptMetadataMigrationSql },
+    { id: "012_webhook_delivery_idempotency", sql: webhookDeliveryIdempotencyMigrationSql },
   ];
 }
 
@@ -554,6 +555,7 @@ create table webhook_deliveries (
   tenant_id text not null references tenants(id) on delete cascade,
   webhook_endpoint_id text not null references webhook_endpoints(id),
   status text not null,
+  idempotency_key text,
   payload text not null,
   error text,
   created_at text not null
@@ -769,6 +771,15 @@ alter table domain_events add column if not exists last_retry_delay_ms integer n
 alter table domain_events add column if not exists failure_classification text;
 alter table domain_events add column if not exists max_attempts integer;
 create index if not exists idx_domain_events_failure on domain_events(tenant_id, status, failure_classification, updated_at desc);
+`;
+
+const webhookDeliveryIdempotencyMigrationSql = `
+alter table webhook_deliveries add column if not exists idempotency_key text;
+create index if not exists idx_webhook_deliveries_endpoint_idempotency
+  on webhook_deliveries(webhook_endpoint_id, idempotency_key);
+create unique index if not exists idx_webhook_deliveries_accepted_idempotency
+  on webhook_deliveries(webhook_endpoint_id, idempotency_key)
+  where idempotency_key is not null and status = 'accepted';
 `;
 
 const rlsMigrationSql = `

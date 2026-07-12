@@ -210,12 +210,33 @@ export async function findWebhookEndpointByToken(db: DbClient, token: string) {
   return endpoint.rows[0] ?? null;
 }
 
+export async function findAcceptedWebhookDeliveryByIdempotencyKey(
+  db: DbClient,
+  input: {
+    endpointId: string;
+    idempotencyKey: string;
+  },
+) {
+  const delivery = await db.query<{ id: string }>(
+    `select id
+     from webhook_deliveries
+     where webhook_endpoint_id = $1
+       and idempotency_key = $2
+       and status = $3
+     limit 1`,
+    [input.endpointId, input.idempotencyKey, "accepted"],
+  );
+
+  return delivery.rows[0] ?? null;
+}
+
 export async function insertWebhookDelivery(
   db: DbClient,
   input: {
     id: string;
     tenantId: string;
     endpointId: string;
+    idempotencyKey: string | null;
     payload: Record<string, unknown>;
     status: string;
     error: string | null;
@@ -223,15 +244,65 @@ export async function insertWebhookDelivery(
   },
 ) {
   await db.query(
-    "insert into webhook_deliveries (id, tenant_id, webhook_endpoint_id, status, payload, error, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
+    "insert into webhook_deliveries (id, tenant_id, webhook_endpoint_id, status, idempotency_key, payload, error, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8)",
     [
       input.id,
       input.tenantId,
       input.endpointId,
       input.status,
+      input.idempotencyKey,
       toJson(input.payload),
       input.error,
       input.createdAt,
     ],
   );
+}
+
+export async function consumeRateLimit(
+  db: DbClient,
+  input: {
+    id: string;
+    key: string;
+    limit: number;
+    windowSeconds: number;
+    now: string;
+  },
+) {
+  const current = await db.query<{ count: number | string; reset_at: string }>(
+    "select count, reset_at from rate_limits where key = $1 limit 1",
+    [input.key],
+  );
+  const row = current.rows[0];
+  const nowMs = Date.parse(input.now);
+
+  if (row && Date.parse(row.reset_at) > nowMs) {
+    const count = Number(row.count);
+    if (count >= input.limit) {
+      return { allowed: false, resetAt: row.reset_at };
+    }
+
+    const updated = await db.query<{ count: number | string; reset_at: string }>(
+      "update rate_limits set count = count + 1, updated_at = $1 where key = $2 returning count, reset_at",
+      [input.now, input.key],
+    );
+
+    return {
+      allowed: true,
+      count: Number(updated.rows[0]?.count ?? count + 1),
+      resetAt: updated.rows[0]?.reset_at ?? row.reset_at,
+    };
+  }
+
+  const resetAt = new Date(nowMs + input.windowSeconds * 1000).toISOString();
+  await db.query(
+    `insert into rate_limits (id, key, count, reset_at, created_at, updated_at)
+     values ($1, $2, $3, $4, $5, $6)
+     on conflict (key) do update
+     set count = excluded.count,
+         reset_at = excluded.reset_at,
+         updated_at = excluded.updated_at`,
+    [input.id, input.key, 1, resetAt, input.now, input.now],
+  );
+
+  return { allowed: true, count: 1, resetAt };
 }

@@ -44,11 +44,15 @@ describe("connectors module", () => {
       "select token from webhook_endpoints where tenant_id = $1 limit 1",
       [demo.tenant.id],
     );
-    await receiveWebhook(db, endpoint.rows[0]!.token, {
+    const payload = {
       name: "Module Webhook",
       email: "module-webhook@example.com",
       phone: "+596 696 10 11 12",
       message: "Demande module",
+    };
+    await receiveWebhook(db, endpoint.rows[0]!.token, payload, {
+      body: JSON.stringify(payload),
+      idempotencyKey: "module-webhook",
     });
 
     const crm = await getCrm(db, demo.user.id, demo.tenant.id);

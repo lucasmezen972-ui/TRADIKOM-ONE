@@ -16,6 +16,7 @@ export type WebhookSignatureInput = {
   body: string;
   timestamp?: string | null;
   signature?: string | null;
+  idempotencyKey?: string | null;
 };
 
 export type WebhookVerificationResult =
@@ -23,6 +24,7 @@ export type WebhookVerificationResult =
   | { ok: false; error: string };
 
 const genericWebhookConnectorKey = "generic_webhook";
+const webhookReplayWindowSeconds = 300;
 
 export async function configureWebhookEndpointSecret(
   db: DbClient,
@@ -75,6 +77,11 @@ export async function verifyWebhookEndpointSignature(
     return { ok: false, error: "Signature webhook manquante." };
   }
 
+  const timestampStatus = validateWebhookTimestamp(signatureInput.timestamp);
+  if (!timestampStatus.ok) {
+    return timestampStatus;
+  }
+
   const secret = await getLatestWebhookSecret(db, endpoint);
   if (!secret) {
     return { ok: false, error: "Secret webhook non configure." };
@@ -89,6 +96,7 @@ export async function verifyWebhookEndpointSignature(
     secret,
     timestamp: signatureInput.timestamp,
     signature: signatureInput.signature,
+    toleranceSeconds: webhookReplayWindowSeconds,
   });
 
   if (!valid) {
@@ -96,6 +104,19 @@ export async function verifyWebhookEndpointSignature(
   }
 
   return { ok: true, mode: "hmac" };
+}
+
+function validateWebhookTimestamp(timestamp: string) {
+  const timestampMs = Number(timestamp) * 1000;
+  if (!Number.isFinite(timestampMs)) {
+    return { ok: false as const, error: "Timestamp webhook invalide." };
+  }
+
+  if (Math.abs(Date.now() - timestampMs) > webhookReplayWindowSeconds * 1000) {
+    return { ok: false as const, error: "Timestamp webhook expire." };
+  }
+
+  return { ok: true as const };
 }
 
 async function getLatestWebhookSecret(

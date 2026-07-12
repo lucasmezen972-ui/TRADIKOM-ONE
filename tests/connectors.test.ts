@@ -35,11 +35,15 @@ describe("connectors", () => {
       "select token from webhook_endpoints where tenant_id = $1 limit 1",
       [demo.tenant.id],
     );
-    await services.receiveWebhook(endpoint.rows[0].token, {
+    const payload = {
       name: "Client Webhook",
       email: "webhook@example.com",
       phone: "+596 696 77 88 99",
       message: "Demande API",
+    };
+    await services.receiveWebhook(endpoint.rows[0].token, payload, {
+      body: JSON.stringify(payload),
+      idempotencyKey: "webhook-basic",
     });
 
     const crm = await services.getCrm(demo.user.id, demo.tenant.id);
@@ -91,24 +95,53 @@ describe("connectors", () => {
 
     await expect(
       services.receiveWebhook(endpoint.rows[0].token, payload),
+    ).rejects.toThrow("Cle idempotence webhook manquante.");
+    await expect(
+      services.receiveWebhook(endpoint.rows[0].token, payload, {
+        body,
+        timestamp,
+        idempotencyKey: "signed-missing",
+      }),
     ).rejects.toThrow("Signature webhook manquante.");
     await expect(
       services.receiveWebhook(endpoint.rows[0].token, payload, {
         body,
         timestamp,
         signature: "sha256=bad",
+        idempotencyKey: "signed-invalid",
       }),
     ).rejects.toThrow("Signature webhook invalide.");
+    const expiredTimestamp = (Math.floor(Date.now() / 1000) - 600).toString();
+    await expect(
+      services.receiveWebhook(endpoint.rows[0].token, payload, {
+        body,
+        timestamp: expiredTimestamp,
+        signature: signWebhookBody(secret, expiredTimestamp, body),
+        idempotencyKey: "signed-expired",
+      }),
+    ).rejects.toThrow("Timestamp webhook expire.");
 
     await services.receiveWebhook(endpoint.rows[0].token, payload, {
       body,
       timestamp,
       signature: signWebhookBody(secret, timestamp, body),
+      idempotencyKey: "signed-valid",
     });
+    await expect(
+      services.receiveWebhook(endpoint.rows[0].token, payload, {
+        body,
+        timestamp,
+        signature: signWebhookBody(secret, timestamp, body),
+        idempotencyKey: "signed-valid",
+      }),
+    ).rejects.toThrow("Livraison webhook deja recue.");
 
     const crm = await services.getCrm(demo.user.id, demo.tenant.id);
-    const deliveries = await db.query<{ status: string }>(
-      "select status from webhook_deliveries where tenant_id = $1 order by created_at asc",
+    const deliveries = await db.query<{
+      status: string;
+      idempotency_key: string | null;
+    }>(
+      "select status, idempotency_key from webhook_deliveries where tenant_id = $1 order by created_at asc",
       [demo.tenant.id],
     );
 
@@ -117,10 +150,50 @@ describe("connectors", () => {
     ).toBe(true);
     expect(
       deliveries.rows.filter((delivery) => delivery.status === "rejected"),
-    ).toHaveLength(2);
+    ).toHaveLength(5);
     expect(
       deliveries.rows.filter((delivery) => delivery.status === "accepted"),
     ).toHaveLength(1);
+    expect(
+      deliveries.rows.some(
+        (delivery) => delivery.idempotency_key === "signed-valid",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects oversized webhook payloads and redacts sensitive delivery data", async () => {
+    const { db, services } = await setup();
+    const demo = await services.seedDemo();
+    const endpoint = await db.query<{ token: string }>(
+      "select token from webhook_endpoints where tenant_id = $1 limit 1",
+      [demo.tenant.id],
+    );
+    const payload = {
+      name: "Payload Trop Grand",
+      email: "oversized-webhook@example.com",
+      message: "x".repeat(70 * 1024),
+      token: "super-secret-token",
+    };
+
+    await expect(
+      services.receiveWebhook(endpoint.rows[0].token, payload, {
+        body: JSON.stringify(payload),
+        idempotencyKey: "oversized-webhook",
+      }),
+    ).rejects.toThrow("Payload webhook trop volumineux.");
+
+    const deliveries = await db.query<{ payload: string; status: string }>(
+      "select payload, status from webhook_deliveries where tenant_id = $1 order by created_at desc limit 1",
+      [demo.tenant.id],
+    );
+    const recordedPayload = JSON.parse(deliveries.rows[0]!.payload) as {
+      token: string;
+      message: string;
+    };
+
+    expect(deliveries.rows[0]!.status).toBe("rejected");
+    expect(recordedPayload.token).toBe("[redacted]");
+    expect(recordedPayload.message.endsWith("[truncated]")).toBe(true);
   });
 });
 

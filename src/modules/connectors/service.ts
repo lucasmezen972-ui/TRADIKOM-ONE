@@ -5,6 +5,8 @@ import { connectorCatalog } from "@/modules/connectors/catalog";
 import { parseContactsCsv } from "@/modules/connectors/csv";
 import { ConnectorError } from "@/modules/connectors/errors";
 import {
+  consumeRateLimit,
+  findAcceptedWebhookDeliveryByIdempotencyKey,
   findImportedContactByEmail,
   findWebhookEndpointByToken,
   insertConnectorActivity,
@@ -19,6 +21,7 @@ import {
 } from "@/modules/connectors/repository";
 import {
   csvImportSchema,
+  webhookIdempotencyKeySchema,
   webhookPayloadSchema,
   webhookTokenSchema,
 } from "@/modules/connectors/schemas";
@@ -30,6 +33,10 @@ import { createLeadFromPayload } from "@/modules/crm";
 import { assertTenantAccess } from "@/modules/tenants";
 
 export type { WebhookSignatureInput } from "@/modules/connectors/webhooks";
+
+const webhookMaxPayloadBytes = 64 * 1024;
+const webhookRateLimitMax = 60;
+const webhookRateLimitWindowSeconds = 60;
 
 export async function getConnectors(
   db: DbClient,
@@ -216,6 +223,63 @@ export async function receiveWebhook(
   if (!row || row.status !== "active") {
     throw new ConnectorError("webhook_invalid", "Webhook invalide.");
   }
+  const idempotencyKey = parseWebhookIdempotencyKey(
+    signatureInput?.idempotencyKey,
+  );
+
+  if (!idempotencyKey) {
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      null,
+      parsedPayload,
+      "rejected",
+      "Cle idempotence webhook manquante.",
+    );
+    throw new ConnectorError(
+      "webhook_idempotency_missing",
+      "Cle idempotence webhook manquante.",
+    );
+  }
+
+  if (webhookPayloadSize(parsedPayload, signatureInput?.body) > webhookMaxPayloadBytes) {
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      idempotencyKey,
+      parsedPayload,
+      "rejected",
+      "Payload webhook trop volumineux.",
+    );
+    throw new ConnectorError(
+      "webhook_oversized",
+      "Payload webhook trop volumineux.",
+    );
+  }
+
+  const now = nowIso();
+  const rateLimit = await consumeRateLimit(db, {
+    id: id("rate"),
+    key: `webhook:${row.id}`,
+    limit: webhookRateLimitMax,
+    windowSeconds: webhookRateLimitWindowSeconds,
+    now,
+  });
+
+  if (!rateLimit.allowed) {
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      idempotencyKey,
+      parsedPayload,
+      "rejected",
+      "Trop de requetes webhook.",
+    );
+    throw new ConnectorError("webhook_rate_limited", "Trop de requetes webhook.");
+  }
 
   const signature = await verifyWebhookEndpointSignature(
     db,
@@ -228,8 +292,34 @@ export async function receiveWebhook(
   );
 
   if (!signature.ok) {
-    await recordWebhookDelivery(db, row.tenant_id, row.id, parsedPayload, "rejected", signature.error);
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      idempotencyKey,
+      parsedPayload,
+      "rejected",
+      signature.error,
+    );
     throw new ConnectorError("webhook_signature_invalid", signature.error);
+  }
+
+  const duplicate = await findAcceptedWebhookDeliveryByIdempotencyKey(db, {
+    endpointId: row.id,
+    idempotencyKey,
+  });
+
+  if (duplicate) {
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      idempotencyKey,
+      parsedPayload,
+      "rejected",
+      "Livraison webhook deja recue.",
+    );
+    throw new ConnectorError("webhook_duplicate", "Livraison webhook deja recue.");
   }
 
   const mapped = {
@@ -240,7 +330,15 @@ export async function receiveWebhook(
   };
 
   if (!mapped.email.includes("@")) {
-    await recordWebhookDelivery(db, row.tenant_id, row.id, parsedPayload, "rejected", "Email invalide");
+    await recordWebhookDelivery(
+      db,
+      row.tenant_id,
+      row.id,
+      idempotencyKey,
+      parsedPayload,
+      "rejected",
+      "Email invalide",
+    );
     throw new ConnectorError("webhook_payload_invalid", "Payload invalide.");
   }
 
@@ -249,7 +347,15 @@ export async function receiveWebhook(
     source: "webhook",
     pagePath: "webhook/generic",
   });
-  await recordWebhookDelivery(db, row.tenant_id, row.id, parsedPayload, "accepted", null);
+  await recordWebhookDelivery(
+    db,
+    row.tenant_id,
+    row.id,
+    idempotencyKey,
+    parsedPayload,
+    "accepted",
+    null,
+  );
   await recordAuditLog(db, {
     tenantId: row.tenant_id,
     actorId: "system",
@@ -266,6 +372,7 @@ async function recordWebhookDelivery(
   db: DbClient,
   tenantId: string,
   endpointId: string,
+  idempotencyKey: string | null,
   payload: Record<string, unknown>,
   status: string,
   error: string | null,
@@ -274,9 +381,67 @@ async function recordWebhookDelivery(
     id: id("delivery"),
     tenantId,
     endpointId,
-    payload,
+    idempotencyKey,
+    payload: sanitizeWebhookPayload(payload),
     status,
     error,
     createdAt: nowIso(),
   });
+}
+
+function parseWebhookIdempotencyKey(value: string | null | undefined) {
+  const parsed = webhookIdempotencyKeySchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+function webhookPayloadSize(
+  payload: Record<string, unknown>,
+  rawBody: string | undefined,
+) {
+  return Buffer.byteLength(rawBody ?? JSON.stringify(payload), "utf8");
+}
+
+function sanitizeWebhookPayload(payload: Record<string, unknown>) {
+  const entries = Object.entries(payload).slice(0, 50);
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of entries) {
+    sanitized[key] = sensitiveWebhookKey(key)
+      ? "[redacted]"
+      : sanitizeWebhookValue(value);
+  }
+
+  if (Object.keys(payload).length > entries.length) {
+    sanitized._truncatedKeys = Object.keys(payload).length - entries.length;
+  }
+
+  return sanitized;
+}
+
+function sanitizeWebhookValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value.length > 500 ? `${value.slice(0, 500)}...[truncated]` : value;
+  }
+
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    value === null
+  ) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return `[array:${value.length}]`;
+  }
+
+  if (typeof value === "object") {
+    return "[object]";
+  }
+
+  return String(value);
+}
+
+function sensitiveWebhookKey(key: string) {
+  return /authorization|password|secret|token|api[_-]?key/i.test(key);
 }
