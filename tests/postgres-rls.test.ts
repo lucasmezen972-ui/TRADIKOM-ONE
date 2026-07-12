@@ -5,6 +5,7 @@ import { pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import { id, nowIso, toJson } from "../src/lib/security";
+import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeIfPostgres = databaseUrl ? describe : describe.skip;
@@ -50,8 +51,18 @@ describeIfPostgres("PostgreSQL RLS", () => {
       name: `Garage RLS B ${randomUUID()}`,
       category: "Garage automobile",
     });
-    await insertContact(ownerDb, tenantA.id, ownerA.id, "alpha@example.com");
-    await insertContact(ownerDb, tenantB.id, ownerB.id, "bravo@example.com");
+    const contactAId = await insertContact(
+      ownerDb,
+      tenantA.id,
+      ownerA.id,
+      "alpha@example.com",
+    );
+    const contactBId = await insertContact(
+      ownerDb,
+      tenantB.id,
+      ownerB.id,
+      "bravo@example.com",
+    );
 
     const policyGaps = await ownerPool.query<{ table_name: string }>(`
       select columns.table_name
@@ -74,6 +85,27 @@ describeIfPostgres("PostgreSQL RLS", () => {
       order by columns.table_name
     `);
     expect(policyGaps.rows).toEqual([]);
+
+    const tenantIndexGaps = await ownerPool.query<{ table_name: string }>(`
+      select columns.table_name
+      from information_schema.columns as columns
+      where columns.table_schema = 'public'
+        and columns.column_name = 'tenant_id'
+        and not exists (
+          select 1
+          from pg_index as indexes
+          join pg_class as tables on tables.oid = indexes.indrelid
+          join pg_namespace as namespaces on namespaces.oid = tables.relnamespace
+          join pg_attribute as attributes
+            on attributes.attrelid = indexes.indrelid
+           and attributes.attnum = any(indexes.indkey)
+          where namespaces.nspname = 'public'
+            and tables.relname = columns.table_name
+            and attributes.attname = 'tenant_id'
+        )
+      order by columns.table_name
+    `);
+    expect(tenantIndexGaps.rows).toEqual([]);
 
     const tenantPolicy = await ownerPool.query<{ relrowsecurity: boolean }>(`
       select tables.relrowsecurity
@@ -177,6 +209,43 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ),
     ).rejects.toThrow(/row-level security|violates/);
 
+    const sameTenantLeadId = id("lead");
+    await withTenantContext(restrictedPool, tenantA.id, async (client) =>
+      client.query(
+        `insert into leads (id, tenant_id, contact_id, source, status, opportunity_value, page_path, created_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          sameTenantLeadId,
+          tenantA.id,
+          contactAId,
+          "rls_test",
+          "Nouveau",
+          0,
+          "/rls",
+          nowIso(),
+        ],
+      ),
+    );
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into leads (id, tenant_id, contact_id, source, status, opportunity_value, page_path, created_at)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            id("lead"),
+            tenantA.id,
+            contactBId,
+            "rls_test",
+            "Nouveau",
+            0,
+            "/rls-cross-tenant",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
+
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
         client.query(
@@ -197,6 +266,45 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ),
     ).rejects.toThrow(/row-level security|violates/);
   });
+
+  it("consumes rate limits atomically under PostgreSQL concurrency", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+
+    const ownerPool = new Pool({ connectionString: databaseUrl, max: 25 });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const limiter = createDatabaseRateLimiter(ownerDb);
+    const nonce = randomUUID();
+    const subject = `postgres-concurrency-${nonce}@example.com`;
+    const scope = `tenant-${nonce}`;
+    const now = new Date("2026-07-12T22:45:00.000Z");
+    const decisions = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        limiter.consume({
+          operationKey: "login",
+          subjectKey: subject,
+          scopeKey: scope,
+          limit: 5,
+          windowSeconds: 60,
+          now,
+        }),
+      ),
+    );
+
+    expect(decisions.filter((decision) => decision.allowed)).toHaveLength(5);
+    expect(decisions.filter((decision) => !decision.allowed)).toHaveLength(15);
+    expect(Math.max(...decisions.map((decision) => decision.count))).toBe(20);
+
+    const stored = await ownerDb.query<Record<string, unknown>>(
+      "select * from rate_limits where operation_key = $1 order by created_at desc limit 1",
+      ["login"],
+    );
+    expect(JSON.stringify(stored.rows[0])).not.toContain(subject);
+    expect(JSON.stringify(stored.rows[0])).not.toContain(scope);
+  });
 });
 
 async function insertContact(
@@ -206,11 +314,12 @@ async function insertContact(
   email: string,
 ) {
   const now = nowIso();
+  const contactId = id("contact");
   await db.query(
     `insert into contacts (id, tenant_id, name, email, phone, status, source, tags, assigned_user_id, created_at, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
-      id("contact"),
+      contactId,
       tenantId,
       email,
       email,
@@ -223,6 +332,7 @@ async function insertContact(
       now,
     ],
   );
+  return contactId;
 }
 
 async function createRestrictedRole(ownerPool: Pool) {
