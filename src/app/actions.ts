@@ -41,8 +41,11 @@ export async function requestPasswordResetAction(formData: FormData) {
   const services = await getServices();
   const email = text(formData, "email").toLowerCase();
   const result = await services.requestPasswordReset({ email });
-  const preview =
-    "developmentLink" in result ? `&lien=${encodeURIComponent(result.developmentLink)}` : "";
+  const developmentLink =
+    "developmentLink" in result ? result.developmentLink : undefined;
+  const preview = developmentLink
+    ? `&lien=${encodeURIComponent(developmentLink)}`
+    : "";
   redirect(
     `/mot-de-passe-oublie/confirme?email=${encodeURIComponent(email)}${preview}`,
   );
@@ -99,10 +102,9 @@ export async function createInvitationAction(formData: FormData) {
     role: text(formData, "role") as Exclude<Role, "owner">,
   });
   revalidatePath("/parametres");
-  const preview =
-    "developmentLink" in invitation
-      ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
-      : "";
+  const preview = invitation.developmentLink
+    ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
+    : "";
   redirect(
     `/parametres?invitationEnvoyee=1&inviteEmail=${encodeURIComponent(
       invitation.email,
@@ -120,10 +122,9 @@ export async function resendInvitationAction(formData: FormData) {
   );
 
   revalidatePath("/parametres");
-  const preview =
-    "developmentLink" in invitation
-      ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
-      : "";
+  const preview = invitation.developmentLink
+    ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
+    : "";
   redirect(
     `/parametres?invitationEnvoyee=1&inviteEmail=${encodeURIComponent(
       invitation.email,

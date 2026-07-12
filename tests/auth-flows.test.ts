@@ -141,7 +141,7 @@ describe("auth flows", () => {
       name: "Garage Role",
       category: "Garage automobile",
     });
-    const invitation = await services.createInvitation(owner.id, tenant.id, {
+    await services.createInvitation(owner.id, tenant.id, {
       email: "role-member@example.com",
       role: "collaborator",
     });
