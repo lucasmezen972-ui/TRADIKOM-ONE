@@ -37,6 +37,7 @@ Last completed checkpoint:
 - Workflow dead-letter manual recovery is implemented: authorized workflow operators can requeue failed terminal `domain_events` from Automatisations, reset attempts for a fresh worker retry window, clear safe errors, and audit the action.
 - Domain event retry/backoff metadata is persisted: worker claims, retries, and terminal failures now record last attempted time, computed retry delay, failure classification, and max attempts.
 - The worker has domain-specific async handlers beyond workflow resume: `connector.sync_requested` dispatches the mock connector sync through the durable outbox path, `lead.created` drives lead follow-up workflow runs from the worker after public form ingestion enqueues the durable event, and `opportunity_radar.sync_requested` refreshes persisted Radar alerts with an audit trail.
+- Workflow queue operations visibility is implemented: Automatisations now exposes tenant-scoped queue health by status, pending/processing event details, retry/backoff metadata, safe error labels, and direct coverage for cross-tenant isolation.
 - Generic webhook endpoints can now enforce encrypted HMAC secrets with timestamped signatures and rejection delivery logs.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
@@ -92,9 +93,10 @@ Current validation note:
 - During the connector sync domain-event handler checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped after 30 seconds. GitHub Actions passed for commit `020051e`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the lead workflow worker checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts tests/public-leads-module.test.ts tests/vertical-slice.test.ts tests/crm-module.test.ts`) hung without output and was stopped after 30 seconds. Unstaged `git diff --check` also hung and was stopped, while staged `git diff --cached --check` passed. GitHub Actions passed for commit `3bf22e4`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - During the Opportunity Radar worker checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts tests/opportunity-radar.test.ts`) hung without output and was stopped after 30 seconds. Staged `git diff --cached --check` passed. GitHub Actions passed for commit `865744b`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the workflow queue operations checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-controls.test.ts`) hung without output and was stopped after 30 seconds. `git diff --check` and `git diff --cached --check` passed. GitHub Actions initially failed commit `1e24768` on a JSX text lint issue, then passed for fix commit `b3a0f01`, including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Continue Phase 2 workflow engine depth: additional domain-specific async handlers beyond lead, connector sync, and Radar sync, plus deeper operational recovery views beyond the current dead-letter requeue control.
+1. Continue Phase 2 workflow engine depth: add more domain-specific async handlers beyond lead, connector sync, and Radar sync, plus operational recovery actions beyond the current queue overview and dead-letter requeue control.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.
