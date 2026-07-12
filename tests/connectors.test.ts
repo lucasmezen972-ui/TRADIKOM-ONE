@@ -219,6 +219,7 @@ describe("connectors", () => {
     const firstPayload = {
       name: "Avant Rotation",
       email: "before-rotation-webhook@example.com",
+      phone: "+596 696 40 41 42",
       message: "Avant rotation",
     };
     const firstBody = JSON.stringify(firstPayload);
@@ -239,6 +240,7 @@ describe("connectors", () => {
     const secondPayload = {
       name: "Apres Rotation",
       email: "after-rotation-webhook@example.com",
+      phone: "+596 696 43 44 45",
       message: "Apres rotation",
     };
     const secondBody = JSON.stringify(secondPayload);
