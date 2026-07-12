@@ -2,10 +2,7 @@ import { z } from "zod";
 import { getDb, migrate, type DbClient } from "@/lib/db";
 import { defaultGarageOnboarding } from "@/lib/generation";
 import {
-  connectorCatalog,
-  configureWebhookEndpointSecret,
   generateWebhookEndpointSecretRotation,
-  generateWebhookEndpointSecretValue,
   getConnectors,
   getWebhookEndpointConfig,
   importCsvContacts,
@@ -78,6 +75,7 @@ import {
   updateMemberRoleSchema,
   acceptInvitationSchema,
 } from "@/modules/tenants";
+import { createDefaultTenantResources } from "@/modules/tenants/provisioning";
 import {
   getPublishedSite,
   getWebsite,
@@ -98,17 +96,11 @@ import {
   getWorkflowDeadLetters,
   getWorkflowQueueOverview,
   getWorkflowRuns,
-  leadFollowUpWorkflow,
   rejectWorkflowRun,
   retryWorkflowDeadLetter,
   requestManualWorkflowRetry,
 } from "@/modules/workflows";
-import {
-  id,
-  nowIso,
-  safeJson,
-  toJson,
-} from "@/lib/security";
+import { safeJson } from "@/lib/security";
 import type { AuditLog, DashboardData, User } from "@/lib/types";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
@@ -123,15 +115,6 @@ export type ServiceDependencies = {
   appUrl?: string;
   revealAuthLinks?: boolean;
 };
-
-const pipelineStages = [
-  "Nouveau contact",
-  "A qualifier",
-  "Rendez-vous prevu",
-  "Devis envoye",
-  "Gagne",
-  "Perdu",
-];
 
 export async function getServices() {
   const db = await getDb();
@@ -163,7 +146,7 @@ export function createServices(
     revokeSession: (sessionToken?: string) => revokeSession(db, sessionToken),
     createTenant: (userId: string, input: z.input<typeof orgSchema>) =>
       createTenantDomain(db, userId, input, {
-        createDefaults: createTenantDefaults,
+        createDefaults: createDefaultTenantResources,
       }),
     switchTenant: (userId: string, tenantId: string) =>
       assertTenantAccess(db, userId, tenantId),
@@ -395,67 +378,6 @@ export function createServices(
   };
 }
 
-async function createTenantDefaults(db: DbClient, tenantId: string) {
-  const now = nowIso();
-  const pipelineId = id("pipeline");
-  await db.query(
-    "insert into pipelines (id, tenant_id, name, created_at) values ($1, $2, $3, $4)",
-    [pipelineId, tenantId, "Pipeline commercial", now],
-  );
-
-  for (const [index, stage] of pipelineStages.entries()) {
-    await db.query(
-      "insert into pipeline_stages (id, tenant_id, pipeline_id, name, position) values ($1, $2, $3, $4, $5)",
-      [id("stage"), tenantId, pipelineId, stage, index + 1],
-    );
-  }
-
-  await db.query(
-    `insert into workflows (id, tenant_id, workflow_key, name, trigger_name, status, approval_policy, definition, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      id("workflow"),
-      tenantId,
-      leadFollowUpWorkflow.key,
-      "Suivi automatique des nouveaux leads site",
-      leadFollowUpWorkflow.trigger,
-      "active",
-      leadFollowUpWorkflow.approvalPolicy,
-      toJson(leadFollowUpWorkflow),
-      now,
-    ],
-  );
-
-  for (const connector of connectorCatalog.slice(0, 3)) {
-    await db.query(
-      `insert into connectors (id, tenant_id, connector_key, status, health, safe_config, last_sync_at, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        id("connector"),
-        tenantId,
-        connector.key,
-        connector.status,
-        connector.health,
-        toJson({ sandbox: true }),
-        connector.lastSyncAt ?? null,
-        now,
-        now,
-      ],
-    );
-  }
-
-  const webhookEndpointId = id("webhook");
-  await db.query(
-    "insert into webhook_endpoints (id, tenant_id, token, secret_hash, status, created_at) values ($1, $2, $3, $4, $5, $6)",
-    [webhookEndpointId, tenantId, id("wh"), null, "active", now],
-  );
-  await configureWebhookEndpointSecret(db, {
-    tenantId,
-    endpointId: webhookEndpointId,
-    secret: generateWebhookEndpointSecretValue(),
-  });
-}
-
 async function getDashboard(db: DbClient, userId: string, tenantId: string) {
   await assertTenantAccess(db, userId, tenantId);
   const tenant = await getTenantById(db, tenantId);
@@ -572,7 +494,7 @@ async function seedDemo(db: DbClient) {
         name: "Garage Caraibes Auto",
         category: "Garage automobile",
       },
-      { createDefaults: createTenantDefaults },
+      { createDefaults: createDefaultTenantResources },
     );
   }
 
