@@ -1,6 +1,10 @@
 import type { DbClient } from "@/lib/db";
 import { syncMockConnectorJob } from "@/modules/connectors";
 import {
+  dispatchQueuedNotification,
+  notificationDispatchRequestedEventType,
+} from "@/modules/notifications";
+import {
   opportunityRadarSyncRequestedEventType,
   syncOpportunityRadarAlerts,
 } from "@/modules/opportunity-radar";
@@ -143,6 +147,17 @@ export async function processPendingDomainEvents(
     }) => {
       await syncOpportunityRadarAlerts(handlerDb, event.actorId, event.tenantId, {
         audit: true,
+      });
+    },
+    [notificationDispatchRequestedEventType]: async ({
+      db: handlerDb,
+      event,
+    }) => {
+      await dispatchQueuedNotification(handlerDb, {
+        tenantId: event.tenantId,
+        actorId: event.actorId,
+        payload: event.payload,
+        correlationId: event.correlationId,
       });
     },
     ...(options.handlers ?? {}),

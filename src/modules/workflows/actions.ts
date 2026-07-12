@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { id, safeJson, toJson } from "@/lib/security";
+import { queueWorkflowNotification } from "@/modules/notifications";
 import { WorkflowError } from "@/modules/workflows/errors";
 import type {
   WorkflowAction,
@@ -263,23 +264,24 @@ function sendMockNotificationAction(channel: string): WorkflowActionHandler {
       );
     }
 
-    await db.query(
-      "insert into notifications (id, tenant_id, channel, recipient_user_id, message, status, created_at) values ($1, $2, $3, $4, $5, $6, $7)",
-      [
-        id("notification"),
-        event.tenantId,
-        channel,
-        recipientUserId,
-        stringInput(action.input.message, "Notification workflow mock envoyee."),
-        "sent",
-        now,
-      ],
-    );
+    const notificationId = await queueWorkflowNotification(db, {
+      tenantId: event.tenantId,
+      actorId: "system",
+      channel,
+      recipientUserId,
+      message: stringInput(
+        action.input.message,
+        "Notification workflow mock envoyee.",
+      ),
+      correlationId: event.correlationId,
+      causationId: event.id,
+      createdAt: now,
+    });
 
     return {
       status: "succeeded",
-      summary: "Notification mock envoyee.",
-      metadata: { channel, recipientUserId },
+      summary: "Notification mock mise en file.",
+      metadata: { channel, recipientUserId, notificationId },
     };
   };
 }

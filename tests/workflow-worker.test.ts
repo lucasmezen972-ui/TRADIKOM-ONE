@@ -5,6 +5,9 @@ import {
   processPendingDomainEvents,
 } from "../src/modules/workflows/worker";
 import {
+  notificationDispatchRequestedEventType,
+} from "../src/modules/notifications";
+import {
   getWorkflowDeadLetters,
   leadFollowUpWorkflow,
   retryWorkflowDeadLetter,
@@ -307,6 +310,90 @@ describe("workflow worker", () => {
     expect(event.status).toBe("succeeded");
     expect(await countRadarAlerts(db, "tenant_radar_worker")).toBeGreaterThan(0);
     expect(await countRadarSyncAudits(db, "tenant_radar_worker")).toBe(1);
+  });
+
+  it("dispatches queued notifications through a tenant-scoped handler", async () => {
+    const { db } = await setup();
+    await seedTenant(
+      db,
+      "tenant_notification_worker",
+      "user_notification_worker",
+    );
+    await seedNotification(db, {
+      tenantId: "tenant_notification_worker",
+      notificationId: "notification_worker",
+      recipientUserId: "user_notification_worker",
+      status: "queued",
+    });
+    await insertDomainEvent(db, {
+      id: "event_notification_dispatch",
+      tenantId: "tenant_notification_worker",
+      actorId: "user_notification_worker",
+      eventType: notificationDispatchRequestedEventType,
+      payload: { notificationId: "notification_worker" },
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+    });
+    const event = await loadEvent(db, "event_notification_dispatch");
+
+    expect(summary.succeeded).toBe(1);
+    expect(event.status).toBe("succeeded");
+    expect(
+      await loadNotificationStatus(
+        db,
+        "tenant_notification_worker",
+        "notification_worker",
+      ),
+    ).toBe("sent");
+    expect(
+      await countNotificationDispatchAudits(db, "tenant_notification_worker"),
+    ).toBe(1);
+  });
+
+  it("rejects notification dispatch for another tenant", async () => {
+    const { db } = await setup();
+    await seedTenant(db, "tenant_notification_owner", "user_notification_owner");
+    await seedTenant(db, "tenant_notification_other", "user_notification_other");
+    await seedNotification(db, {
+      tenantId: "tenant_notification_owner",
+      notificationId: "notification_cross_tenant",
+      recipientUserId: "user_notification_owner",
+      status: "queued",
+    });
+    await insertDomainEvent(db, {
+      id: "event_notification_cross_tenant",
+      tenantId: "tenant_notification_other",
+      actorId: "user_notification_other",
+      eventType: notificationDispatchRequestedEventType,
+      payload: { notificationId: "notification_cross_tenant" },
+      nextRunAt: "2026-07-11T10:00:00.000Z",
+    });
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2026-07-11T10:00:00.000Z"),
+      maxAttempts: 1,
+    });
+    const event = await loadEvent(db, "event_notification_cross_tenant");
+
+    expect(summary.failed).toBe(1);
+    expect(event.status).toBe("failed");
+    expect(event.last_error).toBe("Notification introuvable pour ce tenant.");
+    expect(
+      await loadNotificationStatus(
+        db,
+        "tenant_notification_owner",
+        "notification_cross_tenant",
+      ),
+    ).toBe("queued");
+    expect(
+      await countNotificationDispatchAudits(db, "tenant_notification_owner"),
+    ).toBe(0);
+    expect(
+      await countNotificationDispatchAudits(db, "tenant_notification_other"),
+    ).toBe(0);
   });
 
   it("lists failed domain events as tenant-isolated dead letters", async () => {
@@ -729,6 +816,59 @@ async function countRadarSyncAudits(db: DbClient, tenantId: string) {
   const result = await db.query<{ count: number | string }>(
     "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
     [tenantId, "opportunity_radar.synced"],
+  );
+
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+async function seedNotification(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    notificationId: string;
+    recipientUserId: string;
+    status: string;
+  },
+) {
+  await db.query(
+    `insert into notifications (
+       id,
+       tenant_id,
+       channel,
+       recipient_user_id,
+       message,
+       status,
+       created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      input.notificationId,
+      input.tenantId,
+      "mock_email",
+      input.recipientUserId,
+      "Notification worker",
+      input.status,
+      "2026-07-11T09:00:00.000Z",
+    ],
+  );
+}
+
+async function loadNotificationStatus(
+  db: DbClient,
+  tenantId: string,
+  notificationId: string,
+) {
+  const result = await db.query<{ status: string }>(
+    "select status from notifications where tenant_id = $1 and id = $2",
+    [tenantId, notificationId],
+  );
+
+  return result.rows[0]?.status ?? null;
+}
+
+async function countNotificationDispatchAudits(db: DbClient, tenantId: string) {
+  const result = await db.query<{ count: number | string }>(
+    "select count(*)::int as count from audit_logs where tenant_id = $1 and action = $2",
+    [tenantId, "notification.dispatched"],
   );
 
   return Number(result.rows[0]?.count ?? 0);
