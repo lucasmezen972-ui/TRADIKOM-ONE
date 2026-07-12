@@ -303,7 +303,208 @@ describe("connectors", () => {
     expect(recordedPayload.token).toBe("[redacted]");
     expect(recordedPayload.message.endsWith("[truncated]")).toBe(true);
   });
+
+  it("redacts disabled and invalid-signature rejected webhook deliveries", async () => {
+    const { db, services } = await setup();
+    const demo = await services.seedDemo();
+    const endpoint = await db.query<{ id: string; token: string }>(
+      "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
+      [demo.tenant.id],
+    );
+    const disabledPayload = {
+      email: "disabled-redacted@example.com",
+      phone: "+596 696 51 52 53",
+      token: "disabled-token",
+      password: "disabled-password",
+      authorization: "Bearer disabled",
+      profile: { secret: "nested-secret" },
+    };
+
+    await services.setWebhookEndpointStatus(
+      demo.user.id,
+      demo.tenant.id,
+      endpoint.rows[0]!.id,
+      "disabled",
+    );
+    await expect(
+      services.receiveWebhook(endpoint.rows[0]!.token, disabledPayload, {
+        body: JSON.stringify(disabledPayload),
+        idempotencyKey: "disabled-redacted",
+      }),
+    ).rejects.toThrow("Webhook desactive.");
+
+    await services.setWebhookEndpointStatus(
+      demo.user.id,
+      demo.tenant.id,
+      endpoint.rows[0]!.id,
+      "active",
+    );
+    const rotation = await services.generateWebhookEndpointSecret(
+      demo.user.id,
+      demo.tenant.id,
+      endpoint.rows[0]!.id,
+    );
+    const signedPayload = {
+      email: "signature-redacted@example.com",
+      phone: "+596 696 54 55 56",
+      apiKey: "signature-api-key",
+      message: "Signature invalide",
+    };
+    const signedBody = JSON.stringify(signedPayload);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+
+    await expect(
+      services.receiveWebhook(endpoint.rows[0]!.token, signedPayload, {
+        body: signedBody,
+        timestamp,
+        signature: signWebhookBody(rotation.secret, timestamp, "{}"),
+        idempotencyKey: "signature-redacted",
+      }),
+    ).rejects.toThrow("Signature webhook invalide.");
+
+    const deliveries = await db.query<{
+      idempotency_key: string | null;
+      payload: string;
+      status: string;
+    }>(
+      `select idempotency_key, payload, status
+       from webhook_deliveries
+       where tenant_id = $1
+         and idempotency_key in ($2, $3)
+       order by created_at asc`,
+      [demo.tenant.id, "disabled-redacted", "signature-redacted"],
+    );
+    const disabledDelivery = deliveries.rows.find(
+      (delivery) => delivery.idempotency_key === "disabled-redacted",
+    )!;
+    const signatureDelivery = deliveries.rows.find(
+      (delivery) => delivery.idempotency_key === "signature-redacted",
+    )!;
+    const disabledRecorded = JSON.parse(disabledDelivery.payload) as {
+      token: string;
+      password: string;
+      authorization: string;
+      profile: string;
+    };
+    const signatureRecorded = JSON.parse(signatureDelivery.payload) as {
+      apiKey: string;
+    };
+
+    expect(disabledDelivery.status).toBe("rejected");
+    expect(signatureDelivery.status).toBe("rejected");
+    expect(disabledRecorded.token).toBe("[redacted]");
+    expect(disabledRecorded.password).toBe("[redacted]");
+    expect(disabledRecorded.authorization).toBe("[redacted]");
+    expect(disabledRecorded.profile).toBe("[object]");
+    expect(signatureRecorded.apiKey).toBe("[redacted]");
+  });
+
+  it("keeps webhook rate limits endpoint-scoped and redacts rate-limit rejections", async () => {
+    const { db, services } = await setup();
+    const demo = await services.seedDemo();
+    const other = await services.registerUser({
+      name: "Tenant Webhook Rate",
+      email: "tenant-rate@example.com",
+      password: "password123",
+    });
+    const otherTenant = await services.createTenant(other.id, {
+      name: "Tenant Rate",
+      category: "Garage",
+    });
+    const [demoEndpoint, otherEndpoint] = await Promise.all([
+      loadWebhookEndpoint(db, demo.tenant.id),
+      loadWebhookEndpoint(db, otherTenant.id),
+    ]);
+    const now = new Date().toISOString();
+
+    await db.query(
+      `insert into rate_limits (id, key, count, reset_at, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [
+        "rate_webhook_demo_limit",
+        `webhook:${demoEndpoint.id}`,
+        60,
+        new Date(Date.now() + 60_000).toISOString(),
+        now,
+        now,
+      ],
+    );
+
+    const limitedPayload = {
+      email: "rate-limited@example.com",
+      phone: "+596 696 57 58 59",
+      secret: "rate-limit-secret",
+    };
+    await expect(
+      services.receiveWebhook(demoEndpoint.token, limitedPayload, {
+        body: JSON.stringify(limitedPayload),
+        idempotencyKey: "rate-limited-redacted",
+      }),
+    ).rejects.toThrow("Trop de requetes webhook.");
+
+    const otherRotation = await services.generateWebhookEndpointSecret(
+      other.id,
+      otherTenant.id,
+      otherEndpoint.id,
+    );
+    const otherPayload = {
+      name: "Rate Isolated",
+      email: "rate-isolated@example.com",
+      phone: "+596 696 60 61 62",
+    };
+    const otherBody = JSON.stringify(otherPayload);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    await services.receiveWebhook(otherEndpoint.token, otherPayload, {
+      body: otherBody,
+      timestamp,
+      signature: signWebhookBody(otherRotation.secret, timestamp, otherBody),
+      idempotencyKey: "rate-limited-redacted",
+    });
+
+    const limitedDelivery = await db.query<{ payload: string; status: string }>(
+      `select payload, status
+       from webhook_deliveries
+       where tenant_id = $1 and idempotency_key = $2
+       limit 1`,
+      [demo.tenant.id, "rate-limited-redacted"],
+    );
+    const otherDeliveries = await db.query<{ status: string }>(
+      `select status
+       from webhook_deliveries
+       where tenant_id = $1 and idempotency_key = $2`,
+      [otherTenant.id, "rate-limited-redacted"],
+    );
+    const demoCrm = await services.getCrm(demo.user.id, demo.tenant.id);
+    const otherCrm = await services.getCrm(other.id, otherTenant.id);
+    const recordedPayload = JSON.parse(limitedDelivery.rows[0]!.payload) as {
+      secret: string;
+    };
+
+    expect(limitedDelivery.rows[0]!.status).toBe("rejected");
+    expect(recordedPayload.secret).toBe("[redacted]");
+    expect(otherDeliveries.rows).toEqual([{ status: "accepted" }]);
+    expect(
+      demoCrm.contacts.some(
+        (contact) => contact.email === "rate-limited@example.com",
+      ),
+    ).toBe(false);
+    expect(
+      otherCrm.contacts.some((contact) => contact.email === "rate-isolated@example.com"),
+    ).toBe(true);
+  });
 });
+
+async function loadWebhookEndpoint(
+  db: Awaited<ReturnType<typeof createMemoryDb>>,
+  tenantId: string,
+) {
+  const endpoint = await db.query<{ id: string; token: string }>(
+    "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
+    [tenantId],
+  );
+
+  return endpoint.rows[0]!;
+}
 
 function signWebhookBody(secret: string, timestamp: string, body: string) {
   return `sha256=${createHmac("sha256", secret)
