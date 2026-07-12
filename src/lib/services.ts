@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getDb, migrate, type DbClient } from "@/lib/db";
-import { defaultGarageOnboarding } from "@/lib/generation";
 import {
   generateWebhookEndpointSecretRotation,
   getConnectors,
@@ -41,7 +40,6 @@ import {
   getSessionUser,
   loginSchema,
   loginUser,
-  mapUser,
   passwordResetRequestSchema,
   passwordResetSchema,
   registerUser,
@@ -49,7 +47,6 @@ import {
   requestPasswordReset,
   resetPassword,
   revokeSession,
-  type UserRow,
 } from "@/modules/auth";
 import {
   getBusinessTwin,
@@ -58,6 +55,7 @@ import {
 } from "@/modules/business-twin";
 import { getAuditLogs } from "@/modules/audit";
 import { getDashboardData } from "@/modules/dashboard";
+import { seedDemo } from "@/modules/demo";
 import {
   acceptInvitation,
   acceptInvitationForUser,
@@ -100,8 +98,6 @@ import {
   retryWorkflowDeadLetter,
   requestManualWorkflowRetry,
 } from "@/modules/workflows";
-import type { User } from "@/lib/types";
-import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
   authLinkPreviewEnabled,
   createRuntimeEmailProvider,
@@ -375,71 +371,4 @@ export function createServices(
       contactId: string,
     ) => findContactForTenant(db, userId, tenantId, contactId),
   };
-}
-
-async function seedDemo(db: DbClient) {
-  await enforceRateLimit(db, {
-    operationKey: "demo.seed",
-    subjectKey: "shared-public-demo",
-    scopeKey: process.env.NODE_ENV ?? "development",
-    limit: rateLimitPolicies.publicDemo.limit,
-    windowSeconds: rateLimitPolicies.publicDemo.windowSeconds,
-  });
-  const email = "patron@garage-caraibes-auto.example";
-  const existing = await db.query<UserRow>("select * from users where email = $1", [email]);
-  let user: User;
-
-  if (existing.rows[0]) {
-    user = mapUser(existing.rows[0]);
-  } else {
-    user = await registerUser(db, {
-      name: "Malia Occo",
-      email,
-      password: "Tradikom!2026",
-    });
-  }
-
-  const tenants = await getUserTenants(db, user.id);
-  let tenant = tenants[0]?.tenant;
-
-  if (!tenant) {
-    tenant = await createTenantDomain(
-      db,
-      user.id,
-      {
-        name: "Garage Caraibes Auto",
-        category: "Garage automobile",
-      },
-      { createDefaults: createDefaultTenantResources },
-    );
-  }
-
-  const profile = await getBusinessTwin(db, user.id, tenant.id);
-  if (!profile) {
-    await saveBusinessTwin(db, user.id, tenant.id, defaultGarageOnboarding());
-  }
-
-  const website = await getWebsite(db, tenant.id);
-  if (website?.status !== "published") {
-    await publishWebsite(db, user.id, tenant.id);
-  }
-
-  const contacts = await db.query("select id from contacts where tenant_id = $1 limit 1", [
-    tenant.id,
-  ]);
-  if (contacts.rows.length === 0) {
-    await submitPublicLeadDomain(
-      db,
-      tenant.slug,
-      {
-        name: "Jonathan Pelage",
-        email: "jonathan.pelage@example.com",
-        phone: "+596 696 11 22 33",
-        message: "Bonjour, je souhaite un devis pour un diagnostic climatisation.",
-      },
-      { getPublishedSite },
-    );
-  }
-
-  return { user, tenant, password: "Tradikom!2026" };
 }
