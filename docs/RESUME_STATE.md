@@ -48,6 +48,7 @@ Last completed checkpoint:
 - Webhook endpoints now receive HMAC secrets by default for new tenants, lazily secure older endpoints that had no secret, reject unsigned deliveries, and expose a generated one-time reveal rotation control in Connexions without storing cleartext secrets.
 - Disabled webhook endpoints now store rejected delivery outcomes with idempotency metadata, public webhook responses use a safe 403 status, and rotation coverage verifies old HMAC secrets are rejected after a new generated secret is active.
 - Connexions now exposes tenant-scoped webhook delivery history for operators, including accepted/rejected status, safe reasons, idempotency metadata, and redacted payloads. Integration coverage confirms disabled, invalid-signature, and rate-limited rejections redact sensitive fields and that rate limits remain endpoint-scoped across tenants.
+- Reusable atomic rate limiting now lives in `src/modules/rate-limit/` with PostgreSQL/PGlite and deterministic memory adapters, hashed subject/scope keys, bounded cleanup, retry metadata, and tenant/operation isolation. Registration, login, password reset, invitation creation/acceptance, public forms, demo seeding, and inbound webhooks all use it.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -113,9 +114,10 @@ Current validation note:
 - During the workflow execution timeline checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-controls.test.ts`) hung without output and was stopped after 35 seconds; staged `git diff --cached --check` passed. Commit `13635f2` passed both CI runs (`29194406560` push and `29194407769` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Commit `81e7471` passed both CI runs (`29194632483` push and `29194633519` pull_request), including the expanded two-page Playwright draft/publication/rollback scenario, migration verification, lint, typecheck, unit/integration tests, and production build.
 - During the durable workflow webhook checkpoint, targeted local validation (`pnpm exec vitest run tests/workflow-worker.test.ts`) hung without output and was stopped; staged `git diff --cached --check` passed. Commit `32daccd` passed both CI runs (`29195174902` push and `29195175983` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
+- During the reusable rate-limit checkpoint, targeted local Vitest hung without output and was stopped after a reasonable wait; `git diff --check` and staged `git diff --cached --check` passed. Commit `0d84f39` passed both CI runs (`29196188525` push and `29196189381` pull_request), including migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 
 Next unfinished task:
 
-1. Continue workflow engine depth with more domain-specific async handlers and recovery views beyond dead-letter requeue and active queue cancellation.
+1. Add bounded email delivery for password reset and invitation links.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

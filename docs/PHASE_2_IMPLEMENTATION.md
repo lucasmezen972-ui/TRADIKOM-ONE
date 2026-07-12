@@ -41,11 +41,12 @@
 - Added AI provider abstraction with deterministic provider and optional OpenAI provider wrapper.
 - Changed public website rendering to load the last immutable published snapshot.
 - Added explicit public form idempotency keys, honeypot field, and visible consent checkbox.
+- Added reusable atomic rate limiting with hashed subject and tenant scope keys, deterministic test support, bounded cleanup, retry metadata, and policies for auth, invitations, public forms, demo seeding, and inbound webhooks.
 - Added tests for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV values.
 
 ## Still incomplete
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- Webhook security still needs deeper tenant-isolation/rate-limit edge coverage, operator delivery-history visibility, and broader rejected-delivery redaction assertions.
+- Auth and invitation links still need bounded email delivery instead of raw-token service responses.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.

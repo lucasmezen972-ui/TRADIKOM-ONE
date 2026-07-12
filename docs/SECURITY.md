@@ -18,12 +18,12 @@ Risques principaux : fuite cross-tenant, vol de session, injection SQL, XSS via 
 - Fondations HMAC webhook et chiffrement AES-256-GCM des secrets connecteurs.
 - Credentials connecteurs modelises separement pour chiffrement futur.
 - Aucune cle reelle commitee.
+- Limitation de debit atomique et partagee pour authentification, invitations, formulaires publics, demo et webhooks, avec cles de sujet et de tenant hachees.
 
 ## Production hardening
 
 - Activer PostgreSQL RLS.
 - Completer les tests RLS avec role PostgreSQL non proprietaire.
-- Ajouter rate limiting distribue.
 - Ajouter CSRF token explicite pour mutations critiques.
 - Ajouter CSP stricte et validation upload.
 - Chiffrer credentials avec KMS.
