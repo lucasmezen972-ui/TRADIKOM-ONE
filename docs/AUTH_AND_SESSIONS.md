@@ -12,9 +12,10 @@ Phase 2 changes sessions from raw database session IDs to bearer-style session t
 - Password reset completion updates the password, marks all outstanding reset tokens used, and revokes active sessions for the account.
 - Invitations store only a hashed invitation token, expire after seven days, and can be accepted once.
 - Invitations are emailed through the bounded provider, persist safe delivery status, and authorized resend replaces the previous token before delivery.
+- The maintenance command removes expired/revoked sessions and expired/consumed auth tokens in bounded retention-aware batches.
 - Owners and administrators can invite team members. Only owners can invite or manage administrators.
 - Registration, login, password reset, invitation creation, and invitation acceptance use atomic server-side rate limits with hashed subject/scope keys.
 
 Remaining work:
 
-- scheduled cleanup of expired sessions.
+- final PostgreSQL transaction and RLS closure review.
