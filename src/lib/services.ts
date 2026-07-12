@@ -1,10 +1,6 @@
 import { z } from "zod";
-import { withTenantDbTransaction } from "@/db/tenant-context";
 import { getDb, migrate, type DbClient } from "@/lib/db";
-import {
-  buildBusinessTwin,
-  defaultGarageOnboarding,
-} from "@/lib/generation";
+import { defaultGarageOnboarding } from "@/lib/generation";
 import {
   connectorCatalog,
   configureWebhookEndpointSecret,
@@ -59,7 +55,11 @@ import {
   revokeSession,
   type UserRow,
 } from "@/modules/auth";
-import { recordAuditLog } from "@/modules/audit";
+import {
+  getBusinessTwin,
+  onboardingSchema,
+  saveBusinessTwin,
+} from "@/modules/business-twin";
 import {
   acceptInvitation,
   acceptInvitationForUser,
@@ -79,7 +79,6 @@ import {
   acceptInvitationSchema,
 } from "@/modules/tenants";
 import {
-  generateOrReplaceWebsite,
   getPublishedSite,
   getWebsite,
   getWebsiteWorkspace,
@@ -110,12 +109,7 @@ import {
   safeJson,
   toJson,
 } from "@/lib/security";
-import type {
-  AuditLog,
-  BusinessProfile,
-  DashboardData,
-  User,
-} from "@/lib/types";
+import type { AuditLog, DashboardData, User } from "@/lib/types";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
   authLinkPreviewEnabled,
@@ -138,29 +132,6 @@ const pipelineStages = [
   "Gagne",
   "Perdu",
 ];
-
-const onboardingSchema = z.object({
-  companyName: z.string().min(2),
-  category: z.string().min(2),
-  description: z.string().min(10),
-  services: z.string().min(2),
-  products: z.string().default(""),
-  targetCustomers: z.string().min(2),
-  address: z.string().min(2),
-  serviceAreas: z.string().min(2),
-  phone: z.string().min(4),
-  email: z.string().email(),
-  openingHours: z.string().min(2),
-  desiredCallsToAction: z.string().min(2),
-  tone: z.string().min(2),
-  colors: z.string().default(""),
-  existingWebsite: z.string().default(""),
-  socialLinks: z.string().default(""),
-  photos: z.string().default(""),
-  mainObjective: z.string().min(2),
-  faqs: z.string().default(""),
-  templateKey: z.enum(["artisan", "restaurant", "beauty"]),
-});
 
 export async function getServices() {
   const db = await getDb();
@@ -226,9 +197,9 @@ export function createServices(
       userId: string,
       tenantId: string,
       input: z.input<typeof onboardingSchema>,
-    ) => saveOnboarding(db, userId, tenantId, input),
+    ) => saveBusinessTwin(db, userId, tenantId, input),
     getOnboarding: (userId: string, tenantId: string) =>
-      getOnboarding(db, userId, tenantId),
+      getBusinessTwin(db, userId, tenantId),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (
@@ -485,56 +456,6 @@ async function createTenantDefaults(db: DbClient, tenantId: string) {
   });
 }
 
-async function saveOnboarding(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-  input: z.input<typeof onboardingSchema>,
-) {
-  const parsed = onboardingSchema.parse(input);
-  const profile = buildBusinessTwin(parsed);
-  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
-    await assertTenantAccess(transaction, userId, tenantId, [
-      "owner",
-      "administrator",
-      "manager",
-    ]);
-    const now = nowIso();
-
-    await transaction.query(
-      `insert into business_profiles (tenant_id, data, onboarding_step, completed_at, updated_at)
-       values ($1, $2, $3, $4, $5)
-       on conflict (tenant_id) do update set data = excluded.data, onboarding_step = excluded.onboarding_step, completed_at = excluded.completed_at, updated_at = excluded.updated_at`,
-      [tenantId, toJson(profile), 4, now, now],
-    );
-
-    await generateOrReplaceWebsite(transaction, tenantId, profile);
-    await audit(
-      transaction,
-      tenantId,
-      userId,
-      "onboarding.completed",
-      "business_profile",
-      tenantId,
-      { category: profile.identity.category },
-    );
-
-    return profile;
-  });
-}
-
-async function getOnboarding(db: DbClient, userId: string, tenantId: string) {
-  await assertTenantAccess(db, userId, tenantId);
-  const result = await db.query<{ data: string }>(
-    "select data from business_profiles where tenant_id = $1",
-    [tenantId],
-  );
-
-  return result.rows[0]?.data
-    ? safeJson<BusinessProfile>(result.rows[0].data, null as never)
-    : null;
-}
-
 async function getDashboard(db: DbClient, userId: string, tenantId: string) {
   await assertTenantAccess(db, userId, tenantId);
   const tenant = await getTenantById(db, tenantId);
@@ -655,9 +576,9 @@ async function seedDemo(db: DbClient) {
     );
   }
 
-  const profile = await getOnboarding(db, user.id, tenant.id);
+  const profile = await getBusinessTwin(db, user.id, tenant.id);
   if (!profile) {
-    await saveOnboarding(db, user.id, tenant.id, defaultGarageOnboarding());
+    await saveBusinessTwin(db, user.id, tenant.id, defaultGarageOnboarding());
   }
 
   const website = await getWebsite(db, tenant.id);
@@ -683,23 +604,4 @@ async function seedDemo(db: DbClient) {
   }
 
   return { user, tenant, password: "Tradikom!2026" };
-}
-
-async function audit(
-  db: DbClient,
-  tenantId: string,
-  actorId: string,
-  action: string,
-  targetType: string,
-  targetId: string,
-  metadata: Record<string, unknown>,
-) {
-  await recordAuditLog(db, {
-    tenantId,
-    actorId,
-    action,
-    targetType,
-    targetId,
-    metadata,
-  });
 }
