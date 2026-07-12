@@ -55,6 +55,7 @@ Last completed checkpoint:
 - Tenant-aware transaction orchestration now reuses injected or already-open clients safely, applies PostgreSQL tenant context transaction-locally, and no longer selects PostgreSQL from `DATABASE_URL` alone. Tenant creation/default provisioning, onboarding/Business Twin/site generation, website publication, public lead CRM writes, form persistence, audit, and durable event enqueue now roll back atomically.
 - Invitation acceptance now atomically creates or reuses the account, creates membership, consumes the invitation, and records its audit event. Website restore rollback is covered across draft sections, website state, and audit writes.
 - CSV imports now commit contacts, per-row outcomes, the final report, and audit together. Accepted webhooks now commit CRM writes, durable workflow enqueue, accepted delivery history, and audit together while rejected security outcomes remain independently durable.
+- Workflow operator controls now commit run/approval or queue state, timeline steps, resume events, and audit records atomically for cancellation, approval, rejection, manual retry, dead-letter retry, and queue cancellation.
 - Tests added for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV parsing.
 
 Latest local validation:
@@ -128,6 +129,6 @@ Current validation note:
 
 Next unfinished task:
 
-1. Complete remaining transaction boundaries for multi-write workflow transitions.
+1. Extract onboarding, provisioning, dashboard/audit reads, and demo seeding from `src/lib/services.ts`.
 2. If local Node validation still hangs, keep using GitHub Actions as the authoritative validation path for small, reviewed changes.
 3. Keep PR #1 updated with coherent checkpoints and confirm CI after each push.

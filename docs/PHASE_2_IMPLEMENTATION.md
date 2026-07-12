@@ -46,11 +46,11 @@
 - Added request correlation IDs, typed safe public errors, structured redacted logs, protected sensitive actions, safe webhook/health responses, Retry-After metadata, no-store token pages, and hardened CSP/security headers.
 - Added bounded session/token/invitation/rate-limit/idempotency maintenance with explicit retention, a one-shot command, a worker-compatible handler, structured output, and tests preserving audit/delivery history.
 - Added injected-client-aware tenant transactions with transaction-local PostgreSQL context and rollback coverage for tenant/default provisioning, onboarding/Business Twin/site generation, website publication/restoration, invitation acceptance, public lead and accepted webhook CRM/form/audit/domain-event writes, and CSV finalization.
+- Added atomic workflow operator controls for run cancellation, approval, rejection, manual retry, dead-letter retry, and queue cancellation, including state, timeline/resume, and audit rollback coverage.
 - Added tests for session revocation, password reset, invitations, member role updates, PostgreSQL RLS, published snapshot safety, and quoted CSV values.
 
 ## Still incomplete
 
 - Full service modularization is in progress; the legacy `src/lib/services.ts` remains the central adapter for dashboards and tenant default provisioning.
 - Email delivery for auth links and connector UI mapping are not complete.
-- Selected workflow transitions still need final transaction coverage.
 - The worker is now available as both a durable batch dispatcher and a polling process, but still needs additional domain-specific async handlers and deeper recovery views beyond the current dead-letter requeue and active queue cancellation controls.
