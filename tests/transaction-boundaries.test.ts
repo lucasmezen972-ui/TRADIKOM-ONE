@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { createHmac } from "node:crypto";
 import { withTenantDbTransaction } from "../src/db/tenant-context";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
@@ -222,7 +223,11 @@ describe("critical transaction boundaries", () => {
     const token = invitationToken(emailProvider);
     const membershipsBefore = await tableCount(db, "memberships");
     const auditsBefore = await tableCount(db, "audit_logs");
-    const failingDb = failQuery(db, "insert into audit_logs");
+    const failingDb = failQuery(
+      db,
+      "insert into audit_logs",
+      "team.invitation_accepted",
+    );
 
     await expect(
       createServices(failingDb, {
@@ -284,7 +289,11 @@ describe("critical transaction boundaries", () => {
     const sectionsBefore = await websiteSections(db, tenant.id);
     const websiteBefore = await websiteState(db, tenant.id);
     const auditsBefore = await tableCount(db, "audit_logs");
-    const failingDb = failQuery(db, "insert into audit_logs");
+    const failingDb = failQuery(
+      db,
+      "insert into audit_logs",
+      "website.version_restored",
+    );
 
     await expect(
       createServices(failingDb).restoreWebsiteVersion(
@@ -298,6 +307,100 @@ describe("critical transaction boundaries", () => {
     expect(await websiteState(db, tenant.id)).toEqual(websiteBefore);
     expect(await tableCount(db, "audit_logs")).toBe(auditsBefore);
   });
+
+  it("rolls back CSV contacts, row report, import run, and audit together", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const user = await services.registerUser({
+      name: "CSV Rollback",
+      email: "csv-rollback@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(user.id, {
+      name: "CSV Rollback Garage",
+      category: "Garage automobile",
+    });
+    const contactsBefore = await tableCount(db, "contacts");
+    const auditsBefore = await tableCount(db, "audit_logs");
+    const failingDb = failQuery(
+      db,
+      "insert into audit_logs",
+      "connector.csv_imported",
+    );
+
+    await expect(
+      createServices(failingDb).importCsvContacts(
+        user.id,
+        tenant.id,
+        "nom,email,telephone\nCSV Valide,csv-valid@example.com,0696000000\nCSV Invalide,,0696000001",
+      ),
+    ).rejects.toThrow("simulated transaction failure");
+
+    expect(await tableCount(db, "contacts")).toBe(contactsBefore);
+    expect(await tableCount(db, "imports")).toBe(0);
+    expect(await tableCount(db, "import_rows")).toBe(0);
+    expect(await tableCount(db, "audit_logs")).toBe(auditsBefore);
+  });
+
+  it("rolls back accepted webhook CRM, delivery, event, and audit effects", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const user = await services.registerUser({
+      name: "Webhook Rollback",
+      email: "webhook-rollback-owner@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(user.id, {
+      name: "Webhook Rollback Garage",
+      category: "Garage automobile",
+    });
+    const endpoint = await db.query<{ id: string; token: string }>(
+      "select id, token from webhook_endpoints where tenant_id = $1 limit 1",
+      [tenant.id],
+    );
+    const rotation = await services.generateWebhookEndpointSecret(
+      user.id,
+      tenant.id,
+      endpoint.rows[0]!.id,
+    );
+    const payload = {
+      name: "Webhook transaction",
+      email: "webhook-transaction@example.com",
+      phone: "0696000002",
+      message: "Demande transactionnelle",
+    };
+    const body = JSON.stringify(payload);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const auditsBefore = await tableCount(db, "audit_logs");
+    const failingDb = failQuery(
+      db,
+      "insert into audit_logs",
+      "connector.webhook_received",
+    );
+
+    await expect(
+      createServices(failingDb).receiveWebhook(
+        endpoint.rows[0]!.token,
+        payload,
+        {
+          body,
+          timestamp,
+          signature: signWebhookBody(rotation.secret, timestamp, body),
+          idempotencyKey: "webhook-transaction-rollback",
+        },
+      ),
+    ).rejects.toThrow("simulated transaction failure");
+
+    expect(await tableCount(db, "contacts")).toBe(0);
+    expect(await tableCount(db, "leads")).toBe(0);
+    expect(await tableCount(db, "opportunities")).toBe(0);
+    expect(await tableCount(db, "activities")).toBe(0);
+    expect(await tableCount(db, "domain_events")).toBe(0);
+    expect(await tableCount(db, "webhook_deliveries")).toBe(0);
+    expect(await tableCount(db, "audit_logs")).toBe(auditsBefore);
+  });
 });
 
 async function tableCount(db: DbClient, table: string) {
@@ -307,10 +410,17 @@ async function tableCount(db: DbClient, table: string) {
   return Number(result.rows[0]?.count ?? 0);
 }
 
-function failQuery(db: DbClient, fragment: string): DbClient {
+function failQuery(
+  db: DbClient,
+  fragment: string,
+  parameter?: string,
+): DbClient {
   return {
     async query<T>(sql: string, params?: unknown[]) {
-      if (sql.includes(fragment)) {
+      if (
+        sql.includes(fragment) &&
+        (!parameter || params?.includes(parameter))
+      ) {
         throw new Error("simulated transaction failure");
       }
       return db.query<T>(sql, params);
@@ -358,4 +468,10 @@ async function websiteState(db: DbClient, tenantId: string) {
     tenantId,
   ]);
   return result.rows[0];
+}
+
+function signWebhookBody(secret: string, timestamp: string, body: string) {
+  return `sha256=${createHmac("sha256", secret)
+    .update(`${timestamp}.${body}`)
+    .digest("hex")}`;
 }

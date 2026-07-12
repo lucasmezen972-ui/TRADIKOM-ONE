@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { withTenantDbTransaction } from "@/db/tenant-context";
 import { id, nowIso, safeJson } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import { connectorCatalog } from "@/modules/connectors/catalog";
@@ -80,98 +81,108 @@ export async function importCsvContacts(
   tenantId: string,
   csvText: string,
 ) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
   const parsed = csvImportSchema.parse({ csvText });
   const rows = parseContactsCsv(parsed.csvText);
-  const importId = id("import");
-  const report = {
-    total: rows.length,
-    imported: 0,
-    duplicates: 0,
-    invalid: 0,
-  };
-  const now = nowIso();
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [
+      "owner",
+      "administrator",
+      "manager",
+    ]);
+    const importId = id("import");
+    const report = {
+      total: rows.length,
+      imported: 0,
+      duplicates: 0,
+      invalid: 0,
+    };
+    const now = nowIso();
 
-  await insertImportRun(db, {
-    id: importId,
-    tenantId,
-    source: "csv_contacts",
-    status: "running",
-    report,
-    createdAt: now,
-  });
+    await insertImportRun(transaction, {
+      id: importId,
+      tenantId,
+      source: "csv_contacts",
+      status: "running",
+      report,
+      createdAt: now,
+    });
 
-  for (const [index, row] of rows.entries()) {
-    const name = row.name;
-    const email = row.email;
-    const phone = row.phone;
+    for (const [index, row] of rows.entries()) {
+      const name = row.name;
+      const email = row.email;
+      const phone = row.phone;
 
-    if (!name || !email.includes("@")) {
-      report.invalid += 1;
-      await insertImportRow(db, {
+      if (!name || !email.includes("@")) {
+        report.invalid += 1;
+        await insertImportRow(transaction, {
+          tenantId,
+          importId,
+          rowId: id("importrow"),
+          rowNumber: index + 2,
+          status: "invalid",
+          data: row.raw,
+          error: "Email invalide",
+        });
+        continue;
+      }
+
+      const duplicate = await findImportedContactByEmail(
+        transaction,
         tenantId,
-        importId,
-        rowId: id("importrow"),
-        rowNumber: index + 2,
-        status: "invalid",
-        data: row.raw,
-        error: "Email invalide",
+        email,
+      );
+      if (duplicate) {
+        report.duplicates += 1;
+        await insertImportRow(transaction, {
+          tenantId,
+          importId,
+          rowId: id("importrow"),
+          rowNumber: index + 2,
+          status: "duplicate",
+          data: row.raw,
+          error: null,
+        });
+        continue;
+      }
+
+      await insertImportedContact(transaction, {
+        id: id("contact"),
+        tenantId,
+        name,
+        email,
+        phone,
+        ownerId: userId,
+        createdAt: nowIso(),
       });
-      continue;
-    }
-
-    const duplicate = await findImportedContactByEmail(db, tenantId, email);
-    if (duplicate) {
-      report.duplicates += 1;
-      await insertImportRow(db, {
+      report.imported += 1;
+      await insertImportRow(transaction, {
         tenantId,
         importId,
         rowId: id("importrow"),
         rowNumber: index + 2,
-        status: "duplicate",
+        status: "imported",
         data: row.raw,
         error: null,
       });
-      continue;
     }
 
-    await insertImportedContact(db, {
-      id: id("contact"),
-      tenantId,
-      name,
-      email,
-      phone,
-      ownerId: userId,
-      createdAt: nowIso(),
-    });
-    report.imported += 1;
-    await insertImportRow(db, {
+    await updateImportRun(transaction, {
       tenantId,
       importId,
-      rowId: id("importrow"),
-      rowNumber: index + 2,
-      status: "imported",
-      data: row.raw,
-      error: null,
+      status: "completed",
+      report,
     });
-  }
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "connector.csv_imported",
+      targetType: "import",
+      targetId: importId,
+      metadata: report,
+    });
 
-  await updateImportRun(db, {
-    tenantId,
-    importId,
-    status: "completed",
-    report,
+    return report;
   });
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "connector.csv_imported",
-    targetType: "import",
-    targetId: importId,
-    metadata: report,
-  });
-
-  return report;
 }
 
 export async function syncMockConnector(
@@ -503,30 +514,37 @@ export async function receiveWebhook(
     throw new ConnectorError("webhook_payload_invalid", "Payload invalide.");
   }
 
-  const result = await createLeadFromPayload(db, row.tenant_id, {
-    ...mapped,
-    source: "webhook",
-    pagePath: "webhook/generic",
-  });
-  await recordWebhookDelivery(
+  return withTenantDbTransaction(
     db,
     row.tenant_id,
-    row.id,
-    idempotencyKey,
-    parsedPayload,
-    "accepted",
-    null,
-  );
-  await recordAuditLog(db, {
-    tenantId: row.tenant_id,
-    actorId: "system",
-    action: "connector.webhook_received",
-    targetType: "lead",
-    targetId: result.leadId,
-    metadata: { endpointId: row.id },
-  });
+    "system",
+    async (transaction) => {
+      const result = await createLeadFromPayload(transaction, row.tenant_id, {
+        ...mapped,
+        source: "webhook",
+        pagePath: "webhook/generic",
+      });
+      await recordWebhookDelivery(
+        transaction,
+        row.tenant_id,
+        row.id,
+        idempotencyKey,
+        parsedPayload,
+        "accepted",
+        null,
+      );
+      await recordAuditLog(transaction, {
+        tenantId: row.tenant_id,
+        actorId: "system",
+        action: "connector.webhook_received",
+        targetType: "lead",
+        targetId: result.leadId,
+        metadata: { endpointId: row.id },
+      });
 
-  return result;
+      return result;
+    },
+  );
 }
 
 async function recordWebhookDelivery(
