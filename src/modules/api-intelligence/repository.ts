@@ -263,7 +263,7 @@ export async function listApiClaimsForProduct(
        on api_source_snapshots.id = api_claims.source_snapshot_id
      join api_sources on api_sources.id = api_source_snapshots.source_id
      join api_products on api_products.id = api_sources.api_product_id
-     where ($1 is null or api_products.id = $1)
+     where ($1::text is null or api_products.id = $1::text)
      order by api_products.name asc, api_claims.subject_type asc,
               api_evidence.locator asc`,
     [apiProductId ?? null],
