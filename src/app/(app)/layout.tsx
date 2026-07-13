@@ -11,10 +11,18 @@ export default async function ProtectedLayout({
 }) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const tenants = await services.getUserTenants(user.id);
+  const [tenants, platformAdmin] = await Promise.all([
+    services.getUserTenants(user.id),
+    services.isPlatformAdmin(user.id),
+  ]);
 
   return (
-    <AppShell tenant={tenant} tenants={tenants} userName={user.name}>
+    <AppShell
+      tenant={tenant}
+      tenants={tenants}
+      userName={user.name}
+      platformAdmin={platformAdmin}
+    >
       {children}
     </AppShell>
   );

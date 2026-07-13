@@ -35,6 +35,9 @@ importers:
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
+      yaml:
+        specifier: 2.8.1
+        version: 2.8.1
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -77,7 +80,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.10
-        version: 4.1.10(@types/node@20.19.43)(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0))
+        version: 4.1.10(@types/node@20.19.43)(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1))
 
 packages:
 
@@ -2994,6 +2997,11 @@ packages:
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
+  yaml@2.8.1:
+    resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
@@ -3960,13 +3968,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.10(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0))':
+  '@vitest/mocker@4.1.10(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)
+      vite: 8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -5707,7 +5715,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0):
+  vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.5
@@ -5720,11 +5728,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       tsx: 4.23.0
+      yaml: 2.8.1
 
-  vitest@4.1.10(@types/node@20.19.43)(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)):
+  vitest@4.1.10(@types/node@20.19.43)(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0))
+      '@vitest/mocker': 4.1.10(vite@8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -5741,7 +5750,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)
+      vite: 8.1.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.43
@@ -5803,6 +5812,8 @@ snapshots:
   xtend@4.0.2: {}
 
   yallist@3.1.1: {}
+
+  yaml@2.8.1: {}
 
   yocto-queue@0.1.0: {}
 

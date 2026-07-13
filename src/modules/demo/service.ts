@@ -18,6 +18,7 @@ import {
 import { isDemoSeedEnabled } from "@/modules/demo/availability";
 import { submitPublicLead } from "@/modules/crm";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
+import { grantPlatformAdminForLocalSetup } from "@/modules/platform-admin";
 import {
   createTenant,
   getUserTenants,
@@ -58,6 +59,7 @@ export async function seedDemo(
         email: parsed.email,
         password: parsed.password,
       });
+  await grantPlatformAdminForLocalSetup(db, user.id);
   const tenants = await getUserTenants(db, user.id);
   const tenant =
     tenants[0]?.tenant ??

@@ -1,0 +1,302 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { createMemoryDb, type DbClient } from "../src/lib/db";
+import { createServices } from "../src/lib/services";
+import { setPlatformRole } from "../src/modules/platform-admin";
+import { PlatformAdminError } from "../src/modules/platform-admin/errors";
+
+const databases: Array<{ close: () => Promise<void> }> = [];
+
+afterEach(async () => {
+  await Promise.all(databases.splice(0).map((database) => database.close()));
+});
+
+describe("Phase 3 API Intelligence vertical slice", () => {
+  it("moves approved evidence to a disabled sandbox connector and private store", async () => {
+    const db = await createMemoryDb();
+    databases.push(db);
+    const openApi = await fixture("mock-garage-openapi.json");
+    let sourceRequests = 0;
+    const services = createServices(db, {
+      discoveryTransport: async (url, input) => {
+        if (url.pathname === "/robots.txt") {
+          return {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            body: "User-agent: TradikomApiScout\nAllow: /",
+          };
+        }
+        sourceRequests += 1;
+        if (sourceRequests > 1) {
+          expect(input.headers).toMatchObject({
+            "if-none-match": '"fixture-v1"',
+            "if-modified-since": "Sun, 12 Jul 2026 00:00:00 GMT",
+          });
+          return {
+            status: 304,
+            headers: { etag: '"fixture-v1"' },
+            body: "",
+          };
+        }
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            etag: '"fixture-v1"',
+            "last-modified": "Sun, 12 Jul 2026 00:00:00 GMT",
+          },
+          body: openApi,
+        };
+      },
+      mockContractExecutor: async () => ({
+        status: 200,
+        body: { fixture: true },
+      }),
+    });
+    const admin = await services.registerUser({
+      name: "Admin plateforme",
+      email: "platform-admin@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(admin.id, {
+      name: "Garage API Intelligence",
+      category: "Garage automobile",
+    });
+    await setPlatformRole(db, admin.id, "platform_admin");
+
+    const software = await services.createSoftwareDirectoryEntry(
+      admin.id,
+      tenant.id,
+      {
+        canonicalName: "Garage Cloud",
+        aliases: ["GC"],
+        vendor: "Garage Cloud SAS",
+        officialDomain: "docs.garage-cloud.test",
+        supportedRegions: ["Europe"],
+        languages: ["fr"],
+        industries: ["Automobile"],
+        categories: ["Gestion de garage"],
+        officialWebsite: "https://docs.garage-cloud.test/",
+        developerPortal: "https://docs.garage-cloud.test/developers",
+      },
+    );
+    expect(software.approvalStatus).toBe("pending");
+
+    const approvedDomain = await services.decideSoftwareDomain(
+      admin.id,
+      tenant.id,
+      {
+        domainId: software.domainId,
+        status: "approved",
+        reason: "Domaine editeur verifie manuellement.",
+      },
+    );
+    expect(approvedDomain.approval_status).toBe("approved");
+
+    const api = await services.createApiProductRecord(admin.id, tenant.id, {
+      softwareId: software.softwareId,
+      name: "Garage Cloud API",
+      apiStyle: "rest",
+      version: "2026-01",
+      documentationUrl: "https://docs.garage-cloud.test/openapi.json",
+    });
+    const source = await services.addOfficialApiSource(admin.id, tenant.id, {
+      softwareId: software.softwareId,
+      apiProductId: api.apiProductId,
+      url: "https://docs.garage-cloud.test/openapi.json",
+      sourceType: "official_openapi_specification",
+    });
+    const snapshot = await services.fetchApprovedApiSource(
+      admin.id,
+      tenant.id,
+      source.sourceId,
+    );
+    expect(snapshot.robots_decision).toBe("allowed");
+    expect(snapshot.content).not.toContain("must-not-survive");
+    const unchangedSnapshot = await services.fetchApprovedApiSource(
+      admin.id,
+      tenant.id,
+      source.sourceId,
+    );
+    expect(unchangedSnapshot.id).toBe(snapshot.id);
+    const snapshotCount = await db.query<{ count: number }>(
+      "select count(*)::int as count from api_source_snapshots where source_id = $1",
+      [source.sourceId],
+    );
+    expect(snapshotCount.rows[0]?.count).toBe(1);
+
+    const preview = await services.previewOpenApiSnapshot(
+      admin.id,
+      tenant.id,
+      { snapshotId: snapshot.id, apiProductId: api.apiProductId },
+    );
+    expect(preview.operations.map((item) => item.operationKey)).toEqual([
+      "listCustomers",
+      "createCustomer",
+    ]);
+    expect(preview.schemas.map((schema) => schema.name)).toEqual(["Customer"]);
+    const imported = await services.persistOpenApiPreview(
+      admin.id,
+      tenant.id,
+      preview,
+    );
+    expect(imported).toMatchObject({ operationCount: 2, schemaCount: 1 });
+    expect(imported.claimIds).toHaveLength(4);
+    for (const claimId of imported.claimIds) {
+      await services.decideApiClaim(admin.id, tenant.id, {
+        claimId,
+        status: "approved",
+        reason: "Preuve officielle verifiee dans la fixture.",
+      });
+    }
+    const customerEvidence = imported.schemaEvidence.Customer;
+    expect(customerEvidence).toBeTruthy();
+    if (!customerEvidence) throw new Error("Preuve Customer absente.");
+
+    const mapping = await services.proposeTenantOntologyMapping(
+      admin.id,
+      tenant.id,
+      {
+        apiProductId: api.apiProductId,
+        sourceEntity: "Customer",
+        canonicalEntity: "Contact",
+        confidence: 92,
+        evidenceId: customerEvidence,
+      },
+    );
+    expect(mapping.status).toBe("pending");
+    await services.decideTenantOntologyMapping(admin.id, tenant.id, {
+      mappingId: mapping.mappingId,
+      status: "approved",
+    });
+
+    const compatibility = await services.runCompatibilityCheck(
+      admin.id,
+      tenant.id,
+      {
+        softwareId: software.softwareId,
+        apiProductId: api.apiProductId,
+        tenantIndustry: "Garage automobile",
+        desiredAutomation: "Synchroniser les clients vers les contacts.",
+      },
+    );
+    expect(compatibility.outcome).toBe("custom_connector_possible");
+    expect(compatibility.evidence).toHaveLength(1);
+
+    const proposal = await services.generateConnectorProposal(
+      admin.id,
+      tenant.id,
+      {
+        compatibilityCheckId: compatibility.checkId,
+        name: "Garage Cloud Contacts",
+      },
+    );
+    expect(proposal.status).toBe("static_checks_passed");
+    expect(proposal.manifest.enabled).toBe(false);
+    const contract = await services.runMockContractTests(
+      admin.id,
+      tenant.id,
+      proposal.proposalId,
+    );
+    expect(contract.status).toBe("passed");
+    const approval = await services.submitConnectorForSandboxApproval(
+      admin.id,
+      tenant.id,
+      proposal.proposalId,
+    );
+    const decision = await services.decideConnectorSandboxApproval(
+      admin.id,
+      tenant.id,
+      {
+        approvalId: approval.approvalId,
+        decision: "approved",
+        reason: "Fixtures et controles de securite valides.",
+      },
+    );
+    expect(decision).toMatchObject({
+      status: "approved",
+      connectorEnabled: false,
+    });
+    const store = await services.getPrivateConnectStore(admin.id, tenant.id);
+    expect(store).toHaveLength(1);
+    expect(store[0]).toMatchObject({
+      connectorName: "Garage Cloud Contacts",
+      verificationStatus: "approved_for_sandbox",
+      installationStatus: "not_installed",
+    });
+    expect(store[0]?.manifest?.enabled).toBe(false);
+
+    const otherTenant = await services.createTenant(admin.id, {
+      name: "Autre organisation",
+      category: "Services",
+    });
+    expect(
+      await services.getPrivateConnectStore(admin.id, otherTenant.id),
+    ).toEqual([]);
+
+    const proposalRow = await db.query<{ enabled: number; status: string }>(
+      "select enabled, status from connector_proposals where id = $1 and tenant_id = $2",
+      [proposal.proposalId, tenant.id],
+    );
+    expect(proposalRow.rows).toEqual([
+      { enabled: 0, status: "approved_for_sandbox" },
+    ]);
+    await expectAuditActions(db, tenant.id, [
+      "api_intelligence.domain_approved",
+      "api_intelligence.source_fetched",
+      "api_intelligence.openapi_imported",
+      "api_intelligence.claim_approved",
+      "api_intelligence.mapping_approved",
+      "connector_copilot.proposal_generated",
+      "connector_copilot.contract_tests_completed",
+      "connector_copilot.sandbox_approval_requested",
+      "connector_copilot.sandbox_approved",
+    ]);
+  });
+
+  it("rejects platform mutations for a tenant owner without the global role", async () => {
+    const db = await createMemoryDb();
+    databases.push(db);
+    const services = createServices(db);
+    const owner = await services.registerUser({
+      name: "Owner standard",
+      email: "owner-standard@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(owner.id, {
+      name: "Tenant standard",
+      category: "Services",
+    });
+    await expect(
+      services.createSoftwareDirectoryEntry(owner.id, tenant.id, {
+        canonicalName: "Produit non autorise",
+        aliases: [],
+        vendor: "Editeur",
+        officialDomain: "docs.vendor.test",
+        supportedRegions: [],
+        languages: ["fr"],
+        industries: [],
+        categories: [],
+        officialWebsite: "https://docs.vendor.test/",
+      }),
+    ).rejects.toBeInstanceOf(PlatformAdminError);
+  });
+});
+
+async function fixture(name: string) {
+  return readFile(path.join(process.cwd(), "tests", "fixtures", name), "utf8");
+}
+
+async function expectAuditActions(
+  db: DbClient,
+  tenantId: string,
+  expected: string[],
+) {
+  const result = await db.query<{ action: string }>(
+    "select action from audit_logs where tenant_id = $1",
+    [tenantId],
+  );
+  const actions = result.rows.map((row) => row.action);
+  expected.forEach((action) => expect(actions).toContain(action));
+}

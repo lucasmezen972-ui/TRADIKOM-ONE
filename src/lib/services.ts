@@ -103,11 +103,46 @@ import {
   resolveAppUrl,
   type EmailProvider,
 } from "@/modules/email";
+import {
+  addOfficialApiSource,
+  createApiProductRecord,
+  createSoftwareDirectoryEntry,
+  decideSoftwareDomain,
+  getSoftwareDirectory,
+  type ApiProductInput,
+  type ApiSourceInput,
+  type SoftwareInput,
+} from "@/modules/software-directory";
+import {
+  decideTenantOntologyMapping,
+  decideApiClaim,
+  fetchApprovedApiSource,
+  getApiIntelligenceWorkspace,
+  getLatestCompatibilityCheck,
+  persistOpenApiPreview,
+  previewOpenApiSnapshot,
+  proposeTenantOntologyMapping,
+  runCompatibilityCheck,
+  type DiscoveryTransport,
+  type OntologyMappingInput,
+  type OpenApiPreview,
+} from "@/modules/api-intelligence";
+import {
+  decideConnectorSandboxApproval,
+  generateConnectorProposal,
+  getPrivateConnectStore,
+  runMockContractTests,
+  submitConnectorForSandboxApproval,
+  type MockContractExecutor,
+} from "@/modules/connector-copilot";
+import { isPlatformAdmin } from "@/modules/platform-admin";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
   appUrl?: string;
   revealAuthLinks?: boolean;
+  discoveryTransport?: DiscoveryTransport;
+  mockContractExecutor?: MockContractExecutor;
 };
 
 export async function getServices() {
@@ -369,5 +404,112 @@ export function createServices(
       tenantId: string,
       contactId: string,
     ) => findContactForTenant(db, userId, tenantId, contactId),
+    isPlatformAdmin: (userId: string) => isPlatformAdmin(db, userId),
+    getApiIntelligenceWorkspace: (userId: string, tenantId: string) =>
+      getApiIntelligenceWorkspace(db, userId, tenantId),
+    getSoftwareDirectory: (userId: string, tenantId: string) =>
+      getSoftwareDirectory(db, userId, tenantId),
+    createSoftwareDirectoryEntry: (
+      userId: string,
+      tenantId: string,
+      input: SoftwareInput,
+    ) => createSoftwareDirectoryEntry(db, userId, tenantId, input),
+    decideSoftwareDomain: (
+      userId: string,
+      tenantId: string,
+      input: {
+        domainId: string;
+        status: "approved" | "denied" | "paused";
+        reason: string;
+      },
+    ) => decideSoftwareDomain(db, userId, tenantId, input),
+    createApiProductRecord: (
+      userId: string,
+      tenantId: string,
+      input: ApiProductInput,
+    ) => createApiProductRecord(db, userId, tenantId, input),
+    addOfficialApiSource: (
+      userId: string,
+      tenantId: string,
+      input: ApiSourceInput,
+    ) => addOfficialApiSource(db, userId, tenantId, input),
+    fetchApprovedApiSource: (
+      userId: string,
+      tenantId: string,
+      sourceId: string,
+    ) =>
+      fetchApprovedApiSource(db, userId, tenantId, sourceId, {
+        transport: dependencies.discoveryTransport,
+      }),
+    previewOpenApiSnapshot: (
+      userId: string,
+      tenantId: string,
+      input: { snapshotId: string; apiProductId: string },
+    ) => previewOpenApiSnapshot(db, userId, tenantId, input),
+    persistOpenApiPreview: (
+      userId: string,
+      tenantId: string,
+      preview: OpenApiPreview,
+    ) => persistOpenApiPreview(db, userId, tenantId, preview),
+    proposeTenantOntologyMapping: (
+      userId: string,
+      tenantId: string,
+      input: OntologyMappingInput,
+    ) => proposeTenantOntologyMapping(db, userId, tenantId, input),
+    decideTenantOntologyMapping: (
+      userId: string,
+      tenantId: string,
+      input: { mappingId: string; status: "approved" | "rejected" },
+    ) => decideTenantOntologyMapping(db, userId, tenantId, input),
+    decideApiClaim: (
+      userId: string,
+      tenantId: string,
+      input: {
+        claimId: string;
+        status: "approved" | "rejected";
+        reason: string;
+      },
+    ) => decideApiClaim(db, userId, tenantId, input),
+    runCompatibilityCheck: (
+      userId: string,
+      tenantId: string,
+      input: {
+        softwareId: string;
+        apiProductId: string;
+        tenantIndustry: string;
+        desiredAutomation: string;
+      },
+    ) => runCompatibilityCheck(db, userId, tenantId, input),
+    getLatestCompatibilityCheck: (userId: string, tenantId: string) =>
+      getLatestCompatibilityCheck(db, userId, tenantId),
+    generateConnectorProposal: (
+      userId: string,
+      tenantId: string,
+      input: { compatibilityCheckId: string; name: string },
+    ) => generateConnectorProposal(db, userId, tenantId, input),
+    runMockContractTests: (
+      userId: string,
+      tenantId: string,
+      proposalId: string,
+    ) =>
+      runMockContractTests(db, userId, tenantId, proposalId, {
+        executor: dependencies.mockContractExecutor,
+      }),
+    submitConnectorForSandboxApproval: (
+      userId: string,
+      tenantId: string,
+      proposalId: string,
+    ) => submitConnectorForSandboxApproval(db, userId, tenantId, proposalId),
+    decideConnectorSandboxApproval: (
+      userId: string,
+      tenantId: string,
+      input: {
+        approvalId: string;
+        decision: "approved" | "rejected";
+        reason: string;
+      },
+    ) => decideConnectorSandboxApproval(db, userId, tenantId, input),
+    getPrivateConnectStore: (userId: string, tenantId: string) =>
+      getPrivateConnectStore(db, userId, tenantId),
   };
 }

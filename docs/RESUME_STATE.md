@@ -1,6 +1,6 @@
 # Resume State
 
-Branch: `main`
+Branch: `codex/phase-3-api-intelligence`
 
 Last completed checkpoint:
 
@@ -146,4 +146,13 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Stop Phase 2 work. Rebase or recreate PR #2 from the new `main` and review it separately as a product/UI change before any merge.
+1. Push the first Phase 3 API Intelligence vertical slice and inspect the complete GitHub Actions result.
+2. Fix every CI regression before extending the slice.
+3. After a green checkpoint, continue with API change detection and scheduled approved-source rechecks without broad crawling.
+
+Phase 3 checkpoint in progress:
+
+- Phase 3 started from verified `main` SHA `05a7c7a099ad7ea458cb395cfdd9ccdf73a6f622`; run `29250246503` was green.
+- The first vertical slice now includes the Software Directory, approved-domain workflow, bounded source snapshots, safe OpenAPI JSON/YAML import, evidence-backed tenant mappings, explainable compatibility checks, disabled Connector Copilot proposals, mock contract tests, sandbox approval, private Connect Store, and a platform-admin interface.
+- PostgreSQL migrations `017`/`018` and SQL mirrors `0011`/`0012` add the Phase 3 models, tenant RLS and related-tenant integrity controls.
+- Local Node validation still hangs without diagnostics; `git diff --check` is used locally and GitHub Actions remains authoritative.

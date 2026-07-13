@@ -17,6 +17,7 @@ import {
 } from "@/lib/session";
 import type { Role, WebsiteTemplateKey } from "@/lib/types";
 import { isPublicDemoEnabled } from "@/modules/demo";
+import { canonicalEntitySchema } from "@/modules/api-intelligence";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -574,6 +575,211 @@ export async function setWebhookEndpointStatusAction(formData: FormData) {
   );
   revalidatePath("/connexions");
   revalidatePath("/aujourdhui");
+}
+
+export async function createApiIntelligenceSoftwareAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.software_create", () =>
+    services.createSoftwareDirectoryEntry(user.id, tenant.id, {
+      canonicalName: text(formData, "canonicalName"),
+      aliases: list(formData, "aliases"),
+      vendor: text(formData, "vendor"),
+      officialDomain: text(formData, "officialDomain"),
+      country: text(formData, "country") || undefined,
+      supportedRegions: list(formData, "supportedRegions"),
+      languages: list(formData, "languages"),
+      industries: list(formData, "industries"),
+      categories: list(formData, "categories"),
+      officialWebsite: text(formData, "officialWebsite"),
+      developerPortal: text(formData, "developerPortal") || undefined,
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function decideApiIntelligenceDomainAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.domain_decide", () =>
+    services.decideSoftwareDomain(user.id, tenant.id, {
+      domainId: text(formData, "domainId"),
+      status: text(formData, "status") as "approved" | "denied" | "paused",
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function createApiIntelligenceProductAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.product_create", () =>
+    services.createApiProductRecord(user.id, tenant.id, {
+      softwareId: text(formData, "softwareId"),
+      name: text(formData, "name"),
+      apiStyle: text(formData, "apiStyle") as
+        | "rest"
+        | "graphql"
+        | "webhook"
+        | "other",
+      version: text(formData, "version"),
+      documentationUrl: text(formData, "documentationUrl"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function addApiIntelligenceSourceAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.source_add", () =>
+    services.addOfficialApiSource(user.id, tenant.id, {
+      softwareId: text(formData, "softwareId"),
+      apiProductId: text(formData, "apiProductId") || undefined,
+      url: text(formData, "url"),
+      sourceType: "official_openapi_specification",
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function fetchApiIntelligenceSourceAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.source_fetch", () =>
+    services.fetchApprovedApiSource(
+      user.id,
+      tenant.id,
+      text(formData, "sourceId"),
+    ),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function importApiIntelligenceSnapshotAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const input = {
+    snapshotId: text(formData, "snapshotId"),
+    apiProductId: text(formData, "apiProductId"),
+  };
+  await safeServerAction("api_intelligence.openapi_import", async () => {
+    const preview = await services.previewOpenApiSnapshot(
+      user.id,
+      tenant.id,
+      input,
+    );
+    return services.persistOpenApiPreview(user.id, tenant.id, preview);
+  });
+  revalidatePath("/intelligence-api");
+}
+
+export async function decideApiIntelligenceClaimAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.claim_decide", () =>
+    services.decideApiClaim(user.id, tenant.id, {
+      claimId: text(formData, "claimId"),
+      status: text(formData, "status") as "approved" | "rejected",
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function proposeApiIntelligenceMappingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.mapping_propose", () =>
+    services.proposeTenantOntologyMapping(user.id, tenant.id, {
+      apiProductId: text(formData, "apiProductId"),
+      sourceEntity: text(formData, "sourceEntity"),
+      canonicalEntity: canonicalEntitySchema.parse(
+        text(formData, "canonicalEntity"),
+      ),
+      confidence: Number.parseInt(text(formData, "confidence"), 10),
+      evidenceId: text(formData, "evidenceId"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function decideApiIntelligenceMappingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.mapping_decide", () =>
+    services.decideTenantOntologyMapping(user.id, tenant.id, {
+      mappingId: text(formData, "mappingId"),
+      status: text(formData, "status") as "approved" | "rejected",
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function runApiCompatibilityCheckAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.compatibility_check", () =>
+    services.runCompatibilityCheck(user.id, tenant.id, {
+      softwareId: text(formData, "softwareId"),
+      apiProductId: text(formData, "apiProductId"),
+      tenantIndustry: text(formData, "tenantIndustry"),
+      desiredAutomation: text(formData, "desiredAutomation"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function generateApiConnectorProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector_copilot.proposal_generate", () =>
+    services.generateConnectorProposal(user.id, tenant.id, {
+      compatibilityCheckId: text(formData, "compatibilityCheckId"),
+      name: text(formData, "name"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function runApiConnectorContractAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector_copilot.contract_run", () =>
+    services.runMockContractTests(
+      user.id,
+      tenant.id,
+      text(formData, "proposalId"),
+    ),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function submitApiConnectorApprovalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector_copilot.approval_submit", () =>
+    services.submitConnectorForSandboxApproval(
+      user.id,
+      tenant.id,
+      text(formData, "proposalId"),
+    ),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function decideApiConnectorApprovalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector_copilot.approval_decide", () =>
+    services.decideConnectorSandboxApproval(user.id, tenant.id, {
+      approvalId: text(formData, "approvalId"),
+      decision: text(formData, "decision") as "approved" | "rejected",
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
 }
 
 export async function seedDemoAction() {

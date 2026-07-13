@@ -7,6 +7,7 @@ import {
   Contact,
   Gauge,
   Globe2,
+  ScanSearch,
   PlugZap,
   Settings,
   Workflow,
@@ -19,6 +20,7 @@ type AppShellProps = {
   tenant: Tenant;
   tenants: Array<{ tenant: Tenant }>;
   userName: string;
+  platformAdmin: boolean;
 };
 
 const navItems = [
@@ -33,7 +35,19 @@ const navItems = [
   { href: "/parametres", label: "Parametres", icon: Settings },
 ];
 
-export function AppShell({ children, tenant, tenants, userName }: AppShellProps) {
+export function AppShell({
+  children,
+  tenant,
+  tenants,
+  userName,
+  platformAdmin,
+}: AppShellProps) {
+  const visibleNavItems = platformAdmin
+    ? [
+        ...navItems,
+        { href: "/intelligence-api", label: "Intelligence API", icon: ScanSearch },
+      ]
+    : navItems;
   return (
     <div className="min-h-screen bg-[#08111f] text-slate-100">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-[#08111f] p-5 lg:block">
@@ -71,7 +85,7 @@ export function AppShell({ children, tenant, tenants, userName }: AppShellProps)
         </form>
 
         <nav className="mt-8 grid gap-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -103,7 +117,7 @@ export function AppShell({ children, tenant, tenants, userName }: AppShellProps)
             <span className="text-sm text-slate-600">{tenant.name}</span>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

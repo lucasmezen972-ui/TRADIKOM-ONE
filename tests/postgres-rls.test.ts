@@ -63,6 +63,12 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ownerB.id,
       "bravo@example.com",
     );
+    const apiIntelligence = await insertApiIntelligenceTenantFixtures(
+      ownerDb,
+      tenantA.id,
+      tenantB.id,
+      ownerA.id,
+    );
 
     const policyGaps = await ownerPool.query<{ table_name: string }>(`
       select columns.table_name
@@ -169,6 +175,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
         const connectorSecrets = await client.query<{ tenant_id: string }>(
           "select distinct tenant_id from connector_secret_versions order by tenant_id",
         );
+        const connectorProposals = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from connector_proposals order by id");
 
         return {
           tenants: tenants.rows,
@@ -176,6 +186,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
           workflows: workflows.rows,
           webhookEndpoints: webhookEndpoints.rows,
           connectorSecrets: connectorSecrets.rows,
+          connectorProposals: connectorProposals.rows,
         };
       },
     );
@@ -185,6 +196,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       workflows: [{ tenant_id: tenantA.id }],
       webhookEndpoints: [{ tenant_id: tenantA.id }],
       connectorSecrets: [{ tenant_id: tenantA.id }],
+      connectorProposals: [
+        { id: apiIntelligence.proposalAId, tenant_id: tenantA.id },
+      ],
     });
 
     await expect(
@@ -265,6 +279,31 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ),
       ),
     ).rejects.toThrow(/row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into connector_contract_runs (
+             id, tenant_id, connector_proposal_id, connector_version,
+             api_version, test_suite_version, environment, status, results,
+             safe_logs, created_at
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            id("contract"),
+            tenantA.id,
+            apiIntelligence.proposalBId,
+            "0.1.0",
+            "1",
+            "contract-1",
+            "mock",
+            "passed",
+            toJson([]),
+            toJson([]),
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
   });
 
   it("consumes rate limits atomically under PostgreSQL concurrency", async () => {
@@ -333,6 +372,120 @@ async function insertContact(
     ],
   );
   return contactId;
+}
+
+async function insertApiIntelligenceTenantFixtures(
+  db: ReturnType<typeof pgPoolAsSqlClient>,
+  tenantAId: string,
+  tenantBId: string,
+  ownerId: string,
+) {
+  const now = nowIso();
+  const softwareId = id("software");
+  const apiProductId = id("api");
+  const proposalAId = id("proposal_a");
+  const proposalBId = id("proposal_b");
+  await db.query(
+    `insert into software_directory_entries (
+       id, canonical_name, aliases, vendor, official_domain, country,
+       supported_regions, languages, industries, categories,
+       official_website, developer_portal, support_page,
+       partner_program_page, pricing_information_page, verification_status,
+       confidence_score, last_verified_at, evidence_count, created_by,
+       created_at, updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+               $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+    [
+      softwareId,
+      `RLS Software ${softwareId}`,
+      toJson([]),
+      "RLS Vendor",
+      `${softwareId}.example.test`,
+      null,
+      toJson([]),
+      toJson(["fr"]),
+      toJson([]),
+      toJson([]),
+      `https://${softwareId}.example.test/`,
+      null,
+      null,
+      null,
+      null,
+      "verified",
+      100,
+      now,
+      1,
+      ownerId,
+      now,
+      now,
+    ],
+  );
+  await db.query(
+    `insert into api_products (
+       id, software_id, name, api_style, version, base_url,
+       documentation_url, openapi_url, postman_collection_url,
+       graphql_schema_url, authentication_type, oauth_metadata, scopes,
+       webhook_support, sandbox_support, partner_access_requirement,
+       access_level, rate_limit_information, deprecation_status, terms_url,
+       confidence_score, last_verified_at, created_at, updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+               $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+    [
+      apiProductId,
+      softwareId,
+      "RLS API",
+      "rest",
+      "1",
+      "https://api.example.test",
+      "https://docs.example.test",
+      null,
+      null,
+      null,
+      "none",
+      toJson({}),
+      toJson([]),
+      0,
+      1,
+      0,
+      "public",
+      null,
+      "active",
+      null,
+      100,
+      now,
+      now,
+      now,
+    ],
+  );
+  for (const [proposalId, tenantId] of [
+    [proposalAId, tenantAId],
+    [proposalBId, tenantBId],
+  ]) {
+    await db.query(
+      `insert into connector_proposals (
+         id, tenant_id, software_id, api_product_id, name, version, status,
+         enabled, manifest, unresolved_questions, risk_assessment, created_by,
+         created_at, updated_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        proposalId,
+        tenantId,
+        softwareId,
+        apiProductId,
+        `RLS Connector ${tenantId}`,
+        "0.1.0",
+        "static_checks_passed",
+        0,
+        toJson({ enabled: false }),
+        toJson([]),
+        toJson({ level: "low" }),
+        ownerId,
+        now,
+        now,
+      ],
+    );
+  }
+  return { proposalAId, proposalBId };
 }
 
 async function createRestrictedRole(ownerPool: Pool) {
