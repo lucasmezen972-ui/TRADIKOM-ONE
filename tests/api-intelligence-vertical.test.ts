@@ -182,7 +182,15 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       },
     );
     expect(compatibility.outcome).toBe("custom_connector_possible");
-    expect(compatibility.evidence).toHaveLength(1);
+    expect(compatibility.evidence).toHaveLength(4);
+    expect(
+      compatibility.evidence.map((item) => item.locator).sort(),
+    ).toEqual([
+      "#",
+      "#/components/schemas/Customer",
+      "#/paths/~1customers/get",
+      "#/paths/~1customers/post",
+    ]);
 
     const proposal = await services.generateConnectorProposal(
       admin.id,
