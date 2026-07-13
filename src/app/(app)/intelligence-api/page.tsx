@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import {
   Braces,
   Check,
+  Clock,
   Database,
   FlaskConical,
   Network,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import {
   addApiIntelligenceSourceAction,
+  configureApiSourceRecheckAction,
   createApiIntelligenceProductAction,
   createApiIntelligenceSoftwareAction,
   decideApiConnectorApprovalAction,
@@ -308,8 +310,22 @@ export default async function ApiIntelligencePage() {
                   <p className="mt-1 text-xs text-slate-500">
                     {source.latestSnapshotId ? `Snapshot ${shortId(source.latestSnapshotId)}` : "Jamais analysée"}
                   </p>
+                  {source.recheck ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <StatusPill
+                        label={statusLabel(source.recheck.status)}
+                        tone={source.recheck.enabled ? "positive" : source.recheck.status === "blocked" ? "warning" : "neutral"}
+                      />
+                      <span className="text-xs text-slate-500">
+                        {formatRecheckInterval(source.recheck.intervalSeconds)}
+                        {source.recheck.nextRunAt && source.recheck.enabled
+                          ? ` · prochaine ${formatDateTime(source.recheck.nextRunAt)}`
+                          : ""}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex max-w-full flex-wrap gap-2">
                   <form action={fetchApiIntelligenceSourceAction}>
                     <input name="sourceId" type="hidden" value={source.id} />
                     <button className={secondaryButtonClass}>
@@ -324,6 +340,36 @@ export default async function ApiIntelligencePage() {
                       <button className={secondaryButtonClass}>
                         <Braces size={15} aria-hidden />
                         Importer
+                      </button>
+                    </form>
+                  ) : null}
+                  <form action={configureApiSourceRecheckAction} className="flex max-w-full flex-wrap gap-2">
+                    <input name="sourceId" type="hidden" value={source.id} />
+                    <input name="enabled" type="hidden" value="true" />
+                    <select
+                      aria-label="Fréquence de vérification"
+                      className={`${inputClass} min-w-44 sm:w-auto`}
+                      defaultValue={String(source.recheck?.intervalSeconds ?? 86_400)}
+                      name="intervalSeconds"
+                    >
+                      <option value="3600">Chaque heure</option>
+                      <option value="21600">Toutes les 6 heures</option>
+                      <option value="86400">Chaque jour</option>
+                      <option value="604800">Chaque semaine</option>
+                    </select>
+                    <button className={secondaryButtonClass} title="Planifier les vérifications">
+                      <Clock size={15} aria-hidden />
+                      {source.recheck?.enabled ? "Modifier" : "Planifier"}
+                    </button>
+                  </form>
+                  {source.recheck?.enabled ? (
+                    <form action={configureApiSourceRecheckAction}>
+                      <input name="sourceId" type="hidden" value={source.id} />
+                      <input name="enabled" type="hidden" value="false" />
+                      <input name="intervalSeconds" type="hidden" value={source.recheck.intervalSeconds} />
+                      <button className={secondaryButtonClass}>
+                        <X size={15} aria-hidden />
+                        Suspendre
                       </button>
                     </form>
                   ) : null}
@@ -798,12 +844,32 @@ function statusLabel(status: string) {
     rejected: "Rejeté",
     repair_approved: "Plan approuvé",
     repair_rejected: "Plan rejeté",
+    retrying: "Nouvelle tentative planifiée",
+    scheduled: "Planifiée",
+    processing: "Analyse en cours",
+    succeeded: "À jour",
+    disabled: "Suspendue",
     potentially_breaking: "Risque de rupture",
     security_relevant: "Sécurité",
     security_review_required: "Revue requise",
     static_checks_passed: "Contrôles statiques réussis",
   };
   return labels[status] ?? status.replaceAll("_", " ");
+}
+
+function formatRecheckInterval(seconds: number) {
+  if (seconds === 3_600) return "Vérification horaire";
+  if (seconds === 21_600) return "Vérification toutes les 6 heures";
+  if (seconds === 604_800) return "Vérification hebdomadaire";
+  return "Vérification quotidienne";
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Martinique",
+  }).format(new Date(value));
 }
 
 function claimLabel(claimType: string) {

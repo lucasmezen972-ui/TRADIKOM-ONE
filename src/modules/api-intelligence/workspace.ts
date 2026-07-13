@@ -33,6 +33,14 @@ type SourceRow = {
   latest_snapshot_id: string | null;
   latest_content_hash: string | null;
   latest_retrieved_at: string | null;
+  recheck_schedule_id: string | null;
+  recheck_enabled: number | null;
+  recheck_interval_seconds: number | null;
+  recheck_next_run_at: string | null;
+  recheck_last_run_at: string | null;
+  recheck_last_status: string | null;
+  recheck_failure_count: number | null;
+  recheck_last_error_code: string | null;
 };
 
 type SchemaRow = {
@@ -143,7 +151,15 @@ export async function getApiIntelligenceWorkspace(
             api_sources.canonical_url, api_sources.source_type,
             latest.id as latest_snapshot_id,
             latest.content_hash as latest_content_hash,
-            latest.retrieved_at as latest_retrieved_at
+            latest.retrieved_at as latest_retrieved_at,
+            recheck.id as recheck_schedule_id,
+            recheck.enabled as recheck_enabled,
+            recheck.interval_seconds as recheck_interval_seconds,
+            recheck.next_run_at as recheck_next_run_at,
+            recheck.last_run_at as recheck_last_run_at,
+            recheck.last_status as recheck_last_status,
+            recheck.consecutive_failures as recheck_failure_count,
+            recheck.last_error_code as recheck_last_error_code
      from api_sources
      join software_directory_entries
        on software_directory_entries.id = api_sources.software_id
@@ -155,6 +171,8 @@ export async function getApiIntelligenceWorkspace(
          order by snapshot.retrieved_at desc, snapshot.created_at desc
          limit 1
        )
+     left join api_source_recheck_schedules recheck
+       on recheck.source_id = api_sources.id
      order by software_directory_entries.canonical_name asc,
               api_sources.canonical_url asc`,
   );
@@ -303,6 +321,18 @@ export async function getApiIntelligenceWorkspace(
       latestSnapshotId: row.latest_snapshot_id ?? undefined,
       latestContentHash: row.latest_content_hash ?? undefined,
       latestRetrievedAt: row.latest_retrieved_at ?? undefined,
+      recheck: row.recheck_schedule_id
+        ? {
+            id: row.recheck_schedule_id,
+            enabled: Boolean(row.recheck_enabled),
+            intervalSeconds: row.recheck_interval_seconds ?? 86_400,
+            nextRunAt: row.recheck_next_run_at ?? undefined,
+            lastRunAt: row.recheck_last_run_at ?? undefined,
+            status: row.recheck_last_status ?? "disabled",
+            failureCount: row.recheck_failure_count ?? 0,
+            lastErrorCode: row.recheck_last_error_code ?? undefined,
+          }
+        : undefined,
     })),
     schemas: schemas.rows.map((row) => ({
       id: row.id,

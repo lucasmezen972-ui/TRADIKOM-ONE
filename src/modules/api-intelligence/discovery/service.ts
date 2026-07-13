@@ -33,6 +33,12 @@ export async function fetchApprovedApiSource(
   if (!source) {
     throw new DiscoveryError("source_not_found", "Source API introuvable.");
   }
+  if (source.source_classification !== "official") {
+    throw new DiscoveryError(
+      "source_not_official",
+      "Seule une source officielle approuvee peut etre analysee.",
+    );
+  }
   const approvedDomain = await findApprovedSoftwareDomain(
     db,
     source.software_id,

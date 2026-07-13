@@ -1,5 +1,6 @@
 export type DiscoveryErrorCode =
   | "source_not_found"
+  | "source_not_official"
   | "domain_not_approved"
   | "url_not_allowed"
   | "private_address_blocked"

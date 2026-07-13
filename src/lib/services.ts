@@ -118,6 +118,7 @@ import {
   decideApiChangeRepair,
   decideApiClaim,
   fetchApprovedApiSource,
+  configureApiSourceRecheck,
   getApiIntelligenceWorkspace,
   getLatestCompatibilityCheck,
   persistOpenApiPreview,
@@ -125,6 +126,7 @@ import {
   proposeTenantOntologyMapping,
   runCompatibilityCheck,
   type DiscoveryTransport,
+  type ApiSourceRecheckConfiguration,
   type OntologyMappingInput,
   type OpenApiPreview,
 } from "@/modules/api-intelligence";
@@ -442,6 +444,11 @@ export function createServices(
       fetchApprovedApiSource(db, userId, tenantId, sourceId, {
         transport: dependencies.discoveryTransport,
       }),
+    configureApiSourceRecheck: (
+      userId: string,
+      tenantId: string,
+      input: ApiSourceRecheckConfiguration,
+    ) => configureApiSourceRecheck(db, userId, tenantId, input),
     previewOpenApiSnapshot: (
       userId: string,
       tenantId: string,

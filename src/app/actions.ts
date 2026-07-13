@@ -657,6 +657,19 @@ export async function fetchApiIntelligenceSourceAction(formData: FormData) {
   revalidatePath("/intelligence-api");
 }
 
+export async function configureApiSourceRecheckAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.recheck_configure", () =>
+    services.configureApiSourceRecheck(user.id, tenant.id, {
+      sourceId: text(formData, "sourceId"),
+      enabled: text(formData, "enabled") === "true",
+      intervalSeconds: Number(text(formData, "intervalSeconds")),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
 export async function importApiIntelligenceSnapshotAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

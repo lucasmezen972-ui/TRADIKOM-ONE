@@ -3,6 +3,11 @@ import { setTimeout as delay } from "node:timers/promises";
 import { getDatabaseUrl } from "@/db/client";
 import { withSystemTransaction } from "@/db/tenant-context";
 import { getDb, type DbClient } from "@/lib/db";
+import type { DiscoveryTransport } from "@/modules/api-intelligence/discovery/fetcher";
+import {
+  processDueApiSourceRechecks,
+  type ApiSourceRecheckSummary,
+} from "@/modules/api-intelligence/discovery/recheck/worker";
 import {
   getPendingDomainEventCount,
   processPendingDomainEvents,
@@ -34,6 +39,7 @@ export type WorkerBatchResult = {
   pendingBefore: number;
   pendingAfter: number;
   summary: DomainEventWorkerSummary;
+  sourceRechecks: ApiSourceRecheckSummary;
   startedAt: string;
   completedAt: string;
 };
@@ -48,19 +54,21 @@ export type WorkerPollResult = {
 
 type WorkerEnvironment = Record<string, string | undefined>;
 
-type WorkerRuntimeOptions = {
+export type WorkerRuntimeOptions = {
   signal?: AbortSignal;
   logger?: WorkerLogger;
   db?: DbClient;
   maxIterations?: number;
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  discoveryTransport?: DiscoveryTransport;
 };
 
-type WorkerBatchOptions = {
+export type WorkerBatchOptions = {
   batchSize?: number;
   correlationId?: string;
   db?: DbClient;
   now?: Date;
+  discoveryTransport?: DiscoveryTransport;
 };
 
 const defaultBatchSize = 25;
@@ -84,6 +92,7 @@ export async function runWorkerFromEnvironment(
   const batch = await runWorkerBatch({
     db: options.db,
     batchSize: config.batchSize,
+    discoveryTransport: options.discoveryTransport,
   });
   logWorkerBatch(options.logger ?? writeStructuredWorkerLog, "worker.once", batch);
   return batch;
@@ -136,6 +145,7 @@ export async function runWorkerPoll(
       db: options.db,
       batchSize,
       correlationId: batchCorrelationId,
+      discoveryTransport: options.discoveryTransport,
     });
     iterations += 1;
     logWorkerBatch(logger, "worker.poll", lastBatch);
@@ -183,8 +193,17 @@ export async function runWorkerBatch(
   const now = options.now ?? new Date();
 
   const result = options.db
-    ? await runWithClient(options.db, batchSize, now)
-    : await runWithRuntimeDatabase(batchSize, now);
+    ? await runWithClient(
+        options.db,
+        batchSize,
+        now,
+        options.discoveryTransport,
+      )
+    : await runWithRuntimeDatabase(
+        batchSize,
+        now,
+        options.discoveryTransport,
+      );
 
   return {
     correlationId,
@@ -220,22 +239,38 @@ export function writeStructuredWorkerLog(entry: WorkerLogEntry) {
   console.log(serialized);
 }
 
-async function runWithRuntimeDatabase(batchSize: number, now: Date) {
+async function runWithRuntimeDatabase(
+  batchSize: number,
+  now: Date,
+  discoveryTransport?: DiscoveryTransport,
+) {
   if (getDatabaseUrl()) {
     await getDb();
-    return withSystemTransaction((db) => runWithClient(db, batchSize, now));
+    return withSystemTransaction((db) =>
+      runWithClient(db, batchSize, now, discoveryTransport),
+    );
   }
 
   const db = await getDb();
-  return runWithClient(db, batchSize, now);
+  return runWithClient(db, batchSize, now, discoveryTransport);
 }
 
-async function runWithClient(db: DbClient, limit: number, now: Date) {
+async function runWithClient(
+  db: DbClient,
+  limit: number,
+  now: Date,
+  discoveryTransport?: DiscoveryTransport,
+) {
   const pendingBefore = await getPendingDomainEventCount(db, now);
   const summary = await processPendingDomainEvents(db, { limit, now });
+  const sourceRechecks = await processDueApiSourceRechecks(db, {
+    limit: Math.min(limit, 3),
+    now,
+    transport: discoveryTransport,
+  });
   const pendingAfter = await getPendingDomainEventCount(db, now);
 
-  return { pendingBefore, summary, pendingAfter };
+  return { pendingBefore, summary, sourceRechecks, pendingAfter };
 }
 
 function logWorkerBatch(
@@ -253,6 +288,7 @@ function logWorkerBatch(
     pendingBefore: batch.pendingBefore,
     pendingAfter: batch.pendingAfter,
     summary: batch.summary,
+    sourceRechecks: batch.sourceRechecks,
   });
 }
 
