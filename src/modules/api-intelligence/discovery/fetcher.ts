@@ -18,7 +18,7 @@ const requestTimeoutMs = 10_000;
 
 export type DiscoveryResponse = {
   status: number;
-  headers: Record<string, string>;
+  headers: Record<string, string | undefined>;
   body: string;
 };
 
