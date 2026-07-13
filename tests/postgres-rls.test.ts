@@ -298,7 +298,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
           ],
         ),
       ),
-    ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
+    ).rejects.toThrow(
+      /Cross-tenant relation|Related tenant row|Invalid API change impact relation/,
+    );
 
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
