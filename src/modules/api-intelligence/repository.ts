@@ -53,6 +53,8 @@ export async function replaceOpenApiImport(
       authenticationType: preview.authenticationType,
       scopes: preview.scopes,
       webhookSupport: preview.webhookSupport,
+      rateLimitFingerprint: preview.rateLimitFingerprint,
+      rateLimitLocators: preview.rateLimitLocators,
     },
     locator: "#",
     excerptHash: preview.sourceHash,

@@ -26,6 +26,26 @@ L'espace administrateur `Intelligence API` permet a un administrateur plateforme
 12. soumettre puis approuver le connecteur pour le sandbox uniquement;
 13. afficher le connecteur dans le Connect Store prive.
 
+## Moniteur de changements
+
+Chaque nouvelle observation HTTP 200 est comparee au snapshot precedent, y compris lorsque
+le contenu est identique mais que l'ETag ou Last-Modified change. Une reponse 304
+reutilise le dernier snapshot sans dupliquer l'historique. Le moniteur
+detecte les ajouts et suppressions d'operations, les schemas, l'authentification,
+les scopes, les webhooks, la version, l'URL de base, les signaux de rate limit,
+les deprecations et les decisions de politique d'acces.
+
+Les changements sont classes `informational`, `additive`,
+`potentially_breaking`, `breaking`, `security_relevant` ou
+`access_policy_change`. Une rupture touchant un manifeste existant:
+
+- cree un impact tenant protege par RLS et une alerte Opportunity Radar;
+- garde la proposition et son entree Connect Store desactivees;
+- execute un contrat statique `api-change-1` sans acces Internet;
+- genere un plan de reparation desactive et soumis a decision humaine;
+- conserve le blocage meme apres approbation du plan, jusqu'a regeneration et
+  nouveaux tests sandbox.
+
 ## Garanties du checkpoint
 
 - Les mutations globales exigent un role `platform_admin` et un role owner ou administrator sur le tenant actif.
@@ -40,6 +60,8 @@ L'espace administrateur `Intelligence API` permet a un administrateur plateforme
 - Seules les operations et metadonnees approuvees alimentent la compatibilite et Connector Copilot.
 - Un resultat ne peut pas etre `ready_now` sans connecteur approuve pour la production.
 - Toute proposition generee garde `enabled = false`, y compris apres approbation sandbox.
+- Une rupture API bloque toute mise a niveau automatique et identifie les connecteurs et tenants affectes.
+- Les impacts tenant utilisent RLS, un index tenant et un trigger d'integrite vers la proposition concernee.
 - Les tests automatises utilisent des fixtures locales et aucun acces Internet.
 
 ## Limites assumees
@@ -48,7 +70,7 @@ L'espace administrateur `Intelligence API` permet a un administrateur plateforme
 - La decouverte est manuelle et limitee a une URL approuvee. Le scan de sitemap et les relectures planifiees restent a implementer.
 - Les tests de contrat sont mock uniquement. Aucun appel sandbox externe ni ecriture reelle n'est execute.
 - L'approbation production, l'installation et l'activation de connecteur ne sont pas disponibles.
-- Le suivi des changements d'API et les alertes de rupture restent a implementer.
+- Les plans de reparation ne sont pas appliques automatiquement; la regeneration et les nouveaux tests sandbox restent explicites.
 
 ## Validation
 

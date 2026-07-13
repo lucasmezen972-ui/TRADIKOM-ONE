@@ -78,6 +78,10 @@ export async function persistOpenApiPreview(
       oauthMetadata: parsed.oauthMetadata,
       scopes: parsed.scopes,
       webhookSupport: parsed.webhookSupport,
+      rateLimitInformation: {
+        fingerprint: parsed.rateLimitFingerprint,
+        locators: parsed.rateLimitLocators,
+      },
       confidenceScore: 80,
       verifiedAt: importedAt,
     });

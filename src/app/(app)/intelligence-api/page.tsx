@@ -11,6 +11,7 @@ import {
   Send,
   ShieldCheck,
   Store,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import {
@@ -18,6 +19,7 @@ import {
   createApiIntelligenceProductAction,
   createApiIntelligenceSoftwareAction,
   decideApiConnectorApprovalAction,
+  decideApiChangeRepairAction,
   decideApiIntelligenceClaimAction,
   decideApiIntelligenceDomainAction,
   decideApiIntelligenceMappingAction,
@@ -72,6 +74,7 @@ export default async function ApiIntelligencePage() {
         <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
           <StatusPill label={`${workspace.domains.length} domaines`} />
           <StatusPill label={`${workspace.sources.length} sources`} />
+          <StatusPill label={`${workspace.changeEvents.length} changements`} />
           <StatusPill label={`${storeEntries.length} connecteurs sandbox`} />
         </div>
       </header>
@@ -327,6 +330,83 @@ export default async function ApiIntelligencePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </ToolPanel>
+      </section>
+
+      <section id="changements-api">
+        <ToolPanel icon={TriangleAlert} title="Suivi des changements API">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Historique global</h3>
+              <div className="mt-2 divide-y divide-slate-100">
+                {workspace.changeEvents.length === 0 ? (
+                  <EmptyState label="Aucun changement détecté" />
+                ) : (
+                  workspace.changeEvents.map((event) => (
+                    <div key={event.id} className="py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{event.softwareName} · {event.productName}</p>
+                        <StatusPill
+                          label={statusLabel(event.primaryClassification)}
+                          tone={event.requiresApproval ? "warning" : "neutral"}
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {event.summary?.changes.length ?? 0} changement(s) · {event.affectedConnectorCount} connecteur(s) · {event.affectedTenantCount} tenant(s)
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Réparations de ce tenant</h3>
+              <div className="mt-2 divide-y divide-slate-100">
+                {workspace.changeImpacts.length === 0 ? (
+                  <EmptyState label="Aucun connecteur touché" />
+                ) : (
+                  workspace.changeImpacts.map((impact) => (
+                    <div key={impact.id} className="grid gap-3 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold">{impact.connectorName}</p>
+                          <StatusPill label="Mise à niveau bloquée" tone="warning" />
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {statusLabel(impact.primaryClassification)} · Test {statusLabel(impact.contractTestStatus)} · {statusLabel(impact.approvalStatus)}
+                        </p>
+                      </div>
+                      {impact.approvalStatus === "pending" ? (
+                        <div className="flex flex-wrap gap-2">
+                          <DecisionForm
+                            action={decideApiChangeRepairAction}
+                            idName="impactId"
+                            id={impact.id}
+                            decisionName="decision"
+                            decision="approved"
+                            reason="Plan de réparation examiné; régénération et nouveaux tests toujours requis."
+                            label="Approuver le plan"
+                            icon="check"
+                          />
+                          <DecisionForm
+                            action={decideApiChangeRepairAction}
+                            idName="impactId"
+                            id={impact.id}
+                            decisionName="decision"
+                            decision="rejected"
+                            reason="Plan de réparation refusé; le connecteur reste bloqué."
+                            label="Rejeter"
+                            icon="x"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </ToolPanel>
       </section>
@@ -700,17 +780,26 @@ function statusLabel(status: string) {
   const labels: Record<string, string> = {
     approved: "Approuvé",
     approved_for_sandbox: "Approuvé sandbox",
+    additive: "Additif",
     blocked: "Bloqué",
+    breaking: "Rupture",
+    access_policy_change: "Politique d’accès modifiée",
+    change_review_required: "Revue de changement requise",
     contract_tests_passed: "Tests réussis",
     custom_connector_possible: "Connecteur possible",
     denied: "Refusé",
     failed: "Échec",
     not_installed: "Non installé",
     not_run: "non exécutés",
+    informational: "Informationnel",
     passed: "réussis",
     paused: "Suspendu",
     pending: "En attente",
     rejected: "Rejeté",
+    repair_approved: "Plan approuvé",
+    repair_rejected: "Plan rejeté",
+    potentially_breaking: "Risque de rupture",
+    security_relevant: "Sécurité",
     security_review_required: "Revue requise",
     static_checks_passed: "Contrôles statiques réussis",
   };

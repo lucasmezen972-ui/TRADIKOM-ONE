@@ -1,6 +1,9 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
-import { withTenantDbTransaction } from "@/db/tenant-context";
+import {
+  withSystemDbTransaction,
+  withTenantDbTransaction,
+} from "@/db/tenant-context";
 import { recordAuditLog } from "@/modules/audit";
 import {
   fetchUnderDiscoveryPolicy,
@@ -8,6 +11,7 @@ import {
   type DiscoveryTransport,
 } from "@/modules/api-intelligence/discovery/fetcher";
 import { DiscoveryError } from "@/modules/api-intelligence/discovery/errors";
+import { detectApiSnapshotChange } from "@/modules/api-intelligence/change-monitor/service";
 import { assertPlatformAdmin } from "@/modules/platform-admin";
 import { enforceRateLimit } from "@/modules/rate-limit";
 import {
@@ -76,7 +80,7 @@ export async function fetchApprovedApiSource(
     });
   }
 
-  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+  return withSystemDbTransaction(db, async (transaction) => {
     await assertPlatformAdmin(transaction, userId, tenantId);
     const snapshot = await insertApiSourceSnapshot(transaction, {
       id: id("snapshot"),
@@ -106,6 +110,13 @@ export async function fetchApprovedApiSource(
         publisherDomain: source.publisher_domain,
       },
     });
+    if (latestSnapshot && latestSnapshot.id !== snapshot.id) {
+      await detectApiSnapshotChange(transaction, userId, tenantId, {
+        source,
+        previousSnapshot: latestSnapshot,
+        currentSnapshot: snapshot,
+      });
+    }
     return snapshot;
   });
 }

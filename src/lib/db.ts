@@ -136,6 +136,10 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "018_phase3_api_intelligence_rls", sql: phase3ApiIntelligenceRlsMigrationSql }]
       : []),
+    { id: "019_phase3_api_change_monitor", sql: phase3ApiChangeMonitorMigrationSql },
+    ...(enableRls
+      ? [{ id: "020_phase3_api_change_monitor_rls", sql: phase3ApiChangeMonitorRlsMigrationSql }]
+      : []),
   ];
 }
 
@@ -1463,4 +1467,123 @@ drop trigger if exists private_connect_store_tenant_integrity on private_connect
 create trigger private_connect_store_tenant_integrity
   before insert or update of tenant_id, connector_proposal_id on private_connect_store_entries
   for each row execute function app_enforce_related_tenant('connector_proposals', 'connector_proposal_id');
+`;
+
+const phase3ApiChangeMonitorMigrationSql = `
+alter table api_source_snapshots
+  drop constraint if exists api_source_snapshots_source_id_content_hash_key;
+
+create table if not exists api_change_events (
+  id text primary key,
+  api_product_id text not null references api_products(id) on delete cascade,
+  source_id text not null references api_sources(id) on delete cascade,
+  previous_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  current_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  primary_classification text not null,
+  classifications text not null,
+  summary text not null,
+  requires_approval integer not null default 0,
+  detected_at text not null,
+  created_at text not null,
+  unique (previous_snapshot_id, current_snapshot_id)
+);
+
+create table if not exists api_change_impacts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  api_change_event_id text not null references api_change_events(id) on delete cascade,
+  connector_proposal_id text not null references connector_proposals(id) on delete cascade,
+  contract_run_id text references connector_contract_runs(id) on delete set null,
+  status text not null,
+  upgrade_blocked integer not null default 1,
+  repair_proposal text not null,
+  contract_test_status text not null,
+  contract_test_results text not null,
+  approval_status text not null,
+  decided_by text references users(id),
+  decision_reason text,
+  decided_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (api_change_event_id, connector_proposal_id)
+);
+
+create index if not exists idx_api_change_events_product
+  on api_change_events(api_product_id, detected_at desc);
+create index if not exists idx_api_change_impacts_tenant
+  on api_change_impacts(tenant_id, status, created_at desc);
+create index if not exists idx_api_change_impacts_proposal
+  on api_change_impacts(connector_proposal_id, created_at desc);
+`;
+
+const phase3ApiChangeMonitorRlsMigrationSql = `
+alter table api_change_impacts enable row level security;
+
+drop policy if exists tenant_isolation on api_change_impacts;
+create policy tenant_isolation on api_change_impacts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop trigger if exists api_change_impacts_tenant_integrity on api_change_impacts;
+create trigger api_change_impacts_tenant_integrity
+  before insert or update of tenant_id, connector_proposal_id on api_change_impacts
+  for each row execute function app_enforce_related_tenant('connector_proposals', 'connector_proposal_id');
+
+
+create or replace function app_enforce_api_change_event_integrity()
+returns trigger language plpgsql as $$
+declare
+  source_product_id text;
+  previous_source_id text;
+  current_source_id text;
+begin
+  select api_product_id into source_product_id
+    from api_sources where id = new.source_id;
+  select source_id into previous_source_id
+    from api_source_snapshots where id = new.previous_snapshot_id;
+  select source_id into current_source_id
+    from api_source_snapshots where id = new.current_snapshot_id;
+
+  if source_product_id is null
+     or source_product_id <> new.api_product_id
+     or previous_source_id <> new.source_id
+     or current_source_id <> new.source_id then
+    raise exception 'Invalid API change event relation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists api_change_events_relation_integrity on api_change_events;
+create trigger api_change_events_relation_integrity
+  before insert or update of api_product_id, source_id, previous_snapshot_id, current_snapshot_id
+  on api_change_events
+  for each row execute function app_enforce_api_change_event_integrity();
+
+create or replace function app_enforce_api_change_impact_product()
+returns trigger language plpgsql as $$
+declare
+  event_product_id text;
+  proposal_product_id text;
+begin
+  select api_product_id into event_product_id
+    from api_change_events where id = new.api_change_event_id;
+  select api_product_id into proposal_product_id
+    from connector_proposals where id = new.connector_proposal_id;
+
+  if event_product_id is null
+     or proposal_product_id is null
+     or event_product_id <> proposal_product_id then
+    raise exception 'Invalid API change impact relation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists api_change_impacts_product_integrity on api_change_impacts;
+create trigger api_change_impacts_product_integrity
+  before insert or update of api_change_event_id, connector_proposal_id
+  on api_change_impacts
+  for each row execute function app_enforce_api_change_impact_product();
+
 `;

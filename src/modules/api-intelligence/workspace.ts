@@ -1,6 +1,7 @@
 import type { DbClient } from "@/lib/db";
 import { safeJson } from "@/lib/security";
 import { listApiClaimsForProduct } from "@/modules/api-intelligence/repository";
+import type { ApiChangeSummary } from "@/modules/api-intelligence/change-monitor/schemas";
 import { assertPlatformAdmin } from "@/modules/platform-admin";
 
 type DomainRow = {
@@ -78,6 +79,31 @@ type ApprovalRow = {
   connector_name: string;
   requested_scope: string;
   status: string;
+  created_at: string;
+};
+
+type ChangeEventRow = {
+  id: string;
+  product_name: string;
+  software_name: string;
+  primary_classification: string;
+  summary: string;
+  requires_approval: number;
+  detected_at: string;
+  affected_connectors: number;
+  affected_tenants: number;
+};
+
+type ChangeImpactRow = {
+  id: string;
+  api_change_event_id: string;
+  connector_name: string;
+  primary_classification: string;
+  status: string;
+  upgrade_blocked: number;
+  repair_proposal: string;
+  contract_test_status: string;
+  approval_status: string;
   created_at: string;
 };
 
@@ -203,6 +229,50 @@ export async function getApiIntelligenceWorkspace(
      order by connector_approval_requests.created_at desc`,
     [tenantId],
   );
+  const changeEvents = await db.query<ChangeEventRow>(
+    `select api_change_events.id,
+            api_products.name as product_name,
+            software_directory_entries.canonical_name as software_name,
+            api_change_events.primary_classification,
+            api_change_events.summary,
+            api_change_events.requires_approval,
+            api_change_events.detected_at,
+            count(api_change_impacts.id)::int as affected_connectors,
+            count(distinct api_change_impacts.tenant_id)::int as affected_tenants
+     from api_change_events
+     join api_products on api_products.id = api_change_events.api_product_id
+     join software_directory_entries
+       on software_directory_entries.id = api_products.software_id
+     left join api_change_impacts
+       on api_change_impacts.api_change_event_id = api_change_events.id
+     group by api_change_events.id, api_change_events.primary_classification,
+              api_change_events.summary, api_change_events.requires_approval,
+              api_change_events.detected_at, api_products.name,
+              software_directory_entries.canonical_name
+     order by api_change_events.detected_at desc
+     limit 50`,
+  );
+  const changeImpacts = await db.query<ChangeImpactRow>(
+    `select api_change_impacts.id,
+            api_change_impacts.api_change_event_id,
+            connector_proposals.name as connector_name,
+            api_change_events.primary_classification,
+            api_change_impacts.status,
+            api_change_impacts.upgrade_blocked,
+            api_change_impacts.repair_proposal,
+            api_change_impacts.contract_test_status,
+            api_change_impacts.approval_status,
+            api_change_impacts.created_at
+     from api_change_impacts
+     join api_change_events
+       on api_change_events.id = api_change_impacts.api_change_event_id
+     join connector_proposals
+       on connector_proposals.id = api_change_impacts.connector_proposal_id
+      and connector_proposals.tenant_id = api_change_impacts.tenant_id
+     where api_change_impacts.tenant_id = $1
+     order by api_change_impacts.created_at desc`,
+    [tenantId],
+  );
   const claims = await listApiClaimsForProduct(db);
 
   return {
@@ -274,6 +344,29 @@ export async function getApiIntelligenceWorkspace(
       connectorName: row.connector_name,
       requestedScope: row.requested_scope,
       status: row.status,
+      createdAt: row.created_at,
+    })),
+    changeEvents: changeEvents.rows.map((row) => ({
+      id: row.id,
+      productName: row.product_name,
+      softwareName: row.software_name,
+      primaryClassification: row.primary_classification,
+      summary: safeJson<ApiChangeSummary | null>(row.summary, null),
+      requiresApproval: Boolean(row.requires_approval),
+      affectedConnectorCount: row.affected_connectors,
+      affectedTenantCount: row.affected_tenants,
+      detectedAt: row.detected_at,
+    })),
+    changeImpacts: changeImpacts.rows.map((row) => ({
+      id: row.id,
+      changeEventId: row.api_change_event_id,
+      connectorName: row.connector_name,
+      primaryClassification: row.primary_classification,
+      status: row.status,
+      upgradeBlocked: Boolean(row.upgrade_blocked),
+      repairProposal: safeJson<Record<string, unknown>>(row.repair_proposal, {}),
+      contractTestStatus: row.contract_test_status,
+      approvalStatus: row.approval_status,
       createdAt: row.created_at,
     })),
     claims,

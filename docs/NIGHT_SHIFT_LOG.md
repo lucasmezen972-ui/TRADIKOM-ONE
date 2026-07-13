@@ -133,3 +133,7 @@
 - CI then confirmed the evidence model now returns four approved provenance records instead of the obsolete single-schema expectation; commit `1e181c9` asserts metadata, schema and both operation locators.
 - Playwright exposed an untyped nullable PostgreSQL filter in the administration workspace; commit `e971d13` uses an explicit text cast shared by PostgreSQL and PGlite.
 - Both complete CI runs for `e971d13` passed: push `29258483303` and pull request `29258489327`, including migrations, PostgreSQL RLS, lint, typecheck, 109 tests, production build and all three Playwright scenarios.
+- Documentation checkpoint `b59d239` passed both complete CI runs: push `29259838006` and pull request `29259841906`.
+- Implemented the API Change Monitor with distinct HTTP-validator snapshots, deterministic OpenAPI contract comparison, six classifications, connector/tenant impact discovery, automatic upgrade blocking, safe static contract runs, disabled repair plans, Opportunity Radar alerts and audited human decisions.
+- Added runtime migrations `019`/`020`, SQL mirrors `0013`/`0014`, tenant RLS/integrity coverage, a breaking OpenAPI fixture, pure comparison tests and the complete changed-source-to-blocked-connector integration path.
+- Local dependency preparation for TypeScript validation hung and was stopped after 30 seconds. Targeted `git diff --check` passed; GitHub Actions remains authoritative.

@@ -1,0 +1,66 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Garage Cloud API",
+    "version": "2026-02"
+  },
+  "servers": [{ "url": "https://api.garage-cloud.test/v2" }],
+  "x-rate-limit": {
+    "requests": 60,
+    "window": "minute"
+  },
+  "paths": {
+    "/customers": {
+      "post": {
+        "operationId": "createCustomer",
+        "summary": "Creer un client",
+        "tags": ["Customers"],
+        "security": [{ "oauth": ["customers:write:v2"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Customer" }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepte",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Customer" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://auth.garage-cloud.test/token",
+            "scopes": {
+              "customers:write:v2": "Ecriture des clients"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "required": ["id", "email", "consent"],
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "consent": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

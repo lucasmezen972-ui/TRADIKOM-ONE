@@ -6,6 +6,7 @@
 - `src/modules/software-directory/`: logiciels, domaines, produits API, sources et snapshots.
 - `src/modules/api-intelligence/discovery/`: validation URL/DNS, robots, fetch HTTPS borne et redaction.
 - `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML et previsualisation.
+- `src/modules/api-intelligence/change-monitor/`: comparaison deterministe, classification, impacts tenant, contrats de changement et plans de reparation.
 - `src/modules/api-intelligence/ontology/`: mappings tenant avec preuve et approbation.
 - `src/modules/api-intelligence/compatibility.ts`: resultat tenant explique par operations, mappings et preuves.
 - `src/modules/connector-copilot/`: manifestes desactives, tests mock, demandes d'approbation et Connect Store prive.
@@ -28,13 +29,17 @@ flowchart LR
   J --> K["Tests de contrat mock"]
   K --> L["Approbation sandbox"]
   L --> M["Connect Store prive"]
+  D --> N["Snapshot suivant"]
+  N --> O["Comparaison deterministe"]
+  O --> P["Impact tenant et blocage"]
+  P --> Q["Plan de reparation soumis a approbation"]
 ```
 
 Chaque transition sensible est autorisee cote serveur et auditee. La previsualisation OpenAPI n'est pas une autorite: le service recharge le snapshot, recalcule le document et exige une correspondance exacte avant d'ecrire.
 
 ## Isolation
 
-Les connaissances issues des sources officielles sont globales. Les mappings, analyses de compatibilite, propositions, tests, approbations et entrees du Connect Store portent `tenant_id`.
+Les connaissances issues des sources officielles et les evenements de changement sont globaux. Les mappings, analyses de compatibilite, propositions, tests, approbations, impacts de changement et entrees du Connect Store portent `tenant_id`.
 
 Ces tables utilisent:
 
@@ -44,8 +49,8 @@ Ces tables utilisent:
 - des index commencant par `tenant_id`;
 - des triggers d'integrite entre proposition, test, approbation et Connect Store.
 
-Un mapping tenant ne peut jamais etre promu automatiquement en connaissance globale.
+Un mapping tenant ne peut jamais etre promu automatiquement en connaissance globale. Le fan-out d'un changement global vers plusieurs tenants utilise une transaction systeme explicite apres autorisation plateforme; chaque impact reste ensuite invisible aux autres tenants sous un role PostgreSQL restreint.
 
 ## Frontieres actuelles
 
-L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les futurs importeurs et le moniteur de changements doivent reutiliser les memes sources, snapshots, preuves et decisions d'approbation.
+L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les futurs importeurs et relectures planifiees doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation.

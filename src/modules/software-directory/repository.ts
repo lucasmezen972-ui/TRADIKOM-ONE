@@ -290,6 +290,7 @@ export async function updateApiProductFromSpecification(
     oauthMetadata: unknown;
     scopes: string[];
     webhookSupport: boolean;
+    rateLimitInformation: { fingerprint?: string; locators: string[] };
     confidenceScore: number;
     verifiedAt: string;
   },
@@ -297,15 +298,16 @@ export async function updateApiProductFromSpecification(
   await db.query(
     `update api_products
      set base_url = $1, authentication_type = $2, oauth_metadata = $3,
-         scopes = $4, webhook_support = $5, confidence_score = $6,
-         last_verified_at = $7, updated_at = $7
-     where id = $8`,
+         scopes = $4, webhook_support = $5, rate_limit_information = $6,
+         confidence_score = $7, last_verified_at = $8, updated_at = $8
+     where id = $9`,
     [
       input.baseUrl ?? null,
       input.authenticationType,
       toJson(input.oauthMetadata),
       toJson(input.scopes),
       input.webhookSupport ? 1 : 0,
+      toJson(input.rateLimitInformation),
       input.confidenceScore,
       input.verifiedAt,
       input.apiProductId,
@@ -378,8 +380,7 @@ export async function insertApiSourceSnapshot(
        id, source_id, retrieved_at, http_status, etag, last_modified,
        content_hash, parser_version, robots_decision, access_policy_decision,
        content_type, content, safe_metadata, created_at
-     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-     on conflict (source_id, content_hash) do nothing`,
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       input.id,
       input.sourceId,
@@ -397,22 +398,9 @@ export async function insertApiSourceSnapshot(
       input.createdAt,
     ],
   );
-  const existing = await findSnapshotByHash(db, input.sourceId, input.contentHash);
+  const existing = await findApiSnapshotById(db, input.id);
   if (!existing) throw new Error("Source snapshot persistence failed.");
   return existing;
-}
-
-export async function findSnapshotByHash(
-  db: DbClient,
-  sourceId: string,
-  contentHash: string,
-) {
-  const result = await db.query<ApiSnapshotRow>(
-    `select * from api_source_snapshots
-     where source_id = $1 and content_hash = $2`,
-    [sourceId, contentHash],
-  );
-  return result.rows[0] ?? null;
 }
 
 export async function findApiSnapshotById(db: DbClient, snapshotId: string) {

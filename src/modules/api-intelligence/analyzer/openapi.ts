@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { parseDocument } from "yaml";
 import { AnalyzerError } from "@/modules/api-intelligence/analyzer/errors";
 import {
@@ -44,6 +45,9 @@ export function previewOpenApiDocument(input: {
 
   const securitySchemes = document.components?.securitySchemes ?? {};
   const auth = extractAuthentication(securitySchemes);
+  const rateLimitSignals = collectRateLimitSignals(document).sort((left, right) =>
+    left.locator.localeCompare(right.locator),
+  );
   const operations = Object.entries(document.paths).flatMap(([path, pathItem]) =>
     methods.flatMap((method) => {
       const operation = pathItem[method];
@@ -91,6 +95,12 @@ export function previewOpenApiDocument(input: {
     oauthMetadata: auth.metadata,
     scopes: auth.scopes,
     webhookSupport: Boolean(document.webhooks),
+    rateLimitFingerprint: rateLimitSignals.length > 0
+      ? createHash("sha256")
+          .update(JSON.stringify(rateLimitSignals))
+          .digest("hex")
+      : undefined,
+    rateLimitLocators: rateLimitSignals.map((signal) => signal.locator),
     operations,
     schemas,
     blockedExternalReferences: 0 as const,
@@ -227,4 +237,48 @@ function stripSensitiveExamples(value: unknown): unknown {
       .filter(([key]) => !["example", "examples", "default"].includes(key))
       .map(([key, child]) => [key, stripSensitiveExamples(child)]),
   );
+}
+
+function collectRateLimitSignals(
+  value: unknown,
+  path: string[] = [],
+  signals: Array<{ locator: string; fingerprint: string }> = [],
+) {
+  if (signals.length >= 100) return signals;
+  if (Array.isArray(value)) {
+    value.forEach((child, index) =>
+      collectRateLimitSignals(child, [...path, String(index)], signals),
+    );
+    return signals;
+  }
+  if (!value || typeof value !== "object") return signals;
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const nextPath = [...path, key];
+    if (/rate.?limit/i.test(key) || /^x-ratelimit-/i.test(key)) {
+      signals.push({
+        locator: `#/${nextPath.map(escapeJsonPointer).join("/")}`,
+        fingerprint: createHash("sha256")
+          .update(stableJson(stripSensitiveExamples(child)))
+          .digest("hex"),
+      });
+    }
+    collectRateLimitSignals(child, nextPath, signals);
+    if (signals.length >= 100) break;
+  }
+  return signals;
+}
+
+function escapeJsonPointer(value: string) {
+  return value.replaceAll("~", "~0").replaceAll("/", "~1");
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
 }

@@ -1,6 +1,7 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
+import { listPendingApiChangeImpacts } from "@/modules/api-intelligence/change-monitor/repository";
 import { getContactDuplicateCandidates } from "@/modules/crm/service";
 import {
   dismissOpportunityRadarAlertRecord,
@@ -139,6 +140,7 @@ async function detectOpportunityRadarAlerts(
   alerts.push(...(await detectUnpublishedDraftAlerts(db, tenantId)));
   alerts.push(...(await detectFailedFormProcessingAlerts(db, tenantId)));
   alerts.push(...(await detectDuplicateContactAlerts(db, userId, tenantId)));
+  alerts.push(...(await detectApiChangeAlerts(db, tenantId)));
 
   return alerts;
 }
@@ -392,6 +394,20 @@ async function detectDuplicateContactAlerts(
     entityId: candidate.id,
     actionLabel: "Revoir le doublon",
     actionHref: candidate.actionHref,
+  }));
+}
+
+async function detectApiChangeAlerts(db: DbClient, tenantId: string) {
+  const impacts = await listPendingApiChangeImpacts(db, tenantId);
+  return impacts.map((impact) => ({
+    ruleKey: "api_breaking_change" as const,
+    severity: "critical" as const,
+    title: "Changement API a examiner",
+    explanation: `${impact.connector_name} reste bloque apres un changement ${impact.classification}.`,
+    entityType: "api_change_impact",
+    entityId: impact.id,
+    actionLabel: "Examiner le changement",
+    actionHref: "/intelligence-api#changements-api",
   }));
 }
 

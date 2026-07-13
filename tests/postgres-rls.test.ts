@@ -179,6 +179,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
           id: string;
           tenant_id: string;
         }>("select id, tenant_id from connector_proposals order by id");
+        const apiChangeImpacts = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from api_change_impacts order by id");
 
         return {
           tenants: tenants.rows,
@@ -187,6 +191,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
           webhookEndpoints: webhookEndpoints.rows,
           connectorSecrets: connectorSecrets.rows,
           connectorProposals: connectorProposals.rows,
+          apiChangeImpacts: apiChangeImpacts.rows,
         };
       },
     );
@@ -198,6 +203,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       connectorSecrets: [{ tenant_id: tenantA.id }],
       connectorProposals: [
         { id: apiIntelligence.proposalAId, tenant_id: tenantA.id },
+      ],
+      apiChangeImpacts: [
+        { id: apiIntelligence.impactAId, tenant_id: tenantA.id },
       ],
     });
 
@@ -254,6 +262,38 @@ describeIfPostgres("PostgreSQL RLS", () => {
             "Nouveau",
             0,
             "/rls-cross-tenant",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into api_change_impacts (
+             id, tenant_id, api_change_event_id, connector_proposal_id,
+             contract_run_id, status, upgrade_blocked, repair_proposal,
+             contract_test_status, contract_test_results, approval_status,
+             decided_by, decision_reason, decided_at, created_at, updated_at
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                     $12, $13, $14, $15, $16)`,
+          [
+            id("impact"),
+            tenantA.id,
+            apiIntelligence.changeEventId,
+            apiIntelligence.proposalBId,
+            null,
+            "review_required",
+            1,
+            toJson({ enabled: false }),
+            "failed",
+            toJson({ safeToUpgrade: false }),
+            "pending",
+            null,
+            null,
+            null,
+            nowIso(),
             nowIso(),
           ],
         ),
@@ -385,6 +425,12 @@ async function insertApiIntelligenceTenantFixtures(
   const apiProductId = id("api");
   const proposalAId = id("proposal_a");
   const proposalBId = id("proposal_b");
+  const sourceId = id("source");
+  const previousSnapshotId = id("snapshot_previous");
+  const currentSnapshotId = id("snapshot_current");
+  const changeEventId = id("api_change");
+  const impactAId = id("impact_a");
+  const impactBId = id("impact_b");
   await db.query(
     `insert into software_directory_entries (
        id, canonical_name, aliases, vendor, official_domain, country,
@@ -485,7 +531,105 @@ async function insertApiIntelligenceTenantFixtures(
       ],
     );
   }
-  return { proposalAId, proposalBId };
+  await db.query(
+    `insert into api_sources (
+       id, software_id, api_product_id, canonical_url, source_type,
+       source_classification, publisher_domain, created_by, created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      sourceId,
+      softwareId,
+      apiProductId,
+      `https://${softwareId}.example.test/openapi.json`,
+      "official_openapi_specification",
+      "official",
+      `${softwareId}.example.test`,
+      ownerId,
+      now,
+    ],
+  );
+  for (const [snapshotId, hash, etag] of [
+    [previousSnapshotId, "a".repeat(64), '"v1"'],
+    [currentSnapshotId, "b".repeat(64), '"v2"'],
+  ]) {
+    await db.query(
+      `insert into api_source_snapshots (
+         id, source_id, retrieved_at, http_status, etag, last_modified,
+         content_hash, parser_version, robots_decision,
+         access_policy_decision, content_type, content, safe_metadata,
+         created_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        snapshotId,
+        sourceId,
+        now,
+        200,
+        etag,
+        null,
+        hash,
+        "openapi-1",
+        "allowed",
+        "allowed",
+        "application/json",
+        "{}",
+        toJson({}),
+        now,
+      ],
+    );
+  }
+  await db.query(
+    `insert into api_change_events (
+       id, api_product_id, source_id, previous_snapshot_id,
+       current_snapshot_id, primary_classification, classifications,
+       summary, requires_approval, detected_at, created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      changeEventId,
+      apiProductId,
+      sourceId,
+      previousSnapshotId,
+      currentSnapshotId,
+      "breaking",
+      toJson(["breaking"]),
+      toJson({ monitorVersion: "api-change-1", changes: [] }),
+      1,
+      now,
+      now,
+    ],
+  );
+  for (const [impactId, tenantId, proposalId] of [
+    [impactAId, tenantAId, proposalAId],
+    [impactBId, tenantBId, proposalBId],
+  ]) {
+    await db.query(
+      `insert into api_change_impacts (
+         id, tenant_id, api_change_event_id, connector_proposal_id,
+         contract_run_id, status, upgrade_blocked, repair_proposal,
+         contract_test_status, contract_test_results, approval_status,
+         decided_by, decision_reason, decided_at, created_at, updated_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                 $12, $13, $14, $15, $16)`,
+      [
+        impactId,
+        tenantId,
+        changeEventId,
+        proposalId,
+        null,
+        "review_required",
+        1,
+        toJson({ enabled: false }),
+        "failed",
+        toJson({ safeToUpgrade: false }),
+        "pending",
+        null,
+        null,
+        null,
+        now,
+        now,
+      ],
+    );
+  }
+  return { proposalAId, proposalBId, changeEventId, impactAId, impactBId };
 }
 
 async function createRestrictedRole(ownerPool: Pool) {

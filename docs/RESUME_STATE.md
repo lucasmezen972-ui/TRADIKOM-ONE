@@ -146,7 +146,7 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement API snapshot change detection with deterministic severity classification and affected-connector visibility.
+1. Validate the API Change Monitor checkpoint through the complete GitHub Actions suite and fix every regression.
 2. Add scheduled rechecks for approved official sources without broad crawling.
 3. Continue with bounded Postman, supplied GraphQL and official OAuth metadata importers.
 
@@ -157,3 +157,5 @@ Phase 3 checkpoint in progress:
 - PostgreSQL migrations `017`/`018` and SQL mirrors `0011`/`0012` add the Phase 3 models, tenant RLS and related-tenant integrity controls.
 - Local Node validation still hangs without diagnostics; `git diff --check` is used locally and GitHub Actions remains authoritative.
 - Draft PR #3 is open. Head `e971d1367527671670b2964bdfdc13cb45b2e780` passed both complete CI runs: push `29258483303` and pull request `29258489327`.
+- The API Change Monitor now compares snapshot content and HTTP validators, classifies contract/security/access changes, creates RLS-protected tenant impacts, runs static change contracts, blocks affected connectors, raises alerts, and requires an audited human decision on disabled repair plans.
+- Runtime migrations `019`/`020` and SQL mirrors `0013`/`0014` add change events, tenant impacts, RLS and proposal-tenant integrity.

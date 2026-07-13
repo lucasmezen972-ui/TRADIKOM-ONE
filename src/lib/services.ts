@@ -115,6 +115,7 @@ import {
 } from "@/modules/software-directory";
 import {
   decideTenantOntologyMapping,
+  decideApiChangeRepair,
   decideApiClaim,
   fetchApprovedApiSource,
   getApiIntelligenceWorkspace,
@@ -470,6 +471,15 @@ export function createServices(
         reason: string;
       },
     ) => decideApiClaim(db, userId, tenantId, input),
+    decideApiChangeRepair: (
+      userId: string,
+      tenantId: string,
+      input: {
+        impactId: string;
+        decision: "approved" | "rejected";
+        reason: string;
+      },
+    ) => decideApiChangeRepair(db, userId, tenantId, input),
     runCompatibilityCheck: (
       userId: string,
       tenantId: string,

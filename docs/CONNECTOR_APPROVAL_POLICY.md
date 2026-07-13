@@ -34,6 +34,21 @@ La demande porte explicitement la portee `sandbox`. La decision:
 
 L'entree du Connect Store indique `approved_for_sandbox` et `not_installed`.
 
+## Changement de contrat API
+
+Un changement de rupture ou de securite compare le manifeste aux operations du
+nouveau snapshot. Si le connecteur est affecte:
+
+- `enabled` reste a `false` et le statut devient `change_review_required`;
+- un run `api-change-1` persiste uniquement des resultats et journaux surs;
+- un plan de reparation desactive est cree dans l'impact tenant;
+- une decision humaine approuve ou rejette ce plan et est auditee;
+- aucune decision ne declenche une activation ou une mise a niveau automatique.
+
+Une approbation de plan autorise uniquement la poursuite du travail de
+regeneration. Le blocage n'est leve qu'apres une future regeneration, des tests
+sandbox reussis et une decision distincte.
+
 ## Production
 
 L'approbation, l'installation et l'activation production sont volontairement absentes. Elles devront faire l'objet d'un flux distinct avec revue de securite, credentials chiffres, sandbox reel, tests sans ecriture puis autorisation explicite. Un connecteur sandbox ne doit jamais etre presente comme `ready_now`.

@@ -10,6 +10,7 @@ export const opportunityRadarRuleKeySchema = z.enum([
   "unpublished_draft_changes",
   "failed_form_processing",
   "likely_duplicate_contact",
+  "api_breaking_change",
 ]);
 
 export const opportunityRadarAlertStatusSchema = z.enum([

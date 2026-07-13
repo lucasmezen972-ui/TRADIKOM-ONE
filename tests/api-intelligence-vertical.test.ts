@@ -17,7 +17,9 @@ describe("Phase 3 API Intelligence vertical slice", () => {
     const db = await createMemoryDb();
     databases.push(db);
     const openApi = await fixture("mock-garage-openapi.json");
+    const breakingOpenApi = await fixture("mock-garage-openapi-breaking.json");
     let sourceRequests = 0;
+    let serveBreakingVersion = false;
     const services = createServices(db, {
       discoveryTransport: async (url, input) => {
         if (url.pathname === "/robots.txt") {
@@ -28,6 +30,17 @@ describe("Phase 3 API Intelligence vertical slice", () => {
           };
         }
         sourceRequests += 1;
+        if (serveBreakingVersion) {
+          return {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              etag: '"fixture-v2"',
+              "last-modified": "Mon, 13 Jul 2026 00:00:00 GMT",
+            },
+            body: breakingOpenApi,
+          };
+        }
         if (sourceRequests > 1) {
           expect(input.headers).toMatchObject({
             "if-none-match": '"fixture-v1"',
@@ -250,6 +263,92 @@ describe("Phase 3 API Intelligence vertical slice", () => {
     expect(proposalRow.rows).toEqual([
       { enabled: 0, status: "approved_for_sandbox" },
     ]);
+
+    serveBreakingVersion = true;
+    const changedSnapshot = await services.fetchApprovedApiSource(
+      admin.id,
+      tenant.id,
+      source.sourceId,
+    );
+    expect(changedSnapshot.id).not.toBe(snapshot.id);
+    const changeEvents = await db.query<{
+      id: string;
+      primary_classification: string;
+      requires_approval: number;
+    }>("select id, primary_classification, requires_approval from api_change_events");
+    expect(changeEvents.rows).toHaveLength(1);
+    expect(changeEvents.rows[0]).toMatchObject({
+      primary_classification: "breaking",
+      requires_approval: 1,
+    });
+    const impacts = await db.query<{
+      id: string;
+      tenant_id: string;
+      status: string;
+      upgrade_blocked: number;
+      contract_test_status: string;
+      approval_status: string;
+    }>("select * from api_change_impacts where tenant_id = $1", [tenant.id]);
+    expect(impacts.rows).toHaveLength(1);
+    expect(impacts.rows[0]).toMatchObject({
+      tenant_id: tenant.id,
+      status: "review_required",
+      upgrade_blocked: 1,
+      contract_test_status: "failed",
+      approval_status: "pending",
+    });
+    const blockedProposal = await db.query<{ enabled: number; status: string }>(
+      "select enabled, status from connector_proposals where id = $1 and tenant_id = $2",
+      [proposal.proposalId, tenant.id],
+    );
+    expect(blockedProposal.rows).toEqual([
+      { enabled: 0, status: "change_review_required" },
+    ]);
+    const alerts = await db.query<{ rule_key: string; status: string }>(
+      "select rule_key, status from opportunity_radar_alerts where tenant_id = $1",
+      [tenant.id],
+    );
+    expect(alerts.rows).toContainEqual({
+      rule_key: "api_breaking_change",
+      status: "active",
+    });
+    const otherWorkspace = await services.getApiIntelligenceWorkspace(
+      admin.id,
+      otherTenant.id,
+    );
+    expect(otherWorkspace.changeImpacts).toEqual([]);
+    const impactId = impacts.rows[0]?.id;
+    if (!impactId) throw new Error("Impact de changement absent.");
+    const repairDecision = await services.decideApiChangeRepair(
+      admin.id,
+      tenant.id,
+      {
+        impactId,
+        decision: "approved",
+        reason: "Plan examine; regeneration sandbox encore requise.",
+      },
+    );
+    expect(repairDecision).toEqual({
+      impactId,
+      decision: "approved",
+      upgradeBlocked: true,
+      connectorEnabled: false,
+    });
+    const decidedImpact = await db.query<{
+      status: string;
+      upgrade_blocked: number;
+      approval_status: string;
+    }>(
+      "select status, upgrade_blocked, approval_status from api_change_impacts where tenant_id = $1 and id = $2",
+      [tenant.id, impactId],
+    );
+    expect(decidedImpact.rows).toEqual([
+      {
+        status: "repair_approved",
+        upgrade_blocked: 1,
+        approval_status: "approved",
+      },
+    ]);
     await expectAuditActions(db, tenant.id, [
       "api_intelligence.domain_approved",
       "api_intelligence.source_fetched",
@@ -260,6 +359,9 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       "connector_copilot.contract_tests_completed",
       "connector_copilot.sandbox_approval_requested",
       "connector_copilot.sandbox_approved",
+      "api_intelligence.change_detected",
+      "api_intelligence.connector_upgrade_blocked",
+      "api_intelligence.repair_approved",
     ]);
   });
 

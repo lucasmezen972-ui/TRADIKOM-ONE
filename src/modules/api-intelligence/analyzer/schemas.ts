@@ -32,6 +32,8 @@ export const openApiPreviewSchema = z.object({
   oauthMetadata: z.record(z.string(), z.unknown()),
   scopes: z.array(z.string()),
   webhookSupport: z.boolean(),
+  rateLimitFingerprint: z.string().length(64).optional(),
+  rateLimitLocators: z.array(z.string()).max(100),
   operations: z.array(
     z.object({
       operationKey: z.string().min(1),
