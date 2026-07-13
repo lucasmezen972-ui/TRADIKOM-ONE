@@ -200,7 +200,8 @@ function describeType(type: GraphQLNamedType) {
       fieldCount: fields.length,
       argumentCount: argumentsList.length,
       redactedDefaultValueCount: argumentsList.filter(
-        (argument) => argument.defaultValue !== undefined,
+        (argument) =>
+          argument.defaultValue !== undefined || argument.default !== undefined,
       ).length,
     };
   }
@@ -213,7 +214,7 @@ function describeType(type: GraphQLNamedType) {
       fieldCount: fields.length,
       argumentCount: 0,
       redactedDefaultValueCount: Object.values(type.getFields()).filter(
-        (field) => field.defaultValue !== undefined,
+        (field) => field.defaultValue !== undefined || field.default !== undefined,
       ).length,
     };
   }
