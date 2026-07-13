@@ -173,6 +173,59 @@ Disallow: /private
       ),
     ).toEqual({ properties: { apiKey: { type: "string" } } });
   });
+
+  it("redacts Postman variables, scripts, URLs, and example bodies before storage", () => {
+    const redacted = JSON.parse(
+      redactUntrustedContent(
+        JSON.stringify({
+          variable: [
+            { key: "baseUrl", value: "https://api.vendor.test" },
+            { key: "apiToken", value: "must-not-survive" },
+          ],
+          event: [
+            {
+              listen: "prerequest",
+              script: { type: "text/javascript", exec: ["throw new Error('run')"] },
+            },
+          ],
+          item: [
+            {
+              name: "Create contact",
+              request: {
+                method: "POST",
+                url: {
+                  raw: "https://api.vendor.test/contacts?token=url-secret",
+                  query: [{ key: "token", value: "query-secret" }],
+                },
+                body: {
+                  mode: "raw",
+                  raw: '{"email":"person@example.com","password":"secret"}',
+                },
+              },
+              response: [
+                {
+                  name: "Created",
+                  code: 201,
+                  originalRequest: { method: "POST" },
+                  body: '{"email":"person@example.com"}',
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ) as Record<string, unknown>;
+    const serialized = JSON.stringify(redacted);
+
+    expect(serialized).not.toContain("must-not-survive");
+    expect(serialized).not.toContain("url-secret");
+    expect(serialized).not.toContain("query-secret");
+    expect(serialized).not.toContain("person@example.com");
+    expect(serialized).not.toContain("throw new Error");
+    expect(serialized).toContain("Create contact");
+    expect(serialized).toContain("baseUrl");
+    expect(serialized).toContain("[REDACTED]");
+  });
 });
 
 describe("OpenAPI deterministic importer", () => {

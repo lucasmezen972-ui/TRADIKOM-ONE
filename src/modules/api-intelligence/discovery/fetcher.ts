@@ -136,30 +136,47 @@ export function redactUntrustedContent(content: string) {
   const secretKey = /(authorization|cookie|password|secret|token|api[_-]?key)/i;
   try {
     const parsed = JSON.parse(content) as unknown;
-    const redact = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(redact);
+    const redact = (value: unknown, parentKey?: string): unknown => {
+      if (typeof value === "string") return redactSensitiveText(value);
+      if (Array.isArray(value)) {
+        return value.map((child) => redact(child, parentKey));
+      }
       if (!value || typeof value !== "object") return value;
+      const record = value as Record<string, unknown>;
+      const keyedValue = typeof record.key === "string" && "value" in record;
+      const responseExample =
+        "originalRequest" in record || typeof record.code === "number";
       return Object.fromEntries(
-        Object.entries(value).map(([key, child]) => [
-          key,
-          ["example", "examples", "default"].includes(key.toLowerCase())
-            ? "[REDACTED]"
-            : secretKey.test(key) &&
-          (child === null || typeof child !== "object")
-            ? "[REDACTED]"
-            : redact(child),
-        ]),
+        Object.entries(record).map(([key, child]) => {
+          const lowerKey = key.toLowerCase();
+          if (
+            ["example", "examples", "default"].includes(lowerKey) ||
+            key === "exec" ||
+            (key === "value" && keyedValue) ||
+            (key === "body" && responseExample) ||
+            (parentKey === "body" && ["raw", "src"].includes(key)) ||
+            (secretKey.test(key) &&
+              (child === null || typeof child !== "object"))
+          ) {
+            return [key, "[REDACTED]"];
+          }
+          return [key, redact(child, key)];
+        }),
       );
     };
     return JSON.stringify(redact(parsed));
   } catch {
-    return content
-      .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+=*/gi, "Bearer [REDACTED]")
-      .replace(
-        /((?:api[_-]?key|token|secret|password)[ \t]*[:=][ \t]*)("[^"\r\n]*"|'[^'\r\n]*'|[^\s,;\r\n]+)/gi,
-        "$1[REDACTED]",
-      );
+    return redactSensitiveText(content);
   }
+}
+
+function redactSensitiveText(value: string) {
+  return value
+    .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+=*/gi, "Bearer [REDACTED]")
+    .replace(
+      /((?:api[_-]?key|token|secret|password)[ \t]*[:=][ \t]*)("[^"\r\n]*"|'[^'\r\n]*'|[^\s,;&\r\n]+)/gi,
+      "$1[REDACTED]",
+    );
 }
 
 async function timedRequest(
