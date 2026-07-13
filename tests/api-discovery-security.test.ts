@@ -13,6 +13,7 @@ import {
 import {
   previewOpenApiDocument,
   previewGraphQlDocument,
+  previewOauthMetadataDocument,
   previewPostmanCollection,
 } from "../src/modules/api-intelligence/analyzer";
 
@@ -474,6 +475,71 @@ describe("GraphQL deterministic importer", () => {
         content: JSON.stringify({ data: { notSchema: true } }),
       }),
     ).toThrow(/introspection GraphQL invalide/);
+  });
+});
+
+describe("OAuth metadata deterministic importer", () => {
+  it("extracts RFC 8414 capabilities without retaining unknown secrets", async () => {
+    const content = await fixture("mock-garage-oauth-metadata.json");
+    const preview = previewOauthMetadataDocument({
+      snapshotId: "snapshot_oauth",
+      apiProductId: "api_oauth",
+      sourceHash: "4".repeat(64),
+      content,
+      title: "Garage OAuth",
+      version: "2026-07",
+    });
+
+    expect(preview).toMatchObject({
+      parserVersion: "oauth-metadata-1",
+      issuer: "https://auth.garage-cloud.test",
+      authorizationEndpoint:
+        "https://auth.garage-cloud.test/oauth2/authorize",
+      tokenEndpoint: "https://auth.garage-cloud.test/oauth2/token",
+      revocationEndpoint: "https://auth.garage-cloud.test/oauth2/revoke",
+      grantTypes: ["authorization_code", "refresh_token"],
+      codeChallengeMethods: ["S256"],
+      pkceSupported: true,
+      pkceS256Supported: true,
+      signedMetadataPresent: true,
+    });
+    expect(preview.scopes).toEqual([
+      "contacts:read",
+      "contacts:write",
+      "offline_access",
+    ]);
+    expect(preview.operations).toEqual([]);
+    expect(preview.schemas).toEqual([]);
+    expect(JSON.stringify(preview)).not.toContain("oauth-fixture-secret");
+    expect(JSON.stringify(preview)).not.toContain("header.payload.signature");
+  });
+
+  it("rejects insecure, private, and incomplete endpoint metadata", () => {
+    const base = {
+      issuer: "https://auth.vendor.test",
+      authorization_endpoint: "https://auth.vendor.test/authorize",
+      token_endpoint: "https://auth.vendor.test/token",
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code"],
+    };
+    const preview = (document: Record<string, unknown>) =>
+      previewOauthMetadataDocument({
+        snapshotId: "snapshot_oauth_invalid",
+        apiProductId: "api_oauth",
+        sourceHash: "5".repeat(64),
+        content: JSON.stringify(document),
+      });
+
+    expect(() => preview({ ...base, issuer: "http://auth.vendor.test" }))
+      .toThrow(/issuer non autorisee/);
+    expect(() => preview({
+      ...base,
+      token_endpoint: "https://127.0.0.1/token",
+    })).toThrow(/token_endpoint non autorisee/);
+    expect(() => preview({
+      ...base,
+      authorization_endpoint: undefined,
+    })).toThrow(/autorisation OAuth manquant/);
   });
 });
 

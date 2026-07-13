@@ -4,6 +4,7 @@ export type AnalyzerErrorCode =
   | "openapi_unsupported"
   | "postman_invalid"
   | "graphql_invalid"
+  | "oauth_metadata_invalid"
   | "external_reference_blocked"
   | "document_too_complex"
   | "preview_required"

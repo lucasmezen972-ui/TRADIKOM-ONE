@@ -6,6 +6,7 @@ import {
   type ApiContractPreview,
   previewOpenApiDocument,
   previewGraphQlDocument,
+  previewOauthMetadataDocument,
   previewPostmanCollection,
 } from "@/modules/api-intelligence/analyzer";
 import {
@@ -284,7 +285,8 @@ function describeSnapshot(
   if (
     sourceType !== "official_openapi_specification" &&
     sourceType !== "official_postman_collection" &&
-    sourceType !== "official_graphql_schema"
+    sourceType !== "official_graphql_schema" &&
+    sourceType !== "official_oauth_metadata"
   ) {
     return descriptor;
   }
@@ -317,6 +319,9 @@ function previewSnapshotBySourceType(
   }
   if (sourceType === "official_graphql_schema") {
     return previewGraphQlDocument(input);
+  }
+  if (sourceType === "official_oauth_metadata") {
+    return previewOauthMetadataDocument(input);
   }
   return previewOpenApiDocument({
     ...input,

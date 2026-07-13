@@ -129,7 +129,28 @@ export const graphQlPreviewSchema = z.object({
   redactedDefaultValueCount: z.number().int().min(0).max(10_000),
 });
 
+export const oauthMetadataPreviewSchema = z.object({
+  parserVersion: z.literal("oauth-metadata-1"),
+  ...apiContractPreviewFields,
+  issuer: z.string().url(),
+  authorizationEndpoint: z.string().url().optional(),
+  tokenEndpoint: z.string().url().optional(),
+  revocationEndpoint: z.string().url().optional(),
+  grantTypes: z.array(z.string().min(1)).max(100),
+  responseTypes: z.array(z.string().min(1)).max(100),
+  tokenEndpointAuthMethods: z.array(z.string().min(1)).max(100),
+  codeChallengeMethods: z.array(z.string().min(1)).max(100),
+  pkceSupported: z.boolean(),
+  pkceS256Supported: z.boolean(),
+  signedMetadataPresent: z.boolean(),
+});
+
 export type OpenApiPreview = z.infer<typeof openApiPreviewSchema>;
 export type PostmanPreview = z.infer<typeof postmanPreviewSchema>;
 export type GraphQlPreview = z.infer<typeof graphQlPreviewSchema>;
-export type ApiContractPreview = OpenApiPreview | PostmanPreview | GraphQlPreview;
+export type OauthMetadataPreview = z.infer<typeof oauthMetadataPreviewSchema>;
+export type ApiContractPreview =
+  | OpenApiPreview
+  | PostmanPreview
+  | GraphQlPreview
+  | OauthMetadataPreview;

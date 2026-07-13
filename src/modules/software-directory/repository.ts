@@ -298,8 +298,35 @@ export async function updateApiProductFromSpecification(
 ) {
   await db.query(
     `update api_products
-     set openapi_url = $1, base_url = $2, authentication_type = $3,
-         oauth_metadata = $4, scopes = $5, webhook_support = $6,
+     set openapi_url = $1, base_url = $2,
+         authentication_type = case when exists (
+           select 1 from api_claims
+           join api_source_snapshots
+             on api_source_snapshots.id = api_claims.source_snapshot_id
+           join api_sources on api_sources.id = api_source_snapshots.source_id
+           where api_claims.subject_type = 'api_product'
+             and api_claims.subject_id = $10
+             and api_sources.source_type = 'official_oauth_metadata'
+         ) then authentication_type else $3 end,
+         oauth_metadata = case when exists (
+           select 1 from api_claims
+           join api_source_snapshots
+             on api_source_snapshots.id = api_claims.source_snapshot_id
+           join api_sources on api_sources.id = api_source_snapshots.source_id
+           where api_claims.subject_type = 'api_product'
+             and api_claims.subject_id = $10
+             and api_sources.source_type = 'official_oauth_metadata'
+         ) then oauth_metadata else $4 end,
+         scopes = case when exists (
+           select 1 from api_claims
+           join api_source_snapshots
+             on api_source_snapshots.id = api_claims.source_snapshot_id
+           join api_sources on api_sources.id = api_source_snapshots.source_id
+           where api_claims.subject_type = 'api_product'
+             and api_claims.subject_id = $10
+             and api_sources.source_type = 'official_oauth_metadata'
+         ) then scopes else $5 end,
+         webhook_support = $6,
          rate_limit_information = $7, confidence_score = $8,
          last_verified_at = $9, updated_at = $9
      where id = $10`,
@@ -335,9 +362,33 @@ export async function updateApiProductFromPostmanCollection(
     `update api_products
      set postman_collection_url = $1,
          base_url = coalesce($2, base_url),
-         authentication_type = $3,
-         oauth_metadata = $4,
-         scopes = $5,
+         authentication_type = case when exists (
+           select 1 from api_claims
+           join api_source_snapshots
+             on api_source_snapshots.id = api_claims.source_snapshot_id
+           join api_sources on api_sources.id = api_source_snapshots.source_id
+           where api_claims.subject_type = 'api_product'
+             and api_claims.subject_id = $8
+             and api_sources.source_type = 'official_oauth_metadata'
+         ) then authentication_type else $3 end,
+         oauth_metadata = case when exists (
+           select 1 from api_claims
+           join api_source_snapshots
+             on api_source_snapshots.id = api_claims.source_snapshot_id
+           join api_sources on api_sources.id = api_source_snapshots.source_id
+           where api_claims.subject_type = 'api_product'
+             and api_claims.subject_id = $8
+             and api_sources.source_type = 'official_oauth_metadata'
+         ) then oauth_metadata else $4 end,
+         scopes = case when exists (
+           select 1 from api_claims
+           join api_source_snapshots
+             on api_source_snapshots.id = api_claims.source_snapshot_id
+           join api_sources on api_sources.id = api_source_snapshots.source_id
+           where api_claims.subject_type = 'api_product'
+             and api_claims.subject_id = $8
+             and api_sources.source_type = 'official_oauth_metadata'
+         ) then scopes else $5 end,
          confidence_score = case
            when confidence_score > $6 then confidence_score else $6
          end,
@@ -377,6 +428,37 @@ export async function updateApiProductFromGraphQlSchema(
      where id = $4`,
     [
       input.sourceUrl,
+      input.confidenceScore,
+      input.verifiedAt,
+      input.apiProductId,
+    ],
+  );
+}
+
+export async function updateApiProductFromOauthMetadata(
+  db: DbClient,
+  input: {
+    apiProductId: string;
+    oauthMetadata: unknown;
+    scopes: string[];
+    confidenceScore: number;
+    verifiedAt: string;
+  },
+) {
+  await db.query(
+    `update api_products
+     set authentication_type = 'oauth2',
+         oauth_metadata = $1,
+         scopes = $2,
+         confidence_score = case
+           when confidence_score > $3 then confidence_score else $3
+         end,
+         last_verified_at = $4,
+         updated_at = $4
+     where id = $5`,
+    [
+      toJson(input.oauthMetadata),
+      toJson(input.scopes),
       input.confidenceScore,
       input.verifiedAt,
       input.apiProductId,

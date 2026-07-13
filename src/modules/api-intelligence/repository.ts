@@ -4,6 +4,7 @@ import { safeJson, toJson } from "@/lib/security";
 import type {
   ApiContractPreview,
   GraphQlPreview,
+  OauthMetadataPreview,
   OpenApiPreview,
   PostmanPreview,
 } from "@/modules/api-intelligence/analyzer";
@@ -32,6 +33,51 @@ export async function replaceGraphQlImport(
   return replaceApiContractImport(db, preview, input);
 }
 
+export async function replaceOauthMetadataImport(
+  db: DbClient,
+  preview: OauthMetadataPreview,
+  input: { createdAt: string; createdBy: string },
+) {
+  await db.query(
+    `delete from api_claims
+     where subject_type = 'api_product'
+       and subject_id = $1
+       and source_snapshot_id in (
+         select api_source_snapshots.id
+         from api_source_snapshots
+         join api_sources on api_sources.id = api_source_snapshots.source_id
+         where api_sources.api_product_id = $1
+           and api_sources.source_type = 'official_oauth_metadata'
+       )`,
+    [preview.apiProductId],
+  );
+  const claimId = stableId(
+    "claim_oauth_metadata",
+    preview.apiProductId,
+    preview.sourceHash,
+  );
+  await insertClaimWithEvidence(db, {
+    claimId,
+    evidenceId: stableId(
+      "evidence_oauth_metadata",
+      preview.apiProductId,
+      preview.sourceHash,
+    ),
+    snapshotId: preview.snapshotId,
+    subjectType: "api_product",
+    subjectId: preview.apiProductId,
+    claimType: "oauth_metadata",
+    claimValue: {
+      parserVersion: preview.parserVersion,
+      ...preview.oauthMetadata,
+    },
+    locator: "#",
+    excerptHash: preview.sourceHash,
+    createdAt: input.createdAt,
+  });
+  return { claimIds: [claimId] };
+}
+
 async function replaceApiContractImport(
   db: DbClient,
   preview: ApiContractPreview,
@@ -39,7 +85,18 @@ async function replaceApiContractImport(
 ) {
   await db.query(
     `delete from api_claims
-     where (subject_type = 'api_product' and subject_id = $1)
+     where (subject_type = 'api_product' and subject_id = $1
+            and source_snapshot_id in (
+              select api_source_snapshots.id
+              from api_source_snapshots
+              join api_sources on api_sources.id = api_source_snapshots.source_id
+              where api_sources.api_product_id = $1
+                and api_sources.source_type in (
+                  'official_openapi_specification',
+                  'official_postman_collection',
+                  'official_graphql_schema'
+                )
+            ))
         or (subject_type = 'api_schema' and subject_id in (
               select id from api_schemas where api_product_id = $1
             ))
@@ -220,7 +277,12 @@ export async function listApiProductImportSourceTypes(
     `select distinct api_sources.source_type
      from api_source_snapshots
      join api_sources on api_sources.id = api_source_snapshots.source_id
-     where api_source_snapshots.id in (
+     where api_sources.source_type in (
+       'official_openapi_specification',
+       'official_postman_collection',
+       'official_graphql_schema'
+     )
+       and api_source_snapshots.id in (
        select source_snapshot_id from api_operations where api_product_id = $1
        union
        select source_snapshot_id from api_schemas where api_product_id = $1

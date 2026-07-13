@@ -6,12 +6,15 @@ import {
   AnalyzerError,
   type ApiContractPreview,
   graphQlPreviewSchema,
+  oauthMetadataPreviewSchema,
   openApiPreviewSchema,
   postmanPreviewSchema,
   previewOpenApiDocument,
   previewGraphQlDocument,
+  previewOauthMetadataDocument,
   previewPostmanCollection,
   type GraphQlPreview,
+  type OauthMetadataPreview,
   type OpenApiPreview,
   type PostmanPreview,
 } from "@/modules/api-intelligence/analyzer";
@@ -20,6 +23,7 @@ import {
   listApiProductImportSourceTypes,
   replaceOpenApiImport,
   replaceGraphQlImport,
+  replaceOauthMetadataImport,
   replacePostmanImport,
   setApiClaimDecision,
 } from "@/modules/api-intelligence/repository";
@@ -30,12 +34,14 @@ import {
   findApiSourceById,
   updateApiProductFromSpecification,
   updateApiProductFromGraphQlSchema,
+  updateApiProductFromOauthMetadata,
   updateApiProductFromPostmanCollection,
 } from "@/modules/software-directory";
 
 const openApiSourceType = "official_openapi_specification";
 const postmanSourceType = "official_postman_collection";
 const graphQlSourceType = "official_graphql_schema";
+const oauthMetadataSourceType = "official_oauth_metadata";
 
 export async function previewOpenApiSnapshot(
   db: DbClient,
@@ -92,6 +98,35 @@ export async function previewGraphQlSnapshot(
   });
 }
 
+export async function previewOauthMetadataSnapshot(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: { snapshotId: string; apiProductId: string },
+) {
+  await assertPlatformAdmin(db, userId, tenantId);
+  const { snapshot } = await loadSnapshotContext(
+    db,
+    input,
+    oauthMetadataSourceType,
+  );
+  const product = await findApiProductById(db, input.apiProductId);
+  if (!product) {
+    throw new AnalyzerError(
+      "oauth_metadata_invalid",
+      "Produit API introuvable.",
+    );
+  }
+  return previewOauthMetadataDocument({
+    snapshotId: snapshot.id,
+    apiProductId: input.apiProductId,
+    sourceHash: snapshot.content_hash,
+    content: snapshot.content,
+    title: product.name,
+    version: product.version,
+  });
+}
+
 export async function previewApiSnapshot(
   db: DbClient,
   userId: string,
@@ -112,6 +147,9 @@ export async function previewApiSnapshot(
   }
   if (source?.source_type === graphQlSourceType) {
     return previewGraphQlSnapshot(db, userId, tenantId, input);
+  }
+  if (source?.source_type === oauthMetadataSourceType) {
+    return previewOauthMetadataSnapshot(db, userId, tenantId, input);
   }
   throw new AnalyzerError(
     "openapi_unsupported",
@@ -321,6 +359,69 @@ export async function persistGraphQlPreview(
   });
 }
 
+export async function persistOauthMetadataPreview(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  submittedPreview: OauthMetadataPreview,
+) {
+  const parsed = oauthMetadataPreviewSchema.parse(submittedPreview);
+  const authoritative = await previewOauthMetadataSnapshot(
+    db,
+    userId,
+    tenantId,
+    {
+      snapshotId: parsed.snapshotId,
+      apiProductId: parsed.apiProductId,
+    },
+  );
+  if (JSON.stringify(authoritative) !== JSON.stringify(parsed)) {
+    throw new AnalyzerError(
+      "preview_required",
+      "L'apercu OAuth a change et doit etre revalide.",
+    );
+  }
+  await loadSnapshotContext(db, parsed, oauthMetadataSourceType);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertPlatformAdmin(transaction, userId, tenantId);
+    const importedAt = nowIso();
+    await updateApiProductFromOauthMetadata(transaction, {
+      apiProductId: parsed.apiProductId,
+      oauthMetadata: parsed.oauthMetadata,
+      scopes: parsed.scopes,
+      confidenceScore: 85,
+      verifiedAt: importedAt,
+    });
+    const imported = await replaceOauthMetadataImport(transaction, parsed, {
+      createdAt: importedAt,
+      createdBy: userId,
+    });
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "api_intelligence.oauth_metadata_imported",
+      targetType: "api_product",
+      targetId: parsed.apiProductId,
+      metadata: {
+        snapshotId: parsed.snapshotId,
+        sourceHash: parsed.sourceHash,
+        scopeCount: parsed.scopes.length,
+        grantCount: parsed.grantTypes.length,
+        pkceSupported: parsed.pkceSupported,
+        revocationSupported: Boolean(parsed.revocationEndpoint),
+      },
+    });
+    return {
+      apiProductId: parsed.apiProductId,
+      operationCount: 0,
+      schemaCount: 0,
+      schemaEvidence: {},
+      schemaClaims: {},
+      claimIds: imported.claimIds,
+    };
+  });
+}
+
 export function persistApiPreview(
   db: DbClient,
   userId: string,
@@ -332,6 +433,9 @@ export function persistApiPreview(
   }
   if (preview.parserVersion === "graphql-1") {
     return persistGraphQlPreview(db, userId, tenantId, preview);
+  }
+  if (preview.parserVersion === "oauth-metadata-1") {
+    return persistOauthMetadataPreview(db, userId, tenantId, preview);
   }
   return persistOpenApiPreview(db, userId, tenantId, preview);
 }
@@ -396,6 +500,8 @@ async function loadSnapshotContext(
         ? "postman_invalid"
         : expectedSourceType === graphQlSourceType
           ? "graphql_invalid"
+          : expectedSourceType === oauthMetadataSourceType
+            ? "oauth_metadata_invalid"
           : "openapi_invalid",
       "Le snapshot ne correspond pas au produit et au type de source attendus.",
     );

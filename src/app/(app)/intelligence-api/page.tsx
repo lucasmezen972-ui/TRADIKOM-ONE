@@ -293,6 +293,7 @@ export default async function ApiIntelligencePage() {
                 <option value="official_openapi_specification">OpenAPI 3</option>
                 <option value="official_postman_collection">Collection Postman v2.1</option>
                 <option value="official_graphql_schema">Schema GraphQL fourni</option>
+                <option value="official_oauth_metadata">Métadonnées OAuth</option>
               </select>
             </Field>
             <div className="sm:col-span-2">
@@ -883,6 +884,7 @@ function sourceTypeLabel(sourceType: string) {
   if (sourceType === "official_openapi_specification") return "OpenAPI 3";
   if (sourceType === "official_postman_collection") return "Postman v2.1";
   if (sourceType === "official_graphql_schema") return "GraphQL fourni";
+  if (sourceType === "official_oauth_metadata") return "Métadonnées OAuth";
   return "Source officielle";
 }
 
