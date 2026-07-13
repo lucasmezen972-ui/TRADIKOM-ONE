@@ -1,3 +1,7 @@
 # Night Shift Backlog
 
-1. Run the documentation-only closure CI, mark PR #1 ready after the final self-review, squash-merge it, and verify `main` without touching PR #2.
+Phase 2 has no unfinished blockers.
+
+1. Verify the Phase 3 precondition gate from the latest green `main`.
+2. Start the API Intelligence vertical slice on `codex/phase-3-api-intelligence`.
+3. Keep PR #2 isolated from the Phase 3 branch.
