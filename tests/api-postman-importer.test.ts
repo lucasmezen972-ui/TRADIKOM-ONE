@@ -274,13 +274,13 @@ describe("Postman Collection v2.1 import", () => {
     );
     expect(remainingOperations.rows[0]?.count).toBe(3);
 
-    const audit = await db.query<{ action: string; metadata: string }>(
-      `select action, metadata from audit_logs
+    const audit = await db.query<{ action: string; safe_metadata: string }>(
+      `select action, safe_metadata from audit_logs
        where tenant_id = $1 and action = 'api_intelligence.postman_imported'`,
       [tenant.id],
     );
     expect(audit.rows).toHaveLength(1);
-    expect(audit.rows[0]?.metadata).not.toContain("secret");
+    expect(audit.rows[0]?.safe_metadata).not.toContain("secret");
   });
 });
 
