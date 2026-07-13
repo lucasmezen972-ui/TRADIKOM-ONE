@@ -289,7 +289,8 @@ export type OpportunityRadarRuleKey =
   | "connector_error"
   | "unpublished_draft_changes"
   | "failed_form_processing"
-  | "likely_duplicate_contact";
+  | "likely_duplicate_contact"
+  | "api_breaking_change";
 
 export type OpportunityRadarAlert = {
   id: string;

@@ -137,3 +137,4 @@
 - Implemented the API Change Monitor with distinct HTTP-validator snapshots, deterministic OpenAPI contract comparison, six classifications, connector/tenant impact discovery, automatic upgrade blocking, safe static contract runs, disabled repair plans, Opportunity Radar alerts and audited human decisions.
 - Added runtime migrations `019`/`020`, SQL mirrors `0013`/`0014`, tenant RLS/integrity coverage, a breaking OpenAPI fixture, pure comparison tests and the complete changed-source-to-blocked-connector integration path.
 - Local dependency preparation for TypeScript validation hung and was stopped after 30 seconds. Targeted `git diff --check` passed; GitHub Actions remains authoritative.
+- GitHub Actions run `29262929566` passed migrations and lint, then caught the shared Opportunity Radar union missing `api_breaking_change`; the shared type was aligned immediately.
