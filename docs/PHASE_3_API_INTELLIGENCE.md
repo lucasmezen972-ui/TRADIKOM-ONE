@@ -46,6 +46,21 @@ Les changements sont classes `informational`, `additive`,
 - conserve le blocage meme apres approbation du plan, jusqu'a regeneration et
   nouveaux tests sandbox.
 
+## Relectures planifiees
+
+Un administrateur plateforme peut activer, modifier ou suspendre une frequence
+horaire, toutes les six heures, quotidienne ou hebdomadaire pour une source
+officielle dont le domaine reste approuve. La planification conserve uniquement
+son etat operationnel, un contexte tenant d'audit et des codes d'erreur bornes.
+
+Le worker traite au plus trois sources sequentiellement par batch. Chaque travail
+est reclame avec un bail unique, un bail expire est replanifie, les erreurs
+transitoires utilisent un backoff exponentiel et `Retry-After` reste prioritaire.
+Une source non officielle, un domaine suspendu ou une autorisation plateforme
+revoquee bloque et desactive la planification avant tout acces reseau. Le fetcher
+commun conserve les controles robots, SSRF/DNS, taille, delai, rate limit,
+ETag, Last-Modified, hash et redaction.
+
 ## Garanties du checkpoint
 
 - Les mutations globales exigent un role `platform_admin` et un role owner ou administrator sur le tenant actif.
@@ -67,7 +82,7 @@ Les changements sont classes `informational`, `additive`,
 ## Limites assumees
 
 - Ce checkpoint importe OpenAPI 3.0/3.1 en JSON et YAML. Postman, GraphQL et OAuth restent a implementer.
-- La decouverte est manuelle et limitee a une URL approuvee. Le scan de sitemap et les relectures planifiees restent a implementer.
+- L'ajout de source reste manuel et limite a une URL approuvee. Les relectures planifiees sont disponibles; le scan de sitemap et la detection de nouvelles pages restent a implementer.
 - Les tests de contrat sont mock uniquement. Aucun appel sandbox externe ni ecriture reelle n'est execute.
 - L'approbation production, l'installation et l'activation de connecteur ne sont pas disponibles.
 - Les plans de reparation ne sont pas appliques automatiquement; la regeneration et les nouveaux tests sandbox restent explicites.
@@ -81,4 +96,6 @@ Les changements sont classes `informational`, `additive`,
 - Run pull request `29258489327`: meme suite complete passee.
 - Le checkpoint API Change Monitor est vert au head `b0bd77fa1b6e64161abdcf7a78a031b1b1249d7a`.
 - Runs push `29264958738` et pull request `29264962308`: migrations PostgreSQL/RLS, lint, types, 111 tests, build production et trois Playwright passes.
+- Le checkpoint de relecture planifiee est vert au head `76a1487dc567f902bb478ac0f399224945c2b74c`.
+- Runs push `29267465626` et pull request `29267468487`: migration PostgreSQL, lint, types, 38 fichiers/122 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.

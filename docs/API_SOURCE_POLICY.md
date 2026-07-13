@@ -36,7 +36,16 @@ Chaque contenu accepte conserve:
 - les decisions robots et politique d'acces;
 - des metadonnees bornees sans secret.
 
-Un hash identique pour une meme source reutilise le snapshot existant. Une reponse `304 Not Modified` reutilise la derniere version locale.
+Chaque nouvelle observation HTTP 200 conserve un snapshot, meme si le hash du contenu est identique, afin de suivre les changements d'ETag, Last-Modified et de politique. Une reponse `304 Not Modified` reutilise la derniere version locale sans dupliquer le snapshot.
+
+## Relectures planifiees
+
+- La planification est desactivee tant qu'un administrateur plateforme ne l'active pas explicitement.
+- Seules les sources classees officielles sur un domaine encore approuve sont eligibles.
+- Le worker traite un batch borne de trois sources, sequentiellement, avec un bail unique par execution.
+- Un bail expire est repris apres un delai; les erreurs transitoires suivent un backoff exponentiel et respectent `Retry-After`.
+- Un domaine suspendu, une source non officielle ou une autorisation revoquee desactive la planification avant toute requete.
+- Les echecs ne conservent qu'un code borne; aucun message reseau brut, contenu ou secret n'est stocke dans la planification.
 
 ## Donnees non fiables
 

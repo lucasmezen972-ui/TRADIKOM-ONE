@@ -15,8 +15,14 @@ API Change Monitor checkpoint completed and green at `b0bd77f`:
 2. Tenant impact records, automatic upgrade blocking, static change contracts, Opportunity Radar alerts and human repair decisions.
 3. Runtime/SQL migrations with PostgreSQL RLS and cross-tenant relation tests.
 
+Scheduled source rechecks completed and green at `76a1487`:
+
+1. Platform-admin configuration for approved official sources, with hourly, six-hourly, daily or weekly intervals.
+2. Worker claims with unique leases, stale-lease recovery, bounded batches, conditional HTTP validators and exponential backoff.
+3. Safe terminal blocking for paused domains or revoked authority, persisted error codes without raw messages, and focused integration coverage.
+
 Next unfinished work:
 
-1. Add scheduled rechecks for approved official sources only.
-2. Add Postman v2.1, supplied GraphQL and official OAuth metadata importers.
+1. Add the bounded Postman v2.1 importer without executing collection scripts.
+2. Add supplied GraphQL SDL/introspection and official OAuth metadata importers.
 3. Keep live writes, production connector approval and unrestricted crawling disabled.

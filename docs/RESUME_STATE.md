@@ -146,8 +146,8 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Add scheduled rechecks for approved official sources without broad crawling.
-2. Continue with bounded Postman, supplied GraphQL and official OAuth metadata importers.
+1. Add the bounded Postman Collection v2.1 importer without executing scripts.
+2. Continue with supplied GraphQL SDL/introspection and official OAuth metadata importers.
 3. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
@@ -160,3 +160,6 @@ Phase 3 checkpoint in progress:
 - The API Change Monitor now compares snapshot content and HTTP validators, classifies contract/security/access changes, creates RLS-protected tenant impacts, runs static change contracts, blocks affected connectors, raises alerts, and requires an audited human decision on disabled repair plans.
 - Runtime migrations `019`/`020` and SQL mirrors `0013`/`0014` add change events, tenant impacts, RLS and proposal-tenant integrity.
 - API Change Monitor head `b0bd77fa1b6e64161abdcf7a78a031b1b1249d7a` passed complete push run `29264958738` and pull request run `29264962308`, including 111 tests, clean PostgreSQL migrations/RLS, production build and Playwright.
+- Approved official sources can now be rechecked on a platform-admin schedule. The shared worker processes at most three sequential source checks per batch, uses unique leases and stale-lease recovery, reuses ETag/Last-Modified, backs off transient failures, blocks unsafe or unauthorized schedules, and stores only bounded error codes.
+- Runtime migration `021` and SQL mirror `0015` add the global schedule state and explicit audit tenant context. The French administration surface exposes interval configuration and suspension without enabling broad crawling.
+- Scheduled recheck head `76a1487dc567f902bb478ac0f399224945c2b74c` passed complete push run `29267465626` and pull request run `29267468487`: clean PostgreSQL migration, lint, typecheck, 38 files/122 tests, production build and three Playwright scenarios.

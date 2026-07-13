@@ -4,7 +4,7 @@
 
 - `src/modules/platform-admin/`: autorisation globale et attribution locale controlee.
 - `src/modules/software-directory/`: logiciels, domaines, produits API, sources et snapshots.
-- `src/modules/api-intelligence/discovery/`: validation URL/DNS, robots, fetch HTTPS borne et redaction.
+- `src/modules/api-intelligence/discovery/`: validation URL/DNS, robots, fetch HTTPS borne, redaction et relectures planifiees.
 - `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML et previsualisation.
 - `src/modules/api-intelligence/change-monitor/`: comparaison deterministe, classification, impacts tenant, contrats de changement et plans de reparation.
 - `src/modules/api-intelligence/ontology/`: mappings tenant avec preuve et approbation.
@@ -30,6 +30,8 @@ flowchart LR
   K --> L["Approbation sandbox"]
   L --> M["Connect Store prive"]
   D --> N["Snapshot suivant"]
+  B --> R["Planification approuvee"]
+  R --> C
   N --> O["Comparaison deterministe"]
   O --> P["Impact tenant et blocage"]
   P --> Q["Plan de reparation soumis a approbation"]
@@ -53,4 +55,4 @@ Un mapping tenant ne peut jamais etre promu automatiquement en connaissance glob
 
 ## Frontieres actuelles
 
-L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les futurs importeurs et relectures planifiees doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation.
+L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les futurs importeurs et scans de sitemap doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.
