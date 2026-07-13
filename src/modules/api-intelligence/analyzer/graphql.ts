@@ -146,8 +146,9 @@ function extractSchema(schema: GraphQLSchema) {
     { kind: "subscription", type: schema.getSubscriptionType(), capability: "read" as const },
   ];
   const operations = roots.flatMap((root) => {
-    if (!root.type) return [];
-    return Object.values(root.type.getFields())
+    const rootType = root.type;
+    if (!rootType) return [];
+    return Object.values(rootType.getFields())
       .sort((left, right) => left.name.localeCompare(right.name))
       .map((field) => {
         const argumentsSignature = field.args
@@ -157,7 +158,7 @@ function extractSchema(schema: GraphQLSchema) {
         return {
           operationKey: `${root.kind}.${field.name}`,
           method: root.kind.toUpperCase(),
-          path: `${root.type.name}.${field.name}`,
+          path: `${rootType.name}.${field.name}`,
           summary: "",
           tags: [root.kind],
           capability: root.capability,
@@ -167,7 +168,7 @@ function extractSchema(schema: GraphQLSchema) {
             : undefined,
           responseSchemaRef: `graphql:type:${String(field.type)}`,
           securityRequirements: [],
-          locator: `#/types/${escapeJsonPointer(root.type.name)}/fields/${escapeJsonPointer(field.name)}`,
+          locator: `#/types/${escapeJsonPointer(rootType.name)}/fields/${escapeJsonPointer(field.name)}`,
         };
       });
   });
