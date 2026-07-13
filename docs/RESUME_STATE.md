@@ -146,9 +146,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Push the first Phase 3 API Intelligence vertical slice and inspect the complete GitHub Actions result.
-2. Fix every CI regression before extending the slice.
-3. After a green checkpoint, continue with API change detection and scheduled approved-source rechecks without broad crawling.
+1. Implement API snapshot change detection with deterministic severity classification and affected-connector visibility.
+2. Add scheduled rechecks for approved official sources without broad crawling.
+3. Continue with bounded Postman, supplied GraphQL and official OAuth metadata importers.
 
 Phase 3 checkpoint in progress:
 
@@ -156,3 +156,4 @@ Phase 3 checkpoint in progress:
 - The first vertical slice now includes the Software Directory, approved-domain workflow, bounded source snapshots, safe OpenAPI JSON/YAML import, evidence-backed tenant mappings, explainable compatibility checks, disabled Connector Copilot proposals, mock contract tests, sandbox approval, private Connect Store, and a platform-admin interface.
 - PostgreSQL migrations `017`/`018` and SQL mirrors `0011`/`0012` add the Phase 3 models, tenant RLS and related-tenant integrity controls.
 - Local Node validation still hangs without diagnostics; `git diff --check` is used locally and GitHub Actions remains authoritative.
+- Draft PR #3 is open. Head `e971d1367527671670b2964bdfdc13cb45b2e780` passed both complete CI runs: push `29258483303` and pull request `29258489327`.

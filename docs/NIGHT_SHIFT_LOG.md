@@ -129,3 +129,7 @@
 - Added the French `Intelligence API` administration surface and tenant-aware workspace read model for the complete approval flow.
 - Added Phase 3 PostgreSQL migrations and SQL mirrors, RLS policies, relation-integrity triggers, local fixtures, focused security tests and a complete service-level vertical integration test.
 - Local TypeScript validation again hung without diagnostics and was stopped after a reasonable timeout; `git diff --check` remains the local gate before GitHub Actions validation.
+- Opened draft PR #3 from commit `af46135`. CI first exposed strict test-fixture header typing; fix `d8fd222` made migrations, lint and typecheck pass.
+- CI then confirmed the evidence model now returns four approved provenance records instead of the obsolete single-schema expectation; commit `1e181c9` asserts metadata, schema and both operation locators.
+- Playwright exposed an untyped nullable PostgreSQL filter in the administration workspace; commit `e971d13` uses an explicit text cast shared by PostgreSQL and PGlite.
+- Both complete CI runs for `e971d13` passed: push `29258483303` and pull request `29258489327`, including migrations, PostgreSQL RLS, lint, typecheck, 109 tests, production build and all three Playwright scenarios.

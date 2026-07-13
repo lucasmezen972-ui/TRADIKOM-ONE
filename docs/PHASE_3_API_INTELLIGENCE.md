@@ -54,4 +54,7 @@ L'espace administrateur `Intelligence API` permet a un administrateur plateforme
 
 - `git diff --check`: propre avant le premier checkpoint.
 - La validation Node locale reste instable et a ete arretee apres un delai raisonnable sans diagnostic.
-- GitHub Actions est l'environnement de validation autoritatif pour migrations PostgreSQL, lint, types, tests, build et E2E.
+- Le head `e971d1367527671670b2964bdfdc13cb45b2e780` est vert.
+- Run push `29258483303`: migrations PostgreSQL/RLS, lint, types, 109 tests, build production et trois Playwright passes.
+- Run pull request `29258489327`: meme suite complete passee.
+- La PR #3 reste en brouillon pendant la suite de Phase 3.
