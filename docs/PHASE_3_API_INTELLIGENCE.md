@@ -14,10 +14,10 @@ L'espace administrateur `Intelligence API` permet a un administrateur plateforme
 
 1. enregistrer un logiciel et soumettre son domaine officiel;
 2. approuver ou suspendre ce domaine;
-3. enregistrer un produit API et une source OpenAPI officielle;
+3. enregistrer un produit API et une source OpenAPI ou Postman officielle;
 4. recuperer la source sous la politique de decouverte;
 5. conserver un snapshot avec provenance, ETag, Last-Modified et hash;
-6. previsualiser puis importer un document OpenAPI JSON ou YAML;
+6. previsualiser puis importer un document OpenAPI JSON/YAML ou une collection Postman v2.1 JSON;
 7. extraire les operations, schemas et preuves puis approuver leurs claims;
 8. proposer puis approuver un mapping tenant vers l'ontologie canonique;
 9. produire une analyse de compatibilite explicable;
@@ -69,6 +69,7 @@ ETag, Last-Modified, hash et redaction.
 - `robots.txt`, les tailles, les delais, l'encodage et la frequence par domaine sont controles.
 - Les contenus sont traites comme des donnees non fiables; les secrets en valeur sont rediges.
 - Les references OpenAPI externes sont bloquees et la taille, la profondeur, les references et les alias YAML sont bornes.
+- Les collections Postman sont bornees en taille, profondeur, dossiers, variables, exemples et scripts; aucune valeur, corps, requete ou script n'est execute ou persiste.
 - Une previsualisation est reverifiee contre le snapshot autoritatif avant persistance.
 - Les metadonnees, operations et schemas importes restent `under_review` jusqu'a une decision humaine auditee.
 - Un mapping doit citer la preuve exacte d'un schema approuve.
@@ -81,7 +82,8 @@ ETag, Last-Modified, hash et redaction.
 
 ## Limites assumees
 
-- Ce checkpoint importe OpenAPI 3.0/3.1 en JSON et YAML. Postman, GraphQL et OAuth restent a implementer.
+- Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML et Postman Collection v2.1 en JSON. GraphQL et OAuth restent a implementer.
+- Un produit API conserve un seul format autoritatif pour ses operations: un remplacement OpenAPI/Postman est refuse tant que le modele multi-source n'existe pas.
 - L'ajout de source reste manuel et limite a une URL approuvee. Les relectures planifiees sont disponibles; le scan de sitemap et la detection de nouvelles pages restent a implementer.
 - Les tests de contrat sont mock uniquement. Aucun appel sandbox externe ni ecriture reelle n'est execute.
 - L'approbation production, l'installation et l'activation de connecteur ne sont pas disponibles.
@@ -98,4 +100,6 @@ ETag, Last-Modified, hash et redaction.
 - Runs push `29264958738` et pull request `29264962308`: migrations PostgreSQL/RLS, lint, types, 111 tests, build production et trois Playwright passes.
 - Le checkpoint de relecture planifiee est vert au head `76a1487dc567f902bb478ac0f399224945c2b74c`.
 - Runs push `29267465626` et pull request `29267468487`: migration PostgreSQL, lint, types, 38 fichiers/122 tests, build production et trois Playwright passes.
+- Le checkpoint Postman v2.1 est vert au head `a1fcaf1800a766937e8f8fd600d539b9fb36b428`.
+- Runs push `29291951679` et pull request `29291954167`: migrations PostgreSQL, lint, types, 38 fichiers/126 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.

@@ -146,8 +146,8 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Add the bounded Postman Collection v2.1 importer without executing scripts.
-2. Continue with supplied GraphQL SDL/introspection and official OAuth metadata importers.
+1. Add a bounded GraphQL importer for supplied SDL and supplied introspection JSON without live introspection.
+2. Continue with the official OAuth metadata importer.
 3. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
@@ -163,3 +163,6 @@ Phase 3 checkpoint in progress:
 - Approved official sources can now be rechecked on a platform-admin schedule. The shared worker processes at most three sequential source checks per batch, uses unique leases and stale-lease recovery, reuses ETag/Last-Modified, backs off transient failures, blocks unsafe or unauthorized schedules, and stores only bounded error codes.
 - Runtime migration `021` and SQL mirror `0015` add the global schedule state and explicit audit tenant context. The French administration surface exposes interval configuration and suspension without enabling broad crawling.
 - Scheduled recheck head `76a1487dc567f902bb478ac0f399224945c2b74c` passed complete push run `29267465626` and pull request run `29267468487`: clean PostgreSQL migration, lint, typecheck, 38 files/122 tests, production build and three Playwright scenarios.
+- Postman Collection v2.1 import now uses a bounded deterministic parser, never executes scripts or requests, removes variable/auth values and request/response bodies, persists only safe structural claims and evidence, and reuses the same compatibility and change-monitor paths as OpenAPI.
+- Postman import head `a1fcaf1800a766937e8f8fd600d539b9fb36b428` passed complete push run `29291951679` and pull request run `29291954167`: ordered PostgreSQL migrations, lint, typecheck, 38 test files/126 tests, production build and three Playwright scenarios.
+- OpenAPI and Postman operation imports are intentionally exclusive per API product until a future multi-source operation model exists; a cross-format replacement is rejected instead of deleting the current operation set.

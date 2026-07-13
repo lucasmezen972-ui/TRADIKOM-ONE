@@ -11,7 +11,7 @@ Une source distante n'est accessible que lorsque:
 - `robots.txt` autorise le chemin;
 - la limite de frequence du domaine est disponible.
 
-La premiere version accepte les documentations et specifications OpenAPI officielles ajoutees manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
+La version actuelle accepte les specifications OpenAPI 3.0/3.1 et collections Postman v2.1 officielles ajoutees manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
 
 ## Controles reseau
 
@@ -49,7 +49,9 @@ Chaque nouvelle observation HTTP 200 conserve un snapshot, meme si le hash du co
 
 ## Donnees non fiables
 
-Le contenu distant n'est jamais interprete comme une instruction. Aucun code, script, exemple ou reference externe n'est execute. Les valeurs ressemblant a des credentials sont redigees avant stockage; les exemples et valeurs par defaut sont retires des schemas importes.
+Le contenu distant n'est jamais interprete comme une instruction. Aucun code, script, exemple, requete ou reference externe n'est execute. Les valeurs ressemblant a des credentials sont redigees avant stockage; les exemples et valeurs par defaut sont retires des schemas importes.
+
+Pour Postman, seules la structure des dossiers, les methodes, chemins, noms de parametres, types d'authentification et metadonnees bornees des exemples/scripts sont conserves. Les valeurs de variables et d'authentification, corps de requetes, corps de reponses et code des scripts ne sont jamais persistes.
 
 ## Interdictions
 
@@ -57,5 +59,6 @@ Le contenu distant n'est jamais interprete comme une instruction. Aucun code, sc
 - Domaine non approuve ou sous-domaine implicite.
 - Endpoint local, prive, metadata ou redirection.
 - Reference OpenAPI externe.
+- Remplacement croise OpenAPI/Postman d'un produit possedant deja des operations importees.
 - Secret trouve dans une documentation.
 - Activation ou appel d'ecriture d'un connecteur genere.

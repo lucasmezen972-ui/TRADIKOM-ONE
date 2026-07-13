@@ -21,8 +21,14 @@ Scheduled source rechecks completed and green at `76a1487`:
 2. Worker claims with unique leases, stale-lease recovery, bounded batches, conditional HTTP validators and exponential backoff.
 3. Safe terminal blocking for paused domains or revoked authority, persisted error codes without raw messages, and focused integration coverage.
 
+Bounded Postman Collection v2.1 import completed and green at `a1fcaf1`:
+
+1. Deterministic JSON-only parser with bounded size, depth, folders, variables, examples and scripts.
+2. Safe import of request metadata, operations, authentication shape and evidence without values, bodies or script execution.
+3. Authoritative snapshot recheck, platform-admin authorization, transactional persistence, audit coverage and deterministic change monitoring.
+
 Next unfinished work:
 
-1. Add the bounded Postman v2.1 importer without executing collection scripts.
-2. Add supplied GraphQL SDL/introspection and official OAuth metadata importers.
+1. Add a bounded GraphQL importer for supplied SDL and supplied introspection JSON without live introspection.
+2. Add the official OAuth metadata importer.
 3. Keep live writes, production connector approval and unrestricted crawling disabled.

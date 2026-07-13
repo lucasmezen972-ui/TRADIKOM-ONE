@@ -5,7 +5,7 @@
 - `src/modules/platform-admin/`: autorisation globale et attribution locale controlee.
 - `src/modules/software-directory/`: logiciels, domaines, produits API, sources et snapshots.
 - `src/modules/api-intelligence/discovery/`: validation URL/DNS, robots, fetch HTTPS borne, redaction et relectures planifiees.
-- `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML et previsualisation.
+- `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML et Postman Collection v2.1 JSON, puis previsualisation.
 - `src/modules/api-intelligence/change-monitor/`: comparaison deterministe, classification, impacts tenant, contrats de changement et plans de reparation.
 - `src/modules/api-intelligence/ontology/`: mappings tenant avec preuve et approbation.
 - `src/modules/api-intelligence/compatibility.ts`: resultat tenant explique par operations, mappings et preuves.
@@ -20,7 +20,7 @@ flowchart LR
   A["Domaine en attente"] --> B["Approbation plateforme"]
   B --> C["Fetch HTTPS borne"]
   C --> D["Snapshot et hash"]
-  D --> E["Previsualisation OpenAPI"]
+  D --> E["Previsualisation deterministe"]
   E --> F["Operations, schemas et preuves"]
   F --> G["Claims approuves"]
   G --> H["Mapping tenant approuve"]
@@ -37,7 +37,7 @@ flowchart LR
   P --> Q["Plan de reparation soumis a approbation"]
 ```
 
-Chaque transition sensible est autorisee cote serveur et auditee. La previsualisation OpenAPI n'est pas une autorite: le service recharge le snapshot, recalcule le document et exige une correspondance exacte avant d'ecrire.
+Chaque transition sensible est autorisee cote serveur et auditee. La previsualisation n'est pas une autorite: le service recharge le snapshot, selectionne le parseur selon le type de source, recalcule le document et exige une correspondance exacte avant d'ecrire.
 
 ## Isolation
 
@@ -55,4 +55,4 @@ Un mapping tenant ne peut jamais etre promu automatiquement en connaissance glob
 
 ## Frontieres actuelles
 
-L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les futurs importeurs et scans de sitemap doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.
+L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les importeurs GraphQL/OAuth et futurs scans de sitemap doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.
