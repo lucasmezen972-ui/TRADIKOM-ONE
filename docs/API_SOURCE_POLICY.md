@@ -11,7 +11,7 @@ Une source distante n'est accessible que lorsque:
 - `robots.txt` autorise le chemin;
 - la limite de frequence du domaine est disponible.
 
-La version actuelle accepte les specifications OpenAPI 3.0/3.1 et collections Postman v2.1 officielles ajoutees manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
+La version actuelle accepte les specifications OpenAPI 3.0/3.1, collections Postman v2.1 et schemas GraphQL officiels ajoutes manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
 
 ## Controles reseau
 
@@ -53,6 +53,8 @@ Le contenu distant n'est jamais interprete comme une instruction. Aucun code, sc
 
 Pour Postman, seules la structure des dossiers, les methodes, chemins, noms de parametres, types d'authentification et metadonnees bornees des exemples/scripts sont conserves. Les valeurs de variables et d'authentification, corps de requetes, corps de reponses et code des scripts ne sont jamais persistes.
 
+Pour GraphQL, la source doit contenir un SDL ou un resultat d'introspection JSON deja fourni. Le systeme n'envoie jamais de requete d'introspection a un endpoint. Seuls les types, champs, arguments et signatures d'operations sont conserves; descriptions, raisons de deprecation et valeurs par defaut sont omises des claims structurels.
+
 ## Interdictions
 
 - Authentification, paywall ou tableau de bord prive.
@@ -60,5 +62,6 @@ Pour Postman, seules la structure des dossiers, les methodes, chemins, noms de p
 - Endpoint local, prive, metadata ou redirection.
 - Reference OpenAPI externe.
 - Remplacement croise OpenAPI/Postman d'un produit possedant deja des operations importees.
+- Introspection GraphQL en direct ou execution d'une operation GraphQL.
 - Secret trouve dans une documentation.
 - Activation ou appel d'ecriture d'un connecteur genere.

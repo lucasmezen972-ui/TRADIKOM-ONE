@@ -146,9 +146,8 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Add a bounded GraphQL importer for supplied SDL and supplied introspection JSON without live introspection.
-2. Continue with the official OAuth metadata importer.
-3. Keep production connector activation and unrestricted crawling disabled.
+1. Add the official OAuth metadata importer.
+2. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
 
@@ -166,3 +165,5 @@ Phase 3 checkpoint in progress:
 - Postman Collection v2.1 import now uses a bounded deterministic parser, never executes scripts or requests, removes variable/auth values and request/response bodies, persists only safe structural claims and evidence, and reuses the same compatibility and change-monitor paths as OpenAPI.
 - Postman import head `a1fcaf1800a766937e8f8fd600d539b9fb36b428` passed complete push run `29291951679` and pull request run `29291954167`: ordered PostgreSQL migrations, lint, typecheck, 38 test files/126 tests, production build and three Playwright scenarios.
 - OpenAPI and Postman operation imports are intentionally exclusive per API product until a future multi-source operation model exists; a cross-format replacement is rejected instead of deleting the current operation set.
+- Official GraphQL sources now accept bounded supplied SDL or supplied introspection JSON through the official `graphql` parser. No endpoint introspection or schema request is generated; descriptions, deprecation reasons and default values are omitted from persisted structural claims.
+- GraphQL import head `54b81993eed7a95b58a0ffdd37beec8e8e9079d9` passed complete push run `29293876882` and pull request run `29293878753`: ordered PostgreSQL migrations, lint, typecheck, 40 test files/129 tests, production build and three Playwright scenarios.

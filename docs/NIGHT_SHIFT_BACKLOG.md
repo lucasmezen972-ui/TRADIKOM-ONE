@@ -27,8 +27,13 @@ Bounded Postman Collection v2.1 import completed and green at `a1fcaf1`:
 2. Safe import of request metadata, operations, authentication shape and evidence without values, bodies or script execution.
 3. Authoritative snapshot recheck, platform-admin authorization, transactional persistence, audit coverage and deterministic change monitoring.
 
+Supplied GraphQL import completed and green at `54b8199`:
+
+1. Official `graphql` parser for bounded SDL and supplied introspection JSON, without live introspection.
+2. Deterministic query, mutation, subscription and type extraction without descriptions, deprecation reasons or default values.
+3. Transactional reviewed claims, stable evidence, compatibility reuse, change monitoring and audited vertical coverage.
+
 Next unfinished work:
 
-1. Add a bounded GraphQL importer for supplied SDL and supplied introspection JSON without live introspection.
-2. Add the official OAuth metadata importer.
-3. Keep live writes, production connector approval and unrestricted crawling disabled.
+1. Add the official OAuth metadata importer.
+2. Keep live writes, production connector approval and unrestricted crawling disabled.

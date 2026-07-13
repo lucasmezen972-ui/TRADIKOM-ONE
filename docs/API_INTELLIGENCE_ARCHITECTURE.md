@@ -5,7 +5,7 @@
 - `src/modules/platform-admin/`: autorisation globale et attribution locale controlee.
 - `src/modules/software-directory/`: logiciels, domaines, produits API, sources et snapshots.
 - `src/modules/api-intelligence/discovery/`: validation URL/DNS, robots, fetch HTTPS borne, redaction et relectures planifiees.
-- `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML et Postman Collection v2.1 JSON, puis previsualisation.
+- `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML, Postman Collection v2.1 JSON et GraphQL SDL/introspection JSON fournis, puis previsualisation.
 - `src/modules/api-intelligence/change-monitor/`: comparaison deterministe, classification, impacts tenant, contrats de changement et plans de reparation.
 - `src/modules/api-intelligence/ontology/`: mappings tenant avec preuve et approbation.
 - `src/modules/api-intelligence/compatibility.ts`: resultat tenant explique par operations, mappings et preuves.
@@ -55,4 +55,4 @@ Un mapping tenant ne peut jamais etre promu automatiquement en connaissance glob
 
 ## Frontieres actuelles
 
-L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les importeurs GraphQL/OAuth et futurs scans de sitemap doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.
+L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. L'importeur OAuth et les futurs scans de sitemap doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.
