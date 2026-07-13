@@ -9,13 +9,13 @@ Completed for the first Phase 3 checkpoint:
 3. Implemented the complete safe OpenAPI-to-sandbox-Connect-Store vertical slice.
 4. Opened draft PR #3 and made both complete CI runs green at `e971d13`.
 
-API Change Monitor checkpoint implemented and awaiting authoritative CI:
+API Change Monitor checkpoint completed and green at `b0bd77f`:
 
 1. Deterministic source, operation, schema, authentication, scope, webhook, version, rate-limit, deprecation and access-policy comparison.
 2. Tenant impact records, automatic upgrade blocking, static change contracts, Opportunity Radar alerts and human repair decisions.
 3. Runtime/SQL migrations with PostgreSQL RLS and cross-tenant relation tests.
 
-Next unfinished work after green CI:
+Next unfinished work:
 
 1. Add scheduled rechecks for approved official sources only.
 2. Add Postman v2.1, supplied GraphQL and official OAuth metadata importers.

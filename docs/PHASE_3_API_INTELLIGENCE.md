@@ -79,4 +79,6 @@ Les changements sont classes `informational`, `additive`,
 - Le head `e971d1367527671670b2964bdfdc13cb45b2e780` est vert.
 - Run push `29258483303`: migrations PostgreSQL/RLS, lint, types, 109 tests, build production et trois Playwright passes.
 - Run pull request `29258489327`: meme suite complete passee.
+- Le checkpoint API Change Monitor est vert au head `b0bd77fa1b6e64161abdcf7a78a031b1b1249d7a`.
+- Runs push `29264958738` et pull request `29264962308`: migrations PostgreSQL/RLS, lint, types, 111 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.

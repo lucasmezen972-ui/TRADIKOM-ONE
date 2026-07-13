@@ -139,3 +139,4 @@
 - Local dependency preparation for TypeScript validation hung and was stopped after 30 seconds. Targeted `git diff --check` passed; GitHub Actions remains authoritative.
 - GitHub Actions run `29262929566` passed migrations and lint, then caught the shared Opportunity Radar union missing `api_breaking_change`; the shared type was aligned immediately.
 - Run `29263621921` passed migrations, lint and typecheck. Its PostgreSQL test confirmed the cross-tenant impact write is rejected by the product-integrity trigger before the tenant trigger; the assertion now accepts that equally safe rejection path.
+- API Change Monitor head `b0bd77f` passed both complete CI runs: push `29264958738` and pull request `29264962308`, including ordered migrations, PostgreSQL RLS, lint, typecheck, 111 tests, production build and all three Playwright scenarios.

@@ -146,9 +146,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Validate the API Change Monitor checkpoint through the complete GitHub Actions suite and fix every regression.
-2. Add scheduled rechecks for approved official sources without broad crawling.
-3. Continue with bounded Postman, supplied GraphQL and official OAuth metadata importers.
+1. Add scheduled rechecks for approved official sources without broad crawling.
+2. Continue with bounded Postman, supplied GraphQL and official OAuth metadata importers.
+3. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
 
@@ -159,3 +159,4 @@ Phase 3 checkpoint in progress:
 - Draft PR #3 is open. Head `e971d1367527671670b2964bdfdc13cb45b2e780` passed both complete CI runs: push `29258483303` and pull request `29258489327`.
 - The API Change Monitor now compares snapshot content and HTTP validators, classifies contract/security/access changes, creates RLS-protected tenant impacts, runs static change contracts, blocks affected connectors, raises alerts, and requires an audited human decision on disabled repair plans.
 - Runtime migrations `019`/`020` and SQL mirrors `0013`/`0014` add change events, tenant impacts, RLS and proposal-tenant integrity.
+- API Change Monitor head `b0bd77fa1b6e64161abdcf7a78a031b1b1249d7a` passed complete push run `29264958738` and pull request run `29264962308`, including 111 tests, clean PostgreSQL migrations/RLS, production build and Playwright.
