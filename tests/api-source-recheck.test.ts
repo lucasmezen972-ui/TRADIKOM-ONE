@@ -324,6 +324,7 @@ async function setupSource() {
     tenant.id,
     {
       canonicalName: "Scheduled Source",
+      aliases: [],
       vendor: "Scheduled Source SAS",
       officialDomain: "docs.scheduled-source.test",
       supportedRegions: ["Europe"],
