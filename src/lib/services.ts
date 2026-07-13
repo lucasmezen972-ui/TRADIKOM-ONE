@@ -121,14 +121,20 @@ import {
   configureApiSourceRecheck,
   getApiIntelligenceWorkspace,
   getLatestCompatibilityCheck,
+  persistApiPreview,
   persistOpenApiPreview,
+  persistPostmanPreview,
+  previewApiSnapshot,
   previewOpenApiSnapshot,
+  previewPostmanSnapshot,
   proposeTenantOntologyMapping,
   runCompatibilityCheck,
   type DiscoveryTransport,
   type ApiSourceRecheckConfiguration,
   type OntologyMappingInput,
+  type ApiContractPreview,
   type OpenApiPreview,
+  type PostmanPreview,
 } from "@/modules/api-intelligence";
 import {
   decideConnectorSandboxApproval,
@@ -454,11 +460,31 @@ export function createServices(
       tenantId: string,
       input: { snapshotId: string; apiProductId: string },
     ) => previewOpenApiSnapshot(db, userId, tenantId, input),
+    previewPostmanSnapshot: (
+      userId: string,
+      tenantId: string,
+      input: { snapshotId: string; apiProductId: string },
+    ) => previewPostmanSnapshot(db, userId, tenantId, input),
+    previewApiSnapshot: (
+      userId: string,
+      tenantId: string,
+      input: { snapshotId: string; apiProductId: string },
+    ) => previewApiSnapshot(db, userId, tenantId, input),
     persistOpenApiPreview: (
       userId: string,
       tenantId: string,
       preview: OpenApiPreview,
     ) => persistOpenApiPreview(db, userId, tenantId, preview),
+    persistPostmanPreview: (
+      userId: string,
+      tenantId: string,
+      preview: PostmanPreview,
+    ) => persistPostmanPreview(db, userId, tenantId, preview),
+    persistApiPreview: (
+      userId: string,
+      tenantId: string,
+      preview: ApiContractPreview,
+    ) => persistApiPreview(db, userId, tenantId, preview),
     proposeTenantOntologyMapping: (
       userId: string,
       tenantId: string,

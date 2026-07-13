@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { OpenApiPreview } from "@/modules/api-intelligence/analyzer";
+import type { ApiContractPreview } from "@/modules/api-intelligence/analyzer";
 import {
   apiChangeSummarySchema,
   type ApiChangeClassification,
@@ -12,7 +12,7 @@ export type ApiSnapshotDescriptor = {
   lastModified?: string;
   accessPolicyDecision: string;
   robotsDecision: string;
-  preview?: OpenApiPreview;
+  preview?: ApiContractPreview;
   parseFailed?: boolean;
 };
 
@@ -91,8 +91,8 @@ export function compareApiSnapshots(input: {
 }
 
 function compareProductMetadata(
-  previous: OpenApiPreview,
-  current: OpenApiPreview,
+  previous: ApiContractPreview,
+  current: ApiContractPreview,
   changes: ApiChangeItem[],
 ) {
   if (
@@ -142,8 +142,8 @@ function compareProductMetadata(
 }
 
 function compareOperations(
-  previous: OpenApiPreview,
-  current: OpenApiPreview,
+  previous: ApiContractPreview,
+  current: ApiContractPreview,
   changes: ApiChangeItem[],
 ) {
   const before = new Map(previous.operations.map((item) => [item.operationKey, item]));
@@ -203,8 +203,8 @@ function compareOperations(
 }
 
 function compareSchemas(
-  previous: OpenApiPreview,
-  current: OpenApiPreview,
+  previous: ApiContractPreview,
+  current: ApiContractPreview,
   changes: ApiChangeItem[],
 ) {
   const before = new Map(previous.schemas.map((item) => [item.name, item.document]));

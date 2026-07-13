@@ -1,5 +1,39 @@
 import { z } from "zod";
 
+export const apiOperationPreviewSchema = z.object({
+  operationKey: z.string().min(1),
+  method: z.string().min(1),
+  path: z.string().min(1),
+  summary: z.string(),
+  tags: z.array(z.string()),
+  capability: z.enum(["read", "write"]),
+  deprecated: z.boolean(),
+  requestSchemaRef: z.string().optional(),
+  responseSchemaRef: z.string().optional(),
+  securityRequirements: z.array(z.record(z.string(), z.array(z.string()))),
+  locator: z.string().min(1).optional(),
+  exampleCount: z.number().int().min(0).max(500).optional(),
+});
+
+const apiContractPreviewFields = {
+  snapshotId: z.string().min(1),
+  apiProductId: z.string().min(1),
+  sourceHash: z.string().length(64),
+  title: z.string().min(1),
+  version: z.string().min(1),
+  baseUrl: z.string().optional(),
+  authenticationType: z.string(),
+  oauthMetadata: z.record(z.string(), z.unknown()),
+  scopes: z.array(z.string()),
+  webhookSupport: z.boolean(),
+  rateLimitFingerprint: z.string().length(64).optional(),
+  rateLimitLocators: z.array(z.string()).max(100),
+  operations: z.array(apiOperationPreviewSchema).max(500),
+  schemas: z
+    .array(z.object({ name: z.string().min(1), document: z.unknown() }))
+    .max(500),
+};
+
 export const openApiDocumentSchema = z
   .object({
     openapi: z.string().regex(/^3\.(0|1)(?:\.\d+)?$/),
@@ -22,36 +56,66 @@ export const openApiDocumentSchema = z
 
 export const openApiPreviewSchema = z.object({
   parserVersion: z.literal("openapi-1"),
-  snapshotId: z.string().min(1),
-  apiProductId: z.string().min(1),
-  sourceHash: z.string().length(64),
-  title: z.string().min(1),
-  version: z.string().min(1),
-  baseUrl: z.string().optional(),
-  authenticationType: z.string(),
-  oauthMetadata: z.record(z.string(), z.unknown()),
-  scopes: z.array(z.string()),
-  webhookSupport: z.boolean(),
-  rateLimitFingerprint: z.string().length(64).optional(),
-  rateLimitLocators: z.array(z.string()).max(100),
-  operations: z.array(
-    z.object({
-      operationKey: z.string().min(1),
-      method: z.string().min(1),
-      path: z.string().min(1),
-      summary: z.string(),
-      tags: z.array(z.string()),
-      capability: z.enum(["read", "write"]),
-      deprecated: z.boolean(),
-      requestSchemaRef: z.string().optional(),
-      responseSchemaRef: z.string().optional(),
-      securityRequirements: z.array(z.record(z.string(), z.array(z.string()))),
-    }),
-  ),
-  schemas: z.array(
-    z.object({ name: z.string().min(1), document: z.unknown() }),
-  ),
+  ...apiContractPreviewFields,
   blockedExternalReferences: z.literal(0),
 });
 
+export const postmanCollectionDocumentSchema = z
+  .object({
+    info: z
+      .object({
+        name: z.string().trim().min(1).max(240),
+        schema: z.string().url(),
+        version: z.unknown().optional(),
+      })
+      .passthrough(),
+    item: z.array(z.unknown()),
+    auth: z.unknown().optional(),
+    event: z.array(z.unknown()).optional(),
+    variable: z.array(z.unknown()).optional(),
+  })
+  .passthrough();
+
+export const postmanPreviewSchema = z.object({
+  parserVersion: z.literal("postman-1"),
+  ...apiContractPreviewFields,
+  collectionSchema: z.literal("v2.1.0"),
+  variables: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        type: z.string(),
+        disabled: z.boolean(),
+        scope: z.enum(["collection", "folder", "request", "url"]),
+        locator: z.string().min(1),
+      }),
+    )
+    .max(200),
+  examples: z
+    .array(
+      z.object({
+        operationKey: z.string().min(1),
+        name: z.string(),
+        status: z.string(),
+        code: z.number().int().min(0).max(999).optional(),
+        bodyPresent: z.boolean(),
+        locator: z.string().min(1),
+      }),
+    )
+    .max(500),
+  scripts: z
+    .array(
+      z.object({
+        event: z.string(),
+        disabled: z.boolean(),
+        scope: z.enum(["collection", "folder", "request"]),
+        locator: z.string().min(1),
+      }),
+    )
+    .max(200),
+  blockedScriptCount: z.number().int().min(0).max(200),
+});
+
 export type OpenApiPreview = z.infer<typeof openApiPreviewSchema>;
+export type PostmanPreview = z.infer<typeof postmanPreviewSchema>;
+export type ApiContractPreview = OpenApiPreview | PostmanPreview;

@@ -166,6 +166,12 @@ export async function addOfficialApiSource(
   input: ApiSourceInput,
 ) {
   const parsed = apiSourceInputSchema.parse(input);
+  if (!parsed.sourceType.startsWith("official_")) {
+    throw new SoftwareDirectoryError(
+      "source_not_official",
+      "Seules les sources officielles peuvent etre approuvees.",
+    );
+  }
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertPlatformAdmin(transaction, userId, tenantId);
     if (!(await findSoftwareById(transaction, parsed.softwareId))) {

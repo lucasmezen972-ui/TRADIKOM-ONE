@@ -9,7 +9,10 @@ import {
   resolvePublicDiscoveryAddress,
   validateDiscoveryUrl,
 } from "../src/modules/api-intelligence/discovery";
-import { previewOpenApiDocument } from "../src/modules/api-intelligence/analyzer";
+import {
+  previewOpenApiDocument,
+  previewPostmanCollection,
+} from "../src/modules/api-intelligence/analyzer";
 
 describe("API discovery security", () => {
   it("accepts approved HTTPS URLs and rejects scheme, credentials, ports, and hosts", () => {
@@ -303,6 +306,109 @@ components:
         contentType: "application/yaml",
       }),
     ).toThrow(/YAML OpenAPI invalide|trop/);
+  });
+});
+
+describe("Postman deterministic importer", () => {
+  it("extracts v2.1 metadata without retaining values or executing scripts", async () => {
+    const collection = await fixture("mock-garage-postman-v2.1.json");
+    const executionMarker = globalThis as typeof globalThis & {
+      __postmanScriptExecuted?: boolean;
+    };
+    delete executionMarker.__postmanScriptExecuted;
+
+    const preview = previewPostmanCollection({
+      snapshotId: "snapshot_postman",
+      apiProductId: "api_postman",
+      sourceHash: "e".repeat(64),
+      content: collection,
+    });
+
+    expect(preview).toMatchObject({
+      parserVersion: "postman-1",
+      collectionSchema: "v2.1.0",
+      title: "Garage Cloud API",
+      version: "2.4.1-stable",
+      baseUrl: "https://api.garage-cloud.test",
+      authenticationType: "mixed",
+      blockedScriptCount: 2,
+    });
+    expect(preview.operations.map((operation) => operation.operationKey)).toEqual([
+      "get:/contacts",
+      "post:/contacts",
+      "get:/health",
+    ]);
+    expect(preview.operations.map((operation) => operation.securityRequirements)).toEqual([
+      [{ bearer: [] }],
+      [],
+      [{ oauth2: [] }],
+    ]);
+    expect(preview.variables.map((variable) => variable.key)).toEqual([
+      "baseUrl",
+      "apiToken",
+      "contactId",
+      "page",
+    ]);
+    expect(preview.examples).toMatchObject([
+      { operationKey: "get:/contacts", code: 200, bodyPresent: true },
+      { operationKey: "post:/contacts", code: 201, bodyPresent: true },
+    ]);
+    expect(executionMarker.__postmanScriptExecuted).toBeUndefined();
+
+    const serialized = JSON.stringify(preview);
+    for (const secret of [
+      "postman-access-secret",
+      "postman-variable-secret",
+      "folder-bearer-secret",
+      "query-secret",
+      "request-secret",
+      "body-secret",
+      "response-secret",
+      "client@example.com",
+      "globalThis.__postmanScriptExecuted",
+      "pm.test",
+    ]) {
+      expect(serialized).not.toContain(secret);
+    }
+  });
+
+  it("rejects unsupported schemas and excessive item counts", () => {
+    const unsupported = JSON.stringify({
+      info: {
+        name: "Legacy",
+        schema:
+          "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+      },
+      item: [],
+    });
+    expect(() =>
+      previewPostmanCollection({
+        snapshotId: "snapshot_legacy",
+        apiProductId: "api_legacy",
+        sourceHash: "f".repeat(64),
+        content: unsupported,
+      }),
+    ).toThrow(/v2.1 invalide/);
+
+    const excessive = JSON.stringify({
+      info: {
+        name: "Trop grande",
+        schema:
+          "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      },
+      item: Array.from({ length: 501 }, (_, index) => ({
+        name: `Requete ${index}`,
+        request: `https://api.vendor.test/items/${index}`,
+      })),
+    });
+    expect(() =>
+      previewPostmanCollection({
+        snapshotId: "snapshot_large",
+        apiProductId: "api_large",
+        sourceHash: "0".repeat(64),
+        content: excessive,
+      }),
+    ).toThrow(/trop de requetes/);
   });
 });
 

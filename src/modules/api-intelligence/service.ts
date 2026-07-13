@@ -4,13 +4,19 @@ import { withTenantDbTransaction } from "@/db/tenant-context";
 import { recordAuditLog } from "@/modules/audit";
 import {
   AnalyzerError,
+  type ApiContractPreview,
   openApiPreviewSchema,
+  postmanPreviewSchema,
   previewOpenApiDocument,
+  previewPostmanCollection,
   type OpenApiPreview,
+  type PostmanPreview,
 } from "@/modules/api-intelligence/analyzer";
 import {
   findApiClaimById,
+  listApiProductImportSourceTypes,
   replaceOpenApiImport,
+  replacePostmanImport,
   setApiClaimDecision,
 } from "@/modules/api-intelligence/repository";
 import { assertPlatformAdmin } from "@/modules/platform-admin";
@@ -19,9 +25,46 @@ import {
   findApiSnapshotById,
   findApiSourceById,
   updateApiProductFromSpecification,
+  updateApiProductFromPostmanCollection,
 } from "@/modules/software-directory";
 
+const openApiSourceType = "official_openapi_specification";
+const postmanSourceType = "official_postman_collection";
+
 export async function previewOpenApiSnapshot(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: { snapshotId: string; apiProductId: string },
+) {
+  await assertPlatformAdmin(db, userId, tenantId);
+  const { snapshot } = await loadSnapshotContext(db, input, openApiSourceType);
+  return previewOpenApiDocument({
+    snapshotId: snapshot.id,
+    apiProductId: input.apiProductId,
+    sourceHash: snapshot.content_hash,
+    content: snapshot.content,
+    contentType: snapshot.content_type,
+  });
+}
+
+export async function previewPostmanSnapshot(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: { snapshotId: string; apiProductId: string },
+) {
+  await assertPlatformAdmin(db, userId, tenantId);
+  const { snapshot } = await loadSnapshotContext(db, input, postmanSourceType);
+  return previewPostmanCollection({
+    snapshotId: snapshot.id,
+    apiProductId: input.apiProductId,
+    sourceHash: snapshot.content_hash,
+    content: snapshot.content,
+  });
+}
+
+export async function previewApiSnapshot(
   db: DbClient,
   userId: string,
   tenantId: string,
@@ -33,22 +76,16 @@ export async function previewOpenApiSnapshot(
     throw new AnalyzerError("snapshot_not_found", "Snapshot source introuvable.");
   }
   const source = await findApiSourceById(db, snapshot.source_id);
-  if (!source || source.api_product_id !== input.apiProductId) {
-    throw new AnalyzerError(
-      "openapi_invalid",
-      "Le snapshot ne correspond pas au produit API.",
-    );
+  if (source?.source_type === openApiSourceType) {
+    return previewOpenApiSnapshot(db, userId, tenantId, input);
   }
-  if (!(await findApiProductById(db, input.apiProductId))) {
-    throw new AnalyzerError("openapi_invalid", "Produit API introuvable.");
+  if (source?.source_type === postmanSourceType) {
+    return previewPostmanSnapshot(db, userId, tenantId, input);
   }
-  return previewOpenApiDocument({
-    snapshotId: snapshot.id,
-    apiProductId: input.apiProductId,
-    sourceHash: snapshot.content_hash,
-    content: snapshot.content,
-    contentType: snapshot.content_type,
-  });
+  throw new AnalyzerError(
+    "openapi_unsupported",
+    "Ce type de source n'est pas encore importable.",
+  );
 }
 
 export async function persistOpenApiPreview(
@@ -68,11 +105,22 @@ export async function persistOpenApiPreview(
       "L'apercu OpenAPI a change et doit etre revalide.",
     );
   }
+  const { source } = await loadSnapshotContext(
+    db,
+    parsed,
+    openApiSourceType,
+  );
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertPlatformAdmin(transaction, userId, tenantId);
+    await assertCompatibleImportSource(
+      transaction,
+      parsed.apiProductId,
+      openApiSourceType,
+    );
     const importedAt = nowIso();
     await updateApiProductFromSpecification(transaction, {
       apiProductId: parsed.apiProductId,
+      sourceUrl: source.canonical_url,
       baseUrl: parsed.baseUrl,
       authenticationType: parsed.authenticationType,
       oauthMetadata: parsed.oauthMetadata,
@@ -113,6 +161,84 @@ export async function persistOpenApiPreview(
   });
 }
 
+export async function persistPostmanPreview(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  submittedPreview: PostmanPreview,
+) {
+  const parsed = postmanPreviewSchema.parse(submittedPreview);
+  const authoritative = await previewPostmanSnapshot(db, userId, tenantId, {
+    snapshotId: parsed.snapshotId,
+    apiProductId: parsed.apiProductId,
+  });
+  if (JSON.stringify(authoritative) !== JSON.stringify(parsed)) {
+    throw new AnalyzerError(
+      "preview_required",
+      "L'apercu Postman a change et doit etre revalide.",
+    );
+  }
+  const { source } = await loadSnapshotContext(db, parsed, postmanSourceType);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertPlatformAdmin(transaction, userId, tenantId);
+    await assertCompatibleImportSource(
+      transaction,
+      parsed.apiProductId,
+      postmanSourceType,
+    );
+    const importedAt = nowIso();
+    await updateApiProductFromPostmanCollection(transaction, {
+      apiProductId: parsed.apiProductId,
+      sourceUrl: source.canonical_url,
+      baseUrl: parsed.baseUrl,
+      authenticationType: parsed.authenticationType,
+      oauthMetadata: parsed.oauthMetadata,
+      scopes: parsed.scopes,
+      confidenceScore: 75,
+      verifiedAt: importedAt,
+    });
+    const imported = await replacePostmanImport(transaction, parsed, {
+      createdAt: importedAt,
+      createdBy: userId,
+    });
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "api_intelligence.postman_imported",
+      targetType: "api_product",
+      targetId: parsed.apiProductId,
+      metadata: {
+        snapshotId: parsed.snapshotId,
+        sourceHash: parsed.sourceHash,
+        operationCount: parsed.operations.length,
+        variableCount: parsed.variables.length,
+        exampleCount: parsed.examples.length,
+        blockedScriptCount: parsed.blockedScriptCount,
+      },
+    });
+    return {
+      apiProductId: parsed.apiProductId,
+      operationCount: parsed.operations.length,
+      schemaCount: 0,
+      blockedScriptCount: parsed.blockedScriptCount,
+      schemaEvidence: {},
+      schemaClaims: {},
+      claimIds: imported.claimIds,
+    };
+  });
+}
+
+export function persistApiPreview(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  preview: ApiContractPreview,
+) {
+  return preview.parserVersion === "postman-1"
+    ? persistPostmanPreview(db, userId, tenantId, preview)
+    : persistOpenApiPreview(db, userId, tenantId, preview);
+}
+
 export async function decideApiClaim(
   db: DbClient,
   userId: string,
@@ -151,4 +277,44 @@ export async function decideApiClaim(
     });
     return { claimId: input.claimId, status: input.status };
   });
+}
+
+async function loadSnapshotContext(
+  db: DbClient,
+  input: { snapshotId: string; apiProductId: string },
+  expectedSourceType: string,
+) {
+  const snapshot = await findApiSnapshotById(db, input.snapshotId);
+  if (!snapshot) {
+    throw new AnalyzerError("snapshot_not_found", "Snapshot source introuvable.");
+  }
+  const source = await findApiSourceById(db, snapshot.source_id);
+  if (
+    !source ||
+    source.api_product_id !== input.apiProductId ||
+    source.source_type !== expectedSourceType
+  ) {
+    throw new AnalyzerError(
+      expectedSourceType === postmanSourceType ? "postman_invalid" : "openapi_invalid",
+      "Le snapshot ne correspond pas au produit et au type de source attendus.",
+    );
+  }
+  if (!(await findApiProductById(db, input.apiProductId))) {
+    throw new AnalyzerError("openapi_invalid", "Produit API introuvable.");
+  }
+  return { snapshot, source };
+}
+
+async function assertCompatibleImportSource(
+  db: DbClient,
+  apiProductId: string,
+  expectedSourceType: string,
+) {
+  const sourceTypes = await listApiProductImportSourceTypes(db, apiProductId);
+  if (sourceTypes.some((sourceType) => sourceType !== expectedSourceType)) {
+    throw new AnalyzerError(
+      "source_type_conflict",
+      "Ce produit contient deja un import d'un autre format.",
+    );
+  }
 }

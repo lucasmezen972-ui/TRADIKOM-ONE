@@ -288,8 +288,14 @@ export default async function ApiIntelligencePage() {
                   ))}
               </select>
             </Field>
+            <Field label="Format de la source">
+              <select className={inputClass} name="sourceType" required>
+                <option value="official_openapi_specification">OpenAPI 3</option>
+                <option value="official_postman_collection">Collection Postman v2.1</option>
+              </select>
+            </Field>
             <div className="sm:col-span-2">
-              <Field label="URL OpenAPI officielle">
+              <Field label="URL officielle de la source">
                 <input className={inputClass} name="url" type="url" required />
               </Field>
             </div>
@@ -308,7 +314,7 @@ export default async function ApiIntelligencePage() {
                   <p className="font-semibold">{source.softwareName}</p>
                   <p className="mt-1 break-all text-xs text-slate-500">{source.url}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {source.latestSnapshotId ? `Snapshot ${shortId(source.latestSnapshotId)}` : "Jamais analysée"}
+                    {sourceTypeLabel(source.sourceType)} · {source.latestSnapshotId ? `Snapshot ${shortId(source.latestSnapshotId)}` : "Jamais analysée"}
                   </p>
                   {source.recheck ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -870,6 +876,12 @@ function formatDateTime(value: string) {
     timeStyle: "short",
     timeZone: "America/Martinique",
   }).format(new Date(value));
+}
+
+function sourceTypeLabel(sourceType: string) {
+  if (sourceType === "official_openapi_specification") return "OpenAPI 3";
+  if (sourceType === "official_postman_collection") return "Postman v2.1";
+  return "Source officielle";
 }
 
 function claimLabel(claimType: string) {

@@ -1,11 +1,31 @@
 import { createHash } from "node:crypto";
 import type { DbClient } from "@/lib/db";
 import { safeJson, toJson } from "@/lib/security";
-import type { OpenApiPreview } from "@/modules/api-intelligence/analyzer";
+import type {
+  ApiContractPreview,
+  OpenApiPreview,
+  PostmanPreview,
+} from "@/modules/api-intelligence/analyzer";
 
 export async function replaceOpenApiImport(
   db: DbClient,
   preview: OpenApiPreview,
+  input: { createdAt: string; createdBy: string },
+) {
+  return replaceApiContractImport(db, preview, input);
+}
+
+export async function replacePostmanImport(
+  db: DbClient,
+  preview: PostmanPreview,
+  input: { createdAt: string; createdBy: string },
+) {
+  return replaceApiContractImport(db, preview, input);
+}
+
+async function replaceApiContractImport(
+  db: DbClient,
+  preview: ApiContractPreview,
   input: { createdAt: string; createdBy: string },
 ) {
   await db.query(
@@ -47,6 +67,7 @@ export async function replaceOpenApiImport(
     subjectId: preview.apiProductId,
     claimType: "api_metadata",
     claimValue: {
+      parserVersion: preview.parserVersion,
       title: preview.title,
       version: preview.version,
       baseUrl: preview.baseUrl,
@@ -55,6 +76,15 @@ export async function replaceOpenApiImport(
       webhookSupport: preview.webhookSupport,
       rateLimitFingerprint: preview.rateLimitFingerprint,
       rateLimitLocators: preview.rateLimitLocators,
+      ...(preview.parserVersion === "postman-1"
+        ? {
+            collectionSchema: preview.collectionSchema,
+            variables: preview.variables,
+            examples: preview.examples,
+            scripts: preview.scripts,
+            blockedScriptCount: preview.blockedScriptCount,
+          }
+        : {}),
     },
     locator: "#",
     excerptHash: preview.sourceHash,
@@ -151,8 +181,11 @@ export async function replaceOpenApiImport(
         method: operation.method,
         path: operation.path,
         capability: operation.capability,
+        exampleCount: operation.exampleCount,
       },
-      locator: `#/paths/${escapeJsonPointer(operation.path)}/${operation.method.toLowerCase()}`,
+      locator:
+        operation.locator ??
+        `#/paths/${escapeJsonPointer(operation.path)}/${operation.method.toLowerCase()}`,
       excerptHash: preview.sourceHash,
       createdAt: input.createdAt,
     });
@@ -160,6 +193,28 @@ export async function replaceOpenApiImport(
   }
 
   return { schemaEvidence, schemaClaims, claimIds };
+}
+
+export async function listApiProductImportSourceTypes(
+  db: DbClient,
+  apiProductId: string,
+) {
+  const result = await db.query<{ source_type: string }>(
+    `select distinct api_sources.source_type
+     from api_source_snapshots
+     join api_sources on api_sources.id = api_source_snapshots.source_id
+     where api_source_snapshots.id in (
+       select source_snapshot_id from api_operations where api_product_id = $1
+       union
+       select source_snapshot_id from api_schemas where api_product_id = $1
+       union
+       select source_snapshot_id from api_claims
+       where subject_type = 'api_product' and subject_id = $1
+     )
+     order by api_sources.source_type asc`,
+    [apiProductId],
+  );
+  return result.rows.map((row) => row.source_type);
 }
 
 export async function listApiOperations(db: DbClient, apiProductId: string) {

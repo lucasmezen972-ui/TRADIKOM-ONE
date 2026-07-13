@@ -285,6 +285,7 @@ export async function updateApiProductFromSpecification(
   db: DbClient,
   input: {
     apiProductId: string;
+    sourceUrl: string;
     baseUrl?: string;
     authenticationType: string;
     oauthMetadata: unknown;
@@ -297,17 +298,58 @@ export async function updateApiProductFromSpecification(
 ) {
   await db.query(
     `update api_products
-     set base_url = $1, authentication_type = $2, oauth_metadata = $3,
-         scopes = $4, webhook_support = $5, rate_limit_information = $6,
-         confidence_score = $7, last_verified_at = $8, updated_at = $8
-     where id = $9`,
+     set openapi_url = $1, base_url = $2, authentication_type = $3,
+         oauth_metadata = $4, scopes = $5, webhook_support = $6,
+         rate_limit_information = $7, confidence_score = $8,
+         last_verified_at = $9, updated_at = $9
+     where id = $10`,
     [
+      input.sourceUrl,
       input.baseUrl ?? null,
       input.authenticationType,
       toJson(input.oauthMetadata),
       toJson(input.scopes),
       input.webhookSupport ? 1 : 0,
       toJson(input.rateLimitInformation),
+      input.confidenceScore,
+      input.verifiedAt,
+      input.apiProductId,
+    ],
+  );
+}
+
+export async function updateApiProductFromPostmanCollection(
+  db: DbClient,
+  input: {
+    apiProductId: string;
+    sourceUrl: string;
+    baseUrl?: string;
+    authenticationType: string;
+    oauthMetadata: unknown;
+    scopes: string[];
+    confidenceScore: number;
+    verifiedAt: string;
+  },
+) {
+  await db.query(
+    `update api_products
+     set postman_collection_url = $1,
+         base_url = coalesce($2, base_url),
+         authentication_type = $3,
+         oauth_metadata = $4,
+         scopes = $5,
+         confidence_score = case
+           when confidence_score > $6 then confidence_score else $6
+         end,
+         last_verified_at = $7,
+         updated_at = $7
+     where id = $8`,
+    [
+      input.sourceUrl,
+      input.baseUrl ?? null,
+      input.authenticationType,
+      toJson(input.oauthMetadata),
+      toJson(input.scopes),
       input.confidenceScore,
       input.verifiedAt,
       input.apiProductId,

@@ -3,8 +3,9 @@ import { id, nowIso, safeJson } from "@/lib/security";
 import { withTenantDbTransaction } from "@/db/tenant-context";
 import { recordAuditLog } from "@/modules/audit";
 import {
+  type ApiContractPreview,
   previewOpenApiDocument,
-  type OpenApiPreview,
+  previewPostmanCollection,
 } from "@/modules/api-intelligence/analyzer";
 import {
   compareApiSnapshots,
@@ -68,10 +69,12 @@ export async function detectApiSnapshotChange(
   const previous = describeSnapshot(
     input.previousSnapshot,
     input.source.api_product_id,
+    input.source.source_type,
   );
   const current = describeSnapshot(
     input.currentSnapshot,
     input.source.api_product_id,
+    input.source.source_type,
   );
   const comparison = compareApiSnapshots({ previous, current });
   if (comparison.summary.changes.length === 0) return null;
@@ -268,29 +271,43 @@ export async function decideApiChangeRepair(
 function describeSnapshot(
   snapshot: ApiSnapshotRow,
   apiProductId: string,
+  sourceType: string,
 ): ApiSnapshotDescriptor {
+  const descriptor = {
+    contentHash: snapshot.content_hash,
+    etag: snapshot.etag ?? undefined,
+    lastModified: snapshot.last_modified ?? undefined,
+    accessPolicyDecision: snapshot.access_policy_decision,
+    robotsDecision: snapshot.robots_decision,
+  };
+  if (
+    sourceType !== "official_openapi_specification" &&
+    sourceType !== "official_postman_collection"
+  ) {
+    return descriptor;
+  }
   try {
     return {
-      contentHash: snapshot.content_hash,
-      etag: snapshot.etag ?? undefined,
-      lastModified: snapshot.last_modified ?? undefined,
-      accessPolicyDecision: snapshot.access_policy_decision,
-      robotsDecision: snapshot.robots_decision,
-      preview: previewOpenApiDocument({
-        snapshotId: snapshot.id,
-        apiProductId,
-        sourceHash: snapshot.content_hash,
-        content: snapshot.content,
-        contentType: snapshot.content_type,
-      }),
+      ...descriptor,
+      preview:
+        sourceType === "official_postman_collection"
+          ? previewPostmanCollection({
+              snapshotId: snapshot.id,
+              apiProductId,
+              sourceHash: snapshot.content_hash,
+              content: snapshot.content,
+            })
+          : previewOpenApiDocument({
+              snapshotId: snapshot.id,
+              apiProductId,
+              sourceHash: snapshot.content_hash,
+              content: snapshot.content,
+              contentType: snapshot.content_type,
+            }),
     };
   } catch {
     return {
-      contentHash: snapshot.content_hash,
-      etag: snapshot.etag ?? undefined,
-      lastModified: snapshot.last_modified ?? undefined,
-      accessPolicyDecision: snapshot.access_policy_decision,
-      robotsDecision: snapshot.robots_decision,
+      ...descriptor,
       parseFailed: true,
     };
   }
@@ -299,7 +316,7 @@ function describeSnapshot(
 function evaluateConnectorImpact(
   manifestValue: unknown,
   changes: Array<{ kind: string; target?: string }>,
-  currentPreview?: OpenApiPreview,
+  currentPreview?: ApiContractPreview,
 ) {
   const parsed = connectorManifestSchema.safeParse(manifestValue);
   if (!parsed.success) {

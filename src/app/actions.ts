@@ -18,6 +18,7 @@ import {
 import type { Role, WebsiteTemplateKey } from "@/lib/types";
 import { isPublicDemoEnabled } from "@/modules/demo";
 import { canonicalEntitySchema } from "@/modules/api-intelligence";
+import { sourceTypeSchema } from "@/modules/software-directory";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -638,7 +639,7 @@ export async function addApiIntelligenceSourceAction(formData: FormData) {
       softwareId: text(formData, "softwareId"),
       apiProductId: text(formData, "apiProductId") || undefined,
       url: text(formData, "url"),
-      sourceType: "official_openapi_specification",
+      sourceType: sourceTypeSchema.parse(text(formData, "sourceType")),
     }),
   );
   revalidatePath("/intelligence-api");
@@ -677,13 +678,13 @@ export async function importApiIntelligenceSnapshotAction(formData: FormData) {
     snapshotId: text(formData, "snapshotId"),
     apiProductId: text(formData, "apiProductId"),
   };
-  await safeServerAction("api_intelligence.openapi_import", async () => {
-    const preview = await services.previewOpenApiSnapshot(
+  await safeServerAction("api_intelligence.source_import", async () => {
+    const preview = await services.previewApiSnapshot(
       user.id,
       tenant.id,
       input,
     );
-    return services.persistOpenApiPreview(user.id, tenant.id, preview);
+    return services.persistApiPreview(user.id, tenant.id, preview);
   });
   revalidatePath("/intelligence-api");
 }

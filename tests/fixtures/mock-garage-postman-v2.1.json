@@ -1,0 +1,121 @@
+{
+  "info": {
+    "_postman_id": "garage-cloud-collection",
+    "name": "Garage Cloud API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 2,
+      "minor": 4,
+      "patch": 1,
+      "identifier": "stable"
+    }
+  },
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      { "key": "scope", "value": "customers:read customers:write", "type": "string" },
+      { "key": "accessToken", "value": "postman-access-secret", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.garage-cloud.test", "type": "string" },
+    { "key": "apiToken", "value": "postman-variable-secret", "type": "string" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "globalThis.__postmanScriptExecuted = true;",
+          "throw new Error('this script must never run');"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Contacts",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          { "key": "token", "value": "folder-bearer-secret", "type": "string" }
+        ]
+      },
+      "variable": [
+        { "key": "contactId", "value": "customer-42", "type": "string" }
+      ],
+      "item": [
+        {
+          "name": "Lister les contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer request-secret" }
+            ],
+            "url": {
+              "raw": "https://api.garage-cloud.test/contacts?token=query-secret",
+              "protocol": "https",
+              "host": ["api", "garage-cloud", "test"],
+              "path": ["contacts"],
+              "query": [
+                { "key": "token", "value": "query-secret" }
+              ],
+              "variable": [
+                { "key": "page", "value": 1, "type": "number" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "pm.test('never execute', function () { throw new Error('blocked'); });"
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "Liste obtenue",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": { "method": "GET" },
+              "body": "{\"email\":\"client@example.com\",\"token\":\"response-secret\"}"
+            }
+          ]
+        },
+        {
+          "name": "Créer un contact",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": {
+              "raw": "https://api.garage-cloud.test/contacts",
+              "protocol": "https",
+              "host": "api.garage-cloud.test",
+              "path": "contacts"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"create@example.com\",\"password\":\"body-secret\"}"
+            }
+          },
+          "response": [
+            {
+              "name": "Contact créé",
+              "status": "Created",
+              "code": 201,
+              "originalRequest": { "method": "POST" },
+              "body": "{\"id\":\"contact-secret\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Santé",
+      "request": "https://api.garage-cloud.test/health"
+    }
+  ]
+}
