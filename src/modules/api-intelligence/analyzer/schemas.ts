@@ -30,7 +30,13 @@ const apiContractPreviewFields = {
   rateLimitLocators: z.array(z.string()).max(100),
   operations: z.array(apiOperationPreviewSchema).max(500),
   schemas: z
-    .array(z.object({ name: z.string().min(1), document: z.unknown() }))
+    .array(
+      z.object({
+        name: z.string().min(1),
+        document: z.unknown(),
+        locator: z.string().min(1).optional(),
+      }),
+    )
     .max(500),
 };
 
@@ -116,6 +122,14 @@ export const postmanPreviewSchema = z.object({
   blockedScriptCount: z.number().int().min(0).max(200),
 });
 
+export const graphQlPreviewSchema = z.object({
+  parserVersion: z.literal("graphql-1"),
+  ...apiContractPreviewFields,
+  sourceFormat: z.enum(["sdl", "introspection"]),
+  redactedDefaultValueCount: z.number().int().min(0).max(10_000),
+});
+
 export type OpenApiPreview = z.infer<typeof openApiPreviewSchema>;
 export type PostmanPreview = z.infer<typeof postmanPreviewSchema>;
-export type ApiContractPreview = OpenApiPreview | PostmanPreview;
+export type GraphQlPreview = z.infer<typeof graphQlPreviewSchema>;
+export type ApiContractPreview = OpenApiPreview | PostmanPreview | GraphQlPreview;

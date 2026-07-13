@@ -5,6 +5,7 @@ import { recordAuditLog } from "@/modules/audit";
 import {
   type ApiContractPreview,
   previewOpenApiDocument,
+  previewGraphQlDocument,
   previewPostmanCollection,
 } from "@/modules/api-intelligence/analyzer";
 import {
@@ -282,28 +283,15 @@ function describeSnapshot(
   };
   if (
     sourceType !== "official_openapi_specification" &&
-    sourceType !== "official_postman_collection"
+    sourceType !== "official_postman_collection" &&
+    sourceType !== "official_graphql_schema"
   ) {
     return descriptor;
   }
   try {
     return {
       ...descriptor,
-      preview:
-        sourceType === "official_postman_collection"
-          ? previewPostmanCollection({
-              snapshotId: snapshot.id,
-              apiProductId,
-              sourceHash: snapshot.content_hash,
-              content: snapshot.content,
-            })
-          : previewOpenApiDocument({
-              snapshotId: snapshot.id,
-              apiProductId,
-              sourceHash: snapshot.content_hash,
-              content: snapshot.content,
-              contentType: snapshot.content_type,
-            }),
+      preview: previewSnapshotBySourceType(snapshot, apiProductId, sourceType),
     };
   } catch {
     return {
@@ -311,6 +299,29 @@ function describeSnapshot(
       parseFailed: true,
     };
   }
+}
+
+function previewSnapshotBySourceType(
+  snapshot: ApiSnapshotRow,
+  apiProductId: string,
+  sourceType: string,
+) {
+  const input = {
+    snapshotId: snapshot.id,
+    apiProductId,
+    sourceHash: snapshot.content_hash,
+    content: snapshot.content,
+  };
+  if (sourceType === "official_postman_collection") {
+    return previewPostmanCollection(input);
+  }
+  if (sourceType === "official_graphql_schema") {
+    return previewGraphQlDocument(input);
+  }
+  return previewOpenApiDocument({
+    ...input,
+    contentType: snapshot.content_type,
+  });
 }
 
 function evaluateConnectorImpact(

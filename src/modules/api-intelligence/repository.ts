@@ -3,6 +3,7 @@ import type { DbClient } from "@/lib/db";
 import { safeJson, toJson } from "@/lib/security";
 import type {
   ApiContractPreview,
+  GraphQlPreview,
   OpenApiPreview,
   PostmanPreview,
 } from "@/modules/api-intelligence/analyzer";
@@ -18,6 +19,14 @@ export async function replaceOpenApiImport(
 export async function replacePostmanImport(
   db: DbClient,
   preview: PostmanPreview,
+  input: { createdAt: string; createdBy: string },
+) {
+  return replaceApiContractImport(db, preview, input);
+}
+
+export async function replaceGraphQlImport(
+  db: DbClient,
+  preview: GraphQlPreview,
   input: { createdAt: string; createdBy: string },
 ) {
   return replaceApiContractImport(db, preview, input);
@@ -85,6 +94,12 @@ async function replaceApiContractImport(
             blockedScriptCount: preview.blockedScriptCount,
           }
         : {}),
+      ...(preview.parserVersion === "graphql-1"
+        ? {
+            sourceFormat: preview.sourceFormat,
+            redactedDefaultValueCount: preview.redactedDefaultValueCount,
+          }
+        : {}),
     },
     locator: "#",
     excerptHash: preview.sourceHash,
@@ -122,7 +137,9 @@ async function replaceApiContractImport(
       subjectId: schemaId,
       claimType: "schema_exists",
       claimValue: { schemaName: schema.name },
-      locator: `#/components/schemas/${escapeJsonPointer(schema.name)}`,
+      locator:
+        schema.locator ??
+        `#/components/schemas/${escapeJsonPointer(schema.name)}`,
       excerptHash: preview.sourceHash,
       createdAt: input.createdAt,
     });

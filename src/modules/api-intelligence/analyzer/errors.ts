@@ -3,6 +3,7 @@ export type AnalyzerErrorCode =
   | "openapi_invalid"
   | "openapi_unsupported"
   | "postman_invalid"
+  | "graphql_invalid"
   | "external_reference_blocked"
   | "document_too_complex"
   | "preview_required"

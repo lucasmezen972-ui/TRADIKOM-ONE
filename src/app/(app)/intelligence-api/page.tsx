@@ -292,6 +292,7 @@ export default async function ApiIntelligencePage() {
               <select className={inputClass} name="sourceType" required>
                 <option value="official_openapi_specification">OpenAPI 3</option>
                 <option value="official_postman_collection">Collection Postman v2.1</option>
+                <option value="official_graphql_schema">Schema GraphQL fourni</option>
               </select>
             </Field>
             <div className="sm:col-span-2">
@@ -881,6 +882,7 @@ function formatDateTime(value: string) {
 function sourceTypeLabel(sourceType: string) {
   if (sourceType === "official_openapi_specification") return "OpenAPI 3";
   if (sourceType === "official_postman_collection") return "Postman v2.1";
+  if (sourceType === "official_graphql_schema") return "GraphQL fourni";
   return "Source officielle";
 }
 

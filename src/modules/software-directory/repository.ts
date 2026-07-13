@@ -357,6 +357,33 @@ export async function updateApiProductFromPostmanCollection(
   );
 }
 
+export async function updateApiProductFromGraphQlSchema(
+  db: DbClient,
+  input: {
+    apiProductId: string;
+    sourceUrl: string;
+    confidenceScore: number;
+    verifiedAt: string;
+  },
+) {
+  await db.query(
+    `update api_products
+     set graphql_schema_url = $1,
+         confidence_score = case
+           when confidence_score > $2 then confidence_score else $2
+         end,
+         last_verified_at = $3,
+         updated_at = $3
+     where id = $4`,
+    [
+      input.sourceUrl,
+      input.confidenceScore,
+      input.verifiedAt,
+      input.apiProductId,
+    ],
+  );
+}
+
 export async function insertApiSource(
   db: DbClient,
   input: {

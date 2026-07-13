@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildSchema, introspectionFromSchema } from "graphql";
 import {
   DiscoveryError,
   evaluateRobots,
@@ -11,6 +12,7 @@ import {
 } from "../src/modules/api-intelligence/discovery";
 import {
   previewOpenApiDocument,
+  previewGraphQlDocument,
   previewPostmanCollection,
 } from "../src/modules/api-intelligence/analyzer";
 
@@ -409,6 +411,69 @@ describe("Postman deterministic importer", () => {
         content: excessive,
       }),
     ).toThrow(/trop de requetes/);
+  });
+});
+
+describe("GraphQL deterministic importer", () => {
+  it("extracts supplied SDL without retaining descriptions or default values", async () => {
+    const sdl = await fixture("mock-garage-graphql.graphql");
+    const preview = previewGraphQlDocument({
+      snapshotId: "snapshot_graphql_sdl",
+      apiProductId: "api_graphql",
+      sourceHash: "1".repeat(64),
+      content: sdl,
+      title: "Garage GraphQL",
+      version: "2026-07",
+    });
+
+    expect(preview).toMatchObject({
+      parserVersion: "graphql-1",
+      sourceFormat: "sdl",
+      title: "Garage GraphQL",
+      version: "2026-07",
+      authenticationType: "unknown",
+      redactedDefaultValueCount: 2,
+    });
+    expect(preview.operations.map((operation) => operation.operationKey)).toEqual([
+      "query.contact",
+      "query.contacts",
+      "mutation.archiveContact",
+      "mutation.createContact",
+    ]);
+    expect(preview.operations.find((operation) =>
+      operation.operationKey === "mutation.archiveContact"
+    )?.deprecated).toBe(true);
+    expect(preview.schemas.map((schema) => schema.name)).toContain("Contact");
+    expect(JSON.stringify(preview)).not.toContain("internal-secret");
+    expect(JSON.stringify(preview)).not.toContain("Documentation sensible");
+    expect(JSON.stringify(preview)).not.toContain("deleteContact");
+  });
+
+  it("accepts supplied introspection JSON and rejects malformed results", async () => {
+    const sdl = await fixture("mock-garage-graphql.graphql");
+    const suppliedResult = JSON.stringify({
+      data: introspectionFromSchema(buildSchema(sdl)),
+    });
+    const preview = previewGraphQlDocument({
+      snapshotId: "snapshot_graphql_introspection",
+      apiProductId: "api_graphql",
+      sourceHash: "2".repeat(64),
+      content: suppliedResult,
+    });
+
+    expect(preview.sourceFormat).toBe("introspection");
+    expect(preview.operations).toHaveLength(4);
+    expect(preview.schemas.some((schema) => schema.name === "CreateContactInput")).toBe(true);
+    expect(JSON.stringify(preview)).not.toContain("internal-secret");
+
+    expect(() =>
+      previewGraphQlDocument({
+        snapshotId: "snapshot_graphql_invalid",
+        apiProductId: "api_graphql",
+        sourceHash: "3".repeat(64),
+        content: JSON.stringify({ data: { notSchema: true } }),
+      }),
+    ).toThrow(/introspection GraphQL invalide/);
   });
 });
 
