@@ -1,12 +1,16 @@
 # Phase 2 Implementation
 
-## Implemented in this branch
+## Etat fusionne
+
+La Phase 2 a ete fusionnee dans `main` par la PR #1. Les elements ci-dessous decrivent le comportement livre, pas un travail encore en attente.
+
+## Comportement implemente
 
 - Added GitHub Actions CI with PostgreSQL 17 service, frozen pnpm install, migration verification, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
 - Added PostgreSQL/Drizzle foundation under `src/db/` with schema, client, migrations, tenant transaction helper, and repository guidance.
 - Kept PGlite as a local fallback only when `DATABASE_URL` is absent outside production.
 - Added Phase 2 migrations for hashed session tokens, published/draft website version pointers, domain events, rate limits, generation records, and encrypted connector secret versions.
-- Added RLS migration draft with tenant context helpers and policies for key tenant-owned tables.
+- Added initial RLS migration with tenant context helpers and policies for key tenant-owned tables, followed by the completion migration described below.
 - Added PostgreSQL RLS integration coverage that runs with `DATABASE_URL` and verifies restricted-role tenant isolation plus cross-tenant write rejection.
 - Added an additive RLS completion migration that protects every table carrying `tenant_id` plus `tenants`, limits system-access bypass to the database-owner role, and verifies catalog policy coverage and critical tenant families with a restricted PostgreSQL role.
 - Added PostgreSQL tenant-integrity triggers for critical parent/child relations, completed tenant-scoped indexes through a deterministic migration, and verified both cross-tenant relation rejection and atomic rate-limit concurrency with real PostgreSQL clients in CI.

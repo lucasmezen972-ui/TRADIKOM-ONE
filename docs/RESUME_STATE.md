@@ -1,6 +1,17 @@
 # Resume State
 
-Branch: `codex/phase-3-api-intelligence`
+Branch: `codex/phase-3-5-stabilization`
+
+Current stabilization checkpoint:
+
+- Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
+- Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
+- Draft PR #4 recovers the valid operational intent of obsolete PR #2 against the current dashboard services without cherry-picking its old-base patch.
+- The command center now has tenant-scoped operational metrics, role-aware approvals, safe empty/error states and a full lead-to-worker-to-Radar Playwright path with second-tenant isolation.
+- Clean/upgrade PostgreSQL migration verification, catalog RLS/index checks, production dependency audit, backup/restore verification, bounded maintenance and terminal API recheck retries are part of the stabilization branch.
+- Production configuration rejects public demo, insecure cookies, test email, live integrations and invalid business timezones.
+- Connector Copilot revalidates mapping evidence and rejects unknown authentication or unsupported operation formats.
+- Phase 4 remains locked until PR #4 is merged, main CI is green, PR #2 is closed as superseded and `docs/PHASE_4_ENTRY_CHECK.md` is committed afterward.
 
 Last completed checkpoint:
 
@@ -146,9 +157,10 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Perform the final Phase 3 security, migration, authorization, secret and complete-diff review.
-2. Update PR #3, run the closure CI, then mark it ready and merge only if every documented gate passes.
-3. Keep production connector activation, live writes and unrestricted crawling disabled.
+1. Complete PR #4 closure CI and the final repository/diff review.
+2. Close PR #2 as superseded after the recovered command-center E2E is green.
+3. Merge PR #4 only with every required check green, then verify `main`.
+4. Create the Phase 4 entry check only after the stabilization merge and green main.
 
 Phase 3 checkpoint in progress:
 

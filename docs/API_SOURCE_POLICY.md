@@ -46,6 +46,7 @@ Lorsqu'un nouveau contrat est importe, les preuves historiques encore citees par
 - Seules les sources classees officielles sur un domaine encore approuve sont eligibles.
 - Le worker traite un batch borne de trois sources, sequentiellement, avec un bail unique par execution.
 - Un bail expire est repris apres un delai; les erreurs transitoires suivent un backoff exponentiel et respectent `Retry-After`.
+- Une source atteint un echec terminal apres huit tentatives et ne peut pas entrer dans une boucle de retry infinie.
 - Un domaine suspendu, une source non officielle ou une autorisation revoquee desactive la planification avant toute requete.
 - Les echecs ne conservent qu'un code borne; aucun message reseau brut, contenu ou secret n'est stocke dans la planification.
 

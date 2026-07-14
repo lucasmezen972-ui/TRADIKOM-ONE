@@ -1,6 +1,6 @@
 # TRADIKOM ONE
 
-TRADIKOM ONE est un MVP SaaS en francais pour les entreprises locales : compte utilisateur, organisation, Business Twin, generation de site, publication locale, formulaire public, CRM, workflow de relance, connecteurs mock, import CSV, webhook, dashboard et audit log.
+TRADIKOM ONE est un SaaS en francais pour les entreprises locales : compte utilisateur, organisation, Business Twin, site publie par snapshots immuables, formulaire public, CRM, workflows durables, connecteurs encadres, API Intelligence, centre de pilotage et journal d'audit.
 
 ## Stack
 
@@ -41,11 +41,25 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
+pnpm db:verify
 pnpm db:reset
 ```
 
-Docker Compose est fourni pour le futur chemin PostgreSQL, mais Docker n'est pas requis pour lancer cette demo locale.
+PostgreSQL 17 est le runtime de production. PGlite reste un mode local borne; il ne remplace ni les migrations, ni les tests RLS PostgreSQL de la CI.
 
 ## Phase 2
 
-La branche `codex/phase-2-production-foundation` introduit CI, PostgreSQL, migrations RLS, sessions hashées/révocables, workflow/outbox, SDK connecteurs, abstraction IA, et publication par snapshots immuables. Voir `docs/PHASE_2_IMPLEMENTATION.md`.
+La Phase 2 est fusionnee dans `main` par la PR #1. Elle apporte PostgreSQL, RLS, sessions hashees/revocables, workflows durables, webhooks securises, connecteurs bornes et publication par snapshots immuables. Voir `docs/PHASE_2_IMPLEMENTATION.md`.
+
+## Phase 3
+
+La Phase 3 est fusionnee dans `main` par la PR #3. API Intelligence accepte uniquement des sources officielles explicitement approuvees, importe des contrats bornes, conserve les preuves et genere des propositions de connecteurs toujours desactivees. Voir `docs/PHASE_3_API_INTELLIGENCE.md` et `docs/API_SECURITY_MODEL.md`.
+
+## Limites de production
+
+- Aucun connecteur genere n'est active en production.
+- Aucun test de contrat n'effectue d'ecriture sandbox ou reelle.
+- SMS et WhatsApp restent des actions simulees.
+- La decouverte Internet generale est desactivee.
+- Un fournisseur email de production doit etre configure; le fournisseur console n'est pas accepte par defaut en production.
+- La checklist complete est dans `docs/PRODUCTION_READINESS.md`.

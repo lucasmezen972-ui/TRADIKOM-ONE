@@ -10,11 +10,11 @@ Une proposition exige:
 
 - un produit API importe depuis un snapshot officiel;
 - des metadonnees, operations et schemas approuves avec leurs preuves;
-- au moins un mapping tenant approuve et lie a une preuve;
+- au moins un mapping tenant approuve dont le claim de preuve reste approuve;
 - une analyse `custom_connector_possible`;
 - un administrateur plateforme autorise sur le tenant.
 
-Le manifeste contient des delais, une strategie de retry, la gestion d'idempotence pour les ecritures et les seules operations approuvees.
+Le manifeste contient des delais, une strategie de retry, la gestion d'idempotence pour les ecritures et les seules operations approuvees. Un type d'authentification inconnu, une operation hors methode HTTP autorisee ou un chemin non absolu bloque la generation.
 
 ## Tests de contrat
 

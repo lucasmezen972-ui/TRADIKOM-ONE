@@ -160,3 +160,13 @@
 - Implemented bounded API Intelligence operational health reads for platform and tenant state, including scheduled rechecks, pending source decisions, contract changes, mapping approvals, blocked impacts, connector repairs, sandbox approvals, failed contracts and audited actions.
 - Restricted the health service to platform administrators and excluded raw URLs, payloads, network errors, error codes and secrets from its output; added tenant-isolation and authorization coverage plus the French `Sante operationnelle` administration panel.
 - Observability head `2747368` passed both complete CI runs (`29300616222` push and `29300618426` pull request), including ordered migrations, lint, typecheck, 43 files/137 tests, production build and three Playwright scenarios.
+
+## Phase 3.5 stabilization
+
+- Verified `main` at `c0edf7b5a76197008a38ac0d2da4e8b00e822577` with green run `29301275644`; confirmed PR #1 and PR #3 merged and PR #2 obsolete/conflicting.
+- Created `codex/phase-3-5-stabilization` and draft PR #4 without rebasing, cherry-picking or force-pushing PR #2.
+- Recreated the useful command-center intent against the bounded dashboard, website, workflow, connector and API Intelligence services; added metric integrity tests and the complete cross-tenant command-center Playwright path.
+- Added clean and Phase-2-upgrade PostgreSQL migration verification, RLS/index catalog assertions, production dependency audit and minimum workflow permissions.
+- Hardened startup configuration, bounded maintenance retention, terminal source recheck attempts and Connector Copilot evidence/authentication/operation validation.
+- Added a PostgreSQL backup/restore CI procedure plus API security, learning, backup and production-readiness documentation.
+- Run `29304337927` passed dependency audit, migrations, lint, typecheck, unit/integration tests, production build and the recovered Playwright scenario before the backup and Connector Copilot checkpoints.
