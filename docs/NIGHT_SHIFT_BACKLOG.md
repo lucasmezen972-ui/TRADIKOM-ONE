@@ -67,5 +67,6 @@ Next unfinished work:
 
 1. Business Brain foundation is green at `1ea4e1e` in GitHub Actions run `29333961495`; draft PR #5 is open.
 2. Strategic Advisor is green at `4fcb9e2` in complete GitHub Actions run `29335663755`, with evidence, explainability, planning-only approval and no execution side effects.
-3. Implement Autonomous Marketing proposals without campaign launch or external send.
-4. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
+3. Validate the Autonomous Marketing proposal checkpoint through the complete GitHub Actions suite and fix any failure immediately.
+4. After a green checkpoint, continue with a bounded Website AI proposal slice using immutable drafts and rollback; do not auto-publish.
+5. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.

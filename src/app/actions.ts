@@ -310,6 +310,70 @@ export async function decideStrategicRecommendationAction(formData: FormData) {
   redirect(`/conseiller-strategique?decision=${decision}`);
 }
 
+export async function generateMarketingProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("autonomous_marketing.generate", () =>
+    services.generateMarketingCampaignProposals(user.id, tenant.id),
+  );
+  revalidatePath("/marketing");
+  redirect(`/marketing?generation=1&nouvelles=${result.createdIds.length}`);
+}
+
+export async function submitMarketingProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("autonomous_marketing.submit", () =>
+    services.submitMarketingProposalForApproval(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/marketing");
+  revalidatePath("/aujourdhui");
+  redirect("/marketing?soumission=1");
+}
+
+export async function decideMarketingProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("autonomous_marketing.decide", () =>
+    services.decideMarketingProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/marketing");
+  revalidatePath("/aujourdhui");
+  redirect(`/marketing?decision=${decision}`);
+}
+
+export async function reviseMarketingProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("autonomous_marketing.revise", () =>
+    services.reviseMarketingProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      title: text(formData, "title"),
+      subject: text(formData, "subject"),
+      objective: text(formData, "objective"),
+      audience: text(formData, "audience"),
+      content: text(formData, "content"),
+      callToAction: text(formData, "callToAction"),
+      expectedOutcome: text(formData, "expectedOutcome"),
+      riskSummary: text(formData, "riskSummary"),
+      budgetCents: null,
+      startsAt: null,
+      endsAt: null,
+    }),
+  );
+  revalidatePath("/marketing");
+  redirect("/marketing?revision=1");
+}
+
 export async function updateSectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

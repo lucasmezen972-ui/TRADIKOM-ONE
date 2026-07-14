@@ -62,6 +62,16 @@ import {
   reviseBusinessBrainEntry,
   reviseBusinessBrainEntrySchema,
 } from "@/modules/business-brain";
+import {
+  decideMarketingProposal,
+  generateMarketingCampaignProposals,
+  getAutonomousMarketing,
+  marketingProposalDecisionSchema,
+  reviseMarketingProposal,
+  reviseMarketingProposalSchema,
+  submitMarketingProposalForApproval,
+  submitMarketingProposalSchema,
+} from "@/modules/autonomous-marketing";
 import { getAuditLogs } from "@/modules/audit";
 import { getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
@@ -268,6 +278,25 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof strategicRecommendationDecisionSchema>,
     ) => decideStrategicRecommendation(db, userId, tenantId, input),
+    getAutonomousMarketing: (userId: string, tenantId: string) =>
+      getAutonomousMarketing(db, userId, tenantId),
+    generateMarketingCampaignProposals: (userId: string, tenantId: string) =>
+      generateMarketingCampaignProposals(db, userId, tenantId),
+    submitMarketingProposalForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof submitMarketingProposalSchema>,
+    ) => submitMarketingProposalForApproval(db, userId, tenantId, input),
+    decideMarketingProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof marketingProposalDecisionSchema>,
+    ) => decideMarketingProposal(db, userId, tenantId, input),
+    reviseMarketingProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseMarketingProposalSchema>,
+    ) => reviseMarketingProposal(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (

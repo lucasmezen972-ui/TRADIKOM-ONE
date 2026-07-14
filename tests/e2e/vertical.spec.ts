@@ -111,6 +111,62 @@ test("the strategic advisor explains and approves a proposal without execution",
   ).toHaveCount(0);
 });
 
+test("autonomous marketing versions and approves an evidence-backed draft without publishing", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Marketing" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Marketing autonome" }),
+  ).toBeVisible();
+  await expect(page.getByText("Mode brouillon.")).toBeVisible();
+  await page.getByRole("button", { name: "Préparer les brouillons" }).click();
+  await expect(page.getByText(/Génération terminée/)).toBeVisible();
+
+  const draft = page.locator("article").filter({ hasText: "Brouillon" }).first();
+  await expect(draft).toBeVisible();
+  await expect(draft.getByText("Preuves vérifiées", { exact: true })).toBeVisible();
+  await expect(draft.getByText("Version 1", { exact: true })).toBeVisible();
+  await expect(
+    draft.getByRole("button", { name: /Lancer|Publier|Envoyer/i }),
+  ).toHaveCount(0);
+
+  await draft.getByText("Créer une nouvelle version").click();
+  const title = `Campagne relue ${Date.now()}`;
+  await draft.getByLabel("Titre").fill(title);
+  await draft
+    .getByLabel("Contenu")
+    .fill("Garage Caraibes Auto présente son service d'entretien automobile. Demander un devis pour obtenir des informations adaptées.");
+  await draft
+    .getByRole("button", { name: "Enregistrer la nouvelle version" })
+    .click();
+
+  await expect(page.getByText("Nouvelle version enregistrée en brouillon.")).toBeVisible();
+  const revised = page.locator("article").filter({ hasText: title });
+  await expect(revised.getByText("Version 2", { exact: true })).toBeVisible();
+  await revised
+    .getByRole("button", { name: "Soumettre à approbation" })
+    .click();
+
+  await expect(page.getByText("Brouillon soumis à approbation.")).toBeVisible();
+  const pending = page.locator("article").filter({ hasText: title });
+  await pending
+    .getByLabel("Motif de décision")
+    .fill("Contenu factuel validé pour une planification humaine.");
+  await pending
+    .getByRole("button", { name: "Approuver pour planification" })
+    .click();
+
+  await expect(page.getByText("Proposition approuvée.")).toBeVisible();
+  const approved = page.locator("article").filter({ hasText: title });
+  await expect(
+    approved.getByText("Contenu approuvé pour planification. Aucune diffusion automatique."),
+  ).toBeVisible();
+  await expect(
+    approved.getByRole("button", { name: /Lancer|Publier|Envoyer/i }),
+  ).toHaveCount(0);
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,

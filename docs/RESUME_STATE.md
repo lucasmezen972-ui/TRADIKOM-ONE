@@ -17,6 +17,11 @@ Current Phase 4 checkpoint:
 - Pending strategic decisions now route correctly from the command center to the French `Conseiller stratégique` page.
 - Local typecheck again hung without diagnostics and was stopped after 30 seconds. GitHub Actions run `29335261251` passed every non-browser step and exposed one ambiguous `ROI` Playwright selector.
 - Test-only fix `4fcb9e2d572ac8c539ee2a862781bcd23ee31b21` passed complete run `29335663755`, including migrations, PostgreSQL RLS, lint, typecheck, unit/integration tests, production build and six Playwright scenarios.
+- The Autonomous Marketing checkpoint adds deterministic email/social drafts grounded only in Business Twin evidence, immutable revisions, explicit submission, approval/rejection reasons and command-center routing.
+- Marketing approval is planning-only: there is no launch, send or publish service or control, and tests assert no workflow, connector, notification, activity or domain-event side effect.
+- Runtime migrations `031`/`032` and SQL mirrors `0025`/`0026` add tenant-owned proposals, evidence, decisions, composite tenant relations and restricted-role RLS.
+- The French `Marketing autonome` workspace displays evidence, risks, content and versions with role-aware empty/error states. Module, PostgreSQL and Playwright coverage is included.
+- Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. CI validation is pending for this coherent checkpoint.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.

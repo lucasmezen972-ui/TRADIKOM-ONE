@@ -63,3 +63,21 @@ Implemented behavior:
 Focused tests cover deduplication, changed-evidence supersession, required provenance, tenant authorization, restricted-role RLS, command-center approval routing and the absence of workflow, connector, activity or domain-event side effects after approval.
 
 Strategic Advisor implementation head `ef9ee7de71a930e74b6fb30dd91752459f204d0d` passed every CI step except one ambiguous Playwright text selector in run `29335261251`. Test-only fix `4fcb9e2d572ac8c539ee2a862781bcd23ee31b21` made complete run `29335663755` green: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and six Playwright scenarios.
+
+## Autonomous Marketing
+
+The third vertical slice prepares versioned marketing drafts from verified Business Twin fields. It does not send or publish content.
+
+Implemented behavior:
+
+- Deterministic email and social proposals use only the verified company identity, first recorded offer, target audience, objective and approved call to action.
+- Every draft stores three immutable Business Twin evidence citations and a generation fingerprint; repeated generation does not duplicate a proposal.
+- Revisions create a new draft version, supersede the previous version transactionally and preserve evidence history.
+- Submission creates a tenant-scoped approval. Approval or rejection requires a reason and records a decision plus an audit event with `executionTriggered: false`.
+- Approvals appear in the command center and route to the French `Marketing autonome` workspace.
+- The workspace exposes factual content, risks, evidence, versions and safe role-aware controls. It intentionally has no launch, send or publish action.
+- Composite tenant foreign keys and PostgreSQL RLS protect proposals, evidence and decisions.
+
+Focused tests cover Business Twin requirements, evidence, prohibited-claim avoidance, generation deduplication, immutable revision, approval history, tenant authorization, restricted-role PostgreSQL isolation, command-center routing, Playwright and the absence of workflow, connector, notification, activity or domain-event side effects.
+
+Local typecheck and `git diff --check` again stalled without diagnostics and were stopped after 30 seconds. GitHub Actions is the authoritative validation environment for this checkpoint.

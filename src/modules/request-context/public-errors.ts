@@ -7,6 +7,7 @@ import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
 import { BusinessBrainError } from "@/modules/business-brain";
 import { StrategicAdvisorError } from "@/modules/strategic-advisor";
+import { AutonomousMarketingError } from "@/modules/autonomous-marketing";
 
 export type PublicError = {
   code: string;
@@ -34,6 +35,9 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof WorkflowError) return mapWorkflowError(error);
   if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
   if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
+  if (error instanceof AutonomousMarketingError) {
+    return mapAutonomousMarketingError(error);
+  }
 
   if (error instanceof ZodError) {
     return {
@@ -178,6 +182,31 @@ function mapStrategicAdvisorError(error: StrategicAdvisorError): PublicError {
     error.code,
     "strategic_advisor",
     "Cette recommandation a déjà été décidée.",
+    409,
+  );
+}
+
+function mapAutonomousMarketingError(error: AutonomousMarketingError): PublicError {
+  if (error.code === "marketing_profile_required") {
+    return publicError(
+      error.code,
+      "autonomous_marketing",
+      "Complétez le Business Twin avant de préparer une campagne.",
+      409,
+    );
+  }
+  if (error.code === "marketing_proposal_not_found") {
+    return publicError(
+      error.code,
+      "autonomous_marketing",
+      "Proposition marketing introuvable.",
+      404,
+    );
+  }
+  return publicError(
+    error.code,
+    "autonomous_marketing",
+    "Cette proposition marketing a déjà été modifiée.",
     409,
   );
 }

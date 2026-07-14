@@ -189,3 +189,7 @@
 - Integrated strategic approvals into the command center, added the French advisor workspace, and verified by tests that decisions do not create workflow, connector, activity or domain-event effects.
 - Added PostgreSQL migrations/RLS, tenant authorization, restricted-role relation tests and a Playwright proposal-to-approval scenario. Local typecheck hung and was stopped after 30 seconds; CI validation is pending.
 - Strategic Advisor run `29335261251` passed every step except an ambiguous Playwright `ROI` text match. Test-only fix `4fcb9e2` uses exact labels and complete run `29335663755` passed migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, build and six Playwright scenarios.
+- Implemented the Autonomous Marketing proposal slice with verified Business Twin evidence, deterministic email/social drafts, immutable revisions, explicit approval decisions and a French planning workspace.
+- Added runtime migrations `031`/`032`, SQL mirrors `0025`/`0026`, composite tenant relations, RLS, command-center approval routing, module/PostgreSQL tests and a no-publication Playwright scenario.
+- Marketing decisions remain planning-only and audit `executionTriggered: false`; no launch, send, publish, workflow, connector, notification, activity or domain-event effect is available.
+- Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. The checkpoint is ready for authoritative GitHub Actions validation.

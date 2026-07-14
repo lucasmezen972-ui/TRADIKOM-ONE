@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { Pool, type PoolClient } from "pg";
 import { pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
+import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import { id, nowIso, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
@@ -425,6 +426,20 @@ describeIfPostgres("PostgreSQL RLS", () => {
     if (!recommendationA || !recommendationB) {
       throw new Error("Strategic RLS fixtures are missing.");
     }
+    await services.saveOnboarding(ownerA.id, tenantA.id, defaultGarageOnboarding());
+    await services.saveOnboarding(ownerB.id, tenantB.id, defaultGarageOnboarding());
+    const marketingA = await services.generateMarketingCampaignProposals(
+      ownerA.id,
+      tenantA.id,
+    );
+    const marketingB = await services.generateMarketingCampaignProposals(
+      ownerB.id,
+      tenantB.id,
+    );
+    const proposalB = marketingB.createdIds[0];
+    if (marketingA.createdIds.length === 0 || !proposalB) {
+      throw new Error("Marketing RLS fixtures are missing.");
+    }
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
@@ -435,6 +450,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "select id from business_brain_entries order by id",
     );
     expect(noContext.rows).toEqual([]);
+    const noMarketingContext = await restrictedPool.query<{ id: string }>(
+      "select id from marketing_campaign_proposals order by id",
+    );
+    expect(noMarketingContext.rows).toEqual([]);
 
     const tenantAView = await withTenantContext(
       restrictedPool,
@@ -457,11 +476,23 @@ describeIfPostgres("PostgreSQL RLS", () => {
         }>(
           "select recommendation_id, tenant_id from strategic_recommendation_evidence order by id",
         );
+        const marketing = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from marketing_campaign_proposals order by id");
+        const marketingEvidence = await client.query<{
+          proposal_id: string;
+          tenant_id: string;
+        }>(
+          "select proposal_id, tenant_id from marketing_campaign_evidence order by proposal_id, id",
+        );
         return {
           entries: entries.rows,
           evidence: evidence.rows,
           recommendations: recommendations.rows,
           strategicEvidence: strategicEvidence.rows,
+          marketing: marketing.rows,
+          marketingEvidence: marketingEvidence.rows,
         };
       },
     );
@@ -472,6 +503,16 @@ describeIfPostgres("PostgreSQL RLS", () => {
       strategicEvidence: [
         { recommendation_id: recommendationA, tenant_id: tenantA.id },
       ],
+      marketing: marketingA.createdIds
+        .map((id) => ({ id, tenant_id: tenantA.id }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      marketingEvidence: marketingA.createdIds
+        .flatMap((proposalId) => [
+          { proposal_id: proposalId, tenant_id: tenantA.id },
+          { proposal_id: proposalId, tenant_id: tenantA.id },
+          { proposal_id: proposalId, tenant_id: tenantA.id },
+        ])
+        .sort((left, right) => left.proposal_id.localeCompare(right.proposal_id)),
     });
 
     await expect(
@@ -504,6 +545,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
             id("strategic_evidence"),
             tenantA.id,
             recommendationB,
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into marketing_campaign_evidence (
+             id, tenant_id, proposal_id, evidence_type, evidence_ref, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'business_profile', $4, $5, $6, $7, $7)`,
+          [
+            id("marketing_evidence"),
+            tenantA.id,
+            proposalB,
+            tenantB.id,
             "Preuve étrangère",
             "refusée",
             nowIso(),

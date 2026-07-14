@@ -280,12 +280,15 @@ export async function listPendingApprovalActions(
   }
   const result = await db.query<{
     id: string;
-    approval_type: "workflow" | "connector" | "strategic";
+    approval_type: "workflow" | "connector" | "strategic" | "marketing";
     created_at: string;
   }>(
     `select id,
-       case when target_type = 'strategic_recommendation'
-         then 'strategic' else 'workflow' end as approval_type,
+       case
+         when target_type = 'strategic_recommendation' then 'strategic'
+         when target_type = 'marketing_campaign_proposal' then 'marketing'
+         else 'workflow'
+       end as approval_type,
        created_at
      from approvals where tenant_id = $1 and status = 'pending'
      union all
@@ -302,6 +305,8 @@ export async function listPendingApprovalActions(
         ? "Approbation d'automatisation"
         : row.approval_type === "strategic"
           ? "Décision stratégique"
+          : row.approval_type === "marketing"
+            ? "Validation marketing"
           : "Approbation de connecteur",
     explanation: "Une décision autorisée est en attente.",
     actionLabel: "Examiner",
@@ -310,6 +315,8 @@ export async function listPendingApprovalActions(
         ? "/automatisations"
         : row.approval_type === "strategic"
           ? "/conseiller-strategique"
+          : row.approval_type === "marketing"
+            ? "/marketing"
           : "/intelligence-api",
     severity: "warning" as const,
     approvalType: row.approval_type,
