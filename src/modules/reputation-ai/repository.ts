@@ -197,8 +197,12 @@ export async function insertReputationApproval(db: DbClient, input: {
   id: string; tenantId: string; proposalId: string; actorId: string; now: string;
 }) {
   await db.query(
-    `insert into approvals (id, tenant_id, target_type, target_id, status, requested_by, created_at)
-     values ($1, $2, 'reputation_response', $3, 'pending', $4, $5)`,
+    `insert into approvals (
+       id, tenant_id, target_type, target_id, status, requested_by, policy, created_at
+     ) values (
+       $1, $2, 'reputation_response', $3, 'pending', $4,
+       'administrator_approval_required', $5
+     )`,
     [input.id, input.tenantId, input.proposalId, input.actorId, input.now],
   );
 }
