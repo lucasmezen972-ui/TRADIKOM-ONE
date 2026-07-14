@@ -6,6 +6,7 @@ import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
 import { BusinessBrainError } from "@/modules/business-brain";
+import { StrategicAdvisorError } from "@/modules/strategic-advisor";
 
 export type PublicError = {
   code: string;
@@ -32,6 +33,7 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof CrmError) return mapCrmError(error);
   if (error instanceof WorkflowError) return mapWorkflowError(error);
   if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
+  if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
 
   if (error instanceof ZodError) {
     return {
@@ -160,6 +162,23 @@ function mapBusinessBrainError(error: BusinessBrainError): PublicError {
     "business_brain",
     "La mémoire de l'entreprise est indisponible.",
     503,
+  );
+}
+
+function mapStrategicAdvisorError(error: StrategicAdvisorError): PublicError {
+  if (error.code === "strategic_recommendation_not_found") {
+    return publicError(
+      error.code,
+      "strategic_advisor",
+      "Recommandation introuvable.",
+      404,
+    );
+  }
+  return publicError(
+    error.code,
+    "strategic_advisor",
+    "Cette recommandation a déjà été décidée.",
+    409,
   );
 }
 

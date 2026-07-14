@@ -185,3 +185,6 @@
 - Added the French `Cerveau d'entreprise` workspace with coverage, operational signals, create/revise/archive controls, read-only behavior and safe empty/error states.
 - Added module, rollback, PostgreSQL restricted-role and Playwright coverage. Local Node validation hung without diagnostics and was stopped after bounded waits; `git diff --check` passed and GitHub Actions remains authoritative.
 - Business Brain head `1ea4e1e` passed complete PR run `29333961495` in 4m36s: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+- Implemented the Strategic Advisor proposal engine with multi-role explainability, required evidence, deterministic fingerprints, stale-proposal supersession, planning-only approval/rejection and decision history.
+- Integrated strategic approvals into the command center, added the French advisor workspace, and verified by tests that decisions do not create workflow, connector, activity or domain-event effects.
+- Added PostgreSQL migrations/RLS, tenant authorization, restricted-role relation tests and a Playwright proposal-to-approval scenario. Local typecheck hung and was stopped after 30 seconds; CI validation is pending.

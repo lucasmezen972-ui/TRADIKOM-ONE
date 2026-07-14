@@ -279,6 +279,37 @@ export async function archiveBusinessBrainEntryAction(formData: FormData) {
   redirect("/cerveau-entreprise?archive=1");
 }
 
+export async function generateStrategicRecommendationsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("strategic_advisor.generate", () =>
+    services.generateStrategicRecommendations(user.id, tenant.id),
+  );
+  revalidatePath("/conseiller-strategique");
+  revalidatePath("/aujourdhui");
+  redirect(
+    `/conseiller-strategique?analyse=1&nouvelles=${result.createdIds.length}`,
+  );
+}
+
+export async function decideStrategicRecommendationAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("strategic_advisor.decide", () =>
+    services.decideStrategicRecommendation(user.id, tenant.id, {
+      recommendationId: text(formData, "recommendationId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/conseiller-strategique");
+  revalidatePath("/aujourdhui");
+  redirect(`/conseiller-strategique?decision=${decision}`);
+}
+
 export async function updateSectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

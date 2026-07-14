@@ -40,6 +40,24 @@ Local Node commands remain unreliable and were stopped after a bounded wait. `gi
 
 ## Current limitations
 
-- The Business Brain is a verified memory and read model, not yet an autonomous recommendation engine.
-- Strategic Advisor recommendations, ROI scoring, approval queues and AI employee execution are not implemented by this checkpoint.
+- The Strategic Advisor uses deterministic evidence rules. It does not send tenant data to an external model in this checkpoint.
+- ROI is an explainable qualitative estimate until the tenant records validated costs, targets and realized gains.
+- Recommendation approval means approved for planning only; it cannot trigger an external or production action.
 - No Phase 4 action can send external messages, activate connectors, launch campaigns or modify production systems automatically.
+
+## Strategic Advisor
+
+The second vertical slice adds explainable recommendation proposals grounded in current Business Brain evidence.
+
+Implemented behavior:
+
+- Multi-role recommendations support direction, marketing, sales, operations, finance, reputation and technology viewpoints.
+- Every proposal stores why it exists, confidence, expected gain, effort, ROI summary, risk summary, direct internal action and generation version.
+- Every proposal has one or more immutable evidence citations; generation rules cannot persist an evidence-free recommendation.
+- Deterministic fingerprints prevent duplicate proposals and supersede stale pending proposals when observed evidence changes.
+- Owner, administrator and manager roles can generate and decide; other tenant members receive a read-only view.
+- Pending recommendations use the existing approval queue and appear as strategic decisions in the command center.
+- Approval and rejection require a reason, preserve decision history and audit `executionTriggered: false`.
+- The French `Conseiller stratégique` workspace groups proposals by role and shows complete rationale and evidence before a decision.
+
+Focused tests cover deduplication, changed-evidence supersession, required provenance, tenant authorization, restricted-role RLS, command-center approval routing and the absence of workflow, connector, activity or domain-event side effects after approval.

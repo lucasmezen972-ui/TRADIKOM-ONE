@@ -12,6 +12,10 @@ Current Phase 4 checkpoint:
 - Focused module, rollback, restricted-role PostgreSQL and Playwright tests are included.
 - Local typecheck and focused Vitest remained blocked without diagnostics and were stopped after bounded waits. `git diff --check` passed.
 - Business Brain head `1ea4e1e280777ee17fe90fcc6e00c45aef93134d` passed complete GitHub Actions run `29333961495`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+- The Strategic Advisor checkpoint adds evidence-backed deterministic proposals with role, rationale, confidence, expected gain, effort, ROI, risk, direct action, approval state and immutable decision history.
+- Recommendation generation is deduplicated and supersedes stale pending evidence; approval is explicitly planning-only and creates no workflow, connector, activity or domain event.
+- Pending strategic decisions now route correctly from the command center to the French `Conseiller stratégique` page.
+- Local typecheck again hung without diagnostics and was stopped after 30 seconds. Manual review is complete; GitHub Actions validation is pending for this checkpoint.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -169,9 +173,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the evidence-backed Strategic Advisor recommendation model with explicit reason, confidence, expected gain, effort, ROI, risk and approval state.
-2. Keep recommendations in proposal-only mode; no external send or production write may execute without approval.
-3. Validate the next coherent checkpoint through GitHub Actions and update draft PR #5.
+1. Validate the Strategic Advisor checkpoint through the complete GitHub Actions suite and fix failures immediately.
+2. After green CI, implement the first Autonomous Marketing proposal slice without campaign launch or external send.
+3. Keep all external sends and production writes disabled unless a later bounded executor has explicit approval and policy checks.
 
 Phase 3 completion history:
 

@@ -77,6 +77,40 @@ test("the Business Brain versions and archives verified tenant memory", async ({
   await expect(page.getByText(revisedTitle)).toHaveCount(0);
 });
 
+test("the strategic advisor explains and approves a proposal without execution", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Conseiller" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Conseiller stratégique" }),
+  ).toBeVisible();
+  await expect(page.getByText("Mode proposition.")).toBeVisible();
+  await page.getByRole("button", { name: "Actualiser l'analyse" }).click();
+  await expect(page.getByText(/Analyse terminée/)).toBeVisible();
+
+  const proposal = page.locator("article").filter({ hasText: "À décider" }).first();
+  await expect(proposal).toBeVisible();
+  await expect(proposal.getByText("Pourquoi")).toBeVisible();
+  await expect(proposal.getByText("Gain attendu")).toBeVisible();
+  await expect(proposal.getByText("ROI")).toBeVisible();
+  await expect(proposal.getByText("Risques")).toBeVisible();
+  await expect(proposal.getByText("Preuves")).toBeVisible();
+  await proposal
+    .getByLabel("Motif de décision")
+    .fill("Orientation validée pour planification humaine uniquement.");
+  await proposal
+    .getByRole("button", { name: "Approuver pour planification" })
+    .click();
+
+  await expect(page.getByText("Recommandation approuvée.")).toBeVisible();
+  await expect(page.getByText("Approuvée pour planification").first()).toBeVisible();
+  await page.goto("/aujourdhui");
+  await expect(
+    page.getByText("Décision stratégique"),
+  ).toHaveCount(0);
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,

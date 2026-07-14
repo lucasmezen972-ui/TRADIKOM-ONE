@@ -326,7 +326,7 @@ export type DashboardApiSourceFailure = DashboardActionItem & {
 };
 
 export type DashboardPendingApproval = DashboardActionItem & {
-  approvalType: "workflow" | "connector";
+  approvalType: "workflow" | "connector" | "strategic";
 };
 
 export type DashboardData = {

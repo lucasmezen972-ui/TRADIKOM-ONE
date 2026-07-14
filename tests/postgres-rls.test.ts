@@ -412,6 +412,19 @@ describeIfPostgres("PostgreSQL RLS", () => {
       tenantB.id,
       businessBrainFixture("Tenant B"),
     );
+    const strategicA = await services.generateStrategicRecommendations(
+      ownerA.id,
+      tenantA.id,
+    );
+    const strategicB = await services.generateStrategicRecommendations(
+      ownerB.id,
+      tenantB.id,
+    );
+    const recommendationA = strategicA.createdIds[0];
+    const recommendationB = strategicB.createdIds[0];
+    if (!recommendationA || !recommendationB) {
+      throw new Error("Strategic RLS fixtures are missing.");
+    }
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
@@ -434,12 +447,31 @@ describeIfPostgres("PostgreSQL RLS", () => {
           entry_id: string;
           tenant_id: string;
         }>("select entry_id, tenant_id from business_brain_evidence order by id");
-        return { entries: entries.rows, evidence: evidence.rows };
+        const recommendations = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from strategic_recommendations order by id");
+        const strategicEvidence = await client.query<{
+          recommendation_id: string;
+          tenant_id: string;
+        }>(
+          "select recommendation_id, tenant_id from strategic_recommendation_evidence order by id",
+        );
+        return {
+          entries: entries.rows,
+          evidence: evidence.rows,
+          recommendations: recommendations.rows,
+          strategicEvidence: strategicEvidence.rows,
+        };
       },
     );
     expect(tenantAView).toEqual({
       entries: [{ id: entryA, tenant_id: tenantA.id }],
       evidence: [{ entry_id: entryA, tenant_id: tenantA.id }],
+      recommendations: [{ id: recommendationA, tenant_id: tenantA.id }],
+      strategicEvidence: [
+        { recommendation_id: recommendationA, tenant_id: tenantA.id },
+      ],
     });
 
     await expect(
@@ -456,6 +488,25 @@ describeIfPostgres("PostgreSQL RLS", () => {
             "Preuve étrangère refusée.",
             nowIso(),
             ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into strategic_recommendation_evidence (
+             id, tenant_id, recommendation_id, evidence_type, evidence_ref,
+             label, observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'system_metric', 'cross-tenant', $4, $5, $6, $6)`,
+          [
+            id("strategic_evidence"),
+            tenantA.id,
+            recommendationB,
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
           ],
         ),
       ),

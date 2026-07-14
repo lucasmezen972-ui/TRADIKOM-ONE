@@ -160,6 +160,12 @@ import {
   type MockContractExecutor,
 } from "@/modules/connector-copilot";
 import { isPlatformAdmin } from "@/modules/platform-admin";
+import {
+  decideStrategicRecommendation,
+  generateStrategicRecommendations,
+  getStrategicAdvisor,
+  strategicRecommendationDecisionSchema,
+} from "@/modules/strategic-advisor";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -253,6 +259,15 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof archiveBusinessBrainEntrySchema>,
     ) => archiveBusinessBrainEntry(db, userId, tenantId, input),
+    getStrategicAdvisor: (userId: string, tenantId: string) =>
+      getStrategicAdvisor(db, userId, tenantId),
+    generateStrategicRecommendations: (userId: string, tenantId: string) =>
+      generateStrategicRecommendations(db, userId, tenantId),
+    decideStrategicRecommendation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof strategicRecommendationDecisionSchema>,
+    ) => decideStrategicRecommendation(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (
