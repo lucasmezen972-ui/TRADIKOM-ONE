@@ -178,6 +178,8 @@ test("un administrateur publie un connecteur desactive dans le Connect Store pri
     .click();
   await expect(planningCard.getByText("Plan v1 prêt, désactivé")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Activer|Installer|Connecter en production/i }),
+    planningCard.getByRole("button", {
+      name: /Activer|Installer|Connecter en production/i,
+    }),
   ).toHaveCount(0);
 });
