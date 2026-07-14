@@ -54,6 +54,11 @@ Current Phase 4 checkpoint:
 - Every plan is sandbox-only, immutable, versioned and idempotent. Revoked evidence or a manifest/operation mismatch blocks planning; industry alignment is reported only when documented.
 - Runtime migrations `045`/`046` and SQL mirrors `0039`/`0040` add composite tenant relations, current-plan uniqueness, tenant-leading indexes and PostgreSQL RLS. The French `Connexions` workspace exposes no installation, credentials or activation control.
 - Universal Connector Platform head `793e35cb5cc1269f6d81e160232cc6445b73fef7` passed complete GitHub Actions run `29357220616` in 7m56s, including thirteen Playwright scenarios.
+- Private App Marketplace now creates tenant-owned, immutable catalog listings from current connector sandbox plans, active workflows and versioned AI employee profiles without duplicating those source engines.
+- Catalog refresh and installation previews are idempotent, transactional and audited. Every listing is private; every preview remains disabled and prohibits external execution, production writes, connector activation, public sharing and payment.
+- Runtime migrations `047`/`048` and SQL mirrors `0041`/`0042` enforce composite source relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL and connector-to-catalog Playwright coverage are included.
+- Private App Marketplace head `8713dee664091b8b9f3680952a64dbb04a4341c8` passed complete GitHub Actions run `29359217460`.
+- The next bounded Phase 4 slice is the private Automation Marketplace for sharing and previewing existing tenant workflow/template artifacts without execution, publication, external send or public distribution.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -211,9 +216,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded private App Marketplace slice as a catalog over existing approved tenant artifacts, not as a public marketplace.
-2. Add versioned listings and installation previews for safe internal templates while preserving source provenance, permissions and approval requirements.
-3. Keep installation preview-only: no connector activation, production write, external send, public sharing, payment or one-click execution.
+1. Implement the first bounded private Automation Marketplace slice from existing tenant workflow definitions and approved internal templates.
+2. Add immutable share packages and installation previews while preserving source versions, permissions and approval requirements.
+3. Keep sharing tenant-private and preview-only: no execution, external send, publication, connector activation, payment or production write.
 
 Phase 3 completion history:
 

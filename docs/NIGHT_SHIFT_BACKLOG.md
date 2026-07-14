@@ -74,8 +74,7 @@ Next unfinished work:
 7. Competitor Intelligence is green at `8678683` in complete GitHub Actions run `29350066863`, with confirmed legal public observations, safe URL storage, evidence comparison and no network fetch, scraping or external reaction path.
 8. Financial AI is green at `02eaa2c` in complete GitHub Actions run `29352582873`, with declared/versioned inputs, explainable formulas, strict unavailable states, tenant isolation and no accounting or external write path.
 9. AI Employee is green at `2295c99` in complete GitHub Actions run `29354334456`, with nine default profiles, Business Brain memory scopes, immutable versions/activity, tenant isolation and explicit execution prohibitions.
-10. Continue with a bounded Universal Connector Platform slice that reuses API Intelligence and Connector Copilot for industry/capability compatibility and disabled installation plans.
-11. Keep all connector proposals disabled: no credentials, production activation, live writes, external send or unrestricted discovery.
-12. Universal Connector Platform is green at `793e35c` in complete GitHub Actions run `29357220616`, with evidence revalidation, immutable sandbox plans, tenant isolation and no installation or activation path.
-13. Continue with a bounded private App Marketplace catalog and approval-aware installation previews over existing safe artifacts.
-14. Keep public sharing, purchases, connector activation, external sends and production installation unavailable.
+10. Universal Connector Platform is green at `793e35c` in complete GitHub Actions run `29357220616`, with evidence revalidation, immutable sandbox plans, tenant isolation and no installation or activation path.
+11. Private App Marketplace is green at `8713dee` in complete GitHub Actions run `29359217460`, with immutable tenant-private listings, disabled installation previews, composite source relations and no operational side effects.
+12. Continue with a bounded private Automation Marketplace for existing tenant workflows and safe templates, preserving provenance and approval requirements.
+13. Keep public sharing, purchases, connector activation, external sends, production installation and one-click execution unavailable.

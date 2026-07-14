@@ -220,3 +220,23 @@ Runtime migrations `045`/`046` and SQL mirrors `0039`/`0040` add installation pl
 Head `793e35cb5cc1269f6d81e160232cc6445b73fef7` passed complete GitHub Actions run `29357220616` in 7m56s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and thirteen Playwright scenarios.
 
 Current limitations are deliberate: plans are sandbox-only preparation records. They cannot collect credentials, install a connector, activate a connector, execute a remote read/write or start unrestricted discovery.
+
+## Private App Marketplace
+
+The eleventh vertical slice creates a tenant-owned catalog from existing approved artifacts. It does not publish a marketplace or install anything.
+
+Implemented behavior:
+
+- Authorized managers explicitly refresh listings from current connector sandbox plans, active workflow definitions and versioned AI employee profiles.
+- Stable source keys and deterministic fingerprints make refresh idempotent. A changed source creates an immutable listing version and supersedes only the previous current version.
+- Each listing preserves bounded capabilities, permissions, source status, source version and provenance. It is always tenant-private.
+- Installation previews are immutable and idempotent. They require a separate human approval in any future implementation and explicitly prohibit external execution, production writes, connector activation, public sharing and payment.
+- The French `Catalogue privé` workspace provides real category counts, provenance, safe empty/error states and one-click preview preparation. It exposes no install, activate, execute, publish or payment control.
+- Missing website templates, dashboards and reports are shown as unavailable until a real versioned artifact exists; the platform does not invent catalog entries.
+- Refresh and preview creation are transactional and audited without storing credentials, payloads, tokens or customer data.
+
+Runtime migrations `047`/`048` and SQL mirrors `0041`/`0042` add private listings and installation previews with composite source relations, tenant-leading indexes and PostgreSQL RLS. Tests cover source collection, idempotence, immutable versioning, preview safety, rollback, application authorization, restricted-role cross-tenant reads/writes/relations, absence of operational side effects and the full connector-to-catalog browser path.
+
+Head `8713dee664091b8b9f3680952a64dbb04a4341c8` passed complete GitHub Actions run `29359217460`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+
+Current limitations are deliberate: the catalog is private, supports only existing connector, workflow and AI employee sources, and prepares previews only. It does not install, activate, execute, publish, share publicly or process payments.
