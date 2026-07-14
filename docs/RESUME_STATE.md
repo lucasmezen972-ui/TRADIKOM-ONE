@@ -62,7 +62,11 @@ Current Phase 4 checkpoint:
 - Packages preserve bounded structure, provenance, source versions, required configuration, retry/timeout and approval policies. Review-only previews cannot import, execute, send, publish, activate connectors, share publicly or write to production.
 - Runtime migrations `049`/`050` and SQL mirrors `0043`/`0044` enforce composite tenant/source/version relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL and Playwright coverage are included.
 - Private Automation Marketplace head `954a77bc68bb057bcf13fa9bbff2d620b657dd80` passed complete GitHub Actions run `29361102893`.
-- The next bounded Phase 4 slice is Self Improvement: evidence-backed internal proposals from existing tenant signals, with no automatic change or production action.
+- Self Improvement now creates explainable, versioned proposals from failed/unused workflows, degraded/unused connected connectors, normalized CRM duplicate pairs, incomplete SEO metadata and incomplete website actions.
+- Numeric evidence excludes contact and configuration content. Changed signals create immutable versions, disappeared signals resolve transactionally, and accepted decisions remain planning-only with no operational side effect.
+- Runtime migrations `051`/`052` and SQL mirrors `0045`/`0046` enforce composite tenant/version relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, authorization, restricted-role PostgreSQL and Playwright coverage are included.
+- Self Improvement head `df82be733680d340ffc9d760b3ce730422b86fdb` passed complete GitHub Actions run `29363352123` with 181 tests.
+- The next bounded Phase 4 slice is Enterprise Observability from current database, worker, queue, delivery, API and connector health signals; unsupported infrastructure metrics must remain explicitly unavailable.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -220,9 +224,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded Self Improvement slice from measurable existing tenant signals.
-2. Persist explainable, versioned proposals with evidence, authorization, audit and PostgreSQL RLS.
-3. Keep every proposal advisory-only: no automatic workflow change, contact merge, publication, external send, connector activation or production write.
+1. Implement the first bounded Enterprise Observability slice from existing persisted health signals.
+2. Expose tenant-scoped database, worker, queue, notification, API and connector status with safe thresholds and direct actions.
+3. Keep CPU, memory, storage, provider cost and unavailable external channels explicitly unmeasured until a trusted runtime telemetry source exists.
 
 Phase 3 completion history:
 

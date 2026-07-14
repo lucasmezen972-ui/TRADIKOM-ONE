@@ -77,5 +77,6 @@ Next unfinished work:
 10. Universal Connector Platform is green at `793e35c` in complete GitHub Actions run `29357220616`, with evidence revalidation, immutable sandbox plans, tenant isolation and no installation or activation path.
 11. Private App Marketplace is green at `8713dee` in complete GitHub Actions run `29359217460`, with immutable tenant-private listings, disabled installation previews, composite source relations and no operational side effects.
 12. Private Automation Marketplace is green at `954a77b` in complete GitHub Actions run `29361102893`, with input-value stripping, immutable tenant-private packages, review-only previews, composite relations and no operational side effects.
-13. Continue with bounded Self Improvement proposals derived only from measurable existing tenant signals and explicit evidence.
-14. Keep automatic changes, public sharing, purchases, connector activation, external sends, production installation and one-click execution unavailable.
+13. Self Improvement is green at `df82be7` in complete GitHub Actions run `29363352123`, with seven measurable rule families, numeric evidence, immutable versions/decisions, explicit unavailable telemetry and no operational side effects.
+14. Continue with bounded Enterprise Observability using existing database, worker, queue, delivery, API and connector health records.
+15. Keep unsupported infrastructure metrics explicit and automatic changes, public sharing, purchases, connector activation, external sends, production installation and one-click execution unavailable.

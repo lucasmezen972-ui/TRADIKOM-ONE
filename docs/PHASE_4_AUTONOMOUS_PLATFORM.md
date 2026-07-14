@@ -260,3 +260,23 @@ Runtime migrations `049`/`050` and SQL mirrors `0043`/`0044` add packages and pr
 Head `954a77bc68bb057bcf13fa9bbff2d620b657dd80` passed complete GitHub Actions run `29361102893`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
 
 Current limitations are deliberate: this marketplace supports current workflow artifacts only. It does not import or execute packages, copy configured values, share publicly, publish content, send messages, activate connectors or process payments.
+
+## Self Improvement
+
+The thirteenth vertical slice turns existing tenant-scoped operational facts into explainable improvement proposals. It does not change the underlying business records.
+
+Implemented behavior:
+
+- Deterministic rules measure failed and unused workflows, degraded and unused connected connectors, normalized CRM duplicate pairs, incomplete SEO metadata and incomplete homepage actions.
+- Every proposal records a stable key, category, direct internal action, severity, confidence, immutable version and one or more numeric evidence rows.
+- Evidence stores bounded identifiers, counts and summaries only. Contact names, email addresses, phone numbers, workflow configuration values, payloads and credentials are excluded.
+- Repeated analysis is idempotent. Changed evidence creates a new version and supersedes the previous current proposal; disappeared signals resolve the current version transactionally.
+- Authorized managers can retain or dismiss a proposal with a reason. A retained proposal is planning-only and cannot merge contacts, alter workflows, synchronize connectors, publish a website or trigger any external action.
+- The French `Amelioration continue` workspace separates measured coverage from unavailable telemetry and exposes direct links to existing bounded workspaces.
+- Slow pages, unused pages, unused fields and conversion rates are explicitly unavailable until reliable aggregate telemetry exists; the platform does not invent those conclusions.
+
+Runtime migrations `051`/`052` and SQL mirrors `0045`/`0046` add proposals, evidence and immutable decisions with composite tenant/version relations, tenant-leading indexes and PostgreSQL RLS. Tests cover all measured rules, customer-data exclusion, idempotence, versioning, resolution, planning-only decisions, forced rollback, application authorization, restricted-role cross-tenant reads/writes/relations, absence of operational side effects and Playwright.
+
+Initial run `29362866550` passed migrations, backup/restore, lint and typecheck, then exposed two fixture-count assumptions while 179 tests passed. Test-only head `df82be733680d340ffc9d760b3ce730422b86fdb` aligned the assertions with already-provisioned measurable signals and passed complete GitHub Actions run `29363352123`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, 181 unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+
+Current limitations are deliberate: analysis is explicit and deterministic rather than continuously scheduled, and only signals supported by current persisted evidence are measured. No proposal can execute its recommendation automatically.
