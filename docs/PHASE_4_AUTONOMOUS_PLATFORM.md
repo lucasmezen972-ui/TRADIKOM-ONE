@@ -117,3 +117,24 @@ Implemented behavior:
 - Audit metadata records counts, generation version and explicit false flags for external action, message, quotation and discount generation without storing customer content.
 
 Runtime migrations `035`/`036` and SQL mirrors `0029`/`0030` add tenant-owned assessments and evidence with composite opportunity relations, tenant-leading indexes and PostgreSQL RLS. Tests cover scoring, evidence, deduplication, versioning, closed opportunities, injected transactional rollback, application authorization, restricted-role cross-tenant read/insert/update/delete denial, the absence of operational side effects and Playwright. Head `6a9348048fb0cfbfc463f8d1869114672d5128eb` passed complete GitHub Actions run `29343934205` in 5m46s, including nine Playwright scenarios.
+
+## Reputation AI
+
+The sixth vertical slice creates a tenant-owned review inbox and explainable response drafts without monitoring, fetching or publishing on an external platform.
+
+Implemented behavior:
+
+- Authorized operators can manually import bounded reviews from a declared source, optional rating, optional public alias and occurrence date. Each immutable review is deduplicated by a content hash.
+- Deterministic French lexical rules classify positive, neutral or negative sentiment, confidence and risk from the imported text and declared rating.
+- Every proposal explicitly records that authenticity is not assessed. It never claims fake-review detection, author verification or competitor attribution.
+- Proposals include a response draft, an internal improvement plan, rationale and immutable evidence for the declared source, text analysis and rating when present.
+- Submission, approval and rejection are tenant-scoped, require an authorized role and preserve generic approval plus decision history. Approval means reviewed draft only.
+- The command center routes pending review-response decisions to the French `Réputation` workspace.
+- Audit metadata stores counts and safety flags without storing review or response contents. No activity, notification, domain event, external fetch, response send or website publication is triggered.
+- The expanded desktop navigation is scrollable and keeps the session controls outside the navigation hit area.
+
+Runtime migrations `037`/`038` and SQL mirrors `0031`/`0032` add reviews, response proposals, evidence and decisions with composite tenant relations, tenant-leading indexes and PostgreSQL RLS. Tests cover deterministic sentiment, evidence, deduplication, approvals and rejections, safe audit metadata, forced transactional rollback, application authorization, restricted-role cross-tenant CRUD and foreign relations, dashboard routing, no operational side effects and Playwright.
+
+Initial CI run `29346153870` exposed a missing shared dashboard approval type. Run `29346380889` then exposed the required PostgreSQL approval policy field. Run `29346943623` made all non-browser gates green and revealed a real navigation overlap after the new module was added. Final head `0f783bc5fead15ee72ff3a03eb311898185e81ce` passed complete GitHub Actions run `29347576934` in 7m19s, including ten Playwright scenarios.
+
+Current limitations remain deliberate: reviews must be imported manually, authenticity is not evaluated, external review platforms are not monitored, and approved drafts cannot be sent or published from TRADIKOM ONE.

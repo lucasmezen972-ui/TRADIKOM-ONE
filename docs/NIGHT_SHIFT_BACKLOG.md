@@ -70,5 +70,6 @@ Next unfinished work:
 3. Autonomous Marketing is green at `1c2c8e3` in complete GitHub Actions run `29338101814`, with evidence, immutable revisions, approval and no launch/send/publish path.
 4. Website AI is green at `ab1c344` in complete GitHub Actions run `29341752287`; demo reopening cannot publish a pending draft.
 5. Sales AI is green at `6a93480` in complete GitHub Actions run `29343934205`, with explainable CRM evidence and no message, quotation, pricing or discount path.
-6. Continue with a bounded Reputation AI inbox using manual/imported evidence and draft-only responses; keep external monitoring and publication disabled.
-7. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
+6. Reputation AI is green at `0f783bc` in complete GitHub Actions run `29347576934`, with manual/imported evidence, explicit authenticity limits, planning-only approval and no external monitoring, send or publication path.
+7. Continue with bounded Competitor Intelligence using manually imported observations from legal public sources only; keep automatic crawling and protected-content scraping disabled.
+8. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.

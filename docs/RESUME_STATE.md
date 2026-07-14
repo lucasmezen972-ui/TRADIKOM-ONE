@@ -32,6 +32,11 @@ Current Phase 4 checkpoint:
 - Runtime migrations `035`/`036` and SQL mirrors `0029`/`0030` enforce tenant/opportunity relations, one current assessment, tenant-leading indexes and PostgreSQL RLS.
 - Module tests cover deterministic scoring, deduplication, changed-signal versions, closed opportunities, forced rollback and no operational side effects. Restricted-role PostgreSQL tests cover cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers the French workspace.
 - Sales AI head `6a9348048fb0cfbfc463f8d1869114672d5128eb` passed complete GitHub Actions run `29343934205` in 5m46s, including nine Playwright scenarios.
+- Reputation AI now provides a manual/imported tenant review inbox, deterministic French sentiment and risk, evidence-backed response drafts, internal improvement plans and approval/rejection history without external monitoring or publication.
+- Runtime migrations `037`/`038` and SQL mirrors `0031`/`0032` enforce composite tenant relations, tenant-leading indexes and PostgreSQL RLS across reviews, proposals, evidence and decisions.
+- Module tests cover deduplication, deterministic classification, approval boundaries, safe audits, forced rollback and no external/operational side effects. Restricted-role PostgreSQL tests cover cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers import through approved non-publication.
+- CI found and fixed the shared dashboard approval union, the mandatory PostgreSQL approval policy field and a desktop navigation overlap caused by the expanded module list.
+- Reputation AI head `0f783bc5fead15ee72ff3a03eb311898185e81ce` passed complete GitHub Actions run `29347576934` in 7m19s: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and ten Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -189,9 +194,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement a bounded Reputation AI inbox from manual/imported review evidence only.
-2. Keep sentiment explainable and response/improvement content in draft state; do not crawl external platforms, publish responses or claim fake-review detection without evidence.
-3. Validate tenant isolation, approval boundaries, absence of external side effects and the complete checkpoint through GitHub Actions.
+1. Implement the first bounded Competitor Intelligence slice from manually imported observations of legal public sources only.
+2. Track versioned price, website, service, product, opening-hour, job, partnership, review, SEO, advertising or social observations without crawling, scraping protected content or asserting facts without evidence.
+3. Keep analysis and recommended responses in planning state, preserve tenant isolation and validate the complete checkpoint through GitHub Actions.
 
 Phase 3 completion history:
 
