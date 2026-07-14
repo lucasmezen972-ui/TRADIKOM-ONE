@@ -62,6 +62,11 @@ describeIfPostgres("bounded PostgreSQL scale", () => {
           officialWebsite: "https://scale.example.test/",
         },
       );
+      await services.decideSoftwareDomain(owner.id, tenant.id, {
+        domainId: software.domainId,
+        status: "approved",
+        reason: "Domaine de charge approuve explicitement pour le test.",
+      });
       const product = await services.createApiProductRecord(
         owner.id,
         tenant.id,

@@ -526,7 +526,7 @@ describe("Phase 3 API Intelligence vertical slice", () => {
     expect(JSON.parse(replacement.rows[0]?.manifest ?? "{}").capabilities).toEqual([
       expect.objectContaining({
         operationKey: "createCustomer",
-        method: "POST",
+        method: "post",
         path: "/customers",
       }),
     ]);
