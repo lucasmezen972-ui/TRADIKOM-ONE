@@ -718,7 +718,9 @@ test("operational health distinguishes measured incidents from unknown telemetry
   const connectors = page.locator("article").filter({ hasText: "Connecteurs" });
   await expect(connectors.getByText("Action requise", { exact: true })).toBeVisible();
   const workers = page.locator("article").filter({ hasText: "Agents de traitement" });
-  await expect(workers.getByText("Non instrumenté", { exact: true })).toBeVisible();
+  await expect(
+    workers.locator("span").filter({ hasText: /^Non instrumenté$/ }),
+  ).toBeVisible();
   await expect(page.getByText("Aucun état sain n'est supposé")).toHaveCount(0);
   await expect(
     page.getByRole("button", {
