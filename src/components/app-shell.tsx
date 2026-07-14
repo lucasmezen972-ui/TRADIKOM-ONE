@@ -17,6 +17,7 @@ import {
   Settings,
   Star,
   WalletCards,
+  UsersRound,
   Workflow,
 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
@@ -46,6 +47,7 @@ const navItems = [
   { href: "/reputation", label: "Réputation", icon: Star },
   { href: "/veille-concurrentielle", label: "Veille concurrents", icon: Binoculars },
   { href: "/pilotage-financier", label: "Pilotage financier", icon: WalletCards },
+  { href: "/equipe-ia", label: "Équipe IA", icon: UsersRound },
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },

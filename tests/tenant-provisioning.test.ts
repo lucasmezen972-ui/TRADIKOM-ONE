@@ -38,12 +38,16 @@ describe("tenant provisioning", () => {
     expect(await tenantCount(db, "connectors", tenant.id)).toBe(3);
     expect(await tenantCount(db, "webhook_endpoints", tenant.id)).toBe(1);
     expect(await tenantCount(db, "connector_secret_versions", tenant.id)).toBe(1);
+    expect(await tenantCount(db, "ai_employee_profiles", tenant.id)).toBe(9);
+    expect(await tenantCount(db, "ai_employee_activity_logs", tenant.id)).toBe(9);
     expect(await tenantCount(db, "pipelines", otherTenant.id)).toBe(1);
     expect(await tenantCount(db, "pipeline_stages", otherTenant.id)).toBe(6);
     expect(await tenantCount(db, "connectors", otherTenant.id)).toBe(3);
     expect(await tenantCount(db, "connector_secret_versions", otherTenant.id)).toBe(
       1,
     );
+    expect(await tenantCount(db, "ai_employee_profiles", otherTenant.id)).toBe(9);
+    expect(await tenantCount(db, "ai_employee_activity_logs", otherTenant.id)).toBe(9);
 
     const endpoint = await db.query<{
       secret_hash: string | null;

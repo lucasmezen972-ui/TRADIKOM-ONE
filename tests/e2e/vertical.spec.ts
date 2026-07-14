@@ -278,6 +278,40 @@ test("Financial AI explains declared estimates without accounting or external wr
   ).toHaveCount(0);
 });
 
+test("AI Employee profiles remain bounded, versioned and unable to execute externally", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Équipe IA" }).click();
+  await expect(page.getByRole("heading", { name: "Équipe IA" })).toBeVisible();
+  await expect(page.getByText("Collègues virtuels").first()).toBeVisible();
+  await expect(page.getByText("Actions externes autorisées")).toBeVisible();
+  const analyst = page.locator("article").filter({
+    hasText: "Analyste d'entreprise IA",
+  });
+  await expect(analyst).toBeVisible();
+  await expect(analyst.getByText("Transactions financières : interdites")).toBeVisible();
+  await analyst.getByText("Configurer ce profil").click();
+  await analyst.getByLabel("Nom affiché").fill("Analyste Playwright IA");
+  await analyst
+    .getByLabel("Mission")
+    .fill("Préparer des synthèses internes vérifiables pour la revue Playwright.");
+  await analyst.getByLabel("État").selectOption("paused");
+  await analyst
+    .getByRole("button", { name: "Enregistrer une nouvelle version" })
+    .click();
+  await expect(page.getByText("Nouvelle version du profil enregistrée.")).toBeVisible();
+  const revised = page.locator("article").filter({
+    hasText: "Analyste Playwright IA",
+  });
+  await expect(revised.getByText("version 2")).toBeVisible();
+  await expect(revised.getByText("En pause").first()).toBeVisible();
+  await expect(page.getByText("Profil virtuel mis en pause").first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Envoyer|Publier|Payer|Activer un connecteur/i }),
+  ).toHaveCount(0);
+});
+
 test("Reputation AI prepares an approved response without publishing it", async ({
   page,
 }) => {

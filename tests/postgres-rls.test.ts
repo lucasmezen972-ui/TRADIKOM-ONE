@@ -1386,6 +1386,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ownerB.id,
       tenantB.id,
     );
+    const employeeA = (await services.getAiEmployeeWorkspace(ownerA.id, tenantA.id))
+      .employees[0];
+    const employeeB = (await services.getAiEmployeeWorkspace(ownerB.id, tenantB.id))
+      .employees[0];
+    if (!employeeA || !employeeB) {
+      throw new Error("AI Employee RLS fixtures are incomplete.");
+    }
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
@@ -1396,6 +1403,8 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "financial_assessments",
       "financial_assessment_evidence",
       "financial_alerts",
+      "ai_employee_profiles",
+      "ai_employee_activity_logs",
     ]) {
       expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
     }
@@ -1424,6 +1433,16 @@ describeIfPostgres("PostgreSQL RLS", () => {
             "select distinct tenant_id from financial_alerts",
           )
         ).rows,
+        employeeProfiles: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from ai_employee_profiles",
+          )
+        ).rows,
+        employeeActivities: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from ai_employee_activity_logs",
+          )
+        ).rows,
       }),
     );
     expect(tenantAView.snapshots).toEqual([
@@ -1434,6 +1453,8 @@ describeIfPostgres("PostgreSQL RLS", () => {
     ]);
     expect(tenantAView.evidenceTenants).toEqual([{ tenant_id: tenantA.id }]);
     expect(tenantAView.alertTenants).toEqual([]);
+    expect(tenantAView.employeeProfiles).toEqual([{ tenant_id: tenantA.id }]);
+    expect(tenantAView.employeeActivities).toEqual([{ tenant_id: tenantA.id }]);
 
     await expect(
       withTenantContext(restrictedPool, tenantA.id, (client) =>
@@ -1482,6 +1503,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ),
       ),
     ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into ai_employee_activity_logs (
+             id, tenant_id, employee_key, profile_id, activity_type,
+             summary, safe_metadata, actor_id, created_at
+           ) values ($1, $2, $3, $4, 'profile_revised', $5, $6, $7, $8)`,
+          [
+            id("ai_employee_activity"),
+            tenantA.id,
+            employeeA.employeeKey,
+            employeeB.id,
+            "Cette activité inter-tenant doit être refusée.",
+            toJson({ externalExecutionEnabled: false }),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
 
     const hiddenWrites = await withTenantContext(
       restrictedPool,
@@ -1498,9 +1539,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
             assessmentB.assessmentId,
           ])
         ).rowCount,
+        employeeUpdated: (
+          await client.query(
+            "update ai_employee_profiles set display_name = 'interdit' where id = $1",
+            [employeeB.id],
+          )
+        ).rowCount,
+        activityDeleted: (
+          await client.query(
+            "delete from ai_employee_activity_logs where profile_id = $1",
+            [employeeB.id],
+          )
+        ).rowCount,
       }),
     );
-    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deleted: 0,
+      employeeUpdated: 0,
+      activityDeleted: 0,
+    });
   });
 });
 

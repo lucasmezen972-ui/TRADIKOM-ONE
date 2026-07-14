@@ -634,6 +634,38 @@ export async function generateFinancialAssessmentAction() {
   redirect(`/pilotage-financier?analyse=1&nouvelle=${result.created ? "1" : "0"}`);
 }
 
+export async function initializeAiEmployeeTeamAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("ai_employee.initialize", () =>
+    services.initializeAiEmployeeTeam(user.id, tenant.id),
+  );
+  revalidatePath("/equipe-ia");
+  redirect(`/equipe-ia?initialisee=1&nouveaux=${result.createdIds.length}`);
+}
+
+export async function reviseAiEmployeeProfileAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const workingDays = formData
+    .getAll("workingDays")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => Number.parseInt(value, 10));
+  await safeServerAction("ai_employee.revise", () =>
+    services.reviseAiEmployeeProfile(user.id, tenant.id, {
+      employeeId: text(formData, "employeeId"),
+      displayName: text(formData, "displayName"),
+      purpose: text(formData, "purpose"),
+      status: text(formData, "status") === "paused" ? "paused" : "enabled",
+      workingDays,
+      workdayStart: text(formData, "workdayStart"),
+      workdayEnd: text(formData, "workdayEnd"),
+    }),
+  );
+  revalidatePath("/equipe-ia");
+  redirect("/equipe-ia?profil=1");
+}
+
 export async function updateSectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

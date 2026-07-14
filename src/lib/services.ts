@@ -217,6 +217,12 @@ import {
   getFinancialAiWorkspace,
   recordFinancialInputSnapshot,
 } from "@/modules/financial-ai";
+import {
+  getAiEmployeeWorkspace,
+  initializeAiEmployeeTeam,
+  reviseAiEmployeeProfile,
+  reviseAiEmployeeProfileSchema,
+} from "@/modules/ai-employees";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -413,6 +419,20 @@ export function createServices(
     ) => recordFinancialInputSnapshot(db, userId, tenantId, input),
     generateFinancialAssessment: (userId: string, tenantId: string) =>
       generateFinancialAssessment(db, userId, tenantId),
+    getAiEmployeeWorkspace: (userId: string, tenantId: string) =>
+      getAiEmployeeWorkspace(db, userId, tenantId),
+    initializeAiEmployeeTeam: (userId: string, tenantId: string) =>
+      initializeAiEmployeeTeam(
+        db,
+        userId,
+        tenantId,
+        process.env.BUSINESS_TIME_ZONE,
+      ),
+    reviseAiEmployeeProfile: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseAiEmployeeProfileSchema>,
+    ) => reviseAiEmployeeProfile(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (
