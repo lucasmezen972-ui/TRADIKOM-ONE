@@ -257,6 +257,17 @@ import {
   selfImprovementDecisionSchema,
 } from "@/modules/self-improvement";
 import { getEnterpriseObservability } from "@/modules/enterprise-observability";
+import {
+  completeMockOAuthConnection,
+  refreshMockOAuthCredential,
+  startMockOAuthConnection,
+  type MockOAuthCallbackInput,
+  type StartMockOAuthInput,
+} from "@/modules/oauth";
+import {
+  disconnectSoftwareConnection,
+  getSoftwareConnectionWorkspace,
+} from "@/modules/software-connections";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -618,6 +629,34 @@ export function createServices(
       tenantId: string,
       planId: string,
     ) => simulateDnsChangePlan(db, userId, tenantId, { planId }),
+    getSoftwareConnectionWorkspace: (userId: string, tenantId: string) =>
+      getSoftwareConnectionWorkspace(db, userId, tenantId),
+    startMockOAuthConnection: (
+      userId: string,
+      tenantId: string,
+      input: StartMockOAuthInput = {},
+    ) =>
+      startMockOAuthConnection(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    completeMockOAuthConnection: (
+      userId: string,
+      tenantId: string,
+      input: MockOAuthCallbackInput,
+    ) =>
+      completeMockOAuthConnection(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    refreshMockOAuthCredential: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) => refreshMockOAuthCredential(db, userId, tenantId, { connectionId }),
+    disconnectSoftwareConnection: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) => disconnectSoftwareConnection(db, userId, tenantId, { connectionId }),
     importCsvContacts: (userId: string, tenantId: string, csvText: string) =>
       importCsvContacts(db, userId, tenantId, csvText),
     syncMockConnector: (userId: string, tenantId: string) =>

@@ -15,7 +15,10 @@ Current Phase 5 checkpoint:
 - Initial type fix `6c47c68` passed complete GitHub Actions run `29374174913`: migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL tests, production build and sixteen Playwright scenarios.
 - The French `/connexions/domaines` workspace exposes domain analysis, evidence, current records, non-destructive plans, approval, second confirmation, manual guidance and no-effect simulation with explicit empty and safe error states.
 - Restricted-role PostgreSQL coverage now checks Phase 5 no-context reads, tenant reads, cross-tenant inserts, composite relations, updates and deletes. Playwright covers the complete mock DNS control flow and asserts that no apply/publish control exists.
-- Next unfinished task: validate the domain UI checkpoint through CI, then implement the mock OAuth connection slice.
+- Domain UI head `1b757315` passed complete GitHub Actions run `29375436090`, including clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and seventeen Playwright scenarios.
+- The mock OAuth core now implements Authorization Code + PKCE, hashed single-use state, exact APP_URL callback validation, encrypted/versioned access and refresh tokens, refresh locking, revocation, audit redaction and tenant-scoped persistence with composite relations and RLS.
+- The Software Connection read model currently exposes one truthful local mock provider with read-only scopes and explicit limitations; no network, production data or write capability is enabled.
+- Next unfinished task: validate the OAuth core through CI, then add the French software-connection UI and server-only mock authorization/callback routes.
 
 Current Phase 4 checkpoint:
 

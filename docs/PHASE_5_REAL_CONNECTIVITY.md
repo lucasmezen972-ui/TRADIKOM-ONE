@@ -17,9 +17,16 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - simulation sans effet DNS externe;
 - audit, transactions, clés tenant-composées, index et RLS.
 
-## Prochaine tranche
+## Deuxième checkpoint en cours
 
-L'interface domaine, OAuth mock, l'installation logicielle contrôlée, la lecture seule, la santé et la déconnexion doivent être terminés avant toute intégration réelle.
+- espace français `/connexions/domaines` validé avec analyse, preuves, plan, double confirmation et simulation;
+- fournisseur OAuth mock Authorization Code + PKCE;
+- état haché, anti-rejeu, expiration et redirect URI exacte;
+- credentials chiffrés et versionnés, rafraîchissement verrouillé et révocation;
+- catalogue logiciel limité à une fixture locale annoncée comme mock et lecture seule;
+- stockage tenant-scoped, clés composées, RLS, audit et tests de sécurité ciblés.
+
+Les routes et l'interface OAuth, l'exécution de lecture seule, la santé, l'import/export et la déconnexion de bout en bout doivent être terminés avant toute intégration réelle.
 
 ## Frontière de sécurité
 

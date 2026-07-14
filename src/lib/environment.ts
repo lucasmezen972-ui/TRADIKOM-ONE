@@ -32,6 +32,7 @@ const environmentSchema = z
       .refine(isValidTimeZone)
       .optional(),
     CONNECTOR_ENCRYPTION_KEY: z.string().min(32).optional(),
+    CONNECTOR_ENCRYPTION_KEY_VERSION: z.string().trim().min(1).max(80).optional(),
     EMAIL_PROVIDER: z.enum(["console", "test"]).optional(),
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_MODEL: z.string().min(1).optional(),
