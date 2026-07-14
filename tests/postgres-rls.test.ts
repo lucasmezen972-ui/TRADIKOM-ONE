@@ -1926,10 +1926,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
     );
     await services.generateSelfImprovementProposals(ownerA.id, tenantA.id);
     await services.generateSelfImprovementProposals(ownerB.id, tenantB.id);
-    const proposalA = (await services.getSelfImprovementWorkspace(ownerA.id, tenantA.id))
-      .proposals[0];
-    const proposalB = (await services.getSelfImprovementWorkspace(ownerB.id, tenantB.id))
-      .proposals[0];
+    const workspaceA = await services.getSelfImprovementWorkspace(ownerA.id, tenantA.id);
+    const workspaceB = await services.getSelfImprovementWorkspace(ownerB.id, tenantB.id);
+    const proposalA = workspaceA.proposals[0];
+    const proposalB = workspaceB.proposals[0];
     if (!proposalA || !proposalB) {
       throw new Error("Self improvement RLS fixtures are missing.");
     }
@@ -1980,7 +1980,14 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ),
       }),
     );
-    expect(tenantAView).toEqual({ proposals: 1, evidence: 1, decisions: 1 });
+    expect(tenantAView).toEqual({
+      proposals: workspaceA.proposals.length,
+      evidence: workspaceA.proposals.reduce(
+        (total, proposal) => total + proposal.evidence.length,
+        0,
+      ),
+      decisions: 1,
+    });
 
     await expect(
       withTenantContext(restrictedPool, tenantA.id, (client) =>

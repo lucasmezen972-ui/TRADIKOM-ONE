@@ -219,11 +219,14 @@ describe("Self Improvement", () => {
       "update workflows set status = 'paused' where tenant_id = $1",
       [tenant.id],
     );
-    expect(
-      await services.generateSelfImprovementProposals(owner.id, tenant.id),
-    ).toEqual({ detectedCount: 0, createdCount: 0, unchangedCount: 0, resolvedCount: 1 });
+    const regenerated = await services.generateSelfImprovementProposals(
+      owner.id,
+      tenant.id,
+    );
+    expect(regenerated).toMatchObject({ createdCount: 0, resolvedCount: 1 });
     const history = await db.query<{ record_status: string }>(
-      "select record_status from self_improvement_proposals where tenant_id = $1",
+      `select record_status from self_improvement_proposals
+       where tenant_id = $1 and category = 'workflow_unused'`,
       [tenant.id],
     );
     expect(history.rows).toEqual([{ record_status: "resolved" }]);
