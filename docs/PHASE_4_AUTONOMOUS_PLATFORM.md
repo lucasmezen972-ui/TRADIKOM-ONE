@@ -179,3 +179,23 @@ Runtime migrations `041`/`042` and SQL mirrors `0035`/`0036` add snapshots, asse
 Head `02eaa2cab1467da8c989c29daf8828cb9ddc382a` passed complete GitHub Actions run `29352582873` in 8m11s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and twelve Playwright scenarios.
 
 Current limitations are deliberate: all financial values are tenant-declared, no bank or accounting provider is connected, attribution is not inferred, the projection is a planning scenario rather than certified guidance, and no financial operation can be executed.
+
+## AI Employee
+
+The ninth vertical slice provisions a bounded virtual team for every tenant. Profiles describe responsibilities and internal preparation capabilities; they do not execute external work.
+
+Implemented behavior:
+
+- Nine default profiles cover marketing management, sales assistance, reception, customer support, SEO, content writing, business analysis, automation engineering and website management.
+- Every profile records explicit skills, Business Brain memory domains, permissions, working hours, internal tools, approval limits, KPIs, status and immutable activity history.
+- Permissions are limited to tenant reads and approval-gated proposals. Tools are read-only or draft-only.
+- Approval limits explicitly prohibit external communication, production writes, financial transactions and connector activation; internal drafts still require human approval.
+- New tenant provisioning creates the nine profiles and their initial activity records in the existing tenant transaction. Existing tenants can initialize the same defaults idempotently.
+- Profile changes create immutable versions, preserve supersession history and audit configuration, pause and resume operations without storing profile content in audit metadata.
+- The French `Équipe IA` workspace provides role-aware configuration, safe empty/error states and no send, publish, pay or connector-activation control.
+
+Runtime migrations `043`/`044` and SQL mirrors `0037`/`0038` add tenant-owned profiles and activity logs with composite tenant relations, a unique current profile per employee key, tenant-leading indexes and PostgreSQL RLS. Tests cover all nine roles, Business Brain scope, safety limits, idempotent provisioning, immutable versioning, pause/resume, rollback, application authorization, restricted-role cross-tenant reads/writes/relations and the absence of operational side effects.
+
+Head `2295c99aec1c408b5ae421fab4efdf69267ec872` passed complete GitHub Actions run `29354334456` in 6m35s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and thirteen Playwright scenarios.
+
+Current limitations are deliberate: AI employees are configuration and accountability profiles, not autonomous runtime agents. They cannot communicate externally, activate connectors, launch campaigns, publish content, move money or write to production systems.

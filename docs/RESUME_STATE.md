@@ -46,6 +46,10 @@ Current Phase 4 checkpoint:
 - Deterministic formulas expose profit, margin, cash flow, indicative runway, CAC, CLV, attributed channel ROI and a clearly defined three-month planning projection. Missing attribution remains unavailable and invalid numeric input is rejected.
 - Runtime migrations `041`/`042` and SQL mirrors `0035`/`0036` add tenant-owned snapshots, assessments, evidence and alerts with composite relations, tenant-leading indexes and RLS. The French `Pilotage financier` workspace has no banking, payment, accounting-write or external action control.
 - Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL cross-tenant and Playwright coverage are included. Head `02eaa2cab1467da8c989c29daf8828cb9ddc382a` passed complete GitHub Actions run `29352582873` in 8m11s, including twelve Playwright scenarios.
+- AI Employee now provisions nine tenant-owned virtual profiles with explicit skills, Business Brain memory domains, permissions, working hours, internal tools, approval limits, KPIs, version history and immutable activity logs.
+- All employee permissions remain read/propose-only, every internal draft requires approval and external communication, production writes, financial transactions and connector activation are prohibited. The French `Équipe IA` workspace exposes no operational execution control.
+- Runtime migrations `043`/`044` and SQL mirrors `0037`/`0038` add composite tenant relations, current-version uniqueness, tenant-leading indexes and PostgreSQL RLS. Provisioning, versioning, rollback, authorization, cross-tenant and no-side-effect tests are included.
+- AI Employee head `2295c99aec1c408b5ae421fab4efdf69267ec872` passed complete GitHub Actions run `29354334456` in 6m35s, including thirteen Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -203,9 +207,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded AI Employee slice with tenant-owned virtual employee profiles.
-2. Give each profile explicit skills, Business Brain memory scope, permissions, working hours, internal tools, approval limits, KPIs and an immutable activity log.
-3. Keep every employee prepare/suggest-only: no external send, connector activation, campaign, publication, payment or production write without a separately approved future execution path.
+1. Implement the first bounded Universal Connector Platform slice by extending the existing API Intelligence and Connector Copilot models rather than creating a second connector engine.
+2. Add a tenant-scoped industry/capability compatibility view and disabled installation plans grounded only in approved API evidence and contract results.
+3. Keep every proposed connector disabled: no production activation, credentials, live writes, external send or unrestricted network discovery.
 
 Phase 3 completion history:
 
