@@ -38,6 +38,8 @@ Chaque contenu accepte conserve:
 
 Chaque nouvelle observation HTTP 200 conserve un snapshot, meme si le hash du contenu est identique, afin de suivre les changements d'ETag, Last-Modified et de politique. Une reponse `304 Not Modified` reutilise la derniere version locale sans dupliquer le snapshot.
 
+Lorsqu'un nouveau contrat est importe, les preuves historiques encore citees par un mapping approuve sont conservees. Les nouvelles operations, schemas, claims et preuves sont identifies par snapshot et restent sous revue; une approbation precedente ne s'applique jamais implicitement a une nouvelle version.
+
 ## Relectures planifiees
 
 - La planification est desactivee tant qu'un administrateur plateforme ne l'active pas explicitement.

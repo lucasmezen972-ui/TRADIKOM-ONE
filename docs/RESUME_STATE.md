@@ -146,7 +146,7 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Begin P3 connector repair proposals from approved change evidence and explicit human decisions.
+1. Begin P3 reusable approved mapping intelligence without promoting tenant-private data automatically.
 2. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
@@ -171,3 +171,6 @@ Phase 3 checkpoint in progress:
 - OAuth import head `df9198e7677af862f9abc6fbdbb25169566788ea` passed complete push run `29294952077` and pull request run `29294954700`: ordered PostgreSQL migrations, lint, typecheck, 41 test files/132 tests, production build and three Playwright scenarios.
 - Approved-domain expansion now discovers candidate API resources from bounded sitemap XML only. It follows at most five sitemap documents to depth two, retains at most 100 exact-domain HTTPS candidates, rejects redirects, subdomains and sensitive query parameters, and requires a platform-admin decision for every candidate.
 - Candidate acceptance creates an official source under review without fetching or importing it. Runtime migration `022` and SQL mirror `0016` add persisted decisions; head `7eb283311e7ba40c9172d53703a5c8c2faac1310` passed complete push run `29298279269` and pull request run `29298280928`: ordered migrations, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
+- Approved breaking-change plans can now generate one separately versioned replacement connector from the current fully approved snapshot. The source connector remains blocked; the replacement remains disabled and must pass mock contracts and a fresh sandbox approval.
+- Runtime migrations `023`/`024`/`025` and SQL mirrors `0017`/`0018`/`0019` add tenant-isolated repair provenance and versioned operation imports. Historical evidence referenced by mappings is retained, while new claims receive snapshot-specific identities and remain under review.
+- Connector repair head `2bd088160a2a9fd8f062126012a254f914af8951` passed complete push run `29299530060` and pull request run `29299531581`: ordered migrations, PostgreSQL RLS, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.

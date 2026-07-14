@@ -38,6 +38,8 @@ flowchart LR
   N --> O["Comparaison deterministe"]
   O --> P["Impact tenant et blocage"]
   P --> Q["Plan de reparation soumis a approbation"]
+  Q --> U["Nouvelle version desactivee"]
+  U --> V["Tests mock et approbation sandbox"]
 ```
 
 Chaque transition sensible est autorisee cote serveur et auditee. La previsualisation n'est pas une autorite: le service recharge le snapshot, selectionne le parseur selon le type de source, recalcule le document et exige une correspondance exacte avant d'ecrire.
@@ -55,6 +57,8 @@ Ces tables utilisent:
 - des triggers d'integrite entre proposition, test, approbation et Connect Store.
 
 Un mapping tenant ne peut jamais etre promu automatiquement en connaissance globale. Le fan-out d'un changement global vers plusieurs tenants utilise une transaction systeme explicite apres autorisation plateforme; chaque impact reste ensuite invisible aux autres tenants sous un role PostgreSQL restreint.
+
+Les reparations sont des propositions versionnees reliees a un impact, au connecteur source et au snapshot courant. Les triggers PostgreSQL imposent le meme tenant et le meme produit API pour toutes ces relations. Les imports conservent les anciennes preuves encore referencees par un mapping, mais les operations, schemas, claims et preuves du nouveau snapshot utilisent des identifiants distincts.
 
 ## Frontieres actuelles
 

@@ -90,6 +90,12 @@ Un administrateur plateforme peut scanner les sitemaps XML d'un domaine exact de
 
 Le traitement est borne a 512 Kio par document, cinq documents, une profondeur de deux et 100 candidats. Les URL sont canonicalisees et dedupliquees, puis classees comme documentation developpeur, OpenAPI, Postman, GraphQL, OAuth, changelog, partenaire ou statut. Chaque candidat reste `under_review`. Son acceptation auditee cree uniquement une source officielle rattachee au produit API choisi; elle ne declenche ni fetch, ni import, ni connecteur.
 
+## Reparations de connecteurs
+
+Une rupture API bloque la version de connecteur affectee et produit d'abord un plan soumis a decision humaine. Apres approbation du plan, la generation exige que le snapshot courant ait ete importe et que sa metadonnee ainsi que toutes ses operations aient ete approuvees. Une seule proposition de reparation peut etre creee par impact.
+
+La reparation est une nouvelle version de proposition, jamais une modification silencieuse de l'ancienne. Elle reste `enabled = false`, passe les tests de contrat mock puis une nouvelle approbation sandbox. L'ancienne version reste bloquee et aucune promotion production n'est disponible. Les preuves historiques citees par des mappings sont conservees; les claims du nouveau snapshot ont des identifiants versionnes et recommencent sous revue.
+
 ## Limites assumees
 
 - Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML, Postman Collection v2.1 en JSON, GraphQL fourni en SDL ou introspection JSON et les metadonnees OAuth officielles en JSON.
@@ -118,4 +124,6 @@ Le traitement est borne a 512 Kio par document, cinq documents, une profondeur d
 - Runs push `29294952077` et pull request `29294954700`: migrations PostgreSQL, lint, types, 41 fichiers/132 tests, build production et trois Playwright passes.
 - Le checkpoint d'expansion des domaines approuves est vert au head `7eb283311e7ba40c9172d53703a5c8c2faac1310`.
 - Runs push `29298279269` et pull request `29298280928`: migrations PostgreSQL, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
+- Le checkpoint de reparation des connecteurs est vert au head `2bd088160a2a9fd8f062126012a254f914af8951`.
+- Runs push `29299530060` et pull request `29299531581`: migrations PostgreSQL/RLS, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.

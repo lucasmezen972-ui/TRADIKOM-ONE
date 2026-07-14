@@ -45,7 +45,13 @@ Approved-domain expansion completed and green at `7eb2833`:
 2. XML parsing bounded to 512 KiB, five sitemap documents, depth two and 100 candidates, with canonicalization, deduplication, sensitive-query rejection and rate limiting.
 3. Every candidate remains under human review; acceptance creates only an official source record and never fetches, imports or activates a connector automatically.
 
+Connector repair proposals completed and green at `2bd0881`:
+
+1. An approved API impact can generate one separately versioned connector proposal only after the current snapshot and all its operations are imported and approved.
+2. The original connector stays blocked; the replacement stays disabled and must pass mock contracts plus a fresh sandbox approval.
+3. PostgreSQL RLS and relation triggers isolate repairs by tenant, while versioned imports preserve historical evidence referenced by approved mappings without carrying old approvals forward.
+
 Next unfinished work:
 
-1. Begin P3 connector repair proposals from approved change evidence and explicit human decisions.
+1. Begin P3 reusable approved mapping intelligence without promoting tenant-private data automatically.
 2. Keep live writes, production connector approval and unrestricted crawling disabled.
