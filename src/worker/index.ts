@@ -30,8 +30,9 @@ main()
     writeStructuredWorkerLog({
       level: "error",
       event: "worker.error",
-      message: error instanceof Error ? error.message : "Worker failed.",
+      message: "Worker failed safely.",
       correlationId: "worker-process",
+      errorType: error instanceof Error ? error.name : typeof error,
     });
     process.exitCode = 1;
   })
