@@ -8,6 +8,7 @@ import { WorkflowError } from "@/modules/workflows";
 import { BusinessBrainError } from "@/modules/business-brain";
 import { StrategicAdvisorError } from "@/modules/strategic-advisor";
 import { AutonomousMarketingError } from "@/modules/autonomous-marketing";
+import { WebsiteAiError } from "@/modules/website-ai";
 
 export type PublicError = {
   code: string;
@@ -38,6 +39,7 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof AutonomousMarketingError) {
     return mapAutonomousMarketingError(error);
   }
+  if (error instanceof WebsiteAiError) return mapWebsiteAiError(error);
 
   if (error instanceof ZodError) {
     return {
@@ -207,6 +209,23 @@ function mapAutonomousMarketingError(error: AutonomousMarketingError): PublicErr
     error.code,
     "autonomous_marketing",
     "Cette proposition marketing a déjà été modifiée.",
+    409,
+  );
+}
+
+function mapWebsiteAiError(error: WebsiteAiError): PublicError {
+  if (error.code === "website_ai_source_required") {
+    return publicError(
+      error.code,
+      "website_ai",
+      "Un site et un Business Twin vérifiés sont nécessaires.",
+      409,
+    );
+  }
+  return publicError(
+    error.code,
+    "website_ai",
+    "Cette proposition web n'est plus disponible.",
     409,
   );
 }

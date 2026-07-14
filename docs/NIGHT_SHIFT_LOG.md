@@ -194,3 +194,6 @@
 - Marketing decisions remain planning-only and audit `executionTriggered: false`; no launch, send, publish, workflow, connector, notification, activity or domain-event effect is available.
 - Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. The checkpoint is ready for authoritative GitHub Actions validation.
 - Initial Marketing run `29337702194` passed migrations, lint and typecheck before exposing an order-dependent test assertion. Test-only fix `1c2c8e3` made complete run `29338101814` green in 6m29s, including PostgreSQL RLS, production build and seven Playwright scenarios.
+- Implemented Website AI proposals for verified hero/FAQ copy with source hashes, evidence, versioning, approval and explicit draft-only application.
+- Added stale-write protection, immutable public-site assertions, existing-version rollback, forced transactional rollback, command-center routing, tenant/RLS relation tests and a Playwright approval-to-draft scenario.
+- Runtime migrations `033`/`034` and SQL mirrors `0027`/`0028` add the bounded Website AI records. No service or UI path publishes an AI proposal automatically; CI validation is pending.

@@ -22,6 +22,10 @@ Current Phase 4 checkpoint:
 - Runtime migrations `031`/`032` and SQL mirrors `0025`/`0026` add tenant-owned proposals, evidence, decisions, composite tenant relations and restricted-role RLS.
 - The French `Marketing autonome` workspace displays evidence, risks, content and versions with role-aware empty/error states. Module, PostgreSQL and Playwright coverage is included.
 - Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. Initial run `29337702194` found only an order-dependent evidence assertion; test fix `1c2c8e3113dd5408204775fd7d74c1303a58babf` passed complete run `29338101814`, including migrations, PostgreSQL RLS, lint, typecheck, unit/integration tests, production build and seven Playwright scenarios.
+- Website AI now proposes bounded hero/FAQ copy from Business Twin evidence, requires approval, detects stale human edits and applies only to the existing versioned draft.
+- Applying Website AI never publishes or changes the immutable public snapshot; the existing version restore path provides rollback and a forced-failure test confirms draft/snapshot atomicity.
+- Runtime migrations `033`/`034` and SQL mirrors `0027`/`0028` add tenant-owned proposals, evidence, decisions, indexes, RLS and composite website/section relation enforcement.
+- The French `Mon site` workspace shows rationale, gains, risks, proposed copy, proofs, approval and explicit draft-only application. Module, restricted-role PostgreSQL and Playwright coverage is included; CI validation is pending.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.

@@ -440,6 +440,20 @@ describeIfPostgres("PostgreSQL RLS", () => {
     if (marketingA.createdIds.length === 0 || !proposalB) {
       throw new Error("Marketing RLS fixtures are missing.");
     }
+    const websiteAiA = await services.generateWebsiteAiProposals(ownerA.id, tenantA.id);
+    const websiteAiB = await services.generateWebsiteAiProposals(ownerB.id, tenantB.id);
+    const websiteAiProposalB = websiteAiB.createdIds[0];
+    const websiteB = await services.getWebsiteWorkspace(ownerB.id, tenantB.id);
+    const websiteBId = websiteB.website?.id;
+    const websiteBSectionId = websiteB.sections[0]?.id;
+    if (
+      websiteAiA.createdIds.length === 0 ||
+      !websiteAiProposalB ||
+      !websiteBId ||
+      !websiteBSectionId
+    ) {
+      throw new Error("Website AI RLS fixtures are missing.");
+    }
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
@@ -454,6 +468,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "select id from marketing_campaign_proposals order by id",
     );
     expect(noMarketingContext.rows).toEqual([]);
+    const noWebsiteAiContext = await restrictedPool.query<{ id: string }>(
+      "select id from website_ai_proposals order by id",
+    );
+    expect(noWebsiteAiContext.rows).toEqual([]);
 
     const tenantAView = await withTenantContext(
       restrictedPool,
@@ -486,6 +504,16 @@ describeIfPostgres("PostgreSQL RLS", () => {
         }>(
           "select proposal_id, tenant_id from marketing_campaign_evidence order by proposal_id, id",
         );
+        const websiteAi = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from website_ai_proposals order by id");
+        const websiteAiEvidence = await client.query<{
+          proposal_id: string;
+          tenant_id: string;
+        }>(
+          "select proposal_id, tenant_id from website_ai_evidence order by proposal_id, id",
+        );
         return {
           entries: entries.rows,
           evidence: evidence.rows,
@@ -493,6 +521,8 @@ describeIfPostgres("PostgreSQL RLS", () => {
           strategicEvidence: strategicEvidence.rows,
           marketing: marketing.rows,
           marketingEvidence: marketingEvidence.rows,
+          websiteAi: websiteAi.rows,
+          websiteAiEvidence: websiteAiEvidence.rows,
         };
       },
     );
@@ -512,6 +542,17 @@ describeIfPostgres("PostgreSQL RLS", () => {
           { proposal_id: proposalId, tenant_id: tenantA.id },
           { proposal_id: proposalId, tenant_id: tenantA.id },
         ])
+        .sort((left, right) => left.proposal_id.localeCompare(right.proposal_id)),
+      websiteAi: websiteAiA.createdIds
+        .map((id) => ({ id, tenant_id: tenantA.id }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      websiteAiEvidence: websiteAiA.createdIds
+        .flatMap((proposalId, index) =>
+          Array.from({ length: index === 0 ? 3 : 2 }, () => ({
+            proposal_id: proposalId,
+            tenant_id: tenantA.id,
+          })),
+        )
         .sort((left, right) => left.proposal_id.localeCompare(right.proposal_id)),
     });
 
@@ -572,6 +613,59 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ),
       ),
     ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into website_ai_evidence (
+             id, tenant_id, proposal_id, evidence_type, evidence_ref, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'website_section', $4, $5, $6, $7, $7)`,
+          [
+            id("website_ai_evidence"),
+            tenantA.id,
+            websiteAiProposalB,
+            websiteBSectionId,
+            "Section étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into website_ai_proposals (
+             id, tenant_id, website_id, section_id, proposal_key, fingerprint,
+             proposal_type, title, rationale, expected_gain, risk_summary,
+             proposed_title, proposed_body, original_content_hash, status,
+             version, generation_version, created_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, $5, $6, 'seo_copy', $7, $8, $9, $10,
+             $11, $12, $13, 'proposed', 1, 'rls-test', $14, $15, $15
+           )`,
+          [
+            id("website_ai_proposal"),
+            tenantA.id,
+            websiteBId,
+            websiteBSectionId,
+            `cross-tenant-${randomUUID()}`,
+            "a".repeat(64),
+            "Proposition étrangère",
+            "La relation avec un site étranger doit être refusée.",
+            "Aucun gain ne doit être enregistré.",
+            "Risque de fuite inter-tenant.",
+            "Titre refusé",
+            "Contenu refusé par le contrôle tenant.",
+            "b".repeat(64),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/Cross-tenant relation|Related tenant row|row-level security|violates/);
   });
 
   it("consumes rate limits atomically under PostgreSQL concurrency", async () => {

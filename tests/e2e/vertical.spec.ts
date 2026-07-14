@@ -167,6 +167,52 @@ test("autonomous marketing versions and approves an evidence-backed draft withou
   ).toHaveCount(0);
 });
 
+test("Website AI applies an approved change to the draft while the public site stays immutable", async ({
+  context,
+  page,
+}) => {
+  await openDemo(page);
+  await page.goto("/mon-site");
+  const publicPage = await context.newPage();
+  await publicPage.goto("/sites/garage-caraibes-auto");
+  const liveTitle = await publicPage.getByRole("heading", { level: 1 }).innerText();
+
+  await page.getByRole("button", { name: "Analyser le brouillon" }).click();
+  await expect(page.getByText(/Analyse terminée/)).toBeVisible();
+  const proposal = page.locator("article").filter({
+    hasText: "Clarifier la promesse de la page d'accueil",
+  });
+  await expect(proposal.getByText("Preuves", { exact: true })).toBeVisible();
+  await proposal
+    .getByRole("button", { name: "Soumettre à approbation" })
+    .click();
+
+  const pending = page.locator("article").filter({
+    hasText: "Clarifier la promesse de la page d'accueil",
+  });
+  await pending
+    .getByLabel("Motif de décision Website AI")
+    .fill("Contenu vérifié pour le brouillon, sans publication automatique.");
+  await pending.getByRole("button", { name: "Approuver le brouillon" }).click();
+
+  const approved = page.locator("article").filter({
+    hasText: "Clarifier la promesse de la page d'accueil",
+  });
+  await approved.getByRole("button", { name: "Appliquer au brouillon" }).click();
+  await expect(
+    page.getByText("Amélioration appliquée au brouillon uniquement."),
+  ).toBeVisible();
+  await expect(page.getByText("Statut : brouillon")).toBeVisible();
+  await expect(
+    page.getByText("Appliquée au brouillon. Publication manuelle toujours requise."),
+  ).toBeVisible();
+  await expect(page.getByText(/manual_edit/).first()).toBeVisible();
+
+  await publicPage.reload();
+  await expect(publicPage.getByRole("heading", { level: 1 })).toHaveText(liveTitle);
+  await publicPage.close();
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,

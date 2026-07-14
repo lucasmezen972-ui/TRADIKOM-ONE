@@ -374,6 +374,59 @@ export async function reviseMarketingProposalAction(formData: FormData) {
   redirect("/marketing?revision=1");
 }
 
+export async function generateWebsiteAiProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("website_ai.generate", () =>
+    services.generateWebsiteAiProposals(user.id, tenant.id),
+  );
+  revalidatePath("/mon-site");
+  redirect(`/mon-site?analyse=1&nouvelles=${result.createdIds.length}`);
+}
+
+export async function submitWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("website_ai.submit", () =>
+    services.submitWebsiteAiProposalForApproval(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  revalidatePath("/aujourdhui");
+  redirect("/mon-site?iaSoumise=1");
+}
+
+export async function decideWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("website_ai.decide", () =>
+    services.decideWebsiteAiProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  revalidatePath("/aujourdhui");
+  redirect(`/mon-site?iaDecision=${decision}`);
+}
+
+export async function applyWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("website_ai.apply", () =>
+    services.applyApprovedWebsiteAiProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  redirect(`/mon-site?iaApplication=${result.stale ? "stale" : "applied"}`);
+}
+
 export async function updateSectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

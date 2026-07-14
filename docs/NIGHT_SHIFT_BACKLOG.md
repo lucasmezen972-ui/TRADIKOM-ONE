@@ -68,5 +68,6 @@ Next unfinished work:
 1. Business Brain foundation is green at `1ea4e1e` in GitHub Actions run `29333961495`; draft PR #5 is open.
 2. Strategic Advisor is green at `4fcb9e2` in complete GitHub Actions run `29335663755`, with evidence, explainability, planning-only approval and no execution side effects.
 3. Autonomous Marketing is green at `1c2c8e3` in complete GitHub Actions run `29338101814`, with evidence, immutable revisions, approval and no launch/send/publish path.
-4. Implement a bounded Website AI proposal slice using immutable drafts and rollback; do not auto-publish.
-5. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
+4. Validate the Website AI proposal checkpoint through the complete GitHub Actions suite and fix failures immediately.
+5. After a green checkpoint, continue with a bounded Sales AI scoring/advice slice without sending messages, quotations or discounts.
+6. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.

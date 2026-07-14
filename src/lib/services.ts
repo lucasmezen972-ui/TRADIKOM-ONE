@@ -176,6 +176,15 @@ import {
   getStrategicAdvisor,
   strategicRecommendationDecisionSchema,
 } from "@/modules/strategic-advisor";
+import {
+  applyApprovedWebsiteAiProposal,
+  decideWebsiteAiProposal,
+  generateWebsiteAiProposals,
+  getWebsiteAiWorkspace,
+  submitWebsiteAiProposalForApproval,
+  websiteAiProposalDecisionSchema,
+  websiteAiProposalReferenceSchema,
+} from "@/modules/website-ai";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -297,6 +306,25 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof reviseMarketingProposalSchema>,
     ) => reviseMarketingProposal(db, userId, tenantId, input),
+    getWebsiteAiWorkspace: (userId: string, tenantId: string) =>
+      getWebsiteAiWorkspace(db, userId, tenantId),
+    generateWebsiteAiProposals: (userId: string, tenantId: string) =>
+      generateWebsiteAiProposals(db, userId, tenantId),
+    submitWebsiteAiProposalForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof websiteAiProposalReferenceSchema>,
+    ) => submitWebsiteAiProposalForApproval(db, userId, tenantId, input),
+    decideWebsiteAiProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof websiteAiProposalDecisionSchema>,
+    ) => decideWebsiteAiProposal(db, userId, tenantId, input),
+    applyApprovedWebsiteAiProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof websiteAiProposalReferenceSchema>,
+    ) => applyApprovedWebsiteAiProposal(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (

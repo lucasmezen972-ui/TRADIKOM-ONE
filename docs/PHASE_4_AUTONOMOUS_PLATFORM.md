@@ -81,3 +81,22 @@ Implemented behavior:
 Focused tests cover Business Twin requirements, evidence, prohibited-claim avoidance, generation deduplication, immutable revision, approval history, tenant authorization, restricted-role PostgreSQL isolation, command-center routing, Playwright and the absence of workflow, connector, notification, activity or domain-event side effects.
 
 Local typecheck and `git diff --check` again stalled without diagnostics and were stopped after 30 seconds. Initial CI run `29337702194` passed migrations, lint and typecheck, then exposed an order-dependent evidence assertion. Test-only fix `1c2c8e3113dd5408204775fd7d74c1303a58babf` made complete run `29338101814` green: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and seven Playwright scenarios.
+
+## Website AI
+
+The fourth vertical slice proposes bounded copy improvements for the current website draft. It reuses the existing immutable website snapshots and publication boundary instead of creating a second website model.
+
+Implemented behavior:
+
+- Deterministic rules propose a clearer homepage hero and an aligned FAQ using only Business Twin identity, offer, area, description and FAQ evidence.
+- Each proposal stores the analyzed section hash, proposed copy, rationale, expected gain, risk, evidence, generation version and immutable decision history.
+- New source content produces a new proposal version and supersedes only open proposals; fingerprints prevent duplicate analysis.
+- Submission and approval are explicit tenant-scoped actions. Applying an approved proposal updates only the editable section and creates an existing website draft snapshot.
+- The public site continues reading its last immutable publication. Applying Website AI never inserts a publication or moves the public pointer.
+- If a human changes the target section after analysis, application marks the proposal stale and preserves the human draft.
+- Existing website version restoration remains the rollback mechanism.
+- Owner, administrator and manager roles can generate, decide and apply; other tenant members receive a read-only view.
+
+The read path uses two bounded tenant queries and returns at most 50 proposals; generation produces at most two proposals per analysis. Tenant-leading indexes, PostgreSQL RLS and composite tenant/website/section foreign keys protect proposals, evidence and decisions.
+
+Focused tests cover evidence and deduplication, planning approval, public snapshot immutability, publication-count stability, rollback, stale-write protection, transactional failure rollback, tenant authorization, restricted-role PostgreSQL isolation, command-center routing and Playwright. CI validation is pending for this checkpoint.
