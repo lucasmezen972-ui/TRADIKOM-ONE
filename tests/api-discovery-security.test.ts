@@ -178,6 +178,23 @@ Disallow: /private
         ),
       ),
     ).toEqual({ properties: { apiKey: { type: "string" } } });
+    expect(
+      JSON.parse(
+        redactUntrustedContent(
+          JSON.stringify({
+            authorization_endpoint: "https://auth.vendor.test/authorize",
+            token_endpoint: "https://auth.vendor.test/token",
+            signed_metadata: "header.payload.signature",
+            client_secret: "must-not-survive",
+          }),
+        ),
+      ),
+    ).toEqual({
+      authorization_endpoint: "https://auth.vendor.test/authorize",
+      token_endpoint: "https://auth.vendor.test/token",
+      signed_metadata: "[REDACTED]",
+      client_secret: "[REDACTED]",
+    });
   });
 
   it("redacts Postman variables, scripts, URLs, and example bodies before storage", () => {

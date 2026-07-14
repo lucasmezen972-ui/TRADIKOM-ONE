@@ -121,6 +121,7 @@ describe("OAuth authorization server metadata import", () => {
       oauthSource.sourceId,
     );
     expect(oauthSnapshot.content).not.toContain("oauth-fixture-secret");
+    expect(oauthSnapshot.content).not.toContain("header.payload.signature");
     const preview = await services.previewApiSnapshot(admin.id, tenant.id, {
       snapshotId: oauthSnapshot.id,
       apiProductId: api.apiProductId,

@@ -133,7 +133,6 @@ export async function fetchUnderDiscoveryPolicy(input: {
 }
 
 export function redactUntrustedContent(content: string) {
-  const secretKey = /(authorization|cookie|password|secret|token|api[_-]?key)/i;
   try {
     const parsed = JSON.parse(content) as unknown;
     const redact = (value: unknown, parentKey?: string): unknown => {
@@ -155,7 +154,7 @@ export function redactUntrustedContent(content: string) {
             (key === "value" && keyedValue) ||
             (key === "body" && responseExample) ||
             (parentKey === "body" && ["raw", "src"].includes(key)) ||
-            (secretKey.test(key) &&
+            (isSensitiveUntrustedKey(key) &&
               (child === null || typeof child !== "object"))
           ) {
             return [key, "[REDACTED]"];
@@ -168,6 +167,27 @@ export function redactUntrustedContent(content: string) {
   } catch {
     return redactSensitiveText(content);
   }
+}
+
+const publicSecurityMetadataKeys = new Set([
+  "authorization_endpoint",
+  "authorizationurl",
+  "device_authorization_endpoint",
+  "introspection_endpoint",
+  "pushed_authorization_request_endpoint",
+  "revocation_endpoint",
+  "token_endpoint",
+  "token_endpoint_auth_methods_supported",
+  "token_endpoint_auth_signing_alg_values_supported",
+  "tokenurl",
+]);
+
+function isSensitiveUntrustedKey(key: string) {
+  const normalized = key.toLowerCase();
+  if (publicSecurityMetadataKeys.has(normalized)) return false;
+  return /(authorization|cookie|password|secret|token|api[_-]?key|signed_metadata)/i.test(
+    key,
+  );
 }
 
 function redactSensitiveText(value: string) {
