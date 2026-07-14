@@ -51,7 +51,13 @@ Connector repair proposals completed and green at `2bd0881`:
 2. The original connector stays blocked; the replacement stays disabled and must pass mock contracts plus a fresh sandbox approval.
 3. PostgreSQL RLS and relation triggers isolate repairs by tenant, while versioned imports preserve historical evidence referenced by approved mappings without carrying old approvals forward.
 
+Reusable approved mapping intelligence completed and green at `4af425a`:
+
+1. A platform administrator can promote only an already approved tenant mapping backed by an approved official source.
+2. Global knowledge stores structural mapping fields and evidence only, without tenant IDs, sample values or automatic promotion.
+3. Reuse in another tenant creates a deduplicated pending proposal that still requires an explicit tenant-scoped approval and audit.
+
 Next unfinished work:
 
-1. Begin P3 reusable approved mapping intelligence without promoting tenant-private data automatically.
+1. Begin P3 improved observability for API Intelligence security and worker operations.
 2. Keep live writes, production connector approval and unrestricted crawling disabled.

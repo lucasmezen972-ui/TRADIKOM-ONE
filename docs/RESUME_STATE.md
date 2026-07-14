@@ -146,7 +146,7 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Begin P3 reusable approved mapping intelligence without promoting tenant-private data automatically.
+1. Begin P3 improved observability for API Intelligence security and worker operations.
 2. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
@@ -174,3 +174,6 @@ Phase 3 checkpoint in progress:
 - Approved breaking-change plans can now generate one separately versioned replacement connector from the current fully approved snapshot. The source connector remains blocked; the replacement remains disabled and must pass mock contracts and a fresh sandbox approval.
 - Runtime migrations `023`/`024`/`025` and SQL mirrors `0017`/`0018`/`0019` add tenant-isolated repair provenance and versioned operation imports. Historical evidence referenced by mappings is retained, while new claims receive snapshot-specific identities and remain under review.
 - Connector repair head `2bd088160a2a9fd8f062126012a254f914af8951` passed complete push run `29299530060` and pull request run `29299531581`: ordered migrations, PostgreSQL RLS, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
+- Approved tenant mappings can now be promoted into global structural knowledge only by a platform administrator and only while their official evidence remains approved. No tenant identifier, sample value or private rule is copied into the global record.
+- Reusing a global mapping in another tenant creates a deduplicated `pending` proposal and requires a separate approval. Runtime migration `026` and SQL mirror `0020` add bounded promotion metadata and structural uniqueness.
+- Reusable mapping head `4af425ae8240f487d83a8dc29c47b84a57cf7e10` passed complete push run `29300124894` and pull request run `29300127676`: ordered migrations, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.

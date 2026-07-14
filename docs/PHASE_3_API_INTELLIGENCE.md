@@ -96,6 +96,12 @@ Une rupture API bloque la version de connecteur affectee et produit d'abord un p
 
 La reparation est une nouvelle version de proposition, jamais une modification silencieuse de l'ancienne. Elle reste `enabled = false`, passe les tests de contrat mock puis une nouvelle approbation sandbox. L'ancienne version reste bloquee et aucune promotion production n'est disponible. Les preuves historiques citees par des mappings sont conservees; les claims du nouveau snapshot ont des identifiants versionnes et recommencent sous revue.
 
+## Intelligence de mappings reutilisables
+
+Un administrateur plateforme peut promouvoir un mapping tenant seulement lorsqu'il est deja approuve et que sa preuve provient encore d'une source officielle avec un claim approuve. Le modele global conserve uniquement le produit API, les noms structurels source/cible, la confiance, la preuve et la raison de promotion. Aucun identifiant tenant, exemple de valeur ou regle privee n'est copie.
+
+La reutilisation dans un autre tenant cree une nouvelle proposition `pending`, dedupliquee par sa forme structurelle. Elle n'alimente la compatibilite ou Connector Copilot qu'apres une nouvelle approbation tenant auditee. Il n'existe aucune promotion ou approbation automatique.
+
 ## Limites assumees
 
 - Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML, Postman Collection v2.1 en JSON, GraphQL fourni en SDL ou introspection JSON et les metadonnees OAuth officielles en JSON.
@@ -126,4 +132,6 @@ La reparation est une nouvelle version de proposition, jamais une modification s
 - Runs push `29298279269` et pull request `29298280928`: migrations PostgreSQL, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
 - Le checkpoint de reparation des connecteurs est vert au head `2bd088160a2a9fd8f062126012a254f914af8951`.
 - Runs push `29299530060` et pull request `29299531581`: migrations PostgreSQL/RLS, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
+- Le checkpoint d'intelligence de mappings reutilisables est vert au head `4af425ae8240f487d83a8dc29c47b84a57cf7e10`.
+- Runs push `29300124894` et pull request `29300127676`: migrations PostgreSQL, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.

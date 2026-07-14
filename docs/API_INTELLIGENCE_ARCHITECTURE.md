@@ -58,6 +58,8 @@ Ces tables utilisent:
 
 Un mapping tenant ne peut jamais etre promu automatiquement en connaissance globale. Le fan-out d'un changement global vers plusieurs tenants utilise une transaction systeme explicite apres autorisation plateforme; chaque impact reste ensuite invisible aux autres tenants sous un role PostgreSQL restreint.
 
+La promotion d'un mapping exige un administrateur plateforme, un mapping tenant approuve et une preuve officielle encore approuvee. Le modele global ne contient aucune reference au tenant source. Sa reutilisation produit un nouveau mapping tenant `pending`; l'approbation d'origine ne traverse jamais la frontiere tenant.
+
 Les reparations sont des propositions versionnees reliees a un impact, au connecteur source et au snapshot courant. Les triggers PostgreSQL imposent le meme tenant et le meme produit API pour toutes ces relations. Les imports conservent les anciennes preuves encore referencees par un mapping, mais les operations, schemas, claims et preuves du nouveau snapshot utilisent des identifiants distincts.
 
 ## Frontieres actuelles
