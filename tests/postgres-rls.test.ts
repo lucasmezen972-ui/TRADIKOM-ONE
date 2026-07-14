@@ -1891,6 +1891,153 @@ describeIfPostgres("PostgreSQL RLS", () => {
       automationPreviewDeleted: 0,
     });
   });
+
+  it("isolates self improvement proposals, evidence and decisions", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Improvement RLS Owner A",
+      email: uniqueEmail("improvement-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Improvement RLS Owner B",
+      email: uniqueEmail("improvement-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: "Improvement RLS A",
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: "Improvement RLS B",
+      category: "Services",
+    });
+    const old = new Date(Date.now() - 45 * 24 * 60 * 60 * 1_000).toISOString();
+    await ownerDb.query(
+      "update workflows set created_at = $1 where tenant_id in ($2, $3)",
+      [old, tenantA.id, tenantB.id],
+    );
+    await services.generateSelfImprovementProposals(ownerA.id, tenantA.id);
+    await services.generateSelfImprovementProposals(ownerB.id, tenantB.id);
+    const proposalA = (await services.getSelfImprovementWorkspace(ownerA.id, tenantA.id))
+      .proposals[0];
+    const proposalB = (await services.getSelfImprovementWorkspace(ownerB.id, tenantB.id))
+      .proposals[0];
+    if (!proposalA || !proposalB) {
+      throw new Error("Self improvement RLS fixtures are missing.");
+    }
+    await services.decideSelfImprovementProposal(ownerA.id, tenantA.id, {
+      proposalId: proposalA.id,
+      decision: "accepted",
+      reason: "Planification tenant A sans effet automatique.",
+    });
+    await services.decideSelfImprovementProposal(ownerB.id, tenantB.id, {
+      proposalId: proposalB.id,
+      decision: "dismissed",
+      reason: "Décision tenant B isolée pour la vérification RLS.",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect(
+      (await restrictedPool.query("select id from self_improvement_proposals")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from self_improvement_evidence")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from self_improvement_decisions")).rows,
+    ).toEqual([]);
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        proposals: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from self_improvement_proposals",
+          )).rows[0]?.count ?? 0,
+        ),
+        evidence: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from self_improvement_evidence",
+          )).rows[0]?.count ?? 0,
+        ),
+        decisions: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from self_improvement_decisions",
+          )).rows[0]?.count ?? 0,
+        ),
+      }),
+    );
+    expect(tenantAView).toEqual({ proposals: 1, evidence: 1, decisions: 1 });
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into self_improvement_evidence (
+             id, tenant_id, proposal_id, proposal_version, evidence_key,
+             source_type, source_id, metric_name, metric_value, summary, observed_at
+           ) values ($1, $2, $3, 1, 'cross-tenant', 'workflows', $3,
+             'cross_tenant_metric', 1, 'Cette relation doit être refusée.', $4)`,
+          [id("improvement_evidence"), tenantA.id, proposalB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into self_improvement_decisions (
+             id, tenant_id, proposal_id, proposal_version, decision, reason,
+             created_by, created_at
+           ) values ($1, $2, $3, 1, 'dismissed',
+             'Cette relation tenant étrangère doit être refusée.', $4, $5)`,
+          [id("improvement_decision"), tenantA.id, proposalB.id, ownerA.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update self_improvement_proposals set title = 'interdit' where id = $1",
+            [proposalB.id],
+          )
+        ).rowCount,
+        deletedEvidence: (
+          await client.query(
+            "delete from self_improvement_evidence where proposal_id = $1",
+            [proposalB.id],
+          )
+        ).rowCount,
+        deletedDecision: (
+          await client.query(
+            "delete from self_improvement_decisions where proposal_id = $1",
+            [proposalB.id],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deletedEvidence: 0,
+      deletedDecision: 0,
+    });
+  });
 });
 
 function businessBrainFixture(label: string) {

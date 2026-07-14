@@ -240,6 +240,12 @@ import {
   previewAutomationPackageSchema,
   previewPrivateAutomationPackage,
 } from "@/modules/automation-marketplace";
+import {
+  decideSelfImprovementProposal,
+  generateSelfImprovementProposals,
+  getSelfImprovementWorkspace,
+  selfImprovementDecisionSchema,
+} from "@/modules/self-improvement";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -851,5 +857,14 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof previewAutomationPackageSchema>,
     ) => previewPrivateAutomationPackage(db, userId, tenantId, input),
+    getSelfImprovementWorkspace: (userId: string, tenantId: string) =>
+      getSelfImprovementWorkspace(db, userId, tenantId),
+    generateSelfImprovementProposals: (userId: string, tenantId: string) =>
+      generateSelfImprovementProposals(db, userId, tenantId),
+    decideSelfImprovementProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof selfImprovementDecisionSchema>,
+    ) => decideSelfImprovementProposal(db, userId, tenantId, input),
   };
 }

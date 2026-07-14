@@ -641,6 +641,59 @@ test("the private automation library removes values and never executes a package
   ).toHaveCount(0);
 });
 
+test("Self Improvement explains a measured issue without changing operations", async ({
+  page,
+}) => {
+  await openDemo(page);
+  const db = await getDb();
+  const demo = await db.query<{ tenant_id: string }>(
+    "select id as tenant_id from tenants where slug = $1 limit 1",
+    ["garage-caraibes-auto"],
+  );
+  const tenantId = demo.rows[0]?.tenant_id;
+  if (!tenantId) throw new Error("Le tenant de démonstration est introuvable.");
+  await db.query(
+    `update connectors set status = 'Connecté', health = 'error', updated_at = $1
+     where tenant_id = $2 and connector_key = 'mock_business'`,
+    [new Date().toISOString(), tenantId],
+  );
+  const before = await db.query<{ runs: number; activities: number; events: number }>(
+    `select
+       (select count(*)::int from workflow_runs where tenant_id = $1) as runs,
+       (select count(*)::int from activities where tenant_id = $1) as activities,
+       (select count(*)::int from domain_events where tenant_id = $1) as events`,
+    [tenantId],
+  );
+
+  await page.goto("/ameliorations");
+  await expect(
+    page.getByRole("heading", { name: "Amélioration continue" }),
+  ).toBeVisible();
+  await expect(page.getByText("Mesure indisponible", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Analyser les signaux mesurés" }).click();
+  const proposal = page.locator("article").filter({ hasText: "mock_business" });
+  await expect(proposal.getByText("Preuves mesurées", { exact: true })).toBeVisible();
+  await proposal
+    .getByLabel("Motif de décision")
+    .fill("Contrôle du connecteur planifié sans activation automatique.");
+  await proposal.getByRole("button", { name: "Retenir pour planification" }).click();
+  await expect(proposal.getByText(/Retenue pour planification/)).toBeVisible();
+  await expect(
+    proposal.getByRole("button", {
+      name: /Activer|Synchroniser|Exécuter|Publier|Envoyer|Fusionner/i,
+    }),
+  ).toHaveCount(0);
+
+  const after = await db.query<{ runs: number; activities: number; events: number }>(
+    `select
+       (select count(*)::int from workflow_runs where tenant_id = $1) as runs,
+       (select count(*)::int from activities where tenant_id = $1) as activities,
+       (select count(*)::int from domain_events where tenant_id = $1) as events`,
+    [tenantId],
+  );
+  expect(after.rows[0]).toEqual(before.rows[0]);
+});
+
 async function openDemo(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: /Ouvrir la d.mo/i }).click();

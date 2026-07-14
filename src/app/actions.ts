@@ -1352,6 +1352,28 @@ export async function previewPrivateAutomationPackageAction(formData: FormData) 
   revalidatePath("/bibliotheque-automatisations");
 }
 
+export async function generateSelfImprovementProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("self_improvement.generate", () =>
+    services.generateSelfImprovementProposals(user.id, tenant.id),
+  );
+  revalidatePath("/ameliorations");
+}
+
+export async function decideSelfImprovementProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("self_improvement.decide", () =>
+    services.decideSelfImprovementProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision: text(formData, "decision") as "accepted" | "dismissed",
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/ameliorations");
+}
+
 export async function decideApiChangeRepairAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

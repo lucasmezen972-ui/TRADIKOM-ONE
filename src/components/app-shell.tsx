@@ -17,6 +17,7 @@ import {
   ScanSearch,
   PlugZap,
   Settings,
+  Sparkles,
   Star,
   WalletCards,
   UsersRound,
@@ -59,6 +60,7 @@ const navItems = [
     label: "Bibliothèque",
     icon: LibraryBig,
   },
+  { href: "/ameliorations", label: "Améliorations", icon: Sparkles },
   { href: "/resultats", label: "Résultats", icon: Bot },
   { href: "/parametres", label: "Paramètres", icon: Settings },
 ];
