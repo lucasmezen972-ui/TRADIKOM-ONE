@@ -76,5 +76,6 @@ Next unfinished work:
 9. AI Employee is green at `2295c99` in complete GitHub Actions run `29354334456`, with nine default profiles, Business Brain memory scopes, immutable versions/activity, tenant isolation and explicit execution prohibitions.
 10. Universal Connector Platform is green at `793e35c` in complete GitHub Actions run `29357220616`, with evidence revalidation, immutable sandbox plans, tenant isolation and no installation or activation path.
 11. Private App Marketplace is green at `8713dee` in complete GitHub Actions run `29359217460`, with immutable tenant-private listings, disabled installation previews, composite source relations and no operational side effects.
-12. Continue with a bounded private Automation Marketplace for existing tenant workflows and safe templates, preserving provenance and approval requirements.
-13. Keep public sharing, purchases, connector activation, external sends, production installation and one-click execution unavailable.
+12. Private Automation Marketplace is green at `954a77b` in complete GitHub Actions run `29361102893`, with input-value stripping, immutable tenant-private packages, review-only previews, composite relations and no operational side effects.
+13. Continue with bounded Self Improvement proposals derived only from measurable existing tenant signals and explicit evidence.
+14. Keep automatic changes, public sharing, purchases, connector activation, external sends, production installation and one-click execution unavailable.

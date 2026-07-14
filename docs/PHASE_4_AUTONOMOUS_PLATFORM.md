@@ -240,3 +240,23 @@ Runtime migrations `047`/`048` and SQL mirrors `0041`/`0042` add private listing
 Head `8713dee664091b8b9f3680952a64dbb04a4341c8` passed complete GitHub Actions run `29359217460`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
 
 Current limitations are deliberate: the catalog is private, supports only existing connector, workflow and AI employee sources, and prepares previews only. It does not install, activate, execute, publish, share publicly or process payments.
+
+## Private Automation Marketplace
+
+The twelfth vertical slice packages existing private workflow artifacts for inspection without copying their configured values or enabling execution.
+
+Implemented behavior:
+
+- Only current tenant-private workflow listings backed by an active persisted workflow definition are eligible.
+- Every package preserves the source listing, workflow identity, version, trigger, condition count, action types, required configuration keys, retry policy, timeout and approval policy.
+- Action input values and conditions are stripped before persistence. Packages are inactive, tenant-private, immutable and versioned.
+- Deterministic fingerprints make repeated packaging idempotent; a changed source creates a new current version and supersedes the previous package transactionally.
+- Installation previews are immutable and review-only. They require future human approval and explicitly prohibit import, execution, external send, publication, connector activation and public sharing.
+- The French `Bibliotheque d'automatisations` workspace exposes provenance, required configuration, permission review, safe empty/error states and no install or execute control.
+- Package and preview mutations are tenant-authorized, transactional and audited without storing workflow values, customer data, payloads or credentials.
+
+Runtime migrations `049`/`050` and SQL mirrors `0043`/`0044` add packages and previews with composite tenant/source/version relations, tenant-leading indexes and PostgreSQL RLS. Tests cover value stripping, idempotence, immutable versioning, preview safety, forced rollback, application authorization, restricted-role cross-tenant reads/writes/relations, absence of operational side effects and the browser flow from private catalog to preview.
+
+Head `954a77bc68bb057bcf13fa9bbff2d620b657dd80` passed complete GitHub Actions run `29361102893`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+
+Current limitations are deliberate: this marketplace supports current workflow artifacts only. It does not import or execute packages, copy configured values, share publicly, publish content, send messages, activate connectors or process payments.

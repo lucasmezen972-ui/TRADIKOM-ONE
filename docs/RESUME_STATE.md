@@ -58,7 +58,11 @@ Current Phase 4 checkpoint:
 - Catalog refresh and installation previews are idempotent, transactional and audited. Every listing is private; every preview remains disabled and prohibits external execution, production writes, connector activation, public sharing and payment.
 - Runtime migrations `047`/`048` and SQL mirrors `0041`/`0042` enforce composite source relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL and connector-to-catalog Playwright coverage are included.
 - Private App Marketplace head `8713dee664091b8b9f3680952a64dbb04a4341c8` passed complete GitHub Actions run `29359217460`.
-- The next bounded Phase 4 slice is the private Automation Marketplace for sharing and previewing existing tenant workflow/template artifacts without execution, publication, external send or public distribution.
+- Private Automation Marketplace now creates immutable, tenant-private packages from active persisted workflow definitions while stripping every configured input value and condition.
+- Packages preserve bounded structure, provenance, source versions, required configuration, retry/timeout and approval policies. Review-only previews cannot import, execute, send, publish, activate connectors, share publicly or write to production.
+- Runtime migrations `049`/`050` and SQL mirrors `0043`/`0044` enforce composite tenant/source/version relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL and Playwright coverage are included.
+- Private Automation Marketplace head `954a77bc68bb057bcf13fa9bbff2d620b657dd80` passed complete GitHub Actions run `29361102893`.
+- The next bounded Phase 4 slice is Self Improvement: evidence-backed internal proposals from existing tenant signals, with no automatic change or production action.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -216,9 +220,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded private Automation Marketplace slice from existing tenant workflow definitions and approved internal templates.
-2. Add immutable share packages and installation previews while preserving source versions, permissions and approval requirements.
-3. Keep sharing tenant-private and preview-only: no execution, external send, publication, connector activation, payment or production write.
+1. Implement the first bounded Self Improvement slice from measurable existing tenant signals.
+2. Persist explainable, versioned proposals with evidence, authorization, audit and PostgreSQL RLS.
+3. Keep every proposal advisory-only: no automatic workflow change, contact merge, publication, external send, connector activation or production write.
 
 Phase 3 completion history:
 
