@@ -11,6 +11,7 @@ import {
   Gauge,
   Globe2,
   Lightbulb,
+  LibraryBig,
   Megaphone,
   PackageSearch,
   ScanSearch,
@@ -53,6 +54,11 @@ const navItems = [
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },
   { href: "/catalogue", label: "Catalogue privé", icon: PackageSearch },
+  {
+    href: "/bibliotheque-automatisations",
+    label: "Bibliothèque",
+    icon: LibraryBig,
+  },
   { href: "/resultats", label: "Résultats", icon: Bot },
   { href: "/parametres", label: "Paramètres", icon: Settings },
 ];

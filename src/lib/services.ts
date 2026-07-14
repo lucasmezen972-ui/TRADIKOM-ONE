@@ -233,6 +233,13 @@ import {
   previewMarketplaceInstallationSchema,
   refreshPrivateAppMarketplace,
 } from "@/modules/app-marketplace";
+import {
+  createAutomationPackageSchema,
+  createPrivateAutomationPackage,
+  getAutomationMarketplace,
+  previewAutomationPackageSchema,
+  previewPrivateAutomationPackage,
+} from "@/modules/automation-marketplace";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -832,5 +839,17 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof previewMarketplaceInstallationSchema>,
     ) => previewPrivateMarketplaceInstallation(db, userId, tenantId, input),
+    getAutomationMarketplace: (userId: string, tenantId: string) =>
+      getAutomationMarketplace(db, userId, tenantId),
+    createPrivateAutomationPackage: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof createAutomationPackageSchema>,
+    ) => createPrivateAutomationPackage(db, userId, tenantId, input),
+    previewPrivateAutomationPackage: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof previewAutomationPackageSchema>,
+    ) => previewPrivateAutomationPackage(db, userId, tenantId, input),
   };
 }

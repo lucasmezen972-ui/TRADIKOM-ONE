@@ -1661,6 +1661,38 @@ describeIfPostgres("PostgreSQL RLS", () => {
     await services.previewPrivateMarketplaceInstallation(ownerB.id, tenantB.id, {
       listingId: listingB.id,
     });
+    const automationSourceA = (
+      await services.getAutomationMarketplace(ownerA.id, tenantA.id)
+    ).sources[0];
+    const automationSourceB = (
+      await services.getAutomationMarketplace(ownerB.id, tenantB.id)
+    ).sources[0];
+    if (!automationSourceA || !automationSourceB) {
+      throw new Error("Automation marketplace RLS sources are missing.");
+    }
+    const automationPackageA = await services.createPrivateAutomationPackage(
+      ownerA.id,
+      tenantA.id,
+      { listingId: automationSourceA.listingId },
+    );
+    const automationPackageB = await services.createPrivateAutomationPackage(
+      ownerB.id,
+      tenantB.id,
+      { listingId: automationSourceB.listingId },
+    );
+    await services.previewPrivateAutomationPackage(ownerA.id, tenantA.id, {
+      packageId: automationPackageA.packageId,
+    });
+    await services.previewPrivateAutomationPackage(ownerB.id, tenantB.id, {
+      packageId: automationPackageB.packageId,
+    });
+    const packageBRelation = await ownerPool.query<{ source_workflow_id: string }>(
+      `select source_workflow_id from automation_marketplace_packages
+       where tenant_id = $1 and id = $2`,
+      [tenantB.id, automationPackageB.packageId],
+    );
+    const foreignWorkflowId = packageBRelation.rows[0]?.source_workflow_id;
+    if (!foreignWorkflowId) throw new Error("Foreign workflow source is missing.");
     const foreignEmployee = await ownerPool.query<{ id: string }>(
       `select id from ai_employee_profiles
        where tenant_id = $1 and record_status = 'current'
@@ -1681,6 +1713,12 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(
       (await restrictedPool.query("select id from marketplace_installation_previews")).rows,
     ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from automation_marketplace_packages")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from automation_marketplace_previews")).rows,
+    ).toEqual([]);
     const tenantAView = await withTenantContext(
       restrictedPool,
       tenantA.id,
@@ -1695,9 +1733,24 @@ describeIfPostgres("PostgreSQL RLS", () => {
             "select count(*) as count from marketplace_installation_previews",
           )).rows[0]?.count ?? 0,
         ),
+        automationPackages: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from automation_marketplace_packages",
+          )).rows[0]?.count ?? 0,
+        ),
+        automationPreviews: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from automation_marketplace_previews",
+          )).rows[0]?.count ?? 0,
+        ),
       }),
     );
-    expect(tenantAView).toEqual({ listings: 10, previews: 1 });
+    expect(tenantAView).toEqual({
+      listings: 10,
+      previews: 1,
+      automationPackages: 1,
+      automationPreviews: 1,
+    });
 
     await expect(
       withTenantContext(restrictedPool, tenantA.id, (client) =>
@@ -1719,6 +1772,58 @@ describeIfPostgres("PostgreSQL RLS", () => {
             `ai-employee:cross-${randomUUID()}`,
             foreignEmployeeId,
             "a".repeat(64),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into automation_marketplace_packages (
+             id, tenant_id, listing_id, source_workflow_id, package_key, title,
+             summary, template_snapshot, required_configuration,
+             approval_policy, fingerprint, record_status, visibility,
+             execution_enabled, version, supersedes_id, created_by, created_at,
+             updated_at
+           ) values (
+             $1, $2, $3, $4, $5, 'Paquet étranger',
+             'Cette relation inter-tenant doit être refusée.', $6, $6,
+             'user_approval_required', $7, 'current', 'tenant_private', 0, 1,
+             null, $8, $9, $9
+           )`,
+          [
+            id("automation_package"),
+            tenantA.id,
+            automationSourceB.listingId,
+            foreignWorkflowId,
+            `workflow:cross-${randomUUID()}`,
+            toJson([]),
+            "c".repeat(64),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into automation_marketplace_previews (
+             id, tenant_id, package_id, package_version, package_fingerprint,
+             status, installation_mode, execution_enabled, preview_steps,
+             permission_review, blockers, created_by, created_at
+           ) values ($1, $2, $3, 1, $4, 'ready', 'preview_only', 0,
+                     $5, $5, $5, $6, $7)`,
+          [
+            id("automation_preview"),
+            tenantA.id,
+            automationPackageB.packageId,
+            "d".repeat(64),
             toJson([]),
             ownerA.id,
             nowIso(),
@@ -1765,9 +1870,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
             [listingB.id],
           )
         ).rowCount,
+        automationUpdated: (
+          await client.query(
+            "update automation_marketplace_packages set title = 'interdit' where id = $1",
+            [automationPackageB.packageId],
+          )
+        ).rowCount,
+        automationPreviewDeleted: (
+          await client.query(
+            "delete from automation_marketplace_previews where package_id = $1",
+            [automationPackageB.packageId],
+          )
+        ).rowCount,
       }),
     );
-    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deleted: 0,
+      automationUpdated: 0,
+      automationPreviewDeleted: 0,
+    });
   });
 });
 

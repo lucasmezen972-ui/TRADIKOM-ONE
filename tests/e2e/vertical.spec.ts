@@ -605,6 +605,42 @@ test("the command center turns a public lead into isolated operational work", as
   await isolatedContext.close();
 });
 
+test("the private automation library removes values and never executes a package", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.goto("/catalogue");
+  const refresh = page.getByRole("button", { name: "Actualiser le catalogue" });
+  if (await refresh.count()) await refresh.click();
+
+  await page.goto("/bibliotheque-automatisations");
+  await expect(
+    page.getByRole("heading", { name: "Bibliothèque d'automatisations" }),
+  ).toBeVisible();
+  const source = page.locator("article").filter({
+    hasText: "Suivi automatique des nouveaux leads site",
+  }).first();
+  const prepare = source.getByRole("button", { name: "Préparer le paquet privé" });
+  if (await prepare.count()) await prepare.click();
+
+  const automationPackage = page.locator("article").filter({
+    hasText: "Modèle privé déclenché par lead.created",
+  });
+  await expect(automationPackage.getByText("valeurs source exclues")).toBeVisible();
+  const preview = automationPackage.getByRole("button", {
+    name: "Prévisualiser le paquet",
+  });
+  if (await preview.count()) await preview.click();
+  await expect(
+    automationPackage.getByText("Aperçu du paquet prêt, exécution désactivée"),
+  ).toBeVisible();
+  await expect(
+    automationPackage.getByRole("button", {
+      name: /Exécuter|Activer|Installer|Publier|Envoyer|Partager publiquement/i,
+    }),
+  ).toHaveCount(0);
+});
+
 async function openDemo(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: /Ouvrir la d.mo/i }).click();

@@ -1330,6 +1330,28 @@ export async function previewPrivateMarketplaceInstallationAction(
   revalidatePath("/catalogue");
 }
 
+export async function createPrivateAutomationPackageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("automation_marketplace.package_create", () =>
+    services.createPrivateAutomationPackage(user.id, tenant.id, {
+      listingId: text(formData, "listingId"),
+    }),
+  );
+  revalidatePath("/bibliotheque-automatisations");
+}
+
+export async function previewPrivateAutomationPackageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("automation_marketplace.package_preview", () =>
+    services.previewPrivateAutomationPackage(user.id, tenant.id, {
+      packageId: text(formData, "packageId"),
+    }),
+  );
+  revalidatePath("/bibliotheque-automatisations");
+}
+
 export async function decideApiChangeRepairAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
