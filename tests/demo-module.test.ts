@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
+import { createServices } from "../src/lib/services";
 import {
   isPublicDemoEnabled,
   seedDemo,
@@ -66,6 +67,50 @@ describe("demo module", () => {
     expect(await countRows(db, "contacts")).toBe(1);
     expect(await countRows(db, "leads")).toBe(1);
     expect(await countRows(db, "form_submissions")).toBe(1);
+  });
+
+  it("never republishes an existing draft when the demo is reopened", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const first = await seedDemo(db);
+    const services = createServices(db);
+    const before = await services.getPublishedSite(first.tenant.slug);
+    const workspace = await services.getWebsiteWorkspace(
+      first.user.id,
+      first.tenant.id,
+    );
+    const hero = workspace.sections.find((section) => section.type === "hero");
+    if (!before || !hero) {
+      throw new Error("Demo website fixture is incomplete.");
+    }
+    const liveTitle = before.sections.find(
+      (section) => section.type === "hero",
+    )?.title;
+    const publicationCount = await countRows(db, "website_publications");
+
+    await services.updateWebsiteSection(first.user.id, first.tenant.id, hero.id, {
+      title: "Brouillon prive de demonstration",
+      body: hero.body,
+      imageUrl: hero.imageUrl,
+      buttonLabel: hero.buttonLabel,
+      buttonHref: hero.buttonHref,
+      enabled: hero.enabled,
+    });
+    await seedDemo(db);
+
+    expect(await countRows(db, "website_publications")).toBe(publicationCount);
+    const after = await services.getPublishedSite(first.tenant.slug);
+    expect(after?.sections.find((section) => section.type === "hero")?.title).toBe(
+      liveTitle,
+    );
+    const draft = await services.getWebsiteWorkspace(
+      first.user.id,
+      first.tenant.id,
+    );
+    expect(draft.website?.status).toBe("draft");
+    expect(draft.sections.find((section) => section.type === "hero")?.title).toBe(
+      "Brouillon prive de demonstration",
+    );
   });
 });
 

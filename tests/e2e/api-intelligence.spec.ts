@@ -166,4 +166,38 @@ test("un administrateur publie un connecteur desactive dans le Connect Store pri
   const storeCard = page.locator("article").filter({ hasText: connectorName });
   await expect(storeCard).toContainText("Sandbox uniquement");
   await expect(storeCard).toContainText("Désactivée");
+
+  await page.goto("/connexions");
+  await expect(page.getByRole("heading", { name: "Plans de connexion" })).toBeVisible();
+  const planningCard = page.locator("article").filter({ hasText: connectorName });
+  await expect(planningCard.getByText("adéquation documentée")).toBeVisible();
+  await expect(planningCard.getByText(/2 opérations · 1 correspondances/)).toBeVisible();
+  await expect(planningCard.getByText("createCustomer · écriture avec approbation")).toBeVisible();
+  await planningCard
+    .getByRole("button", { name: "Préparer le plan sandbox" })
+    .click();
+  await expect(planningCard.getByText("Plan v1 prêt, désactivé")).toBeVisible();
+  await expect(
+    planningCard.getByRole("button", {
+      name: /Activer|Installer|Connecter en production/i,
+    }),
+  ).toHaveCount(0);
+
+  await page.goto("/catalogue");
+  await expect(page.getByRole("heading", { name: "Catalogue privé" })).toBeVisible();
+  await page.getByRole("button", { name: "Actualiser le catalogue" }).click();
+  const marketplaceCard = page.locator("article").filter({ hasText: connectorName });
+  await expect(marketplaceCard.getByText("Connecteur", { exact: true })).toBeVisible();
+  await expect(marketplaceCard).toContainText("Plan connecteur sandbox validé");
+  await marketplaceCard
+    .getByRole("button", { name: "Prévisualiser l'installation" })
+    .click();
+  await expect(
+    marketplaceCard.getByText("Aperçu d'installation prêt, désactivé"),
+  ).toBeVisible();
+  await expect(
+    marketplaceCard.getByRole("button", {
+      name: /Activer|Installer|Exécuter|Publier|Payer/i,
+    }),
+  ).toHaveCount(0);
 });

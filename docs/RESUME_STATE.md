@@ -1,8 +1,72 @@
 # Resume State
 
-Branch: `main`
+Branch: `codex/phase-4-autonomous-platform`
 
-Current stabilization checkpoint:
+Current Phase 4 checkpoint:
+
+- Phase 4 started from green `main` head `49c78d1e4e720a9a0b32596f64c01d3ec8d3b70d`; GitHub Actions run `29309008452` passed the complete suite.
+- The first vertical slice implements the Business Brain foundation under `src/modules/business-brain/`.
+- Tenant-owned memory entries require evidence, confidence and reviewer provenance; revisions are immutable versions and archival preserves history.
+- Composite tenant foreign keys, PostgreSQL RLS, tenant-scoped services, role checks, transactions and audit logs protect every write.
+- The French `Cerveau d'entreprise` page combines manual memory with live Business Twin, CRM, team, workflow, website, connector and API signals without duplicating those source records.
+- Focused module, rollback, restricted-role PostgreSQL and Playwright tests are included.
+- Local typecheck and focused Vitest remained blocked without diagnostics and were stopped after bounded waits. `git diff --check` passed.
+- Business Brain head `1ea4e1e280777ee17fe90fcc6e00c45aef93134d` passed complete GitHub Actions run `29333961495`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+- The Strategic Advisor checkpoint adds evidence-backed deterministic proposals with role, rationale, confidence, expected gain, effort, ROI, risk, direct action, approval state and immutable decision history.
+- Recommendation generation is deduplicated and supersedes stale pending evidence; approval is explicitly planning-only and creates no workflow, connector, activity or domain event.
+- Pending strategic decisions now route correctly from the command center to the French `Conseiller stratégique` page.
+- Local typecheck again hung without diagnostics and was stopped after 30 seconds. GitHub Actions run `29335261251` passed every non-browser step and exposed one ambiguous `ROI` Playwright selector.
+- Test-only fix `4fcb9e2d572ac8c539ee2a862781bcd23ee31b21` passed complete run `29335663755`, including migrations, PostgreSQL RLS, lint, typecheck, unit/integration tests, production build and six Playwright scenarios.
+- The Autonomous Marketing checkpoint adds deterministic email/social drafts grounded only in Business Twin evidence, immutable revisions, explicit submission, approval/rejection reasons and command-center routing.
+- Marketing approval is planning-only: there is no launch, send or publish service or control, and tests assert no workflow, connector, notification, activity or domain-event side effect.
+- Runtime migrations `031`/`032` and SQL mirrors `0025`/`0026` add tenant-owned proposals, evidence, decisions, composite tenant relations and restricted-role RLS.
+- The French `Marketing autonome` workspace displays evidence, risks, content and versions with role-aware empty/error states. Module, PostgreSQL and Playwright coverage is included.
+- Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. Initial run `29337702194` found only an order-dependent evidence assertion; test fix `1c2c8e3113dd5408204775fd7d74c1303a58babf` passed complete run `29338101814`, including migrations, PostgreSQL RLS, lint, typecheck, unit/integration tests, production build and seven Playwright scenarios.
+- Website AI now proposes bounded hero/FAQ copy from Business Twin evidence, requires approval, detects stale human edits and applies only to the existing versioned draft.
+- Applying Website AI never publishes or changes the immutable public snapshot; the existing version restore path provides rollback and a forced-failure test confirms draft/snapshot atomicity.
+- Runtime migrations `033`/`034` and SQL mirrors `0027`/`0028` add tenant-owned proposals, evidence, decisions, indexes, RLS and composite website/section relation enforcement.
+- The French `Mon site` workspace shows rationale, gains, risks, proposed copy, proofs, approval and explicit draft-only application. Module, restricted-role PostgreSQL and Playwright coverage is included.
+- Initial Website AI runs exposed one over-broad unit assertion and then a real demo-seed publication regression. The seed now publishes only when no immutable public snapshot exists, so reopening the demo cannot publish a pending draft.
+- Final Website AI head `ab1c344b78ef074b6e5b2f0ad193c43ff7762118` passed complete GitHub Actions run `29341752287` in 6m55s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and eight Playwright scenarios.
+- Sales AI now produces versioned follow-up scores, indicative closing potential and next-action advice from six bounded CRM evidence signals. It sends no message and generates no quotation, price or discount.
+- Runtime migrations `035`/`036` and SQL mirrors `0029`/`0030` enforce tenant/opportunity relations, one current assessment, tenant-leading indexes and PostgreSQL RLS.
+- Module tests cover deterministic scoring, deduplication, changed-signal versions, closed opportunities, forced rollback and no operational side effects. Restricted-role PostgreSQL tests cover cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers the French workspace.
+- Sales AI head `6a9348048fb0cfbfc463f8d1869114672d5128eb` passed complete GitHub Actions run `29343934205` in 5m46s, including nine Playwright scenarios.
+- Reputation AI now provides a manual/imported tenant review inbox, deterministic French sentiment and risk, evidence-backed response drafts, internal improvement plans and approval/rejection history without external monitoring or publication.
+- Runtime migrations `037`/`038` and SQL mirrors `0031`/`0032` enforce composite tenant relations, tenant-leading indexes and PostgreSQL RLS across reviews, proposals, evidence and decisions.
+- Module tests cover deduplication, deterministic classification, approval boundaries, safe audits, forced rollback and no external/operational side effects. Restricted-role PostgreSQL tests cover cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers import through approved non-publication.
+- CI found and fixed the shared dashboard approval union, the mandatory PostgreSQL approval policy field and a desktop navigation overlap caused by the expanded module list.
+- Reputation AI head `0f783bc5fead15ee72ff3a03eb311898185e81ce` passed complete GitHub Actions run `29347576934` in 7m19s: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and ten Playwright scenarios.
+- Competitor Intelligence now stores manually confirmed legal public observations, strips unsafe URL components and compares only tenant-owned evidence without crawling or protected-content scraping.
+- Deterministic insights require one or two immutable observation citations, classify opportunity/risk/watch, remain planning-only and use tenant-scoped approval/rejection history. No price, campaign, workflow, connector or external contact action is available.
+- Runtime migrations `039`/`040` and SQL mirrors `0033`/`0034` protect competitor profiles, observations, insights, evidence and decisions with composite tenant relations, indexes and PostgreSQL RLS.
+- Module tests cover URL safety, deduplication, versioning, pending supersession, approval, rejection, safe audits, rollback and no side effects. Restricted-role PostgreSQL coverage verifies cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers the complete French workflow.
+- Competitor Intelligence head `86786830a0c36b561a1ce37e543c4520062cab3b` passed complete GitHub Actions run `29350066863` on the first attempt in 7m30s, including eleven Playwright scenarios.
+- Financial AI now uses versioned tenant-declared monthly inputs, current CRM opportunities, Sales AI weighting and relevant Business Brain records without inventing accounting values.
+- Deterministic formulas expose profit, margin, cash flow, indicative runway, CAC, CLV, attributed channel ROI and a clearly defined three-month planning projection. Missing attribution remains unavailable and invalid numeric input is rejected.
+- Runtime migrations `041`/`042` and SQL mirrors `0035`/`0036` add tenant-owned snapshots, assessments, evidence and alerts with composite relations, tenant-leading indexes and RLS. The French `Pilotage financier` workspace has no banking, payment, accounting-write or external action control.
+- Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL cross-tenant and Playwright coverage are included. Head `02eaa2cab1467da8c989c29daf8828cb9ddc382a` passed complete GitHub Actions run `29352582873` in 8m11s, including twelve Playwright scenarios.
+- AI Employee now provisions nine tenant-owned virtual profiles with explicit skills, Business Brain memory domains, permissions, working hours, internal tools, approval limits, KPIs, version history and immutable activity logs.
+- All employee permissions remain read/propose-only, every internal draft requires approval and external communication, production writes, financial transactions and connector activation are prohibited. The French `Équipe IA` workspace exposes no operational execution control.
+- Runtime migrations `043`/`044` and SQL mirrors `0037`/`0038` add composite tenant relations, current-version uniqueness, tenant-leading indexes and PostgreSQL RLS. Provisioning, versioning, rollback, authorization, cross-tenant and no-side-effect tests are included.
+- AI Employee head `2295c99aec1c408b5ae421fab4efdf69267ec872` passed complete GitHub Actions run `29354334456` in 6m35s, including thirteen Playwright scenarios.
+- Universal Connector Platform now derives tenant-visible compatibility and disabled installation plans exclusively from existing private Connect Store entries, approved API claims/operations, tenant mappings and passed mock contract tests.
+- Every plan is sandbox-only, immutable, versioned and idempotent. Revoked evidence or a manifest/operation mismatch blocks planning; industry alignment is reported only when documented.
+- Runtime migrations `045`/`046` and SQL mirrors `0039`/`0040` add composite tenant relations, current-plan uniqueness, tenant-leading indexes and PostgreSQL RLS. The French `Connexions` workspace exposes no installation, credentials or activation control.
+- Universal Connector Platform head `793e35cb5cc1269f6d81e160232cc6445b73fef7` passed complete GitHub Actions run `29357220616` in 7m56s, including thirteen Playwright scenarios.
+- Private App Marketplace now creates tenant-owned, immutable catalog listings from current connector sandbox plans, active workflows and versioned AI employee profiles without duplicating those source engines.
+- Catalog refresh and installation previews are idempotent, transactional and audited. Every listing is private; every preview remains disabled and prohibits external execution, production writes, connector activation, public sharing and payment.
+- Runtime migrations `047`/`048` and SQL mirrors `0041`/`0042` enforce composite source relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL and connector-to-catalog Playwright coverage are included.
+- Private App Marketplace head `8713dee664091b8b9f3680952a64dbb04a4341c8` passed complete GitHub Actions run `29359217460`.
+- Private Automation Marketplace now creates immutable, tenant-private packages from active persisted workflow definitions while stripping every configured input value and condition.
+- Packages preserve bounded structure, provenance, source versions, required configuration, retry/timeout and approval policies. Review-only previews cannot import, execute, send, publish, activate connectors, share publicly or write to production.
+- Runtime migrations `049`/`050` and SQL mirrors `0043`/`0044` enforce composite tenant/source/version relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL and Playwright coverage are included.
+- Private Automation Marketplace head `954a77bc68bb057bcf13fa9bbff2d620b657dd80` passed complete GitHub Actions run `29361102893`.
+- Self Improvement now creates explainable, versioned proposals from failed/unused workflows, degraded/unused connected connectors, normalized CRM duplicate pairs, incomplete SEO metadata and incomplete website actions.
+- Numeric evidence excludes contact and configuration content. Changed signals create immutable versions, disappeared signals resolve transactionally, and accepted decisions remain planning-only with no operational side effect.
+- Runtime migrations `051`/`052` and SQL mirrors `0045`/`0046` enforce composite tenant/version relations, tenant-leading indexes and PostgreSQL RLS. Module, rollback/no-side-effect, authorization, restricted-role PostgreSQL and Playwright coverage are included.
+- Self Improvement head `df82be733680d340ffc9d760b3ce730422b86fdb` passed complete GitHub Actions run `29363352123` with 181 tests.
+- The next bounded Phase 4 slice is Enterprise Observability from current database, worker, queue, delivery, API and connector health signals; unsupported infrastructure metrics must remain explicitly unavailable.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -160,8 +224,11 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Confirm the `main` CI for the Phase 4 entry-check documentation commit.
-2. Keep Phase 4 implementation stopped until a separate authorized prompt starts it from green `main`.
+1. No Phase 4 implementation task remains.
+2. Enterprise Observability is green at `9880457` in complete run `29365672444`: clean/upgrade migrations, backup/restore, lint, typecheck, 183 tests, production build and sixteen Playwright scenarios.
+3. The tenant health read model measures database access, queues, workflows, internal email processing, API checks, connectors and webhook-security signals without returning payloads, messages, recipients, URLs, errors or secrets.
+4. Worker heartbeat, external AI, production SMS/WhatsApp, CPU, memory, storage and provider cost remain explicitly unavailable until trusted telemetry exists.
+5. Preserve the Phase 4 safety boundary: no automatic recommendation execution, public marketplace sharing, payment, production connector activation, unrestricted Internet collection, external send or autonomous publication.
 
 Phase 3 completion history:
 

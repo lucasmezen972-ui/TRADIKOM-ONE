@@ -19,6 +19,16 @@ import type { Role, WebsiteTemplateKey } from "@/lib/types";
 import { isPublicDemoEnabled } from "@/modules/demo";
 import { canonicalEntitySchema } from "@/modules/api-intelligence";
 import { sourceTypeSchema } from "@/modules/software-directory";
+import type {
+  BusinessBrainDomain,
+  BusinessBrainEvidenceType,
+} from "@/modules/business-brain";
+import { reputationSourceSchema } from "@/modules/reputation-ai";
+import {
+  competitorCategorySchema,
+  competitorDirectionSchema,
+  competitorSourceTypeSchema,
+} from "@/modules/competitor-intelligence";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -214,6 +224,446 @@ export async function saveOnboardingAction(formData: FormData) {
   });
   revalidatePath("/", "layout");
   redirect("/mon-site");
+}
+
+export async function createBusinessBrainEntryAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("business_brain.entry_create", () =>
+    services.createBusinessBrainEntry(user.id, tenant.id, {
+      domain: text(formData, "domain") as BusinessBrainDomain,
+      title: text(formData, "title"),
+      summary: text(formData, "summary"),
+      details: text(formData, "details"),
+      confidence: text(formData, "confidence"),
+      sourceType: "manual",
+      sourceRef: text(formData, "sourceRef") || undefined,
+      evidenceType: text(
+        formData,
+        "evidenceType",
+      ) as BusinessBrainEvidenceType,
+      evidenceSummary: text(formData, "evidenceSummary"),
+    }),
+  );
+  revalidatePath("/cerveau-entreprise");
+  redirect("/cerveau-entreprise?ajout=1");
+}
+
+export async function reviseBusinessBrainEntryAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("business_brain.entry_revise", () =>
+    services.reviseBusinessBrainEntry(user.id, tenant.id, {
+      entryId: text(formData, "entryId"),
+      domain: text(formData, "domain") as BusinessBrainDomain,
+      title: text(formData, "title"),
+      summary: text(formData, "summary"),
+      details: text(formData, "details"),
+      confidence: text(formData, "confidence"),
+      sourceType: "manual",
+      sourceRef: text(formData, "sourceRef") || undefined,
+      evidenceType: text(
+        formData,
+        "evidenceType",
+      ) as BusinessBrainEvidenceType,
+      evidenceSummary: text(formData, "evidenceSummary"),
+    }),
+  );
+  revalidatePath("/cerveau-entreprise");
+  redirect("/cerveau-entreprise?revision=1");
+}
+
+export async function archiveBusinessBrainEntryAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("business_brain.entry_archive", () =>
+    services.archiveBusinessBrainEntry(user.id, tenant.id, {
+      entryId: text(formData, "entryId"),
+    }),
+  );
+  revalidatePath("/cerveau-entreprise");
+  redirect("/cerveau-entreprise?archive=1");
+}
+
+export async function generateStrategicRecommendationsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("strategic_advisor.generate", () =>
+    services.generateStrategicRecommendations(user.id, tenant.id),
+  );
+  revalidatePath("/conseiller-strategique");
+  revalidatePath("/aujourdhui");
+  redirect(
+    `/conseiller-strategique?analyse=1&nouvelles=${result.createdIds.length}`,
+  );
+}
+
+export async function decideStrategicRecommendationAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("strategic_advisor.decide", () =>
+    services.decideStrategicRecommendation(user.id, tenant.id, {
+      recommendationId: text(formData, "recommendationId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/conseiller-strategique");
+  revalidatePath("/aujourdhui");
+  redirect(`/conseiller-strategique?decision=${decision}`);
+}
+
+export async function generateMarketingProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("autonomous_marketing.generate", () =>
+    services.generateMarketingCampaignProposals(user.id, tenant.id),
+  );
+  revalidatePath("/marketing");
+  redirect(`/marketing?generation=1&nouvelles=${result.createdIds.length}`);
+}
+
+export async function submitMarketingProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("autonomous_marketing.submit", () =>
+    services.submitMarketingProposalForApproval(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/marketing");
+  revalidatePath("/aujourdhui");
+  redirect("/marketing?soumission=1");
+}
+
+export async function decideMarketingProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("autonomous_marketing.decide", () =>
+    services.decideMarketingProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/marketing");
+  revalidatePath("/aujourdhui");
+  redirect(`/marketing?decision=${decision}`);
+}
+
+export async function reviseMarketingProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("autonomous_marketing.revise", () =>
+    services.reviseMarketingProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      title: text(formData, "title"),
+      subject: text(formData, "subject"),
+      objective: text(formData, "objective"),
+      audience: text(formData, "audience"),
+      content: text(formData, "content"),
+      callToAction: text(formData, "callToAction"),
+      expectedOutcome: text(formData, "expectedOutcome"),
+      riskSummary: text(formData, "riskSummary"),
+      budgetCents: null,
+      startsAt: null,
+      endsAt: null,
+    }),
+  );
+  revalidatePath("/marketing");
+  redirect("/marketing?revision=1");
+}
+
+export async function generateWebsiteAiProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("website_ai.generate", () =>
+    services.generateWebsiteAiProposals(user.id, tenant.id),
+  );
+  revalidatePath("/mon-site");
+  redirect(`/mon-site?analyse=1&nouvelles=${result.createdIds.length}`);
+}
+
+export async function submitWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("website_ai.submit", () =>
+    services.submitWebsiteAiProposalForApproval(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  revalidatePath("/aujourdhui");
+  redirect("/mon-site?iaSoumise=1");
+}
+
+export async function decideWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("website_ai.decide", () =>
+    services.decideWebsiteAiProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  revalidatePath("/aujourdhui");
+  redirect(`/mon-site?iaDecision=${decision}`);
+}
+
+export async function applyWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("website_ai.apply", () =>
+    services.applyApprovedWebsiteAiProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  redirect(`/mon-site?iaApplication=${result.stale ? "stale" : "applied"}`);
+}
+
+export async function generateSalesAiAssessmentsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("sales_ai.generate", () =>
+    services.generateSalesAiAssessments(user.id, tenant.id),
+  );
+  revalidatePath("/assistant-commercial");
+  redirect(
+    `/assistant-commercial?analyse=1&nouvelles=${result.createdIds.length}`,
+  );
+}
+
+export async function createReputationReviewAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const rating = text(formData, "rating");
+  await safeServerAction("reputation.review_import", () =>
+    services.createReputationReview(user.id, tenant.id, {
+      source: reputationSourceSchema.parse(text(formData, "source")),
+      externalRef: text(formData, "externalRef") || undefined,
+      reviewerAlias: text(formData, "reviewerAlias") || undefined,
+      rating: rating ? Number(rating) : null,
+      reviewText: text(formData, "reviewText"),
+      occurredAt: text(formData, "occurredAt"),
+    }),
+  );
+  revalidatePath("/reputation");
+  redirect("/reputation?avisImporte=1");
+}
+
+export async function generateReputationProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("reputation.generate", () =>
+    services.generateReputationProposals(user.id, tenant.id),
+  );
+  revalidatePath("/reputation");
+  redirect(`/reputation?analyse=1&nouvelles=${result.createdIds.length}`);
+}
+
+export async function submitReputationProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("reputation.submit", () =>
+    services.submitReputationProposalForApproval(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/reputation");
+  revalidatePath("/aujourdhui");
+  redirect("/reputation?soumise=1");
+}
+
+export async function decideReputationProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("reputation.decide", () =>
+    services.decideReputationProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/reputation");
+  revalidatePath("/aujourdhui");
+  redirect(`/reputation?decision=${decision}`);
+}
+
+export async function createCompetitorProfileAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("competitor.profile_create", () =>
+    services.createCompetitorProfile(user.id, tenant.id, {
+      name: text(formData, "name"),
+      websiteUrl: text(formData, "websiteUrl") || undefined,
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  redirect("/veille-concurrentielle?concurrentCree=1");
+}
+
+export async function createCompetitorObservationAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("competitor.observation_create", () =>
+    services.createCompetitorObservation(user.id, tenant.id, {
+      competitorId: text(formData, "competitorId"),
+      category: competitorCategorySchema.parse(text(formData, "category")),
+      direction: competitorDirectionSchema.parse(text(formData, "direction")),
+      sourceType: competitorSourceTypeSchema.parse(text(formData, "sourceType")),
+      sourceUrl: text(formData, "sourceUrl"),
+      title: text(formData, "title"),
+      summary: text(formData, "summary"),
+      observedValue: text(formData, "observedValue") || undefined,
+      observedAt: text(formData, "observedAt"),
+      publicSourceConfirmed: formData.get("publicSourceConfirmed") === "on",
+      protectedContentExcluded: formData.get("protectedContentExcluded") === "on",
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  redirect("/veille-concurrentielle?observationCreee=1");
+}
+
+export async function generateCompetitorInsightsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("competitor.generate", () =>
+    services.generateCompetitorInsights(user.id, tenant.id),
+  );
+  revalidatePath("/veille-concurrentielle");
+  redirect(
+    `/veille-concurrentielle?analyse=1&nouvelles=${result.createdIds.length}`,
+  );
+}
+
+export async function submitCompetitorInsightAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("competitor.submit", () =>
+    services.submitCompetitorInsightForApproval(user.id, tenant.id, {
+      insightId: text(formData, "insightId"),
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  revalidatePath("/aujourdhui");
+  redirect("/veille-concurrentielle?soumise=1");
+}
+
+export async function decideCompetitorInsightAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("competitor.decide", () =>
+    services.decideCompetitorInsight(user.id, tenant.id, {
+      insightId: text(formData, "insightId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  revalidatePath("/aujourdhui");
+  redirect(`/veille-concurrentielle?decision=${decision}`);
+}
+
+export async function recordFinancialInputSnapshotAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("financial_ai.input_record", () =>
+    services.recordFinancialInputSnapshot(user.id, tenant.id, {
+      period: text(formData, "period"),
+      monthlyRevenueCents: strictMoneyToCents(text(formData, "monthlyRevenue")),
+      operatingCostsCents: strictMoneyToCents(text(formData, "operatingCosts")),
+      cashBalanceCents: strictMoneyToCents(text(formData, "cashBalance")),
+      cashInflowsCents: strictMoneyToCents(text(formData, "cashInflows")),
+      cashOutflowsCents: strictMoneyToCents(text(formData, "cashOutflows")),
+      receivablesCents: strictMoneyToCents(text(formData, "receivables")),
+      payablesCents: strictMoneyToCents(text(formData, "payables")),
+      marketingSpendCents: strictMoneyToCents(text(formData, "marketingSpend")),
+      salesSpendCents: strictMoneyToCents(text(formData, "salesSpend")),
+      websiteSpendCents: strictMoneyToCents(text(formData, "websiteSpend")),
+      automationSpendCents: strictMoneyToCents(text(formData, "automationSpend")),
+      newCustomers: integerValue(formData, "newCustomers"),
+      activeCustomers: integerValue(formData, "activeCustomers"),
+      averageLifetimeMonths: optionalIntegerValue(
+        formData,
+        "averageLifetimeMonths",
+      ),
+      marketingAttributedRevenueCents: optionalMoneyToCents(
+        text(formData, "marketingAttributedRevenue"),
+      ),
+      salesAttributedRevenueCents: optionalMoneyToCents(
+        text(formData, "salesAttributedRevenue"),
+      ),
+      websiteAttributedRevenueCents: optionalMoneyToCents(
+        text(formData, "websiteAttributedRevenue"),
+      ),
+      automationSavingsCents: optionalMoneyToCents(
+        text(formData, "automationSavings"),
+      ),
+      evidenceSummary: text(formData, "evidenceSummary"),
+    }),
+  );
+  revalidatePath("/pilotage-financier");
+  redirect("/pilotage-financier?donnees=1");
+}
+
+export async function generateFinancialAssessmentAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("financial_ai.generate", () =>
+    services.generateFinancialAssessment(user.id, tenant.id),
+  );
+  revalidatePath("/pilotage-financier");
+  redirect(`/pilotage-financier?analyse=1&nouvelle=${result.created ? "1" : "0"}`);
+}
+
+export async function initializeAiEmployeeTeamAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("ai_employee.initialize", () =>
+    services.initializeAiEmployeeTeam(user.id, tenant.id),
+  );
+  revalidatePath("/equipe-ia");
+  redirect(`/equipe-ia?initialisee=1&nouveaux=${result.createdIds.length}`);
+}
+
+export async function reviseAiEmployeeProfileAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const workingDays = formData
+    .getAll("workingDays")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => Number.parseInt(value, 10));
+  await safeServerAction("ai_employee.revise", () =>
+    services.reviseAiEmployeeProfile(user.id, tenant.id, {
+      employeeId: text(formData, "employeeId"),
+      displayName: text(formData, "displayName"),
+      purpose: text(formData, "purpose"),
+      status: text(formData, "status") === "paused" ? "paused" : "enabled",
+      workingDays,
+      workdayStart: text(formData, "workdayStart"),
+      workdayEnd: text(formData, "workdayEnd"),
+    }),
+  );
+  revalidatePath("/equipe-ia");
+  redirect("/equipe-ia?profil=1");
 }
 
 export async function updateSectionAction(formData: FormData) {
@@ -845,6 +1295,85 @@ export async function decideApiConnectorApprovalAction(formData: FormData) {
   revalidatePath("/intelligence-api");
 }
 
+export async function prepareConnectorInstallationPlanAction(
+  formData: FormData,
+) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("universal_connector.installation_plan_prepare", () =>
+    services.prepareConnectorInstallationPlan(user.id, tenant.id, {
+      storeEntryId: text(formData, "storeEntryId"),
+    }),
+  );
+  revalidatePath("/connexions");
+}
+
+export async function refreshPrivateAppMarketplaceAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("app_marketplace.private_catalog_refresh", () =>
+    services.refreshPrivateAppMarketplace(user.id, tenant.id),
+  );
+  revalidatePath("/catalogue");
+}
+
+export async function previewPrivateMarketplaceInstallationAction(
+  formData: FormData,
+) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("app_marketplace.installation_preview", () =>
+    services.previewPrivateMarketplaceInstallation(user.id, tenant.id, {
+      listingId: text(formData, "listingId"),
+    }),
+  );
+  revalidatePath("/catalogue");
+}
+
+export async function createPrivateAutomationPackageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("automation_marketplace.package_create", () =>
+    services.createPrivateAutomationPackage(user.id, tenant.id, {
+      listingId: text(formData, "listingId"),
+    }),
+  );
+  revalidatePath("/bibliotheque-automatisations");
+}
+
+export async function previewPrivateAutomationPackageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("automation_marketplace.package_preview", () =>
+    services.previewPrivateAutomationPackage(user.id, tenant.id, {
+      packageId: text(formData, "packageId"),
+    }),
+  );
+  revalidatePath("/bibliotheque-automatisations");
+}
+
+export async function generateSelfImprovementProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("self_improvement.generate", () =>
+    services.generateSelfImprovementProposals(user.id, tenant.id),
+  );
+  revalidatePath("/ameliorations");
+}
+
+export async function decideSelfImprovementProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("self_improvement.decide", () =>
+    services.decideSelfImprovementProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision: text(formData, "decision") as "accepted" | "dismissed",
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/ameliorations");
+}
+
 export async function decideApiChangeRepairAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
@@ -900,6 +1429,25 @@ function list(formData: FormData, key: string) {
 function moneyToCents(value: string) {
   const amount = Number.parseFloat(value.replace(",", "."));
   return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+}
+
+function optionalMoneyToCents(value: string) {
+  return value ? strictMoneyToCents(value) : null;
+}
+
+function strictMoneyToCents(value: string) {
+  const amount = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(amount) ? Math.round(amount * 100) : Number.NaN;
+}
+
+function integerValue(formData: FormData, key: string) {
+  const value = Number.parseInt(text(formData, key), 10);
+  return Number.isFinite(value) ? value : Number.NaN;
+}
+
+function optionalIntegerValue(formData: FormData, key: string) {
+  const raw = text(formData, key);
+  return raw ? integerValue(formData, key) : null;
 }
 
 function mergeFieldSource(

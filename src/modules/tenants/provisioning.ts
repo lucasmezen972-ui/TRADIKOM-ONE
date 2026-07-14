@@ -13,6 +13,7 @@ import {
   insertProvisionedWorkflow,
 } from "@/modules/tenants/provisioning-repository";
 import { leadFollowUpWorkflow } from "@/modules/workflows/engine";
+import { provisionDefaultAiEmployees } from "@/modules/ai-employees/provisioning";
 
 const defaultPipelineStages = [
   "Nouveau contact",
@@ -84,4 +85,6 @@ export async function createDefaultTenantResources(
     endpointId: webhookEndpointId,
     secret: generateWebhookEndpointSecretValue(),
   });
+
+  await provisionDefaultAiEmployees(db, tenantId);
 }

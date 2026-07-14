@@ -280,10 +280,26 @@ export async function listPendingApprovalActions(
   }
   const result = await db.query<{
     id: string;
-    approval_type: "workflow" | "connector";
+    approval_type:
+      | "workflow"
+      | "connector"
+      | "strategic"
+      | "marketing"
+      | "website_ai"
+      | "reputation"
+      | "competitor";
     created_at: string;
   }>(
-    `select id, 'workflow' as approval_type, created_at
+    `select id,
+       case
+         when target_type = 'strategic_recommendation' then 'strategic'
+         when target_type = 'marketing_campaign_proposal' then 'marketing'
+         when target_type = 'website_ai_proposal' then 'website_ai'
+         when target_type = 'reputation_response' then 'reputation'
+         when target_type = 'competitor_insight' then 'competitor'
+         else 'workflow'
+       end as approval_type,
+       created_at
      from approvals where tenant_id = $1 and status = 'pending'
      union all
      select id, 'connector' as approval_type, created_at
@@ -297,13 +313,33 @@ export async function listPendingApprovalActions(
     title:
       row.approval_type === "workflow"
         ? "Approbation d'automatisation"
-        : "Approbation de connecteur",
+        : row.approval_type === "strategic"
+          ? "Décision stratégique"
+          : row.approval_type === "marketing"
+            ? "Validation marketing"
+            : row.approval_type === "website_ai"
+              ? "Validation de brouillon web"
+              : row.approval_type === "reputation"
+                ? "Validation d'une réponse à un avis"
+                : row.approval_type === "competitor"
+                  ? "Décision de veille concurrentielle"
+          : "Approbation de connecteur",
     explanation: "Une décision autorisée est en attente.",
     actionLabel: "Examiner",
     actionHref:
       row.approval_type === "workflow"
         ? "/automatisations"
-        : "/intelligence-api",
+        : row.approval_type === "strategic"
+          ? "/conseiller-strategique"
+          : row.approval_type === "marketing"
+            ? "/marketing"
+            : row.approval_type === "website_ai"
+              ? "/mon-site"
+              : row.approval_type === "reputation"
+                ? "/reputation"
+                : row.approval_type === "competitor"
+                  ? "/veille-concurrentielle"
+          : "/intelligence-api",
     severity: "warning" as const,
     approvalType: row.approval_type,
   }));

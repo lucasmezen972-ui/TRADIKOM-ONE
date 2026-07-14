@@ -2,14 +2,26 @@ import Link from "next/link";
 import {
   Activity,
   BarChart3,
+  BadgeEuro,
+  Binoculars,
+  BrainCircuit,
   Bot,
   Building2,
   Contact,
   Gauge,
   Globe2,
+  HeartPulse,
+  Lightbulb,
+  LibraryBig,
+  Megaphone,
+  PackageSearch,
   ScanSearch,
   PlugZap,
   Settings,
+  Sparkles,
+  Star,
+  WalletCards,
+  UsersRound,
   Workflow,
 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
@@ -25,12 +37,32 @@ type AppShellProps = {
 
 const navItems = [
   { href: "/aujourdhui", label: "Aujourd'hui", icon: Gauge },
+  {
+    href: "/cerveau-entreprise",
+    label: "Cerveau d'entreprise",
+    icon: BrainCircuit,
+  },
+  { href: "/conseiller-strategique", label: "Conseiller", icon: Lightbulb },
+  { href: "/marketing", label: "Marketing", icon: Megaphone },
   { href: "/mon-activite", label: "Mon activité", icon: Activity },
   { href: "/contacts", label: "Contacts", icon: Contact },
   { href: "/opportunites", label: "Opportunités", icon: BarChart3 },
+  { href: "/assistant-commercial", label: "Assistant commercial", icon: BadgeEuro },
+  { href: "/reputation", label: "Réputation", icon: Star },
+  { href: "/veille-concurrentielle", label: "Veille concurrents", icon: Binoculars },
+  { href: "/pilotage-financier", label: "Pilotage financier", icon: WalletCards },
+  { href: "/equipe-ia", label: "Équipe IA", icon: UsersRound },
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },
+  { href: "/catalogue", label: "Catalogue privé", icon: PackageSearch },
+  {
+    href: "/bibliotheque-automatisations",
+    label: "Bibliothèque",
+    icon: LibraryBig,
+  },
+  { href: "/ameliorations", label: "Améliorations", icon: Sparkles },
+  { href: "/sante-operationnelle", label: "Santé", icon: HeartPulse },
   { href: "/resultats", label: "Résultats", icon: Bot },
   { href: "/parametres", label: "Paramètres", icon: Settings },
 ];
@@ -50,7 +82,7 @@ export function AppShell({
     : navItems;
   return (
     <div className="min-h-screen bg-[#08111f] text-slate-100">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-[#08111f] p-5 lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-white/10 bg-[#08111f] p-5 lg:flex">
         <Link href="/aujourdhui" className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-lg bg-[#19c6b7] text-[#08111f]">
             <Building2 size={20} aria-hidden />
@@ -84,7 +116,7 @@ export function AppShell({
           </button>
         </form>
 
-        <nav className="mt-8 grid gap-1">
+        <nav className="mt-8 grid min-h-0 flex-1 content-start gap-1 overflow-y-auto pr-1">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -100,7 +132,7 @@ export function AppShell({
           })}
         </nav>
 
-        <form action={logoutAction} className="absolute bottom-5 left-5 right-5">
+        <form action={logoutAction} className="mt-4 shrink-0 border-t border-white/10 pt-4">
           <p className="mb-3 text-sm text-white/55">{userName}</p>
           <button className="w-full rounded-md border border-white/10 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10">
             Déconnexion

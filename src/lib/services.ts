@@ -53,6 +53,25 @@ import {
   onboardingSchema,
   saveBusinessTwin,
 } from "@/modules/business-twin";
+import {
+  archiveBusinessBrainEntry,
+  archiveBusinessBrainEntrySchema,
+  createBusinessBrainEntry,
+  createBusinessBrainEntrySchema,
+  getBusinessBrain,
+  reviseBusinessBrainEntry,
+  reviseBusinessBrainEntrySchema,
+} from "@/modules/business-brain";
+import {
+  decideMarketingProposal,
+  generateMarketingCampaignProposals,
+  getAutonomousMarketing,
+  marketingProposalDecisionSchema,
+  reviseMarketingProposal,
+  reviseMarketingProposalSchema,
+  submitMarketingProposalForApproval,
+  submitMarketingProposalSchema,
+} from "@/modules/autonomous-marketing";
 import { getAuditLogs } from "@/modules/audit";
 import { getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
@@ -150,7 +169,84 @@ import {
   submitConnectorForSandboxApproval,
   type MockContractExecutor,
 } from "@/modules/connector-copilot";
+import {
+  getUniversalConnectorWorkspace,
+  prepareConnectorInstallationPlan,
+} from "@/modules/universal-connectors";
 import { isPlatformAdmin } from "@/modules/platform-admin";
+import {
+  decideStrategicRecommendation,
+  generateStrategicRecommendations,
+  getStrategicAdvisor,
+  strategicRecommendationDecisionSchema,
+} from "@/modules/strategic-advisor";
+import {
+  applyApprovedWebsiteAiProposal,
+  decideWebsiteAiProposal,
+  generateWebsiteAiProposals,
+  getWebsiteAiWorkspace,
+  submitWebsiteAiProposalForApproval,
+  websiteAiProposalDecisionSchema,
+  websiteAiProposalReferenceSchema,
+} from "@/modules/website-ai";
+import {
+  generateSalesAiAssessments,
+  getSalesAiWorkspace,
+} from "@/modules/sales-ai";
+import {
+  createReputationReview,
+  decideReputationProposal,
+  generateReputationProposals,
+  getReputationWorkspace,
+  reputationProposalDecisionSchema,
+  reputationProposalReferenceSchema,
+  reputationReviewSchema,
+  submitReputationProposalForApproval,
+} from "@/modules/reputation-ai";
+import {
+  competitorInsightDecisionSchema,
+  competitorInsightReferenceSchema,
+  competitorObservationSchema,
+  competitorProfileSchema,
+  createCompetitorObservation,
+  createCompetitorProfile,
+  decideCompetitorInsight,
+  generateCompetitorInsights,
+  getCompetitorIntelligenceWorkspace,
+  submitCompetitorInsightForApproval,
+} from "@/modules/competitor-intelligence";
+import {
+  financialInputSnapshotSchema,
+  generateFinancialAssessment,
+  getFinancialAiWorkspace,
+  recordFinancialInputSnapshot,
+} from "@/modules/financial-ai";
+import {
+  getAiEmployeeWorkspace,
+  initializeAiEmployeeTeam,
+  reviseAiEmployeeProfile,
+  reviseAiEmployeeProfileSchema,
+} from "@/modules/ai-employees";
+import {
+  getPrivateAppMarketplace,
+  previewPrivateMarketplaceInstallation,
+  previewMarketplaceInstallationSchema,
+  refreshPrivateAppMarketplace,
+} from "@/modules/app-marketplace";
+import {
+  createAutomationPackageSchema,
+  createPrivateAutomationPackage,
+  getAutomationMarketplace,
+  previewAutomationPackageSchema,
+  previewPrivateAutomationPackage,
+} from "@/modules/automation-marketplace";
+import {
+  decideSelfImprovementProposal,
+  generateSelfImprovementProposals,
+  getSelfImprovementWorkspace,
+  selfImprovementDecisionSchema,
+} from "@/modules/self-improvement";
+import { getEnterpriseObservability } from "@/modules/enterprise-observability";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -227,6 +323,140 @@ export function createServices(
     ) => saveBusinessTwin(db, userId, tenantId, input),
     getOnboarding: (userId: string, tenantId: string) =>
       getBusinessTwin(db, userId, tenantId),
+    getBusinessBrain: (userId: string, tenantId: string) =>
+      getBusinessBrain(db, userId, tenantId),
+    createBusinessBrainEntry: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof createBusinessBrainEntrySchema>,
+    ) => createBusinessBrainEntry(db, userId, tenantId, input),
+    reviseBusinessBrainEntry: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseBusinessBrainEntrySchema>,
+    ) => reviseBusinessBrainEntry(db, userId, tenantId, input),
+    archiveBusinessBrainEntry: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof archiveBusinessBrainEntrySchema>,
+    ) => archiveBusinessBrainEntry(db, userId, tenantId, input),
+    getStrategicAdvisor: (userId: string, tenantId: string) =>
+      getStrategicAdvisor(db, userId, tenantId),
+    generateStrategicRecommendations: (userId: string, tenantId: string) =>
+      generateStrategicRecommendations(db, userId, tenantId),
+    decideStrategicRecommendation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof strategicRecommendationDecisionSchema>,
+    ) => decideStrategicRecommendation(db, userId, tenantId, input),
+    getAutonomousMarketing: (userId: string, tenantId: string) =>
+      getAutonomousMarketing(db, userId, tenantId),
+    generateMarketingCampaignProposals: (userId: string, tenantId: string) =>
+      generateMarketingCampaignProposals(db, userId, tenantId),
+    submitMarketingProposalForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof submitMarketingProposalSchema>,
+    ) => submitMarketingProposalForApproval(db, userId, tenantId, input),
+    decideMarketingProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof marketingProposalDecisionSchema>,
+    ) => decideMarketingProposal(db, userId, tenantId, input),
+    reviseMarketingProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseMarketingProposalSchema>,
+    ) => reviseMarketingProposal(db, userId, tenantId, input),
+    getWebsiteAiWorkspace: (userId: string, tenantId: string) =>
+      getWebsiteAiWorkspace(db, userId, tenantId),
+    generateWebsiteAiProposals: (userId: string, tenantId: string) =>
+      generateWebsiteAiProposals(db, userId, tenantId),
+    submitWebsiteAiProposalForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof websiteAiProposalReferenceSchema>,
+    ) => submitWebsiteAiProposalForApproval(db, userId, tenantId, input),
+    decideWebsiteAiProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof websiteAiProposalDecisionSchema>,
+    ) => decideWebsiteAiProposal(db, userId, tenantId, input),
+    applyApprovedWebsiteAiProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof websiteAiProposalReferenceSchema>,
+    ) => applyApprovedWebsiteAiProposal(db, userId, tenantId, input),
+    getSalesAiWorkspace: (userId: string, tenantId: string) =>
+      getSalesAiWorkspace(db, userId, tenantId),
+    generateSalesAiAssessments: (userId: string, tenantId: string) =>
+      generateSalesAiAssessments(db, userId, tenantId),
+    getReputationWorkspace: (userId: string, tenantId: string) =>
+      getReputationWorkspace(db, userId, tenantId),
+    createReputationReview: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reputationReviewSchema>,
+    ) => createReputationReview(db, userId, tenantId, input),
+    generateReputationProposals: (userId: string, tenantId: string) =>
+      generateReputationProposals(db, userId, tenantId),
+    submitReputationProposalForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reputationProposalReferenceSchema>,
+    ) => submitReputationProposalForApproval(db, userId, tenantId, input),
+    decideReputationProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reputationProposalDecisionSchema>,
+    ) => decideReputationProposal(db, userId, tenantId, input),
+    getCompetitorIntelligenceWorkspace: (userId: string, tenantId: string) =>
+      getCompetitorIntelligenceWorkspace(db, userId, tenantId),
+    createCompetitorProfile: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorProfileSchema>,
+    ) => createCompetitorProfile(db, userId, tenantId, input),
+    createCompetitorObservation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorObservationSchema>,
+    ) => createCompetitorObservation(db, userId, tenantId, input),
+    generateCompetitorInsights: (userId: string, tenantId: string) =>
+      generateCompetitorInsights(db, userId, tenantId),
+    submitCompetitorInsightForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorInsightReferenceSchema>,
+    ) => submitCompetitorInsightForApproval(db, userId, tenantId, input),
+    decideCompetitorInsight: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorInsightDecisionSchema>,
+    ) => decideCompetitorInsight(db, userId, tenantId, input),
+    getFinancialAiWorkspace: (userId: string, tenantId: string) =>
+      getFinancialAiWorkspace(db, userId, tenantId),
+    recordFinancialInputSnapshot: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof financialInputSnapshotSchema>,
+    ) => recordFinancialInputSnapshot(db, userId, tenantId, input),
+    generateFinancialAssessment: (userId: string, tenantId: string) =>
+      generateFinancialAssessment(db, userId, tenantId),
+    getAiEmployeeWorkspace: (userId: string, tenantId: string) =>
+      getAiEmployeeWorkspace(db, userId, tenantId),
+    initializeAiEmployeeTeam: (userId: string, tenantId: string) =>
+      initializeAiEmployeeTeam(
+        db,
+        userId,
+        tenantId,
+        process.env.BUSINESS_TIME_ZONE,
+      ),
+    reviseAiEmployeeProfile: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseAiEmployeeProfileSchema>,
+    ) => reviseAiEmployeeProfile(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (
@@ -600,5 +830,44 @@ export function createServices(
     ) => decideConnectorSandboxApproval(db, userId, tenantId, input),
     getPrivateConnectStore: (userId: string, tenantId: string) =>
       getPrivateConnectStore(db, userId, tenantId),
+    getUniversalConnectorWorkspace: (userId: string, tenantId: string) =>
+      getUniversalConnectorWorkspace(db, userId, tenantId),
+    prepareConnectorInstallationPlan: (
+      userId: string,
+      tenantId: string,
+      input: { storeEntryId: string },
+    ) => prepareConnectorInstallationPlan(db, userId, tenantId, input),
+    getPrivateAppMarketplace: (userId: string, tenantId: string) =>
+      getPrivateAppMarketplace(db, userId, tenantId),
+    refreshPrivateAppMarketplace: (userId: string, tenantId: string) =>
+      refreshPrivateAppMarketplace(db, userId, tenantId),
+    previewPrivateMarketplaceInstallation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof previewMarketplaceInstallationSchema>,
+    ) => previewPrivateMarketplaceInstallation(db, userId, tenantId, input),
+    getAutomationMarketplace: (userId: string, tenantId: string) =>
+      getAutomationMarketplace(db, userId, tenantId),
+    createPrivateAutomationPackage: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof createAutomationPackageSchema>,
+    ) => createPrivateAutomationPackage(db, userId, tenantId, input),
+    previewPrivateAutomationPackage: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof previewAutomationPackageSchema>,
+    ) => previewPrivateAutomationPackage(db, userId, tenantId, input),
+    getSelfImprovementWorkspace: (userId: string, tenantId: string) =>
+      getSelfImprovementWorkspace(db, userId, tenantId),
+    generateSelfImprovementProposals: (userId: string, tenantId: string) =>
+      generateSelfImprovementProposals(db, userId, tenantId),
+    decideSelfImprovementProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof selfImprovementDecisionSchema>,
+    ) => decideSelfImprovementProposal(db, userId, tenantId, input),
+    getEnterpriseObservability: (userId: string, tenantId: string) =>
+      getEnterpriseObservability(db, userId, tenantId),
   };
 }

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { Pool, type PoolClient } from "pg";
 import { pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
+import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import { id, nowIso, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
@@ -138,6 +139,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "select email from contacts order by email",
     );
     expect(noContext.rows).toEqual([]);
+    const noConnectorPlans = await restrictedPool.query<{ id: string }>(
+      "select id from connector_installation_plans order by id",
+    );
+    expect(noConnectorPlans.rows).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -187,6 +192,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
           id: string;
           tenant_id: string;
         }>("select id, tenant_id from connector_repair_proposals order by id");
+        const connectorPlans = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from connector_installation_plans order by id");
 
         return {
           tenants: tenants.rows,
@@ -197,6 +206,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
           connectorProposals: connectorProposals.rows,
           apiChangeImpacts: apiChangeImpacts.rows,
           connectorRepairs: connectorRepairs.rows,
+          connectorPlans: connectorPlans.rows,
         };
       },
     );
@@ -215,6 +225,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ],
       connectorRepairs: [
         { id: apiIntelligence.repairAId, tenant_id: tenantA.id },
+      ],
+      connectorPlans: [
+        { id: apiIntelligence.planAId, tenant_id: tenantA.id },
       ],
     });
 
@@ -372,6 +385,347 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ),
       ),
     ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into connector_installation_plans (
+             id, tenant_id, store_entry_id, connector_proposal_id, fingerprint,
+             record_status, enabled, installation_mode, tenant_industry,
+             industry_match, capabilities_snapshot, evidence_summary, blockers,
+             version, supersedes_id, created_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, $5, 'current', 0, 'sandbox_only',
+             'Garage automobile', 'aligned', $6, $7, $8, 2, null, $9, $10, $10
+           )`,
+          [
+            id("connector_plan"),
+            tenantA.id,
+            apiIntelligence.storeBId,
+            apiIntelligence.proposalBId,
+            "c".repeat(64),
+            toJson([]),
+            toJson({ contractStatus: "passed" }),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenConnectorPlanWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update connector_installation_plans set tenant_industry = 'interdit' where id = $1",
+            [apiIntelligence.planBId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query(
+            "delete from connector_installation_plans where id = $1",
+            [apiIntelligence.planBId],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenConnectorPlanWrites).toEqual({ updated: 0, deleted: 0 });
+  });
+
+  it("isolates Business Brain entries and their evidence", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Brain RLS Owner A",
+      email: uniqueEmail("brain-rls-owner-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Brain RLS Owner B",
+      email: uniqueEmail("brain-rls-owner-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Brain RLS A ${randomUUID()}`,
+      category: "Services",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Brain RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const entryA = await services.createBusinessBrainEntry(
+      ownerA.id,
+      tenantA.id,
+      businessBrainFixture("Tenant A"),
+    );
+    const entryB = await services.createBusinessBrainEntry(
+      ownerB.id,
+      tenantB.id,
+      businessBrainFixture("Tenant B"),
+    );
+    const strategicA = await services.generateStrategicRecommendations(
+      ownerA.id,
+      tenantA.id,
+    );
+    const strategicB = await services.generateStrategicRecommendations(
+      ownerB.id,
+      tenantB.id,
+    );
+    const recommendationA = strategicA.createdIds[0];
+    const recommendationB = strategicB.createdIds[0];
+    if (!recommendationA || !recommendationB) {
+      throw new Error("Strategic RLS fixtures are missing.");
+    }
+    await services.saveOnboarding(ownerA.id, tenantA.id, defaultGarageOnboarding());
+    await services.saveOnboarding(ownerB.id, tenantB.id, defaultGarageOnboarding());
+    const marketingA = await services.generateMarketingCampaignProposals(
+      ownerA.id,
+      tenantA.id,
+    );
+    const marketingB = await services.generateMarketingCampaignProposals(
+      ownerB.id,
+      tenantB.id,
+    );
+    const proposalB = marketingB.createdIds[0];
+    if (marketingA.createdIds.length === 0 || !proposalB) {
+      throw new Error("Marketing RLS fixtures are missing.");
+    }
+    const websiteAiA = await services.generateWebsiteAiProposals(ownerA.id, tenantA.id);
+    const websiteAiB = await services.generateWebsiteAiProposals(ownerB.id, tenantB.id);
+    const websiteAiProposalB = websiteAiB.createdIds[0];
+    const websiteB = await services.getWebsiteWorkspace(ownerB.id, tenantB.id);
+    const websiteBId = websiteB.website?.id;
+    const websiteBSectionId = websiteB.sections[0]?.id;
+    if (
+      websiteAiA.createdIds.length === 0 ||
+      !websiteAiProposalB ||
+      !websiteBId ||
+      !websiteBSectionId
+    ) {
+      throw new Error("Website AI RLS fixtures are missing.");
+    }
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    const noContext = await restrictedPool.query<{ id: string }>(
+      "select id from business_brain_entries order by id",
+    );
+    expect(noContext.rows).toEqual([]);
+    const noMarketingContext = await restrictedPool.query<{ id: string }>(
+      "select id from marketing_campaign_proposals order by id",
+    );
+    expect(noMarketingContext.rows).toEqual([]);
+    const noWebsiteAiContext = await restrictedPool.query<{ id: string }>(
+      "select id from website_ai_proposals order by id",
+    );
+    expect(noWebsiteAiContext.rows).toEqual([]);
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => {
+        const entries = await client.query<{ id: string; tenant_id: string }>(
+          "select id, tenant_id from business_brain_entries order by id",
+        );
+        const evidence = await client.query<{
+          entry_id: string;
+          tenant_id: string;
+        }>("select entry_id, tenant_id from business_brain_evidence order by id");
+        const recommendations = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from strategic_recommendations order by id");
+        const strategicEvidence = await client.query<{
+          recommendation_id: string;
+          tenant_id: string;
+        }>(
+          "select recommendation_id, tenant_id from strategic_recommendation_evidence order by id",
+        );
+        const marketing = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from marketing_campaign_proposals order by id");
+        const marketingEvidence = await client.query<{
+          proposal_id: string;
+          tenant_id: string;
+        }>(
+          "select proposal_id, tenant_id from marketing_campaign_evidence order by proposal_id, id",
+        );
+        const websiteAi = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from website_ai_proposals order by id");
+        const websiteAiEvidence = await client.query<{
+          proposal_id: string;
+          tenant_id: string;
+        }>(
+          "select proposal_id, tenant_id from website_ai_evidence order by proposal_id, id",
+        );
+        return {
+          entries: entries.rows,
+          evidence: evidence.rows,
+          recommendations: recommendations.rows,
+          strategicEvidence: strategicEvidence.rows,
+          marketing: marketing.rows,
+          marketingEvidence: marketingEvidence.rows,
+          websiteAi: websiteAi.rows,
+          websiteAiEvidence: websiteAiEvidence.rows,
+        };
+      },
+    );
+    expect(tenantAView).toEqual({
+      entries: [{ id: entryA, tenant_id: tenantA.id }],
+      evidence: [{ entry_id: entryA, tenant_id: tenantA.id }],
+      recommendations: [{ id: recommendationA, tenant_id: tenantA.id }],
+      strategicEvidence: [
+        { recommendation_id: recommendationA, tenant_id: tenantA.id },
+      ],
+      marketing: marketingA.createdIds
+        .map((id) => ({ id, tenant_id: tenantA.id }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      marketingEvidence: marketingA.createdIds
+        .flatMap((proposalId) => [
+          { proposal_id: proposalId, tenant_id: tenantA.id },
+          { proposal_id: proposalId, tenant_id: tenantA.id },
+          { proposal_id: proposalId, tenant_id: tenantA.id },
+        ])
+        .sort((left, right) => left.proposal_id.localeCompare(right.proposal_id)),
+      websiteAi: websiteAiA.createdIds
+        .map((id) => ({ id, tenant_id: tenantA.id }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      websiteAiEvidence: websiteAiA.createdIds
+        .flatMap((proposalId, index) =>
+          Array.from({ length: index === 0 ? 3 : 2 }, () => ({
+            proposal_id: proposalId,
+            tenant_id: tenantA.id,
+          })),
+        )
+        .sort((left, right) => left.proposal_id.localeCompare(right.proposal_id)),
+    });
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into business_brain_evidence (
+             id, tenant_id, entry_id, evidence_type, source_ref, summary,
+             captured_at, created_by, created_at
+           ) values ($1, $2, $3, 'observation', null, $4, $5, $6, $5)`,
+          [
+            id("brain_evidence"),
+            tenantA.id,
+            entryB,
+            "Preuve étrangère refusée.",
+            nowIso(),
+            ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into strategic_recommendation_evidence (
+             id, tenant_id, recommendation_id, evidence_type, evidence_ref,
+             label, observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'system_metric', 'cross-tenant', $4, $5, $6, $6)`,
+          [
+            id("strategic_evidence"),
+            tenantA.id,
+            recommendationB,
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into marketing_campaign_evidence (
+             id, tenant_id, proposal_id, evidence_type, evidence_ref, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'business_profile', $4, $5, $6, $7, $7)`,
+          [
+            id("marketing_evidence"),
+            tenantA.id,
+            proposalB,
+            tenantB.id,
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into website_ai_evidence (
+             id, tenant_id, proposal_id, evidence_type, evidence_ref, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'website_section', $4, $5, $6, $7, $7)`,
+          [
+            id("website_ai_evidence"),
+            tenantA.id,
+            websiteAiProposalB,
+            websiteBSectionId,
+            "Section étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into website_ai_proposals (
+             id, tenant_id, website_id, section_id, proposal_key, fingerprint,
+             proposal_type, title, rationale, expected_gain, risk_summary,
+             proposed_title, proposed_body, original_content_hash, status,
+             version, generation_version, created_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, $5, $6, 'seo_copy', $7, $8, $9, $10,
+             $11, $12, $13, 'proposed', 1, 'rls-test', $14, $15, $15
+           )`,
+          [
+            id("website_ai_proposal"),
+            tenantA.id,
+            websiteBId,
+            websiteBSectionId,
+            `cross-tenant-${randomUUID()}`,
+            "a".repeat(64),
+            "Proposition étrangère",
+            "La relation avec un site étranger doit être refusée.",
+            "Aucun gain ne doit être enregistré.",
+            "Risque de fuite inter-tenant.",
+            "Titre refusé",
+            "Contenu refusé par le contrôle tenant.",
+            "b".repeat(64),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/Cross-tenant relation|Related tenant row|row-level security|violates/);
   });
 
   it("consumes rate limits atomically under PostgreSQL concurrency", async () => {
@@ -412,7 +766,1299 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(JSON.stringify(stored.rows[0])).not.toContain(subject);
     expect(JSON.stringify(stored.rows[0])).not.toContain(scope);
   });
+
+  it("isolates Sales AI assessments and their opportunity relations", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Sales RLS Owner A",
+      email: uniqueEmail("sales-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Sales RLS Owner B",
+      email: uniqueEmail("sales-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Sales RLS A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Sales RLS B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    for (const [owner, tenant, label] of [
+      [ownerA, tenantA, "a"],
+      [ownerB, tenantB, "b"],
+    ] as const) {
+      await services.saveOnboarding(owner.id, tenant.id, defaultGarageOnboarding());
+      await services.publishWebsite(owner.id, tenant.id);
+      await services.submitPublicLead(tenant.slug, {
+        name: `Sales RLS ${label}`,
+        email: uniqueEmail(`sales-rls-lead-${label}`),
+        phone: "+596 696 40 50 60",
+        message: "Demande commerciale tenant-scoped.",
+      });
+    }
+    const salesA = await services.generateSalesAiAssessments(ownerA.id, tenantA.id);
+    const salesB = await services.generateSalesAiAssessments(ownerB.id, tenantB.id);
+    const assessmentA = salesA.createdIds[0];
+    const assessmentB = salesB.createdIds[0];
+    const opportunityB = await ownerDb.query<{ id: string }>(
+      "select id from opportunities where tenant_id = $1 limit 1",
+      [tenantB.id],
+    );
+    if (!assessmentA || !assessmentB || !opportunityB.rows[0]) {
+      throw new Error("Sales AI RLS fixtures are incomplete.");
+    }
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    expect(
+      (await restrictedPool.query("select id from sales_ai_assessments")).rows,
+    ).toEqual([]);
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        assessments: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from sales_ai_assessments order by id",
+          )
+        ).rows,
+        evidence: (
+          await client.query<{ assessment_id: string; tenant_id: string }>(
+            "select assessment_id, tenant_id from sales_ai_evidence order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.assessments).toEqual([
+      { id: assessmentA, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.evidence).toHaveLength(6);
+    expect(
+      tenantAView.evidence.every(
+        (row) => row.assessment_id === assessmentA && row.tenant_id === tenantA.id,
+      ),
+    ).toBe(true);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into sales_ai_evidence (
+             id, tenant_id, assessment_id, evidence_type, evidence_ref, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'follow_up', $4, $5, $6, $7, $7)`,
+          [
+            id("sales_ai_evidence"),
+            tenantA.id,
+            assessmentB,
+            "cross-tenant",
+            "Preuve etrangere",
+            "refusee",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into sales_ai_assessments (
+             id, tenant_id, opportunity_id, fingerprint, status, score,
+             closing_estimate, confidence, priority, title, rationale,
+             recommended_action, risk_summary, action_label, action_href,
+             version, generation_version, generated_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, 'current', 50, 40, 80, 'medium', $5, $6,
+             $7, $8, $9, $10, 1, 'rls-test', $11, $12, $12
+           )`,
+          [
+            id("sales_ai_assessment"),
+            tenantA.id,
+            opportunityB.rows[0]!.id,
+            "c".repeat(64),
+            "Evaluation etrangere",
+            "La relation avec une opportunite etrangere doit etre refusee.",
+            "Ne creer aucune action.",
+            "Risque de fuite inter-tenant.",
+            "Ouvrir",
+            "/opportunites/refusee",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update sales_ai_assessments set score = 1 where id = $1",
+            [assessmentB],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from sales_ai_assessments where id = $1", [
+            assessmentB,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
+
+  it("isolates Reputation AI reviews, proposals, evidence and decisions", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Reputation RLS Owner A",
+      email: uniqueEmail("reputation-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Reputation RLS Owner B",
+      email: uniqueEmail("reputation-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Reputation RLS A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Reputation RLS B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const reviewA = await services.createReputationReview(ownerA.id, tenantA.id, {
+      source: "manual_import",
+      rating: 1,
+      reviewText: "Retard important et attente trop longue pour le tenant A.",
+      occurredAt: "2026-07-14T08:00:00.000Z",
+    });
+    const reviewB = await services.createReputationReview(ownerB.id, tenantB.id, {
+      source: "direct_feedback",
+      rating: 5,
+      reviewText: "Excellent accueil pour le tenant B.",
+      occurredAt: "2026-07-14T09:00:00.000Z",
+    });
+    const generatedA = await services.generateReputationProposals(ownerA.id, tenantA.id);
+    const generatedB = await services.generateReputationProposals(ownerB.id, tenantB.id);
+    const proposalA = generatedA.createdIds[0];
+    const proposalB = generatedB.createdIds[0];
+    if (!proposalA || !proposalB) {
+      throw new Error("Reputation AI RLS fixtures are incomplete.");
+    }
+    await services.submitReputationProposalForApproval(ownerA.id, tenantA.id, {
+      proposalId: proposalA,
+    });
+    await services.decideReputationProposal(ownerA.id, tenantA.id, {
+      proposalId: proposalA,
+      decision: "approved",
+      reason: "Validation tenant A sans publication.",
+    });
+    await services.submitReputationProposalForApproval(ownerB.id, tenantB.id, {
+      proposalId: proposalB,
+    });
+    await services.decideReputationProposal(ownerB.id, tenantB.id, {
+      proposalId: proposalB,
+      decision: "rejected",
+      reason: "Rejet tenant B sans publication.",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    for (const table of [
+      "reputation_reviews",
+      "reputation_response_proposals",
+      "reputation_proposal_evidence",
+      "reputation_proposal_decisions",
+    ]) {
+      expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
+    }
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        reviews: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from reputation_reviews order by id",
+          )
+        ).rows,
+        proposals: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from reputation_response_proposals order by id",
+          )
+        ).rows,
+        evidence: (
+          await client.query<{ proposal_id: string; tenant_id: string }>(
+            "select proposal_id, tenant_id from reputation_proposal_evidence order by id",
+          )
+        ).rows,
+        decisions: (
+          await client.query<{ proposal_id: string; tenant_id: string }>(
+            "select proposal_id, tenant_id from reputation_proposal_decisions order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.reviews).toEqual([{ id: reviewA.reviewId, tenant_id: tenantA.id }]);
+    expect(tenantAView.proposals).toEqual([{ id: proposalA, tenant_id: tenantA.id }]);
+    expect(tenantAView.evidence).toHaveLength(3);
+    expect(tenantAView.evidence.every((row) => row.proposal_id === proposalA)).toBe(true);
+    expect(tenantAView.decisions).toEqual([
+      { proposal_id: proposalA, tenant_id: tenantA.id },
+    ]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_reviews (
+             id, tenant_id, source, rating, review_text, content_hash,
+             occurred_at, imported_by, created_at
+           ) values ($1, $2, 'manual_import', 3, $3, $4, $5, $6, $5)`,
+          [
+            id("reputation_review"),
+            tenantB.id,
+            "Avis injecté dans un autre tenant.",
+            "a".repeat(64),
+            nowIso(),
+            ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_response_proposals (
+             id, tenant_id, review_id, fingerprint, sentiment, confidence,
+             risk_level, authenticity_status, rationale, response_draft,
+             improvement_plan, status, version, generation_version,
+             generated_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, 'neutral', 60, 'low', 'not_assessed', $5,
+             $6, $7, 'proposed', 1, 'rls-test', $8, $9, $9
+           )`,
+          [
+            id("reputation_proposal"),
+            tenantA.id,
+            reviewB.reviewId,
+            "b".repeat(64),
+            "La relation avec un avis étranger doit être refusée.",
+            "Réponse non publiable.",
+            "Plan interne non exécutable.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_proposal_evidence (
+             id, tenant_id, proposal_id, evidence_type, evidence_ref,
+             label, observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'review_source', $4, $5, $6, $7, $7)`,
+          [
+            id("reputation_evidence"),
+            tenantA.id,
+            proposalB,
+            "cross-tenant",
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_proposal_decisions (
+             id, tenant_id, proposal_id, decision, reason, decided_by, created_at
+           ) values ($1, $2, $3, 'rejected', $4, $5, $6)`,
+          [
+            id("reputation_decision"),
+            tenantA.id,
+            proposalB,
+            "Décision inter-tenant refusée.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update reputation_reviews set reviewer_alias = 'interdit' where id = $1",
+            [reviewB.reviewId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query(
+            "delete from reputation_response_proposals where id = $1",
+            [proposalB],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
+
+  it("isolates competitor observations, insights, evidence and decisions", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Competitor RLS Owner A",
+      email: uniqueEmail("competitor-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Competitor RLS Owner B",
+      email: uniqueEmail("competitor-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Competitor RLS A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Competitor RLS B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const profileA = await services.createCompetitorProfile(ownerA.id, tenantA.id, {
+      name: `Concurrent A ${randomUUID()}`,
+    });
+    const profileB = await services.createCompetitorProfile(ownerB.id, tenantB.id, {
+      name: `Concurrent B ${randomUUID()}`,
+    });
+    const observationA = await services.createCompetitorObservation(ownerA.id, tenantA.id, {
+      competitorId: profileA.competitorId,
+      category: "price",
+      direction: "increase",
+      sourceType: "official_website",
+      sourceUrl: "https://competitor-a.example.org/pricing",
+      title: "Prix public A",
+      summary: "Une page publique affiche une évolution de prix pour A.",
+      observedAt: "2026-07-14T08:00:00.000Z",
+      publicSourceConfirmed: true,
+      protectedContentExcluded: true,
+    });
+    const observationB = await services.createCompetitorObservation(ownerB.id, tenantB.id, {
+      competitorId: profileB.competitorId,
+      category: "service",
+      direction: "new",
+      sourceType: "public_announcement",
+      sourceUrl: "https://competitor-b.example.org/service",
+      title: "Service public B",
+      summary: "Une annonce publique présente un nouveau service pour B.",
+      observedAt: "2026-07-14T09:00:00.000Z",
+      publicSourceConfirmed: true,
+      protectedContentExcluded: true,
+    });
+    const generatedA = await services.generateCompetitorInsights(ownerA.id, tenantA.id);
+    const generatedB = await services.generateCompetitorInsights(ownerB.id, tenantB.id);
+    const insightA = generatedA.createdIds[0];
+    const insightB = generatedB.createdIds[0];
+    if (!insightA || !insightB) {
+      throw new Error("Competitor Intelligence RLS fixtures are incomplete.");
+    }
+    await services.submitCompetitorInsightForApproval(ownerA.id, tenantA.id, {
+      insightId: insightA,
+    });
+    await services.decideCompetitorInsight(ownerA.id, tenantA.id, {
+      insightId: insightA,
+      decision: "approved",
+      reason: "Décision de planification tenant A.",
+    });
+    await services.submitCompetitorInsightForApproval(ownerB.id, tenantB.id, {
+      insightId: insightB,
+    });
+    await services.decideCompetitorInsight(ownerB.id, tenantB.id, {
+      insightId: insightB,
+      decision: "rejected",
+      reason: "Décision de planification tenant B.",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    for (const table of [
+      "competitor_profiles",
+      "competitor_observations",
+      "competitor_insights",
+      "competitor_insight_evidence",
+      "competitor_insight_decisions",
+    ]) {
+      expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
+    }
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        profiles: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from competitor_profiles order by id",
+          )
+        ).rows,
+        observations: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from competitor_observations order by id",
+          )
+        ).rows,
+        insights: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from competitor_insights order by id",
+          )
+        ).rows,
+        evidence: (
+          await client.query<{ insight_id: string; tenant_id: string }>(
+            "select insight_id, tenant_id from competitor_insight_evidence order by id",
+          )
+        ).rows,
+        decisions: (
+          await client.query<{ insight_id: string; tenant_id: string }>(
+            "select insight_id, tenant_id from competitor_insight_decisions order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.profiles).toEqual([
+      { id: profileA.competitorId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.observations).toEqual([
+      { id: observationA.observationId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.insights).toEqual([{ id: insightA, tenant_id: tenantA.id }]);
+    expect(tenantAView.evidence).toEqual([
+      { insight_id: insightA, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.decisions).toEqual([
+      { insight_id: insightA, tenant_id: tenantA.id },
+    ]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_observations (
+             id, tenant_id, competitor_id, category, direction, source_type,
+             source_url, title, summary, content_hash, observed_at,
+             recorded_by, created_at
+           ) values (
+             $1, $2, $3, 'price', 'changed', 'official_website',
+             $4, $5, $6, $7, $8, $9, $8
+           )`,
+          [
+            id("competitor_observation"),
+            tenantA.id,
+            profileB.competitorId,
+            "https://cross.example.org/",
+            "Observation étrangère",
+            "Cette relation concurrente étrangère doit être refusée.",
+            "c".repeat(64),
+            nowIso(),
+            ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_insights (
+             id, tenant_id, competitor_id, category, latest_observation_id,
+             fingerprint, impact, confidence, title, rationale,
+             recommended_action, status, version, generation_version,
+             generated_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, 'service', $4, $5, 'watch', 70, $6, $7,
+             $8, 'proposed', 1, 'rls-test', $9, $10, $10
+           )`,
+          [
+            id("competitor_insight"),
+            tenantA.id,
+            profileA.competitorId,
+            observationB.observationId,
+            "d".repeat(64),
+            "Analyse étrangère",
+            "La relation avec une observation étrangère doit être refusée.",
+            "Ne déclencher aucune action externe à partir de cette ligne.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_insight_evidence (
+             id, tenant_id, insight_id, observation_id, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, $4, $5, $6, $7, $7)`,
+          [
+            id("competitor_evidence"),
+            tenantA.id,
+            insightB,
+            observationA.observationId,
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_insight_decisions (
+             id, tenant_id, insight_id, decision, reason, decided_by, created_at
+           ) values ($1, $2, $3, 'rejected', $4, $5, $6)`,
+          [
+            id("competitor_decision"),
+            tenantA.id,
+            insightB,
+            "Décision inter-tenant refusée.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update competitor_profiles set name = 'interdit' where id = $1",
+            [profileB.competitorId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from competitor_observations where id = $1", [
+            observationB.observationId,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
+
+  it("isolates Financial AI reads, writes and relations by tenant", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Financial RLS A",
+      email: uniqueEmail("financial-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Financial RLS B",
+      email: uniqueEmail("financial-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Financial tenant A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Financial tenant B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const financialInput = {
+      period: "2026-07",
+      monthlyRevenueCents: 1_000_000,
+      operatingCostsCents: 800_000,
+      cashBalanceCents: 500_000,
+      cashInflowsCents: 1_000_000,
+      cashOutflowsCents: 900_000,
+      receivablesCents: 100_000,
+      payablesCents: 80_000,
+      marketingSpendCents: 0,
+      salesSpendCents: 0,
+      websiteSpendCents: 0,
+      automationSpendCents: 0,
+      newCustomers: 0,
+      activeCustomers: 0,
+      evidenceSummary: "Données de test validées pour la politique RLS.",
+    };
+    const snapshotA = await services.recordFinancialInputSnapshot(
+      ownerA.id,
+      tenantA.id,
+      financialInput,
+    );
+    const snapshotB = await services.recordFinancialInputSnapshot(
+      ownerB.id,
+      tenantB.id,
+      financialInput,
+    );
+    const assessmentA = await services.generateFinancialAssessment(
+      ownerA.id,
+      tenantA.id,
+    );
+    const assessmentB = await services.generateFinancialAssessment(
+      ownerB.id,
+      tenantB.id,
+    );
+    const employeeA = (await services.getAiEmployeeWorkspace(ownerA.id, tenantA.id))
+      .employees[0];
+    const employeeB = (await services.getAiEmployeeWorkspace(ownerB.id, tenantB.id))
+      .employees[0];
+    if (!employeeA || !employeeB) {
+      throw new Error("AI Employee RLS fixtures are incomplete.");
+    }
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    for (const table of [
+      "financial_input_snapshots",
+      "financial_assessments",
+      "financial_assessment_evidence",
+      "financial_alerts",
+      "ai_employee_profiles",
+      "ai_employee_activity_logs",
+    ]) {
+      expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
+    }
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        snapshots: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from financial_input_snapshots order by id",
+          )
+        ).rows,
+        assessments: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from financial_assessments order by id",
+          )
+        ).rows,
+        evidenceTenants: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from financial_assessment_evidence",
+          )
+        ).rows,
+        alertTenants: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from financial_alerts",
+          )
+        ).rows,
+        employeeProfiles: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from ai_employee_profiles",
+          )
+        ).rows,
+        employeeActivities: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from ai_employee_activity_logs",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.snapshots).toEqual([
+      { id: snapshotA.snapshotId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.assessments).toEqual([
+      { id: assessmentA.assessmentId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.evidenceTenants).toEqual([{ tenant_id: tenantA.id }]);
+    expect(tenantAView.alertTenants).toEqual([]);
+    expect(tenantAView.employeeProfiles).toEqual([{ tenant_id: tenantA.id }]);
+    expect(tenantAView.employeeActivities).toEqual([{ tenant_id: tenantA.id }]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into financial_assessment_evidence (
+             id, tenant_id, assessment_id, evidence_type, source_ref,
+             label, observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'formula', $4, $5, $6, $7, $7)`,
+          [
+            id("financial_evidence"),
+            tenantA.id,
+            assessmentB.assessmentId,
+            "rls-test",
+            "Preuve inter-tenant",
+            "Cette preuve doit être refusée.",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into financial_assessments (
+             id, tenant_id, snapshot_id, period_month, fingerprint, status,
+             version, monthly_revenue_cents, estimated_profit_cents,
+             cash_flow_cents, pipeline_value_cents, weighted_pipeline_value_cents,
+             forecast_three_months_cents, confidence, rationale, limitations,
+             recommended_action, generation_version, generated_by,
+             created_at, updated_at
+           ) values (
+             $1, $2, $3, '2026-08', $4, 'current', 1, 0, 0, 0, 0, 0, 0,
+             50, $5, $6, $7, 'rls-test', $8, $9, $9
+           )`,
+          [
+            id("financial_assessment"),
+            tenantA.id,
+            snapshotB.snapshotId,
+            "f".repeat(64),
+            "Une relation inter-tenant doit être refusée par PostgreSQL.",
+            "Aucune donnée comptable ne doit être déduite de cette tentative.",
+            "Ne déclencher aucune action à partir de cette tentative.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into ai_employee_activity_logs (
+             id, tenant_id, employee_key, profile_id, activity_type,
+             summary, safe_metadata, actor_id, created_at
+           ) values ($1, $2, $3, $4, 'profile_revised', $5, $6, $7, $8)`,
+          [
+            id("ai_employee_activity"),
+            tenantA.id,
+            employeeA.employeeKey,
+            employeeB.id,
+            "Cette activité inter-tenant doit être refusée.",
+            toJson({ externalExecutionEnabled: false }),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update financial_input_snapshots set evidence_summary = 'interdit' where id = $1",
+            [snapshotB.snapshotId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from financial_assessments where id = $1", [
+            assessmentB.assessmentId,
+          ])
+        ).rowCount,
+        employeeUpdated: (
+          await client.query(
+            "update ai_employee_profiles set display_name = 'interdit' where id = $1",
+            [employeeB.id],
+          )
+        ).rowCount,
+        activityDeleted: (
+          await client.query(
+            "delete from ai_employee_activity_logs where profile_id = $1",
+            [employeeB.id],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deleted: 0,
+      employeeUpdated: 0,
+      activityDeleted: 0,
+    });
+  });
+
+  it("isolates private marketplace listings, previews and source relations", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Marketplace RLS Owner A",
+      email: uniqueEmail("marketplace-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Marketplace RLS Owner B",
+      email: uniqueEmail("marketplace-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: "Marketplace RLS A",
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: "Marketplace RLS B",
+      category: "Conseil juridique",
+    });
+    await services.refreshPrivateAppMarketplace(ownerA.id, tenantA.id);
+    await services.refreshPrivateAppMarketplace(ownerB.id, tenantB.id);
+    const workspaceA = await services.getPrivateAppMarketplace(ownerA.id, tenantA.id);
+    const workspaceB = await services.getPrivateAppMarketplace(ownerB.id, tenantB.id);
+    const listingA = workspaceA.listings[0];
+    const listingB = workspaceB.listings[0];
+    if (!listingA || !listingB) throw new Error("Marketplace RLS fixtures are missing.");
+    await services.previewPrivateMarketplaceInstallation(ownerA.id, tenantA.id, {
+      listingId: listingA.id,
+    });
+    await services.previewPrivateMarketplaceInstallation(ownerB.id, tenantB.id, {
+      listingId: listingB.id,
+    });
+    const automationSourceA = (
+      await services.getAutomationMarketplace(ownerA.id, tenantA.id)
+    ).sources[0];
+    const automationSourceB = (
+      await services.getAutomationMarketplace(ownerB.id, tenantB.id)
+    ).sources[0];
+    if (!automationSourceA || !automationSourceB) {
+      throw new Error("Automation marketplace RLS sources are missing.");
+    }
+    const automationPackageA = await services.createPrivateAutomationPackage(
+      ownerA.id,
+      tenantA.id,
+      { listingId: automationSourceA.listingId },
+    );
+    const automationPackageB = await services.createPrivateAutomationPackage(
+      ownerB.id,
+      tenantB.id,
+      { listingId: automationSourceB.listingId },
+    );
+    await services.previewPrivateAutomationPackage(ownerA.id, tenantA.id, {
+      packageId: automationPackageA.packageId,
+    });
+    await services.previewPrivateAutomationPackage(ownerB.id, tenantB.id, {
+      packageId: automationPackageB.packageId,
+    });
+    const packageBRelation = await ownerPool.query<{ source_workflow_id: string }>(
+      `select source_workflow_id from automation_marketplace_packages
+       where tenant_id = $1 and id = $2`,
+      [tenantB.id, automationPackageB.packageId],
+    );
+    const foreignWorkflowId = packageBRelation.rows[0]?.source_workflow_id;
+    if (!foreignWorkflowId) throw new Error("Foreign workflow source is missing.");
+    const foreignEmployee = await ownerPool.query<{ id: string }>(
+      `select id from ai_employee_profiles
+       where tenant_id = $1 and record_status = 'current'
+       order by id limit 1`,
+      [tenantB.id],
+    );
+    const foreignEmployeeId = foreignEmployee.rows[0]?.id;
+    if (!foreignEmployeeId) throw new Error("Foreign marketplace source is missing.");
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect(
+      (await restrictedPool.query("select id from private_marketplace_listings")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from marketplace_installation_previews")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from automation_marketplace_packages")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from automation_marketplace_previews")).rows,
+    ).toEqual([]);
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        listings: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from private_marketplace_listings",
+          )).rows[0]?.count ?? 0,
+        ),
+        previews: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from marketplace_installation_previews",
+          )).rows[0]?.count ?? 0,
+        ),
+        automationPackages: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from automation_marketplace_packages",
+          )).rows[0]?.count ?? 0,
+        ),
+        automationPreviews: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from automation_marketplace_previews",
+          )).rows[0]?.count ?? 0,
+        ),
+      }),
+    );
+    expect(tenantAView).toEqual({
+      listings: 10,
+      previews: 1,
+      automationPackages: 1,
+      automationPreviews: 1,
+    });
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into private_marketplace_listings (
+             id, tenant_id, listing_key, category, source_kind,
+             connector_plan_id, workflow_id, ai_employee_profile_id, title,
+             summary, fingerprint, record_status, visibility,
+             capabilities_snapshot, permissions_snapshot, provenance_snapshot,
+             version, supersedes_id, created_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, 'ai_employee', 'ai_employee_profile', null, null, $4,
+             'Source étrangère', 'Cette relation inter-tenant doit être refusée.',
+             $5, 'current', 'private', $6, $6, $6, 1, null, $7, $8, $8
+           )`,
+          [
+            id("marketplace_listing"),
+            tenantA.id,
+            `ai-employee:cross-${randomUUID()}`,
+            foreignEmployeeId,
+            "a".repeat(64),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into automation_marketplace_packages (
+             id, tenant_id, listing_id, source_workflow_id, package_key, title,
+             summary, template_snapshot, required_configuration,
+             approval_policy, fingerprint, record_status, visibility,
+             execution_enabled, version, supersedes_id, created_by, created_at,
+             updated_at
+           ) values (
+             $1, $2, $3, $4, $5, 'Paquet étranger',
+             'Cette relation inter-tenant doit être refusée.', $6, $6,
+             'user_approval_required', $7, 'current', 'tenant_private', 0, 1,
+             null, $8, $9, $9
+           )`,
+          [
+            id("automation_package"),
+            tenantA.id,
+            automationSourceB.listingId,
+            foreignWorkflowId,
+            `workflow:cross-${randomUUID()}`,
+            toJson([]),
+            "c".repeat(64),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into automation_marketplace_previews (
+             id, tenant_id, package_id, package_version, package_fingerprint,
+             status, installation_mode, execution_enabled, preview_steps,
+             permission_review, blockers, created_by, created_at
+           ) values ($1, $2, $3, 1, $4, 'ready', 'preview_only', 0,
+                     $5, $5, $5, $6, $7)`,
+          [
+            id("automation_preview"),
+            tenantA.id,
+            automationPackageB.packageId,
+            "d".repeat(64),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into marketplace_installation_previews (
+             id, tenant_id, listing_id, listing_version, listing_fingerprint,
+             status, installation_mode, enabled, installation_steps,
+             permission_review, blockers, created_by, created_at
+           ) values ($1, $2, $3, 1, $4, 'ready', 'preview_only', 0,
+                     $5, $5, $5, $6, $7)`,
+          [
+            id("marketplace_preview"),
+            tenantA.id,
+            listingB.id,
+            "b".repeat(64),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update private_marketplace_listings set title = 'interdit' where id = $1",
+            [listingB.id],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query(
+            "delete from marketplace_installation_previews where listing_id = $1",
+            [listingB.id],
+          )
+        ).rowCount,
+        automationUpdated: (
+          await client.query(
+            "update automation_marketplace_packages set title = 'interdit' where id = $1",
+            [automationPackageB.packageId],
+          )
+        ).rowCount,
+        automationPreviewDeleted: (
+          await client.query(
+            "delete from automation_marketplace_previews where package_id = $1",
+            [automationPackageB.packageId],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deleted: 0,
+      automationUpdated: 0,
+      automationPreviewDeleted: 0,
+    });
+  });
+
+  it("isolates self improvement proposals, evidence and decisions", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Improvement RLS Owner A",
+      email: uniqueEmail("improvement-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Improvement RLS Owner B",
+      email: uniqueEmail("improvement-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: "Improvement RLS A",
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: "Improvement RLS B",
+      category: "Services",
+    });
+    const old = new Date(Date.now() - 45 * 24 * 60 * 60 * 1_000).toISOString();
+    await ownerDb.query(
+      "update workflows set created_at = $1 where tenant_id in ($2, $3)",
+      [old, tenantA.id, tenantB.id],
+    );
+    await services.generateSelfImprovementProposals(ownerA.id, tenantA.id);
+    await services.generateSelfImprovementProposals(ownerB.id, tenantB.id);
+    const workspaceA = await services.getSelfImprovementWorkspace(ownerA.id, tenantA.id);
+    const workspaceB = await services.getSelfImprovementWorkspace(ownerB.id, tenantB.id);
+    const proposalA = workspaceA.proposals[0];
+    const proposalB = workspaceB.proposals[0];
+    if (!proposalA || !proposalB) {
+      throw new Error("Self improvement RLS fixtures are missing.");
+    }
+    await services.decideSelfImprovementProposal(ownerA.id, tenantA.id, {
+      proposalId: proposalA.id,
+      decision: "accepted",
+      reason: "Planification tenant A sans effet automatique.",
+    });
+    await services.decideSelfImprovementProposal(ownerB.id, tenantB.id, {
+      proposalId: proposalB.id,
+      decision: "dismissed",
+      reason: "Décision tenant B isolée pour la vérification RLS.",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect(
+      (await restrictedPool.query("select id from self_improvement_proposals")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from self_improvement_evidence")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from self_improvement_decisions")).rows,
+    ).toEqual([]);
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        proposals: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from self_improvement_proposals",
+          )).rows[0]?.count ?? 0,
+        ),
+        evidence: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from self_improvement_evidence",
+          )).rows[0]?.count ?? 0,
+        ),
+        decisions: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from self_improvement_decisions",
+          )).rows[0]?.count ?? 0,
+        ),
+      }),
+    );
+    expect(tenantAView).toEqual({
+      proposals: workspaceA.proposals.length,
+      evidence: workspaceA.proposals.reduce(
+        (total, proposal) => total + proposal.evidence.length,
+        0,
+      ),
+      decisions: 1,
+    });
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into self_improvement_evidence (
+             id, tenant_id, proposal_id, proposal_version, evidence_key,
+             source_type, source_id, metric_name, metric_value, summary, observed_at
+           ) values ($1, $2, $3, 1, 'cross-tenant', 'workflows', $3,
+             'cross_tenant_metric', 1, 'Cette relation doit être refusée.', $4)`,
+          [id("improvement_evidence"), tenantA.id, proposalB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into self_improvement_decisions (
+             id, tenant_id, proposal_id, proposal_version, decision, reason,
+             created_by, created_at
+           ) values ($1, $2, $3, 1, 'dismissed',
+             'Cette relation tenant étrangère doit être refusée.', $4, $5)`,
+          [id("improvement_decision"), tenantA.id, proposalB.id, ownerA.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update self_improvement_proposals set title = 'interdit' where id = $1",
+            [proposalB.id],
+          )
+        ).rowCount,
+        deletedEvidence: (
+          await client.query(
+            "delete from self_improvement_evidence where proposal_id = $1",
+            [proposalB.id],
+          )
+        ).rowCount,
+        deletedDecision: (
+          await client.query(
+            "delete from self_improvement_decisions where proposal_id = $1",
+            [proposalB.id],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deletedEvidence: 0,
+      deletedDecision: 0,
+    });
+  });
 });
+
+function businessBrainFixture(label: string) {
+  return {
+    domain: "company" as const,
+    title: `Mémoire ${label}`,
+    summary: `Information vérifiée pour ${label}.`,
+    details: "",
+    confidence: 90,
+    sourceType: "manual" as const,
+    evidenceType: "observation" as const,
+    evidenceSummary: `Observation validée pour ${label}.`,
+  };
+}
 
 async function insertContact(
   db: ReturnType<typeof pgPoolAsSqlClient>,
@@ -463,6 +2109,10 @@ async function insertApiIntelligenceTenantFixtures(
   const impactBId = id("impact_b");
   const repairAId = id("repair_a");
   const repairBId = id("repair_b");
+  const storeAId = id("store_a");
+  const storeBId = id("store_b");
+  const planAId = id("connector_plan_a");
+  const planBId = id("connector_plan_b");
   await db.query(
     `insert into software_directory_entries (
        id, canonical_name, aliases, vendor, official_domain, country,
@@ -561,6 +2211,44 @@ async function insertApiIntelligenceTenantFixtures(
         toJson({ level: "low" }),
         ownerId,
         now,
+        now,
+      ],
+    );
+  }
+  for (const [storeId, planId, tenantId, proposalId] of [
+    [storeAId, planAId, tenantAId, proposalAId],
+    [storeBId, planBId, tenantBId, proposalBId],
+  ]) {
+    await db.query(
+      `insert into private_connect_store_entries (
+         id, tenant_id, connector_proposal_id, verification_status,
+         installation_status, last_tested_at, known_limitations,
+         created_at, updated_at
+       ) values ($1, $2, $3, 'approved_for_sandbox', 'not_installed',
+                 $4, $5, $4, $4)`,
+      [storeId, tenantId, proposalId, now, toJson([])],
+    );
+    await db.query(
+      `insert into connector_installation_plans (
+         id, tenant_id, store_entry_id, connector_proposal_id, fingerprint,
+         record_status, enabled, installation_mode, tenant_industry,
+         industry_match, capabilities_snapshot, evidence_summary, blockers,
+         version, supersedes_id, created_by, created_at, updated_at
+       ) values (
+         $1, $2, $3, $4, $5, 'current', 0, 'sandbox_only',
+         'Garage automobile', 'not_documented', $6, $7, $8, 1, null, $9,
+         $10, $10
+       )`,
+      [
+        planId,
+        tenantId,
+        storeId,
+        proposalId,
+        "d".repeat(64),
+        toJson([]),
+        toJson({ contractStatus: "mock" }),
+        toJson([]),
+        ownerId,
         now,
       ],
     );
@@ -696,6 +2384,10 @@ async function insertApiIntelligenceTenantFixtures(
     impactBId,
     repairAId,
     repairBId,
+    storeAId,
+    storeBId,
+    planAId,
+    planBId,
   };
 }
 

@@ -26,7 +26,6 @@ import {
 import { createDefaultTenantResources } from "@/modules/tenants/provisioning";
 import {
   getPublishedSite,
-  getWebsite,
   publishWebsite,
 } from "@/modules/websites";
 
@@ -82,8 +81,8 @@ export async function seedDemo(
     await saveBusinessTwin(db, user.id, tenant.id, defaultGarageOnboarding());
   }
 
-  const website = await getWebsite(db, tenant.id);
-  if (website?.status !== "published") {
+  const publishedSite = await getPublishedSite(db, tenant.slug);
+  if (!publishedSite) {
     await publishWebsite(db, user.id, tenant.id);
   }
 

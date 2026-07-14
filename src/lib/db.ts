@@ -165,6 +165,92 @@ function getMigrations(enableRls: boolean) {
       : []),
     { id: "025_phase3_versioned_api_imports", sql: phase3VersionedApiImportsMigrationSql },
     { id: "026_phase3_reusable_mapping_intelligence", sql: phase3ReusableMappingIntelligenceMigrationSql },
+    { id: "027_phase4_business_brain", sql: phase4BusinessBrainMigrationSql },
+    ...(enableRls
+      ? [{ id: "028_phase4_business_brain_rls", sql: phase4BusinessBrainRlsMigrationSql }]
+      : []),
+    { id: "029_phase4_strategic_advisor", sql: phase4StrategicAdvisorMigrationSql },
+    ...(enableRls
+      ? [{ id: "030_phase4_strategic_advisor_rls", sql: phase4StrategicAdvisorRlsMigrationSql }]
+      : []),
+    { id: "031_phase4_autonomous_marketing", sql: phase4AutonomousMarketingMigrationSql },
+    ...(enableRls
+      ? [{ id: "032_phase4_autonomous_marketing_rls", sql: phase4AutonomousMarketingRlsMigrationSql }]
+      : []),
+    { id: "033_phase4_website_ai", sql: phase4WebsiteAiMigrationSql },
+    ...(enableRls
+      ? [{ id: "034_phase4_website_ai_rls", sql: phase4WebsiteAiRlsMigrationSql }]
+      : []),
+    { id: "035_phase4_sales_ai", sql: phase4SalesAiMigrationSql },
+    ...(enableRls
+      ? [{ id: "036_phase4_sales_ai_rls", sql: phase4SalesAiRlsMigrationSql }]
+      : []),
+    { id: "037_phase4_reputation_ai", sql: phase4ReputationAiMigrationSql },
+    ...(enableRls
+      ? [{ id: "038_phase4_reputation_ai_rls", sql: phase4ReputationAiRlsMigrationSql }]
+      : []),
+    {
+      id: "039_phase4_competitor_intelligence",
+      sql: phase4CompetitorIntelligenceMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "040_phase4_competitor_intelligence_rls",
+          sql: phase4CompetitorIntelligenceRlsMigrationSql,
+        }]
+      : []),
+    { id: "041_phase4_financial_ai", sql: phase4FinancialAiMigrationSql },
+    ...(enableRls
+      ? [{ id: "042_phase4_financial_ai_rls", sql: phase4FinancialAiRlsMigrationSql }]
+      : []),
+    { id: "043_phase4_ai_employees", sql: phase4AiEmployeesMigrationSql },
+    ...(enableRls
+      ? [{ id: "044_phase4_ai_employees_rls", sql: phase4AiEmployeesRlsMigrationSql }]
+      : []),
+    {
+      id: "045_phase4_universal_connectors",
+      sql: phase4UniversalConnectorsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "046_phase4_universal_connectors_rls",
+          sql: phase4UniversalConnectorsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "047_phase4_private_app_marketplace",
+      sql: phase4PrivateAppMarketplaceMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "048_phase4_private_app_marketplace_rls",
+          sql: phase4PrivateAppMarketplaceRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "049_phase4_private_automation_marketplace",
+      sql: phase4PrivateAutomationMarketplaceMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "050_phase4_private_automation_marketplace_rls",
+          sql: phase4PrivateAutomationMarketplaceRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "051_phase4_self_improvement",
+      sql: phase4SelfImprovementMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "052_phase4_self_improvement_rls",
+          sql: phase4SelfImprovementRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "053_phase4_enterprise_observability_indexes",
+      sql: phase4EnterpriseObservabilityIndexesMigrationSql,
+    },
   ];
 }
 
@@ -1813,4 +1899,1447 @@ create unique index if not exists uq_api_global_mapping_shape
     coalesce(source_field, ''),
     coalesce(canonical_field, '')
   );
+`;
+
+const phase4BusinessBrainMigrationSql = `
+create table if not exists business_brain_entries (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  entry_key text not null,
+  domain text not null check (domain in (
+    'company', 'customers', 'suppliers', 'catalog', 'pricing', 'margins',
+    'objectives', 'kpis', 'team', 'locations', 'automations', 'websites',
+    'api', 'connectors'
+  )),
+  title text not null check (char_length(title) between 3 and 120),
+  summary text not null check (char_length(summary) between 5 and 1000),
+  details text not null check (char_length(details) <= 5000),
+  source_type text not null check (source_type in (
+    'manual', 'business_twin', 'crm', 'workflow', 'website', 'connector',
+    'api_intelligence', 'import'
+  )),
+  source_ref text check (source_ref is null or char_length(source_ref) <= 500),
+  confidence integer not null check (confidence between 0 and 100),
+  status text not null check (status in ('active', 'superseded', 'archived')),
+  version integer not null check (version > 0),
+  supersedes_id text,
+  created_by text not null references users(id),
+  reviewed_by text references users(id),
+  reviewed_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, entry_key, version),
+  foreign key (tenant_id, supersedes_id)
+    references business_brain_entries(tenant_id, id) on delete restrict,
+  check (
+    (reviewed_by is null and reviewed_at is null)
+    or (reviewed_by is not null and reviewed_at is not null)
+  )
+);
+
+create table if not exists business_brain_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  entry_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'observation', 'document', 'system_record', 'import'
+  )),
+  source_ref text check (source_ref is null or char_length(source_ref) <= 500),
+  summary text not null check (char_length(summary) between 5 and 500),
+  captured_at text not null,
+  created_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, entry_id)
+    references business_brain_entries(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_business_brain_entries_tenant_status
+  on business_brain_entries(tenant_id, status, domain, updated_at desc);
+
+create index if not exists idx_business_brain_entries_tenant_key
+  on business_brain_entries(tenant_id, entry_key, version desc);
+
+create index if not exists idx_business_brain_evidence_tenant_entry
+  on business_brain_evidence(tenant_id, entry_id, captured_at desc);
+`;
+
+const phase4BusinessBrainRlsMigrationSql = `
+alter table business_brain_entries enable row level security;
+alter table business_brain_evidence enable row level security;
+
+drop policy if exists tenant_isolation on business_brain_entries;
+create policy tenant_isolation on business_brain_entries
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on business_brain_evidence;
+create policy tenant_isolation on business_brain_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4StrategicAdvisorMigrationSql = `
+create table if not exists strategic_recommendations (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  rule_key text not null check (char_length(rule_key) between 3 and 160),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  advisor_role text not null check (advisor_role in (
+    'executive', 'marketing', 'sales', 'operations', 'finance',
+    'reputation', 'technology'
+  )),
+  title text not null check (char_length(title) between 5 and 160),
+  rationale text not null check (char_length(rationale) between 10 and 1200),
+  expected_gain text not null check (char_length(expected_gain) between 5 and 500),
+  effort text not null check (effort in ('low', 'medium', 'high')),
+  roi_summary text not null check (char_length(roi_summary) between 5 and 500),
+  risk_summary text not null check (char_length(risk_summary) between 5 and 500),
+  confidence integer not null check (confidence between 0 and 100),
+  action_label text not null check (char_length(action_label) between 3 and 80),
+  action_href text not null check (
+    char_length(action_href) between 1 and 300 and substr(action_href, 1, 1) = '/'
+  ),
+  status text not null check (status in (
+    'proposed', 'approved', 'rejected', 'superseded', 'expired'
+  )),
+  generation_version text not null check (char_length(generation_version) <= 80),
+  created_by text not null references users(id),
+  decided_by text references users(id),
+  decision_reason text check (
+    decision_reason is null or char_length(decision_reason) <= 500
+  ),
+  decided_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, rule_key, fingerprint),
+  check (
+    (status in ('proposed', 'superseded', 'expired') and decided_by is null
+      and decision_reason is null and decided_at is null)
+    or (status in ('approved', 'rejected') and decided_by is not null
+      and decision_reason is not null and decided_at is not null)
+  )
+);
+
+create table if not exists strategic_recommendation_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  recommendation_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'business_brain_entry', 'system_metric', 'audit_record', 'api_source'
+  )),
+  evidence_ref text not null check (char_length(evidence_ref) between 1 and 300),
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 500),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, recommendation_id)
+    references strategic_recommendations(tenant_id, id) on delete cascade
+);
+
+create table if not exists strategic_recommendation_decisions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  recommendation_id text not null,
+  decision text not null check (decision in ('approved', 'rejected')),
+  reason text not null check (char_length(reason) between 5 and 500),
+  decided_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, recommendation_id)
+    references strategic_recommendations(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_strategic_recommendations_tenant_status
+  on strategic_recommendations(tenant_id, status, created_at desc);
+
+create index if not exists idx_strategic_recommendations_tenant_role
+  on strategic_recommendations(tenant_id, advisor_role, updated_at desc);
+
+create index if not exists idx_strategic_evidence_tenant_recommendation
+  on strategic_recommendation_evidence(
+    tenant_id, recommendation_id, captured_at desc
+  );
+
+create index if not exists idx_strategic_decisions_tenant_recommendation
+  on strategic_recommendation_decisions(
+    tenant_id, recommendation_id, created_at desc
+  );
+`;
+
+const phase4StrategicAdvisorRlsMigrationSql = `
+alter table strategic_recommendations enable row level security;
+alter table strategic_recommendation_evidence enable row level security;
+alter table strategic_recommendation_decisions enable row level security;
+
+drop policy if exists tenant_isolation on strategic_recommendations;
+create policy tenant_isolation on strategic_recommendations
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on strategic_recommendation_evidence;
+create policy tenant_isolation on strategic_recommendation_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on strategic_recommendation_decisions;
+create policy tenant_isolation on strategic_recommendation_decisions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4AutonomousMarketingMigrationSql = `
+create table if not exists marketing_campaign_proposals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  campaign_key text not null check (char_length(campaign_key) between 3 and 160),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  channel text not null check (channel in ('email', 'social', 'website')),
+  title text not null check (char_length(title) between 5 and 160),
+  subject text not null check (char_length(subject) <= 200),
+  objective text not null check (char_length(objective) between 5 and 500),
+  audience text not null check (char_length(audience) between 3 and 500),
+  content text not null check (char_length(content) between 10 and 5000),
+  call_to_action text not null check (char_length(call_to_action) between 2 and 80),
+  expected_outcome text not null check (
+    char_length(expected_outcome) between 5 and 500
+  ),
+  risk_summary text not null check (char_length(risk_summary) between 5 and 500),
+  budget_cents integer check (budget_cents is null or budget_cents >= 0),
+  starts_at text,
+  ends_at text,
+  status text not null check (status in (
+    'draft', 'pending_approval', 'approved', 'rejected', 'superseded', 'archived'
+  )),
+  version integer not null check (version > 0),
+  supersedes_id text,
+  source_strategy_recommendation_id text,
+  generation_version text not null check (char_length(generation_version) <= 80),
+  created_by text not null references users(id),
+  decided_by text references users(id),
+  decision_reason text check (
+    decision_reason is null or char_length(decision_reason) <= 500
+  ),
+  decided_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, campaign_key, version),
+  unique (tenant_id, campaign_key, fingerprint),
+  foreign key (tenant_id, supersedes_id)
+    references marketing_campaign_proposals(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, source_strategy_recommendation_id)
+    references strategic_recommendations(tenant_id, id) on delete restrict,
+  check (starts_at is null or ends_at is null or starts_at < ends_at),
+  check (
+    (status in ('draft', 'pending_approval', 'superseded', 'archived')
+      and decided_by is null and decision_reason is null and decided_at is null)
+    or (status in ('approved', 'rejected') and decided_by is not null
+      and decision_reason is not null and decided_at is not null)
+  )
+);
+
+create table if not exists marketing_campaign_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'business_profile', 'business_brain_entry', 'strategic_recommendation'
+  )),
+  evidence_ref text not null check (char_length(evidence_ref) between 1 and 300),
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 500),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, proposal_id)
+    references marketing_campaign_proposals(tenant_id, id) on delete cascade
+);
+
+create table if not exists marketing_campaign_decisions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  decision text not null check (decision in ('approved', 'rejected')),
+  reason text not null check (char_length(reason) between 5 and 500),
+  decided_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, proposal_id)
+    references marketing_campaign_proposals(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_marketing_proposals_tenant_status
+  on marketing_campaign_proposals(tenant_id, status, updated_at desc);
+
+create index if not exists idx_marketing_proposals_tenant_campaign
+  on marketing_campaign_proposals(tenant_id, campaign_key, version desc);
+
+create index if not exists idx_marketing_evidence_tenant_proposal
+  on marketing_campaign_evidence(tenant_id, proposal_id, captured_at desc);
+
+create index if not exists idx_marketing_decisions_tenant_proposal
+  on marketing_campaign_decisions(tenant_id, proposal_id, created_at desc);
+`;
+
+const phase4AutonomousMarketingRlsMigrationSql = `
+alter table marketing_campaign_proposals enable row level security;
+alter table marketing_campaign_evidence enable row level security;
+alter table marketing_campaign_decisions enable row level security;
+
+drop policy if exists tenant_isolation on marketing_campaign_proposals;
+create policy tenant_isolation on marketing_campaign_proposals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on marketing_campaign_evidence;
+create policy tenant_isolation on marketing_campaign_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on marketing_campaign_decisions;
+create policy tenant_isolation on marketing_campaign_decisions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4WebsiteAiMigrationSql = `
+create unique index if not exists uq_websites_tenant_id
+  on websites(tenant_id, id);
+
+create unique index if not exists uq_website_sections_tenant_website_id
+  on website_sections(tenant_id, website_id, id);
+
+create table if not exists website_ai_proposals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  website_id text not null,
+  section_id text not null,
+  proposal_key text not null check (char_length(proposal_key) between 3 and 160),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  proposal_type text not null check (proposal_type in (
+    'seo_copy', 'faq_content', 'accessibility_copy'
+  )),
+  title text not null check (char_length(title) between 5 and 160),
+  rationale text not null check (char_length(rationale) between 10 and 1000),
+  expected_gain text not null check (char_length(expected_gain) between 5 and 500),
+  risk_summary text not null check (char_length(risk_summary) between 5 and 500),
+  proposed_title text not null check (char_length(proposed_title) between 1 and 300),
+  proposed_body text not null check (char_length(proposed_body) between 1 and 5000),
+  original_content_hash text not null check (char_length(original_content_hash) = 64),
+  status text not null check (status in (
+    'proposed', 'pending_approval', 'approved', 'rejected', 'applied',
+    'superseded', 'stale'
+  )),
+  version integer not null check (version > 0),
+  supersedes_id text,
+  generation_version text not null check (char_length(generation_version) <= 80),
+  created_by text not null references users(id),
+  decided_by text references users(id),
+  decision_reason text check (
+    decision_reason is null or char_length(decision_reason) <= 500
+  ),
+  decided_at text,
+  applied_by text references users(id),
+  applied_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, proposal_key, fingerprint),
+  foreign key (tenant_id, website_id)
+    references websites(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, website_id, section_id)
+    references website_sections(tenant_id, website_id, id) on delete cascade,
+  foreign key (tenant_id, supersedes_id)
+    references website_ai_proposals(tenant_id, id) on delete restrict,
+  check (
+    (status in ('proposed', 'pending_approval', 'superseded', 'stale')
+      and decided_by is null and decision_reason is null and decided_at is null)
+    or (status in ('approved', 'rejected', 'applied')
+      and decided_by is not null and decision_reason is not null and decided_at is not null)
+  ),
+  check (
+    (status = 'applied' and applied_by is not null and applied_at is not null)
+    or (status <> 'applied' and applied_by is null and applied_at is null)
+  )
+);
+
+create table if not exists website_ai_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'business_profile', 'website_section'
+  )),
+  evidence_ref text not null check (char_length(evidence_ref) between 1 and 300),
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 500),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, proposal_id)
+    references website_ai_proposals(tenant_id, id) on delete cascade
+);
+
+create table if not exists website_ai_decisions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  decision text not null check (decision in ('approved', 'rejected')),
+  reason text not null check (char_length(reason) between 5 and 500),
+  decided_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, proposal_id)
+    references website_ai_proposals(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_website_ai_proposals_tenant_status
+  on website_ai_proposals(tenant_id, status, updated_at desc);
+
+create index if not exists idx_website_ai_proposals_tenant_website
+  on website_ai_proposals(tenant_id, website_id, proposal_key);
+
+create index if not exists idx_website_ai_evidence_tenant_proposal
+  on website_ai_evidence(tenant_id, proposal_id, captured_at desc);
+
+create index if not exists idx_website_ai_decisions_tenant_proposal
+  on website_ai_decisions(tenant_id, proposal_id, created_at desc);
+`;
+
+const phase4WebsiteAiRlsMigrationSql = `
+alter table website_ai_proposals enable row level security;
+alter table website_ai_evidence enable row level security;
+alter table website_ai_decisions enable row level security;
+
+drop policy if exists tenant_isolation on website_ai_proposals;
+create policy tenant_isolation on website_ai_proposals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on website_ai_evidence;
+create policy tenant_isolation on website_ai_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on website_ai_decisions;
+create policy tenant_isolation on website_ai_decisions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+`;
+
+const phase4SalesAiMigrationSql = `
+create unique index if not exists uq_opportunities_tenant_id
+  on opportunities(tenant_id, id);
+
+create table if not exists sales_ai_assessments (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  opportunity_id text not null,
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  status text not null check (status in ('current', 'superseded')),
+  score integer not null check (score between 0 and 100),
+  closing_estimate integer not null check (closing_estimate between 0 and 100),
+  confidence integer not null check (confidence between 0 and 100),
+  priority text not null check (priority in ('low', 'medium', 'high')),
+  title text not null check (char_length(title) between 5 and 160),
+  rationale text not null check (char_length(rationale) between 10 and 1200),
+  recommended_action text not null check (
+    char_length(recommended_action) between 5 and 500
+  ),
+  risk_summary text not null check (char_length(risk_summary) between 5 and 500),
+  action_label text not null check (char_length(action_label) between 3 and 80),
+  action_href text not null check (
+    char_length(action_href) between 1 and 300 and substr(action_href, 1, 1) = '/'
+  ),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  generation_version text not null check (char_length(generation_version) <= 80),
+  generated_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, opportunity_id)
+    references opportunities(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, supersedes_id)
+    references sales_ai_assessments(tenant_id, id) on delete restrict
+);
+
+create table if not exists sales_ai_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  assessment_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'opportunity_stage', 'opportunity_value', 'follow_up',
+    'recent_activity', 'open_tasks', 'assignment'
+  )),
+  evidence_ref text not null check (char_length(evidence_ref) between 1 and 300),
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 500),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, assessment_id)
+    references sales_ai_assessments(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_sales_ai_assessments_tenant_status
+  on sales_ai_assessments(tenant_id, status, priority, updated_at desc);
+
+create index if not exists idx_sales_ai_assessments_tenant_opportunity
+  on sales_ai_assessments(tenant_id, opportunity_id, version desc);
+
+create index if not exists idx_sales_ai_assessments_tenant_fingerprint
+  on sales_ai_assessments(tenant_id, opportunity_id, fingerprint);
+
+create unique index if not exists uq_sales_ai_assessments_current
+  on sales_ai_assessments(tenant_id, opportunity_id)
+  where status = 'current';
+
+create index if not exists idx_sales_ai_evidence_tenant_assessment
+  on sales_ai_evidence(tenant_id, assessment_id, captured_at desc);
+`;
+
+const phase4SalesAiRlsMigrationSql = `
+alter table sales_ai_assessments enable row level security;
+alter table sales_ai_evidence enable row level security;
+
+drop policy if exists tenant_isolation on sales_ai_assessments;
+create policy tenant_isolation on sales_ai_assessments
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on sales_ai_evidence;
+create policy tenant_isolation on sales_ai_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4ReputationAiMigrationSql = `
+create table if not exists reputation_reviews (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  source text not null check (source in (
+    'google', 'facebook', 'instagram', 'tripadvisor', 'trustpilot',
+    'industry_directory', 'direct_feedback', 'manual_import'
+  )),
+  external_ref text check (external_ref is null or char_length(external_ref) <= 200),
+  reviewer_alias text check (
+    reviewer_alias is null or char_length(reviewer_alias) <= 100
+  ),
+  rating integer check (rating is null or rating between 1 and 5),
+  review_text text not null check (char_length(review_text) between 3 and 3000),
+  content_hash text not null check (char_length(content_hash) = 64),
+  occurred_at text not null,
+  imported_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, content_hash)
+);
+
+create table if not exists reputation_response_proposals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  review_id text not null,
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  sentiment text not null check (sentiment in ('positive', 'neutral', 'negative')),
+  confidence integer not null check (confidence between 0 and 100),
+  risk_level text not null check (risk_level in ('low', 'medium', 'high')),
+  authenticity_status text not null check (authenticity_status = 'not_assessed'),
+  rationale text not null check (char_length(rationale) between 10 and 1000),
+  response_draft text not null check (char_length(response_draft) between 10 and 1500),
+  improvement_plan text not null check (
+    char_length(improvement_plan) between 10 and 1500
+  ),
+  status text not null check (status in (
+    'proposed', 'pending_approval', 'approved', 'rejected', 'superseded'
+  )),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  generation_version text not null check (char_length(generation_version) <= 80),
+  generated_by text not null references users(id),
+  decided_by text references users(id),
+  decision_reason text check (
+    decision_reason is null or char_length(decision_reason) <= 500
+  ),
+  decided_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, review_id, fingerprint),
+  foreign key (tenant_id, review_id)
+    references reputation_reviews(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, supersedes_id)
+    references reputation_response_proposals(tenant_id, id) on delete restrict,
+  check (
+    (status in ('proposed', 'pending_approval', 'superseded')
+      and decided_by is null and decision_reason is null and decided_at is null)
+    or (status in ('approved', 'rejected')
+      and decided_by is not null and decision_reason is not null and decided_at is not null)
+  )
+);
+
+create table if not exists reputation_proposal_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'review_source', 'review_rating', 'review_text'
+  )),
+  evidence_ref text not null check (char_length(evidence_ref) between 1 and 300),
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 500),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, proposal_id)
+    references reputation_response_proposals(tenant_id, id) on delete cascade
+);
+
+create table if not exists reputation_proposal_decisions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  decision text not null check (decision in ('approved', 'rejected')),
+  reason text not null check (char_length(reason) between 5 and 500),
+  decided_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, proposal_id)
+    references reputation_response_proposals(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_reputation_reviews_tenant_occurred
+  on reputation_reviews(tenant_id, occurred_at desc);
+
+create index if not exists idx_reputation_proposals_tenant_status
+  on reputation_response_proposals(tenant_id, status, updated_at desc);
+
+create index if not exists idx_reputation_proposals_tenant_review
+  on reputation_response_proposals(tenant_id, review_id, version desc);
+
+create index if not exists idx_reputation_evidence_tenant_proposal
+  on reputation_proposal_evidence(tenant_id, proposal_id, captured_at desc);
+
+create index if not exists idx_reputation_decisions_tenant_proposal
+  on reputation_proposal_decisions(tenant_id, proposal_id, created_at desc);
+`;
+
+const phase4ReputationAiRlsMigrationSql = `
+alter table reputation_reviews enable row level security;
+alter table reputation_response_proposals enable row level security;
+alter table reputation_proposal_evidence enable row level security;
+alter table reputation_proposal_decisions enable row level security;
+
+drop policy if exists tenant_isolation on reputation_reviews;
+create policy tenant_isolation on reputation_reviews
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on reputation_response_proposals;
+create policy tenant_isolation on reputation_response_proposals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on reputation_proposal_evidence;
+create policy tenant_isolation on reputation_proposal_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on reputation_proposal_decisions;
+create policy tenant_isolation on reputation_proposal_decisions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4CompetitorIntelligenceMigrationSql = `
+create table if not exists competitor_profiles (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  name text not null check (char_length(name) between 2 and 120),
+  website_url text check (website_url is null or char_length(website_url) <= 500),
+  status text not null check (status in ('active', 'archived')),
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id)
+);
+
+create unique index if not exists idx_competitor_profiles_tenant_name
+  on competitor_profiles(tenant_id, lower(name));
+
+create table if not exists competitor_observations (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  competitor_id text not null,
+  category text not null check (category in (
+    'price', 'website', 'seo', 'service', 'product', 'google_position',
+    'advertising', 'social_activity', 'review', 'opening_hours', 'job',
+    'partnership'
+  )),
+  direction text not null check (direction in (
+    'increase', 'decrease', 'new', 'removed', 'changed',
+    'positive_signal', 'negative_signal'
+  )),
+  source_type text not null check (source_type in (
+    'official_website', 'public_search', 'public_social', 'public_directory',
+    'public_ad', 'public_job', 'public_review', 'public_announcement'
+  )),
+  source_url text not null check (char_length(source_url) between 10 and 500),
+  title text not null check (char_length(title) between 3 and 160),
+  summary text not null check (char_length(summary) between 10 and 2000),
+  observed_value text check (
+    observed_value is null or char_length(observed_value) <= 300
+  ),
+  content_hash text not null check (char_length(content_hash) = 64),
+  observed_at text not null,
+  recorded_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, competitor_id, content_hash),
+  foreign key (tenant_id, competitor_id)
+    references competitor_profiles(tenant_id, id) on delete cascade
+);
+
+create table if not exists competitor_insights (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  competitor_id text not null,
+  category text not null check (category in (
+    'price', 'website', 'seo', 'service', 'product', 'google_position',
+    'advertising', 'social_activity', 'review', 'opening_hours', 'job',
+    'partnership'
+  )),
+  latest_observation_id text not null,
+  previous_observation_id text,
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  impact text not null check (impact in ('opportunity', 'risk', 'watch')),
+  confidence integer not null check (confidence between 0 and 100),
+  title text not null check (char_length(title) between 3 and 180),
+  rationale text not null check (char_length(rationale) between 10 and 1200),
+  recommended_action text not null check (
+    char_length(recommended_action) between 10 and 1200
+  ),
+  status text not null check (status in (
+    'proposed', 'pending_approval', 'approved', 'rejected', 'superseded'
+  )),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  generation_version text not null check (char_length(generation_version) <= 80),
+  generated_by text not null references users(id),
+  decided_by text references users(id),
+  decision_reason text check (
+    decision_reason is null or char_length(decision_reason) <= 500
+  ),
+  decided_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, competitor_id, category, fingerprint),
+  foreign key (tenant_id, competitor_id)
+    references competitor_profiles(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, latest_observation_id)
+    references competitor_observations(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, previous_observation_id)
+    references competitor_observations(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, supersedes_id)
+    references competitor_insights(tenant_id, id) on delete restrict,
+  check (
+    (status in ('proposed', 'pending_approval', 'superseded')
+      and decided_by is null and decision_reason is null and decided_at is null)
+    or (status in ('approved', 'rejected')
+      and decided_by is not null and decision_reason is not null and decided_at is not null)
+  )
+);
+
+create table if not exists competitor_insight_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  insight_id text not null,
+  observation_id text not null,
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 500),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, insight_id)
+    references competitor_insights(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, observation_id)
+    references competitor_observations(tenant_id, id) on delete restrict
+);
+
+create table if not exists competitor_insight_decisions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  insight_id text not null,
+  decision text not null check (decision in ('approved', 'rejected')),
+  reason text not null check (char_length(reason) between 5 and 500),
+  decided_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, insight_id)
+    references competitor_insights(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_competitor_profiles_tenant_status
+  on competitor_profiles(tenant_id, status, updated_at desc);
+
+create index if not exists idx_competitor_observations_tenant_competitor
+  on competitor_observations(tenant_id, competitor_id, category, observed_at desc);
+
+create index if not exists idx_competitor_insights_tenant_status
+  on competitor_insights(tenant_id, status, updated_at desc);
+
+create index if not exists idx_competitor_insights_tenant_competitor
+  on competitor_insights(tenant_id, competitor_id, category, version desc);
+
+create index if not exists idx_competitor_evidence_tenant_insight
+  on competitor_insight_evidence(tenant_id, insight_id, captured_at desc);
+
+create index if not exists idx_competitor_decisions_tenant_insight
+  on competitor_insight_decisions(tenant_id, insight_id, created_at desc);
+`;
+
+const phase4CompetitorIntelligenceRlsMigrationSql = `
+alter table competitor_profiles enable row level security;
+alter table competitor_observations enable row level security;
+alter table competitor_insights enable row level security;
+alter table competitor_insight_evidence enable row level security;
+alter table competitor_insight_decisions enable row level security;
+
+drop policy if exists tenant_isolation on competitor_profiles;
+create policy tenant_isolation on competitor_profiles
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on competitor_observations;
+create policy tenant_isolation on competitor_observations
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on competitor_insights;
+create policy tenant_isolation on competitor_insights
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on competitor_insight_evidence;
+create policy tenant_isolation on competitor_insight_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on competitor_insight_decisions;
+create policy tenant_isolation on competitor_insight_decisions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4FinancialAiMigrationSql = `
+create table if not exists financial_input_snapshots (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  period_month text not null check (period_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+  status text not null check (status in ('current', 'superseded')),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  monthly_revenue_cents bigint not null check (monthly_revenue_cents >= 0),
+  operating_costs_cents bigint not null check (operating_costs_cents >= 0),
+  cash_balance_cents bigint not null check (cash_balance_cents >= 0),
+  cash_inflows_cents bigint not null check (cash_inflows_cents >= 0),
+  cash_outflows_cents bigint not null check (cash_outflows_cents >= 0),
+  receivables_cents bigint not null check (receivables_cents >= 0),
+  payables_cents bigint not null check (payables_cents >= 0),
+  marketing_spend_cents bigint not null check (marketing_spend_cents >= 0),
+  sales_spend_cents bigint not null check (sales_spend_cents >= 0),
+  website_spend_cents bigint not null check (website_spend_cents >= 0),
+  automation_spend_cents bigint not null check (automation_spend_cents >= 0),
+  new_customers integer not null check (new_customers >= 0),
+  active_customers integer not null check (active_customers >= 0),
+  average_lifetime_months integer check (
+    average_lifetime_months is null or average_lifetime_months between 0 and 600
+  ),
+  marketing_attributed_revenue_cents bigint check (
+    marketing_attributed_revenue_cents is null or marketing_attributed_revenue_cents >= 0
+  ),
+  sales_attributed_revenue_cents bigint check (
+    sales_attributed_revenue_cents is null or sales_attributed_revenue_cents >= 0
+  ),
+  website_attributed_revenue_cents bigint check (
+    website_attributed_revenue_cents is null or website_attributed_revenue_cents >= 0
+  ),
+  automation_savings_cents bigint check (
+    automation_savings_cents is null or automation_savings_cents >= 0
+  ),
+  evidence_summary text not null check (char_length(evidence_summary) between 10 and 500),
+  recorded_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, period_month, version),
+  foreign key (tenant_id, supersedes_id)
+    references financial_input_snapshots(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_financial_snapshots_current_period
+  on financial_input_snapshots(tenant_id, period_month)
+  where status = 'current';
+
+create table if not exists financial_assessments (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  snapshot_id text not null,
+  period_month text not null check (period_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  status text not null check (status in ('current', 'superseded')),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  monthly_revenue_cents bigint not null check (monthly_revenue_cents >= 0),
+  estimated_profit_cents bigint not null,
+  margin_basis_points integer,
+  cash_flow_cents bigint not null,
+  cash_runway_months integer check (
+    cash_runway_months is null or cash_runway_months >= 0
+  ),
+  customer_lifetime_value_cents bigint check (
+    customer_lifetime_value_cents is null or customer_lifetime_value_cents >= 0
+  ),
+  customer_acquisition_cost_cents bigint check (
+    customer_acquisition_cost_cents is null or customer_acquisition_cost_cents >= 0
+  ),
+  marketing_roi_basis_points integer,
+  sales_roi_basis_points integer,
+  website_roi_basis_points integer,
+  automation_roi_basis_points integer,
+  pipeline_value_cents bigint not null check (pipeline_value_cents >= 0),
+  weighted_pipeline_value_cents bigint not null check (weighted_pipeline_value_cents >= 0),
+  forecast_three_months_cents bigint not null check (forecast_three_months_cents >= 0),
+  confidence integer not null check (confidence between 0 and 100),
+  rationale text not null check (char_length(rationale) between 20 and 2000),
+  limitations text not null check (char_length(limitations) between 20 and 2000),
+  recommended_action text not null check (
+    char_length(recommended_action) between 20 and 1200
+  ),
+  generation_version text not null check (char_length(generation_version) <= 80),
+  generated_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, fingerprint),
+  unique (tenant_id, period_month, version),
+  foreign key (tenant_id, snapshot_id)
+    references financial_input_snapshots(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, supersedes_id)
+    references financial_assessments(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_financial_assessments_current_period
+  on financial_assessments(tenant_id, period_month)
+  where status = 'current';
+
+create table if not exists financial_assessment_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  assessment_id text not null,
+  evidence_type text not null check (evidence_type in (
+    'declared_input', 'crm_pipeline', 'business_brain', 'formula'
+  )),
+  source_ref text not null check (char_length(source_ref) between 1 and 200),
+  label text not null check (char_length(label) between 3 and 160),
+  observed_value text not null check (char_length(observed_value) between 1 and 600),
+  captured_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, assessment_id)
+    references financial_assessments(tenant_id, id) on delete cascade
+);
+
+create table if not exists financial_alerts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  assessment_id text not null,
+  severity text not null check (severity in ('info', 'warning', 'critical')),
+  code text not null check (char_length(code) between 3 and 80),
+  title text not null check (char_length(title) between 5 and 180),
+  explanation text not null check (char_length(explanation) between 20 and 1000),
+  action_label text not null check (char_length(action_label) between 3 and 120),
+  action_href text not null check (char_length(action_href) between 1 and 300),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, assessment_id, code),
+  foreign key (tenant_id, assessment_id)
+    references financial_assessments(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_financial_snapshots_tenant_period
+  on financial_input_snapshots(tenant_id, period_month desc, version desc);
+
+create index if not exists idx_financial_assessments_tenant_period
+  on financial_assessments(tenant_id, period_month desc, version desc);
+
+create index if not exists idx_financial_evidence_tenant_assessment
+  on financial_assessment_evidence(tenant_id, assessment_id, captured_at desc);
+
+create index if not exists idx_financial_alerts_tenant_assessment
+  on financial_alerts(tenant_id, assessment_id, severity, created_at desc);
+`;
+
+const phase4FinancialAiRlsMigrationSql = `
+alter table financial_input_snapshots enable row level security;
+alter table financial_assessments enable row level security;
+alter table financial_assessment_evidence enable row level security;
+alter table financial_alerts enable row level security;
+
+drop policy if exists tenant_isolation on financial_input_snapshots;
+create policy tenant_isolation on financial_input_snapshots
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on financial_assessments;
+create policy tenant_isolation on financial_assessments
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on financial_assessment_evidence;
+create policy tenant_isolation on financial_assessment_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on financial_alerts;
+create policy tenant_isolation on financial_alerts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4AiEmployeesMigrationSql = `
+create table if not exists ai_employee_profiles (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  employee_key text not null check (char_length(employee_key) between 3 and 80),
+  role_key text not null check (role_key in (
+    'marketing_manager', 'sales_assistant', 'receptionist', 'customer_support',
+    'seo_specialist', 'content_writer', 'business_analyst',
+    'automation_engineer', 'website_manager'
+  )),
+  display_name text not null check (char_length(display_name) between 3 and 100),
+  purpose text not null check (char_length(purpose) between 10 and 500),
+  operational_status text not null check (operational_status in ('enabled', 'paused')),
+  record_status text not null check (record_status in ('current', 'superseded')),
+  skills text not null check (char_length(skills) between 2 and 8000),
+  memory_domains text not null check (char_length(memory_domains) between 2 and 2000),
+  permissions text not null check (char_length(permissions) between 2 and 8000),
+  working_hours text not null check (char_length(working_hours) between 2 and 2000),
+  tools text not null check (char_length(tools) between 2 and 8000),
+  approval_limits text not null check (char_length(approval_limits) between 2 and 4000),
+  kpis text not null check (char_length(kpis) between 2 and 8000),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, employee_key, version),
+  foreign key (tenant_id, supersedes_id)
+    references ai_employee_profiles(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_ai_employee_profiles_current
+  on ai_employee_profiles(tenant_id, employee_key)
+  where record_status = 'current';
+
+create table if not exists ai_employee_activity_logs (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  employee_key text not null check (char_length(employee_key) between 3 and 80),
+  profile_id text not null,
+  activity_type text not null check (activity_type in (
+    'provisioned', 'initialized', 'profile_revised', 'paused', 'resumed'
+  )),
+  summary text not null check (char_length(summary) between 10 and 500),
+  safe_metadata text not null check (char_length(safe_metadata) between 2 and 4000),
+  actor_id text references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, profile_id)
+    references ai_employee_profiles(tenant_id, id) on delete restrict
+);
+
+create index if not exists idx_ai_employee_profiles_tenant_status
+  on ai_employee_profiles(tenant_id, record_status, operational_status, role_key);
+
+create index if not exists idx_ai_employee_activity_tenant_employee
+  on ai_employee_activity_logs(tenant_id, employee_key, created_at desc);
+
+create index if not exists idx_ai_employee_activity_tenant_profile
+  on ai_employee_activity_logs(tenant_id, profile_id, created_at desc);
+`;
+
+const phase4AiEmployeesRlsMigrationSql = `
+alter table ai_employee_profiles enable row level security;
+alter table ai_employee_activity_logs enable row level security;
+
+drop policy if exists tenant_isolation on ai_employee_profiles;
+create policy tenant_isolation on ai_employee_profiles
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on ai_employee_activity_logs;
+create policy tenant_isolation on ai_employee_activity_logs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4UniversalConnectorsMigrationSql = `
+create unique index if not exists uq_private_connect_store_tenant_id
+  on private_connect_store_entries(tenant_id, id);
+
+create unique index if not exists uq_connector_proposals_tenant_id
+  on connector_proposals(tenant_id, id);
+
+create table if not exists connector_installation_plans (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  store_entry_id text not null,
+  connector_proposal_id text not null,
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  record_status text not null check (record_status in ('current', 'superseded')),
+  enabled integer not null default 0 check (enabled = 0),
+  installation_mode text not null check (installation_mode = 'sandbox_only'),
+  tenant_industry text not null check (char_length(tenant_industry) between 1 and 160),
+  industry_match text not null check (industry_match in ('aligned', 'not_documented')),
+  capabilities_snapshot text not null check (char_length(capabilities_snapshot) between 2 and 12000),
+  evidence_summary text not null check (char_length(evidence_summary) between 2 and 8000),
+  blockers text not null check (char_length(blockers) between 2 and 4000),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, store_entry_id, version),
+  foreign key (tenant_id, store_entry_id)
+    references private_connect_store_entries(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, connector_proposal_id)
+    references connector_proposals(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, supersedes_id)
+    references connector_installation_plans(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_connector_installation_plans_current
+  on connector_installation_plans(tenant_id, store_entry_id)
+  where record_status = 'current';
+
+create index if not exists idx_connector_installation_plans_tenant_status
+  on connector_installation_plans(tenant_id, record_status, updated_at desc);
+
+create index if not exists idx_connector_installation_plans_tenant_proposal
+  on connector_installation_plans(tenant_id, connector_proposal_id, version desc);
+`;
+
+const phase4UniversalConnectorsRlsMigrationSql = `
+alter table connector_installation_plans enable row level security;
+
+drop policy if exists tenant_isolation on connector_installation_plans;
+create policy tenant_isolation on connector_installation_plans
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4PrivateAppMarketplaceMigrationSql = `
+create unique index if not exists uq_workflows_tenant_id
+  on workflows(tenant_id, id);
+
+create table if not exists private_marketplace_listings (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  listing_key text not null check (char_length(listing_key) between 3 and 200),
+  category text not null check (category in ('connector', 'workflow', 'ai_employee')),
+  source_kind text not null check (source_kind in ('connector_plan', 'workflow', 'ai_employee_profile')),
+  connector_plan_id text,
+  workflow_id text,
+  ai_employee_profile_id text,
+  title text not null check (char_length(title) between 3 and 160),
+  summary text not null check (char_length(summary) between 10 and 800),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  record_status text not null check (record_status in ('current', 'superseded')),
+  visibility text not null default 'private' check (visibility = 'private'),
+  capabilities_snapshot text not null check (char_length(capabilities_snapshot) between 2 and 12000),
+  permissions_snapshot text not null check (char_length(permissions_snapshot) between 2 and 12000),
+  provenance_snapshot text not null check (char_length(provenance_snapshot) between 2 and 8000),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, listing_key, version),
+  check (
+    (source_kind = 'connector_plan' and connector_plan_id is not null and workflow_id is null and ai_employee_profile_id is null)
+    or (source_kind = 'workflow' and connector_plan_id is null and workflow_id is not null and ai_employee_profile_id is null)
+    or (source_kind = 'ai_employee_profile' and connector_plan_id is null and workflow_id is null and ai_employee_profile_id is not null)
+  ),
+  foreign key (tenant_id, connector_plan_id)
+    references connector_installation_plans(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, workflow_id)
+    references workflows(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, ai_employee_profile_id)
+    references ai_employee_profiles(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, supersedes_id)
+    references private_marketplace_listings(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_private_marketplace_listings_current
+  on private_marketplace_listings(tenant_id, listing_key)
+  where record_status = 'current';
+
+create index if not exists idx_private_marketplace_listings_tenant_category
+  on private_marketplace_listings(tenant_id, category, record_status, updated_at desc);
+
+create table if not exists marketplace_installation_previews (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  listing_id text not null,
+  listing_version integer not null check (listing_version >= 1),
+  listing_fingerprint text not null check (char_length(listing_fingerprint) = 64),
+  status text not null default 'ready' check (status = 'ready'),
+  installation_mode text not null default 'preview_only' check (installation_mode = 'preview_only'),
+  enabled integer not null default 0 check (enabled = 0),
+  installation_steps text not null check (char_length(installation_steps) between 2 and 8000),
+  permission_review text not null check (char_length(permission_review) between 2 and 8000),
+  blockers text not null check (char_length(blockers) between 2 and 4000),
+  created_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, listing_id, listing_version),
+  foreign key (tenant_id, listing_id)
+    references private_marketplace_listings(tenant_id, id) on delete restrict
+);
+
+create index if not exists idx_marketplace_previews_tenant_listing
+  on marketplace_installation_previews(tenant_id, listing_id, created_at desc);
+`;
+
+const phase4PrivateAppMarketplaceRlsMigrationSql = `
+alter table private_marketplace_listings enable row level security;
+alter table marketplace_installation_previews enable row level security;
+
+drop policy if exists tenant_isolation on private_marketplace_listings;
+create policy tenant_isolation on private_marketplace_listings
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on marketplace_installation_previews;
+create policy tenant_isolation on marketplace_installation_previews
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4PrivateAutomationMarketplaceMigrationSql = `
+create table if not exists automation_marketplace_packages (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  listing_id text not null,
+  source_workflow_id text not null,
+  package_key text not null check (char_length(package_key) between 3 and 200),
+  title text not null check (char_length(title) between 3 and 160),
+  summary text not null check (char_length(summary) between 10 and 800),
+  template_snapshot text not null check (char_length(template_snapshot) between 2 and 12000),
+  required_configuration text not null check (char_length(required_configuration) between 2 and 8000),
+  approval_policy text not null check (char_length(approval_policy) between 3 and 100),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  record_status text not null check (record_status in ('current', 'superseded')),
+  visibility text not null default 'tenant_private' check (visibility = 'tenant_private'),
+  execution_enabled integer not null default 0 check (execution_enabled = 0),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, package_key, version),
+  foreign key (tenant_id, listing_id)
+    references private_marketplace_listings(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, source_workflow_id)
+    references workflows(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, supersedes_id)
+    references automation_marketplace_packages(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_automation_marketplace_packages_current
+  on automation_marketplace_packages(tenant_id, package_key)
+  where record_status = 'current';
+
+create index if not exists idx_automation_marketplace_packages_tenant_status
+  on automation_marketplace_packages(tenant_id, record_status, updated_at desc);
+
+create table if not exists automation_marketplace_previews (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  package_id text not null,
+  package_version integer not null check (package_version >= 1),
+  package_fingerprint text not null check (char_length(package_fingerprint) = 64),
+  status text not null default 'ready' check (status = 'ready'),
+  installation_mode text not null default 'preview_only' check (installation_mode = 'preview_only'),
+  execution_enabled integer not null default 0 check (execution_enabled = 0),
+  preview_steps text not null check (char_length(preview_steps) between 2 and 8000),
+  permission_review text not null check (char_length(permission_review) between 2 and 8000),
+  blockers text not null check (char_length(blockers) between 2 and 4000),
+  created_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, package_id, package_version),
+  foreign key (tenant_id, package_id)
+    references automation_marketplace_packages(tenant_id, id) on delete restrict
+);
+
+create index if not exists idx_automation_marketplace_previews_tenant_package
+  on automation_marketplace_previews(tenant_id, package_id, created_at desc);
+`;
+
+const phase4PrivateAutomationMarketplaceRlsMigrationSql = `
+alter table automation_marketplace_packages enable row level security;
+alter table automation_marketplace_previews enable row level security;
+
+drop policy if exists tenant_isolation on automation_marketplace_packages;
+create policy tenant_isolation on automation_marketplace_packages
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on automation_marketplace_previews;
+create policy tenant_isolation on automation_marketplace_previews
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4SelfImprovementMigrationSql = `
+create table if not exists self_improvement_proposals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_key text not null check (char_length(proposal_key) between 3 and 220),
+  category text not null check (category in (
+    'workflow_failed', 'workflow_unused', 'connector_degraded',
+    'connector_unused', 'contact_duplicates', 'seo_metadata', 'website_cta'
+  )),
+  entity_type text not null check (char_length(entity_type) between 3 and 80),
+  entity_id text not null check (char_length(entity_id) between 1 and 200),
+  title text not null check (char_length(title) between 3 and 180),
+  explanation text not null check (char_length(explanation) between 10 and 1000),
+  recommendation text not null check (char_length(recommendation) between 10 and 1200),
+  action_label text not null check (char_length(action_label) between 3 and 100),
+  action_href text not null check (char_length(action_href) between 1 and 240),
+  severity text not null check (severity in ('critical', 'warning', 'info')),
+  confidence integer not null check (confidence between 0 and 100),
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  record_status text not null check (record_status in ('current', 'superseded', 'resolved')),
+  decision_status text not null default 'pending' check (decision_status in ('pending', 'accepted', 'dismissed')),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, id, version),
+  unique (tenant_id, proposal_key, version),
+  foreign key (tenant_id, supersedes_id)
+    references self_improvement_proposals(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_self_improvement_proposals_current
+  on self_improvement_proposals(tenant_id, proposal_key)
+  where record_status = 'current';
+
+create index if not exists idx_self_improvement_proposals_tenant_status
+  on self_improvement_proposals(tenant_id, record_status, decision_status, updated_at desc);
+
+create table if not exists self_improvement_evidence (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  proposal_version integer not null check (proposal_version >= 1),
+  evidence_key text not null check (char_length(evidence_key) between 3 and 160),
+  source_type text not null check (char_length(source_type) between 3 and 80),
+  source_id text not null check (char_length(source_id) between 1 and 200),
+  metric_name text not null check (char_length(metric_name) between 3 and 120),
+  metric_value integer not null check (metric_value >= 0),
+  summary text not null check (char_length(summary) between 10 and 500),
+  observed_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, proposal_id, proposal_version, evidence_key),
+  foreign key (tenant_id, proposal_id, proposal_version)
+    references self_improvement_proposals(tenant_id, id, version) on delete restrict
+);
+
+create index if not exists idx_self_improvement_evidence_tenant_proposal
+  on self_improvement_evidence(tenant_id, proposal_id, proposal_version);
+
+create table if not exists self_improvement_decisions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  proposal_id text not null,
+  proposal_version integer not null check (proposal_version >= 1),
+  decision text not null check (decision in ('accepted', 'dismissed')),
+  reason text not null check (char_length(reason) between 10 and 800),
+  created_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, proposal_id, proposal_version),
+  foreign key (tenant_id, proposal_id, proposal_version)
+    references self_improvement_proposals(tenant_id, id, version) on delete restrict
+);
+
+create index if not exists idx_self_improvement_decisions_tenant_created
+  on self_improvement_decisions(tenant_id, created_at desc);
+`;
+
+const phase4SelfImprovementRlsMigrationSql = `
+alter table self_improvement_proposals enable row level security;
+alter table self_improvement_evidence enable row level security;
+alter table self_improvement_decisions enable row level security;
+
+drop policy if exists tenant_isolation on self_improvement_proposals;
+create policy tenant_isolation on self_improvement_proposals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on self_improvement_evidence;
+create policy tenant_isolation on self_improvement_evidence
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on self_improvement_decisions;
+create policy tenant_isolation on self_improvement_decisions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4EnterpriseObservabilityIndexesMigrationSql = `
+create index if not exists idx_domain_events_tenant_status_schedule
+  on domain_events(tenant_id, status, next_run_at, updated_at);
+
+create index if not exists idx_workflow_runs_tenant_status_created
+  on workflow_runs(tenant_id, status, created_at desc);
+
+create index if not exists idx_notifications_tenant_channel_status
+  on notifications(tenant_id, channel, status, created_at desc);
+
+create index if not exists idx_connectors_tenant_health_updated
+  on connectors(tenant_id, health, updated_at desc);
+
+create index if not exists idx_connector_sync_runs_tenant_status
+  on connector_sync_runs(tenant_id, status, created_at desc);
+
+create index if not exists idx_webhook_deliveries_tenant_status
+  on webhook_deliveries(tenant_id, status, created_at desc);
+
+create index if not exists idx_webhook_endpoints_tenant_status
+  on webhook_endpoints(tenant_id, status);
+
+create index if not exists idx_connector_contract_runs_tenant_status
+  on connector_contract_runs(tenant_id, status, created_at desc);
+
+create index if not exists idx_api_change_impacts_tenant_blocked
+  on api_change_impacts(tenant_id, upgrade_blocked, updated_at desc);
+
+create index if not exists idx_api_source_rechecks_context_status
+  on api_source_recheck_schedules(context_tenant_id, last_status, next_run_at);
 `;

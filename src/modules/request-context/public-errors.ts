@@ -5,6 +5,10 @@ import { CrmError } from "@/modules/crm";
 import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
+import { BusinessBrainError } from "@/modules/business-brain";
+import { StrategicAdvisorError } from "@/modules/strategic-advisor";
+import { AutonomousMarketingError } from "@/modules/autonomous-marketing";
+import { WebsiteAiError } from "@/modules/website-ai";
 
 export type PublicError = {
   code: string;
@@ -30,6 +34,12 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof ConnectorError) return mapConnectorError(error);
   if (error instanceof CrmError) return mapCrmError(error);
   if (error instanceof WorkflowError) return mapWorkflowError(error);
+  if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
+  if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
+  if (error instanceof AutonomousMarketingError) {
+    return mapAutonomousMarketingError(error);
+  }
+  if (error instanceof WebsiteAiError) return mapWebsiteAiError(error);
 
   if (error instanceof ZodError) {
     return {
@@ -132,6 +142,90 @@ function mapWorkflowError(error: WorkflowError): PublicError {
     error.code,
     "workflow",
     "Action d'automatisation impossible.",
+    409,
+  );
+}
+
+function mapBusinessBrainError(error: BusinessBrainError): PublicError {
+  if (error.code === "business_brain_entry_not_found") {
+    return publicError(
+      error.code,
+      "business_brain",
+      "Information introuvable.",
+      404,
+    );
+  }
+  if (error.code === "business_brain_revision_conflict") {
+    return publicError(
+      error.code,
+      "business_brain",
+      "Cette information a déjà été modifiée.",
+      409,
+    );
+  }
+  return publicError(
+    error.code,
+    "business_brain",
+    "La mémoire de l'entreprise est indisponible.",
+    503,
+  );
+}
+
+function mapStrategicAdvisorError(error: StrategicAdvisorError): PublicError {
+  if (error.code === "strategic_recommendation_not_found") {
+    return publicError(
+      error.code,
+      "strategic_advisor",
+      "Recommandation introuvable.",
+      404,
+    );
+  }
+  return publicError(
+    error.code,
+    "strategic_advisor",
+    "Cette recommandation a déjà été décidée.",
+    409,
+  );
+}
+
+function mapAutonomousMarketingError(error: AutonomousMarketingError): PublicError {
+  if (error.code === "marketing_profile_required") {
+    return publicError(
+      error.code,
+      "autonomous_marketing",
+      "Complétez le Business Twin avant de préparer une campagne.",
+      409,
+    );
+  }
+  if (error.code === "marketing_proposal_not_found") {
+    return publicError(
+      error.code,
+      "autonomous_marketing",
+      "Proposition marketing introuvable.",
+      404,
+    );
+  }
+  return publicError(
+    error.code,
+    "autonomous_marketing",
+    "Cette proposition marketing a déjà été modifiée.",
+    409,
+  );
+}
+
+function mapWebsiteAiError(error: WebsiteAiError): PublicError {
+  if (error.code === "website_ai_source_required") {
+    return publicError(
+      error.code,
+      "website_ai",
+      "Un site et un Business Twin vérifiés sont nécessaires.",
+      409,
+    );
+  }
+  return publicError(
+    error.code,
+    "website_ai",
+    "Cette proposition web n'est plus disponible.",
     409,
   );
 }

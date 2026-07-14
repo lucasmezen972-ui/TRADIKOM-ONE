@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 implementation remains stopped until a separate authorized prompt starts from green `main`.
+Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 
 Completed for the first Phase 3 checkpoint:
 
@@ -63,7 +63,21 @@ Improved operational observability completed and green at `2747368`:
 2. Tenant-scoped health totals cover pending mappings, blocked impacts, repair decisions, sandbox approvals, failed contracts and audited API Intelligence actions.
 3. The read model exposes no raw source URLs, payloads, error messages, error codes or secrets and is covered for role and tenant isolation.
 
-Next unfinished work:
+Phase 4 completion:
 
-1. Confirm the `main` CI for the Phase 4 entry-check documentation commit.
-2. Do not start Phase 4 implementation as part of Phase 3.5 stabilization.
+1. Business Brain foundation is green at `1ea4e1e` in GitHub Actions run `29333961495`; draft PR #5 is open.
+2. Strategic Advisor is green at `4fcb9e2` in complete GitHub Actions run `29335663755`, with evidence, explainability, planning-only approval and no execution side effects.
+3. Autonomous Marketing is green at `1c2c8e3` in complete GitHub Actions run `29338101814`, with evidence, immutable revisions, approval and no launch/send/publish path.
+4. Website AI is green at `ab1c344` in complete GitHub Actions run `29341752287`; demo reopening cannot publish a pending draft.
+5. Sales AI is green at `6a93480` in complete GitHub Actions run `29343934205`, with explainable CRM evidence and no message, quotation, pricing or discount path.
+6. Reputation AI is green at `0f783bc` in complete GitHub Actions run `29347576934`, with manual/imported evidence, explicit authenticity limits, planning-only approval and no external monitoring, send or publication path.
+7. Competitor Intelligence is green at `8678683` in complete GitHub Actions run `29350066863`, with confirmed legal public observations, safe URL storage, evidence comparison and no network fetch, scraping or external reaction path.
+8. Financial AI is green at `02eaa2c` in complete GitHub Actions run `29352582873`, with declared/versioned inputs, explainable formulas, strict unavailable states, tenant isolation and no accounting or external write path.
+9. AI Employee is green at `2295c99` in complete GitHub Actions run `29354334456`, with nine default profiles, Business Brain memory scopes, immutable versions/activity, tenant isolation and explicit execution prohibitions.
+10. Universal Connector Platform is green at `793e35c` in complete GitHub Actions run `29357220616`, with evidence revalidation, immutable sandbox plans, tenant isolation and no installation or activation path.
+11. Private App Marketplace is green at `8713dee` in complete GitHub Actions run `29359217460`, with immutable tenant-private listings, disabled installation previews, composite source relations and no operational side effects.
+12. Private Automation Marketplace is green at `954a77b` in complete GitHub Actions run `29361102893`, with input-value stripping, immutable tenant-private packages, review-only previews, composite relations and no operational side effects.
+13. Self Improvement is green at `df82be7` in complete GitHub Actions run `29363352123`, with seven measurable rule families, numeric evidence, immutable versions/decisions, explicit unavailable telemetry and no operational side effects.
+14. Enterprise Observability is green at `9880457` in complete run `29365672444`, with tenant-scoped persisted signals, sensitive-content exclusion, read-only behavior, tenant-leading indexes and sixteen Playwright scenarios.
+15. Worker heartbeat, external AI, production SMS/WhatsApp, CPU, memory, storage and provider cost remain explicitly unavailable rather than receiving invented health states.
+16. No Phase 4 implementation task remains. Automatic changes, public sharing, purchases, connector activation, external sends, production installation, unrestricted crawling and one-click execution remain unavailable by design.
