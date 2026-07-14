@@ -1,5 +1,7 @@
+import Link from "next/link";
 import {
   ClipboardList,
+  Globe2,
   LockKeyhole,
   Power,
   RotateCcw,
@@ -35,6 +37,13 @@ export default async function ConnectionsPage() {
           Connect Store
         </p>
         <h1 className="mt-1 text-4xl font-bold">Connexions</h1>
+        <Link
+          href="/connexions/domaines"
+          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+        >
+          <Globe2 size={17} aria-hidden />
+          Gérer les domaines
+        </Link>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

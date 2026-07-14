@@ -46,9 +46,18 @@ export async function getDomainConnectionWorkspace(
     listDomainConnections(db, tenantId),
     listDnsChangePlans(db, tenantId),
   ]);
+  const connectionViews = await Promise.all(
+    connections.map(async (connection) => {
+      const snapshot = await findLatestDnsSnapshot(db, tenantId, connection.id);
+      return mapConnection(
+        connection,
+        safeJson<DnsRecord[]>(snapshot?.records, []),
+      );
+    }),
+  );
   return {
     canManage: domainAdminRoles.includes(role as (typeof domainAdminRoles)[number]),
-    connections: connections.map(mapConnection),
+    connections: connectionViews,
     plans: plans.map(mapPlan),
   };
 }
@@ -398,7 +407,11 @@ function defaultWebsiteChange(): DnsChange[] {
   ];
 }
 
-function mapConnection(row: Awaited<ReturnType<typeof listDomainConnections>>[number]) {
+function mapConnection(
+  row: Awaited<ReturnType<typeof listDomainConnections>>[number],
+  records: DnsRecord[],
+) {
+  const adapter = getDomainProviderAdapter(row.provider_key);
   return {
     id: row.id,
     domain: row.normalized_domain,
@@ -409,6 +422,8 @@ function mapConnection(row: Awaited<ReturnType<typeof listDomainConnections>>[nu
     likelyHosting: row.likely_hosting,
     certificateStatus: row.certificate_status,
     evidence: safeJson<DomainEvidence[]>(row.evidence, []),
+    records,
+    capabilities: adapter.capabilities,
     updatedAt: row.updated_at,
   };
 }
@@ -421,6 +436,9 @@ function mapPlan(row: Awaited<ReturnType<typeof listDnsChangePlans>>[number]) {
     changes: safeJson<DnsChange[]>(row.proposed_changes, []),
     impact: safeJson<Record<string, unknown>>(row.impact_analysis, {}),
     checks: safeJson<string[]>(row.verification_checks, []),
+    manualGuide: buildManualSetupGuide(
+      safeJson<DnsChange[]>(row.proposed_changes, []),
+    ),
     expiresAt: row.expires_at,
   };
 }

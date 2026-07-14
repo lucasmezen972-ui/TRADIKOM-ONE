@@ -970,6 +970,57 @@ export async function syncMockConnectorAction() {
   revalidatePath("/aujourdhui");
 }
 
+export async function analyzeDomainConnectionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.analyze", () =>
+    services.analyzeDomainConnection(user.id, tenant.id, {
+      domain: text(formData, "domain"),
+      providerKey: text(formData, "providerKey") as "mock_dns" | "manual",
+    }),
+  );
+  revalidatePath("/connexions/domaines");
+  revalidatePath("/connexions");
+}
+
+export async function prepareDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_prepare", () =>
+    services.prepareDnsChangePlan(user.id, tenant.id, {
+      connectionId: text(formData, "connectionId"),
+    }),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function approveDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_approve", () =>
+    services.approveDnsChangePlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function confirmDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_confirm", () =>
+    services.confirmDnsChangePlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function simulateDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_simulate", () =>
+    services.simulateDnsChangePlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
 export async function rotateWebhookSecretAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

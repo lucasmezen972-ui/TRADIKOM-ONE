@@ -12,7 +12,10 @@ Current Phase 5 checkpoint:
 - Runtime migrations `054`/`055` and SQL mirrors `0048`/`0049` add composite tenant relations, tenant-leading indexes and PostgreSQL RLS.
 - Focused tests cover the mock flow, double confirmation, no external effect, destructive-change blocks, application isolation and cross-tenant foreign relations.
 - Local TypeScript validation hung without diagnostics and was stopped after 30 seconds. GitHub Actions remains the authoritative validation environment.
-- Next unfinished task: make this checkpoint green in CI, add the French domain workspace and restricted-role PostgreSQL coverage, then implement the mock OAuth connection slice.
+- Initial type fix `6c47c68` passed complete GitHub Actions run `29374174913`: migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL tests, production build and sixteen Playwright scenarios.
+- The French `/connexions/domaines` workspace exposes domain analysis, evidence, current records, non-destructive plans, approval, second confirmation, manual guidance and no-effect simulation with explicit empty and safe error states.
+- Restricted-role PostgreSQL coverage now checks Phase 5 no-context reads, tenant reads, cross-tenant inserts, composite relations, updates and deletes. Playwright covers the complete mock DNS control flow and asserts that no apply/publish control exists.
+- Next unfinished task: validate the domain UI checkpoint through CI, then implement the mock OAuth connection slice.
 
 Current Phase 4 checkpoint:
 

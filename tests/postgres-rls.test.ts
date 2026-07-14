@@ -2045,6 +2045,117 @@ describeIfPostgres("PostgreSQL RLS", () => {
       deletedDecision: 0,
     });
   });
+
+  it("isolates Phase 5 domain records and composite relations for a restricted role", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Domain RLS A",
+      email: uniqueEmail("domain-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Domain RLS B",
+      email: uniqueEmail("domain-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Domain RLS A ${randomUUID()}`,
+      category: "Commerce",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Domain RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const domainA = await services.analyzeDomainConnection(ownerA.id, tenantA.id, {
+      domain: `a-${randomUUID()}.example.test`,
+      providerKey: "mock_dns",
+    });
+    const domainB = await services.analyzeDomainConnection(ownerB.id, tenantB.id, {
+      domain: `b-${randomUUID()}.example.test`,
+      providerKey: "mock_dns",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect((await restrictedPool.query("select id from domain_connections")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from dns_snapshots")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from dns_change_plans")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from dns_change_approvals")).rows).toEqual([]);
+
+    const visible = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        connections: (
+          await client.query("select id from domain_connections order by id")
+        ).rows,
+        snapshots: (
+          await client.query("select id from dns_snapshots order by id")
+        ).rows,
+      }),
+    );
+    expect(visible.connections).toEqual([{ id: domainA.connectionId }]);
+    expect(visible.snapshots).toEqual([{ id: domainA.snapshotId }]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into dns_snapshots (
+             id, tenant_id, domain_connection_id, records, evidence, captured_at
+           ) values ($1, $2, $3, '[]', '[]', $4)`,
+          [id("dns_snapshot"), tenantA.id, domainB.connectionId, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into domain_connections (
+             id, tenant_id, normalized_domain, provider_key, provider_label,
+             state, certificate_status, evidence, created_by, created_at, updated_at
+           ) values ($1, $2, $3, 'manual', 'Configuration manuelle',
+             'manual_setup_required', 'unknown', '[]', $4, $5, $5)`,
+          [
+            id("domain"),
+            tenantB.id,
+            `cross-${randomUUID()}.example.test`,
+            ownerB.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update domain_connections set state = 'failed' where id = $1",
+            [domainB.connectionId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from dns_snapshots where id = $1", [
+            domainB.snapshotId,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
 });
 
 function businessBrainFixture(label: string) {

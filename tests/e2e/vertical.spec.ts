@@ -23,6 +23,52 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
   await expect(page.getByText("lead-playwright@example.com")).toBeVisible();
 });
 
+test("a tenant administrator approves and simulates a DNS plan without applying it", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.goto("/connexions/domaines");
+  await expect(page.getByRole("heading", { name: "Domaines" })).toBeVisible();
+  const domain = `atelier-${Date.now()}.example.test`;
+  await page.getByLabel("Nom de domaine").fill(domain);
+  await page.getByLabel("Méthode").selectOption("mock_dns");
+  await page.getByRole("button", { name: "Analyser le domaine" }).click();
+
+  const connection = page.locator("article").filter({ hasText: domain }).first();
+  await expect(connection.getByText("Analysé", { exact: true })).toBeVisible();
+  await expect(connection.getByText("Registraire de test")).toBeVisible();
+  await expect(connection.getByText("MX", { exact: true })).toBeVisible();
+  await connection.getByRole("button", { name: "Préparer le plan DNS" }).click();
+
+  let plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Première approbation requise",
+  });
+  await expect(plan.getByText("Aucun effet externe")).toBeVisible();
+  await plan.getByRole("button", { name: "Approuver le plan" }).click();
+
+  plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Deuxième confirmation requise",
+  });
+  await plan
+    .getByRole("button", { name: "Confirmer une seconde fois" })
+    .click();
+
+  plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Prêt à simuler",
+  });
+  await plan.getByRole("button", { name: "Simuler le changement" }).click();
+
+  plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Simulation réussie",
+  });
+  await expect(
+    plan.getByText("Simulation terminée, aucune modification appliquée"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Appliquer|Modifier les DNS|Publier/i }),
+  ).toHaveCount(0);
+});
+
 test("the Business Brain versions and archives verified tenant memory", async ({
   page,
 }) => {

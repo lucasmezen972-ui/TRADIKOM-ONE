@@ -2,8 +2,8 @@
 
 Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green main `1de2e3c`:
 
-1. Validate the domain connection foundation through GitHub Actions.
-2. Add the French domain connection workspace and PostgreSQL restricted-role tests.
+1. Domain connection foundation validated in complete run `29374174913`.
+2. Validate the French domain workspace and PostgreSQL restricted-role tests through CI.
 3. Implement the mock OAuth provider, encrypted credentials and replay-safe callback flow.
 4. Install one controlled mock software connection and enforce read-only execution policy.
 5. Add connection health, safe disconnect, universal import/export and website domain binding.

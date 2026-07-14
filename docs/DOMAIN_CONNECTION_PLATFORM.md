@@ -18,3 +18,7 @@ Un plan part du dernier instantané, expire après 24 heures et contient les cha
 ## Limite actuelle
 
 La simulation valide le plan et génère les instructions manuelles. Elle n'envoie aucune commande à un fournisseur DNS.
+
+## Interface
+
+`/connexions/domaines` permet à un propriétaire ou administrateur d'analyser un domaine, consulter les preuves et enregistrements, préparer le plan, effectuer les deux confirmations et lancer une simulation. Les autres membres disposent d'une lecture seule. Les erreurs restent sûres et aucune commande d'application DNS n'est rendue.
