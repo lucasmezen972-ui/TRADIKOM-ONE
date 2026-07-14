@@ -30,7 +30,8 @@ describeIfPostgres("bounded PostgreSQL scale", () => {
       const pool = new Pool({ connectionString: targetUrl.toString() });
       cleanupTasks.push(async () => {
         await pool.end();
-        await adminPool.query(`drop database if exists ${databaseName} with (force)`);
+        await waitForDatabaseConnectionsToClose(adminPool, databaseName);
+        await adminPool.query(`drop database if exists ${databaseName}`);
         await adminPool.end();
       });
 
@@ -246,3 +247,20 @@ describeIfPostgres("bounded PostgreSQL scale", () => {
     120_000,
   );
 });
+
+async function waitForDatabaseConnectionsToClose(
+  adminPool: Pool,
+  databaseName: string,
+) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const result = await adminPool.query<{ connection_count: string }>(
+      `select count(*)::text as connection_count
+       from pg_stat_activity
+       where datname = $1`,
+      [databaseName],
+    );
+    if (result.rows[0]?.connection_count === "0") return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error("Temporary database connections did not close.");
+}
