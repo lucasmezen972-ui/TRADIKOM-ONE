@@ -25,6 +25,12 @@ const environmentSchema = z
       .optional(),
     DATABASE_POOL_MAX: positiveIntegerString.optional(),
     PGLITE_DATA_DIR: z.string().min(1).optional(),
+    BUSINESS_TIME_ZONE: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine(isValidTimeZone)
+      .optional(),
     CONNECTOR_ENCRYPTION_KEY: z.string().min(32).optional(),
     EMAIL_PROVIDER: z.enum(["console", "test"]).optional(),
     OPENAI_API_KEY: z.string().min(1).optional(),
@@ -90,6 +96,22 @@ const environmentSchema = z
         code: "custom",
         path: ["ALLOW_CONSOLE_EMAIL_IN_PRODUCTION"],
         message: "Console email delivery requires explicit production opt-in.",
+      });
+    }
+
+    if (environment.EMAIL_PROVIDER === "test") {
+      context.addIssue({
+        code: "custom",
+        path: ["EMAIL_PROVIDER"],
+        message: "Test email delivery is not available in production.",
+      });
+    }
+
+    if (environment.FEATURE_LIVE_INTEGRATIONS === "true") {
+      context.addIssue({
+        code: "custom",
+        path: ["FEATURE_LIVE_INTEGRATIONS"],
+        message: "Live integrations are not approved for production.",
       });
     }
 
@@ -165,4 +187,13 @@ function isSecurePublicUrl(value: string) {
     url.hostname === "127.0.0.1" ||
     url.hostname === "::1"
   );
+}
+
+function isValidTimeZone(value: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
 }

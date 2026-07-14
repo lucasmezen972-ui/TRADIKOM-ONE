@@ -93,4 +93,29 @@ describe("environment validation", () => {
       }),
     ).toThrowError(/COOKIE_SECURE, FEATURE_PUBLIC_DEMO/);
   });
+
+  it("validates the business timezone", () => {
+    expect(
+      validateEnvironment({
+        NODE_ENV: "test",
+        BUSINESS_TIME_ZONE: "America/Martinique",
+      }).BUSINESS_TIME_ZONE,
+    ).toBe("America/Martinique");
+    expect(() =>
+      validateEnvironment({
+        NODE_ENV: "test",
+        BUSINESS_TIME_ZONE: "Invalid/Timezone",
+      }),
+    ).toThrowError(/BUSINESS_TIME_ZONE/);
+  });
+
+  it("keeps test email and live integrations disabled in production", () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        EMAIL_PROVIDER: "test",
+        FEATURE_LIVE_INTEGRATIONS: "true",
+      }),
+    ).toThrowError(/EMAIL_PROVIDER, FEATURE_LIVE_INTEGRATIONS/);
+  });
 });

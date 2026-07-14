@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { getDb } from "../../src/lib/db";
 import { createServices } from "../../src/lib/services";
-import { processPendingDomainEvents } from "../../src/modules/workflows";
+import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 
 test("demo user can publish site lead into CRM", async ({ page }) => {
   await openDemo(page);
