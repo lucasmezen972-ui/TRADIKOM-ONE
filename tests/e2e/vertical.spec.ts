@@ -176,7 +176,9 @@ test("the command center turns a public lead into isolated operational work", as
     page.getByRole("heading", { name: /Priorités de Garage Caraibes Auto/i }),
   ).toBeVisible();
   await expect(page.getByText("Lead centre de pilotage").first()).toBeVisible();
-  await expect(page.getByText("Approbation d'automatisation")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Approbation d'automatisation/ }).first(),
+  ).toBeVisible();
   await expect(page.getByText("Configuration requise").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Opportunity Radar" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Site web" })).toBeVisible();
