@@ -185,6 +185,40 @@ describe("scheduled API source rechecks", () => {
     });
   });
 
+  it("moves repeated transient failures to a terminal blocked state", async () => {
+    const context = await setupSource();
+    const now = new Date("2026-07-13T12:00:00.000Z");
+    await context.services.configureApiSourceRecheck(
+      context.adminId,
+      context.tenantId,
+      { sourceId: context.sourceId, enabled: true, intervalSeconds: 3_600 },
+    );
+    await context.db.query(
+      `update api_source_recheck_schedules
+       set next_run_at = $1, consecutive_failures = 2
+       where source_id = $2`,
+      [now.toISOString(), context.sourceId],
+    );
+
+    const exhausted = await processDueApiSourceRechecks(context.db, {
+      now,
+      maxAttempts: 3,
+      transport: async () => {
+        throw new Error("credential=must-not-be-stored");
+      },
+    });
+
+    expect(exhausted).toMatchObject({ blocked: 1, retried: 0 });
+    const schedule = await loadSchedule(context.db, context.sourceId);
+    expect(schedule).toMatchObject({
+      enabled: 0,
+      last_status: "blocked",
+      last_error_code: "max_attempts_exceeded",
+      consecutive_failures: 3,
+    });
+    expect(JSON.stringify(schedule)).not.toContain("must-not-be-stored");
+  });
+
   it("stops a schedule when the configuring administrator loses platform authority", async () => {
     const context = await setupSource();
     const now = new Date("2026-07-13T12:00:00.000Z");

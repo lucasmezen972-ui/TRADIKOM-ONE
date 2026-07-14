@@ -20,6 +20,7 @@ export type ApiSourceRecheckWorkerOptions = {
   now?: Date;
   baseBackoffMs?: number;
   maxBackoffMs?: number;
+  maxAttempts?: number;
   processingTimeoutMs?: number;
   transport?: DiscoveryTransport;
 };
@@ -38,6 +39,7 @@ const defaultLimit = 3;
 const defaultBaseBackoffMs = 60_000;
 const defaultMaxBackoffMs = 6 * 60 * 60 * 1_000;
 const defaultProcessingTimeoutMs = 5 * 60 * 1_000;
+const defaultMaxAttempts = 8;
 
 export async function processDueApiSourceRechecks(
   db: DbClient,
@@ -58,6 +60,7 @@ export async function processDueApiSourceRechecks(
     options.processingTimeoutMs,
     defaultProcessingTimeoutMs,
   );
+  const maxAttempts = positiveInteger(options.maxAttempts, defaultMaxAttempts);
   const summary: ApiSourceRecheckSummary = {
     selected: 0,
     processed: 0,
@@ -118,12 +121,15 @@ export async function processDueApiSourceRechecks(
       }
     } catch (error) {
       const failure = classifyRecheckFailure(error);
-      if (failure.blocked) {
+      const attemptsExhausted = schedule.consecutive_failures + 1 >= maxAttempts;
+      if (failure.blocked || attemptsExhausted) {
         if (
           await markApiSourceRecheckBlocked(db, {
             scheduleId: schedule.id,
             leaseId,
-            errorCode: failure.code,
+            errorCode: attemptsExhausted
+              ? "max_attempts_exceeded"
+              : failure.code,
             now: nowValue,
           })
         ) {
