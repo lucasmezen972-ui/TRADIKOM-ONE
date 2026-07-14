@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { getDb } from "../../src/lib/db";
+import { createServices } from "../../src/lib/services";
+import { processPendingDomainEvents } from "../../src/modules/workflows";
 
 test("demo user can publish site lead into CRM", async ({ page }) => {
   await openDemo(page);
@@ -94,6 +97,120 @@ test("draft edits keep the published site and form online until publication", as
 
   await page.goto("/contacts");
   await expect(page.getByText(leadEmail)).toBeVisible();
+});
+
+test("the command center turns a public lead into isolated operational work", async ({
+  browser,
+  page,
+}) => {
+  await openDemo(page);
+  const leadEmail = `command-center-${Date.now()}@example.com`;
+  await page.goto("/sites/garage-caraibes-auto");
+  await page.getByPlaceholder("Votre nom").fill("Lead centre de pilotage");
+  await page.getByPlaceholder("Email").fill(leadEmail);
+  await page.getByPlaceholder("Telephone").fill("+596 696 55 66 77");
+  await page
+    .getByPlaceholder("Votre demande")
+    .fill("Je souhaite être rappelé pour une intervention.");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: /Envoyer/i }).click();
+  await expect(page).toHaveURL(/merci/);
+
+  const db = await getDb();
+  const demo = await db.query<{ tenant_id: string; user_id: string }>(
+    `select tenants.id as tenant_id, memberships.user_id
+     from tenants
+     join memberships on memberships.tenant_id = tenants.id
+     where tenants.slug = $1 and memberships.role = 'owner'
+     limit 1`,
+    ["garage-caraibes-auto"],
+  );
+  const demoTenantId = demo.rows[0]?.tenant_id;
+  const demoUserId = demo.rows[0]?.user_id;
+  if (!demoTenantId || !demoUserId) {
+    throw new Error("Le tenant de démonstration est introuvable.");
+  }
+
+  const workerNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000);
+  for (let pass = 0; pass < 12; pass += 1) {
+    const summary = await processPendingDomainEvents(db, {
+      now: workerNow,
+      limit: 100,
+    });
+    if (summary.selected === 0) break;
+  }
+  const workflowWork = await db.query<{ task_count: number; run_count: number }>(
+    `select
+       (select count(*)::int from tasks
+        join leads on leads.id = tasks.related_id
+          and leads.tenant_id = tasks.tenant_id
+          and tasks.related_type = 'lead'
+        join contacts on contacts.id = leads.contact_id
+          and contacts.tenant_id = leads.tenant_id
+        where tasks.tenant_id = $1 and contacts.email = $2) as task_count,
+       (select count(*)::int from workflow_runs
+        where tenant_id = $1 and trigger_name = 'lead.created') as run_count`,
+    [demoTenantId, leadEmail],
+  );
+  expect(Number(workflowWork.rows[0]?.task_count)).toBeGreaterThan(0);
+  expect(Number(workflowWork.rows[0]?.run_count)).toBeGreaterThan(0);
+
+  await db.query(
+    `insert into approvals
+      (id, tenant_id, requested_by, policy, status, target_type, target_id, created_at)
+     values ($1, $2, $3, 'administrator_approval_required', 'pending',
+       'workflow_run', $4, $5)`,
+    [
+      `e2e-command-center-approval-${Date.now()}`,
+      demoTenantId,
+      demoUserId,
+      `e2e-command-center-run-${Date.now()}`,
+      new Date().toISOString(),
+    ],
+  );
+
+  await page.goto("/contacts");
+  await expect(page.getByText(leadEmail)).toBeVisible();
+  await page.goto("/aujourdhui");
+  await expect(
+    page.getByRole("heading", { name: /Priorités de Garage Caraibes Auto/i }),
+  ).toBeVisible();
+  await expect(page.getByText("Lead centre de pilotage").first()).toBeVisible();
+  await expect(page.getByText("Approbation d'automatisation")).toBeVisible();
+  await expect(page.getByText("Configuration requise").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Opportunity Radar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Site web" })).toBeVisible();
+
+  const services = createServices(db);
+  const isolatedEmail = `isolated-command-center-${Date.now()}@example.com`;
+  const isolatedPassword = "Isolated!2026";
+  const isolatedUser = await services.registerUser({
+    name: "Organisation isolée",
+    email: isolatedEmail,
+    password: isolatedPassword,
+  });
+  await services.createTenant(isolatedUser.id, {
+    name: "Organisation sans activité",
+    category: "Services",
+  });
+
+  const isolatedContext = await browser.newContext();
+  const isolatedPage = await isolatedContext.newPage();
+  await isolatedPage.goto("/");
+  const loginForm = isolatedPage.locator("form").filter({
+    has: isolatedPage.getByRole("button", { name: "Se connecter" }),
+  });
+  await loginForm.getByPlaceholder("Email professionnel").fill(isolatedEmail);
+  await loginForm.getByPlaceholder("Mot de passe").fill(isolatedPassword);
+  await loginForm.getByRole("button", { name: "Se connecter" }).click();
+  await expect(isolatedPage).toHaveURL(/aujourdhui/);
+  await expect(isolatedPage.getByText(leadEmail)).toHaveCount(0);
+  await expect(
+    isolatedPage.getByText("Aucun nouveau lead aujourd'hui."),
+  ).toBeVisible();
+  await isolatedPage.goto("/contacts");
+  await expect(isolatedPage.getByText(leadEmail)).toHaveCount(0);
+  await isolatedContext.close();
 });
 
 async function openDemo(page: Page) {
