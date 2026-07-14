@@ -1,9 +1,14 @@
-import { getPgPool, pgClientAsSqlClient, type SqlClient } from "@/db/client";
+import {
+  getPgPool,
+  withPgPoolTransaction,
+  type SqlClient,
+} from "@/db/client";
 import type { DbClient } from "@/lib/db";
 
 type TransactionClient = DbClient & {
   __runtime?: "postgres";
   __transaction?: boolean;
+  __withTransaction?: SqlClient["__withTransaction"];
 };
 
 export async function withTenantDbTransaction<T>(
@@ -15,7 +20,10 @@ export async function withTenantDbTransaction<T>(
   const client = db as TransactionClient;
   if (client.__transaction) return callback(db);
   if (client.__runtime === "postgres") {
-    return withTenantTransaction(tenantId, actorId, callback);
+    if (!client.__withTransaction) {
+      throw new Error("PostgreSQL client does not expose transaction capability.");
+    }
+    return client.__withTransaction({ tenantId, actorId }, callback);
   }
 
   await db.query("begin");
@@ -36,7 +44,10 @@ export async function withSystemDbTransaction<T>(
   const client = db as TransactionClient;
   if (client.__transaction) return callback(db);
   if (client.__runtime === "postgres") {
-    return withSystemTransaction(callback);
+    if (!client.__withTransaction) {
+      throw new Error("PostgreSQL client does not expose transaction capability.");
+    }
+    return client.__withTransaction({ systemAccess: true }, callback);
   }
 
   await db.query("begin");
@@ -55,40 +66,19 @@ export async function withTenantTransaction<T>(
   actorId: string,
   callback: (client: SqlClient) => Promise<T>,
 ) {
-  const pool = getPgPool();
-  const client = await pool.connect();
-
-  try {
-    await client.query("begin");
-    await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
-    await client.query("select set_config('app.actor_id', $1, true)", [actorId]);
-    const result = await callback(pgClientAsSqlClient(client));
-    await client.query("commit");
-    return result;
-  } catch (error) {
-    await client.query("rollback");
-    throw error;
-  } finally {
-    client.release();
-  }
+  return withPgPoolTransaction(
+    getPgPool(),
+    { tenantId, actorId },
+    callback,
+  );
 }
 
 export async function withSystemTransaction<T>(
   callback: (client: SqlClient) => Promise<T>,
 ) {
-  const pool = getPgPool();
-  const client = await pool.connect();
-
-  try {
-    await client.query("begin");
-    await client.query("select set_config('app.system_access', 'true', true)");
-    const result = await callback(pgClientAsSqlClient(client));
-    await client.query("commit");
-    return result;
-  } catch (error) {
-    await client.query("rollback");
-    throw error;
-  } finally {
-    client.release();
-  }
+  return withPgPoolTransaction(
+    getPgPool(),
+    { systemAccess: true },
+    callback,
+  );
 }

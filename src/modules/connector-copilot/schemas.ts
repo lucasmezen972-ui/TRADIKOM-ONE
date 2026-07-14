@@ -11,6 +11,11 @@ export const connectorAuthenticationTypeSchema = z.enum([
   "bearer",
 ]);
 
+const connectorHttpMethodSchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.toLowerCase() : value),
+  z.enum(["get", "post", "put", "patch", "delete", "head", "options"]),
+);
+
 export const connectorManifestSchema = z.object({
   manifestVersion: z.literal("1"),
   connectorKey: z.string().regex(/^[a-z0-9_]+$/),
@@ -22,7 +27,7 @@ export const connectorManifestSchema = z.object({
   capabilities: z.array(
     z.object({
       operationKey: z.string().min(1),
-      method: z.enum(["get", "post", "put", "patch", "delete", "head", "options"]),
+      method: connectorHttpMethodSchema,
       path: z.string().startsWith("/").max(2_000),
       direction: z.enum(["read", "write"]),
       timeoutMs: z.number().int().min(100).max(30_000),
