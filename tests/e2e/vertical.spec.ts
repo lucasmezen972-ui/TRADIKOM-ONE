@@ -264,8 +264,10 @@ test("draft edits keep the published site and form online until publication", as
   );
 
   const publicationVersions = page
+    .getByRole("heading", { name: "Versions" })
+    .locator("..")
     .locator("form")
-    .filter({ hasText: "publication" });
+    .filter({ hasText: /^publication -/ });
   await expect(publicationVersions).toHaveCount(2);
   await publicationVersions
     .last()
