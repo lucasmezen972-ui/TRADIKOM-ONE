@@ -193,3 +193,4 @@
 - Added runtime migrations `031`/`032`, SQL mirrors `0025`/`0026`, composite tenant relations, RLS, command-center approval routing, module/PostgreSQL tests and a no-publication Playwright scenario.
 - Marketing decisions remain planning-only and audit `executionTriggered: false`; no launch, send, publish, workflow, connector, notification, activity or domain-event effect is available.
 - Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. The checkpoint is ready for authoritative GitHub Actions validation.
+- Initial Marketing run `29337702194` passed migrations, lint and typecheck before exposing an order-dependent test assertion. Test-only fix `1c2c8e3` made complete run `29338101814` green in 6m29s, including PostgreSQL RLS, production build and seven Playwright scenarios.

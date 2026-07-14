@@ -21,7 +21,7 @@ Current Phase 4 checkpoint:
 - Marketing approval is planning-only: there is no launch, send or publish service or control, and tests assert no workflow, connector, notification, activity or domain-event side effect.
 - Runtime migrations `031`/`032` and SQL mirrors `0025`/`0026` add tenant-owned proposals, evidence, decisions, composite tenant relations and restricted-role RLS.
 - The French `Marketing autonome` workspace displays evidence, risks, content and versions with role-aware empty/error states. Module, PostgreSQL and Playwright coverage is included.
-- Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. CI validation is pending for this coherent checkpoint.
+- Local typecheck and diff validation stalled without diagnostics and were stopped after 30 seconds. Initial run `29337702194` found only an order-dependent evidence assertion; test fix `1c2c8e3113dd5408204775fd7d74c1303a58babf` passed complete run `29338101814`, including migrations, PostgreSQL RLS, lint, typecheck, unit/integration tests, production build and seven Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.

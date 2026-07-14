@@ -80,4 +80,4 @@ Implemented behavior:
 
 Focused tests cover Business Twin requirements, evidence, prohibited-claim avoidance, generation deduplication, immutable revision, approval history, tenant authorization, restricted-role PostgreSQL isolation, command-center routing, Playwright and the absence of workflow, connector, notification, activity or domain-event side effects.
 
-Local typecheck and `git diff --check` again stalled without diagnostics and were stopped after 30 seconds. GitHub Actions is the authoritative validation environment for this checkpoint.
+Local typecheck and `git diff --check` again stalled without diagnostics and were stopped after 30 seconds. Initial CI run `29337702194` passed migrations, lint and typecheck, then exposed an order-dependent evidence assertion. Test-only fix `1c2c8e3113dd5408204775fd7d74c1303a58babf` made complete run `29338101814` green: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and seven Playwright scenarios.
