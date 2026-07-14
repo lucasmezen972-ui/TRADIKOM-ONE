@@ -7,7 +7,7 @@
 - Run initial `main` `29301275644`: vert.
 - Branche: `codex/phase-3-5-stabilization`.
 - PR #4: stabilisation et recuperation du centre de pilotage.
-- PR #2 reste non fusionnee et doit etre fermee comme remplacee apres validation du parcours recupere.
+- PR #2 a ete fermee sans fusion comme remplacee par la PR #4; son historique reste disponible.
 
 ## Recuperation du centre de pilotage
 
@@ -51,10 +51,13 @@ Les agregations du centre de pilotage sont calculees en SQL par tenant, avec com
 
 Un test PostgreSQL isole cree 10 000 contacts, 1 000 opportunites, 100 workflows actifs, 10 000 evenements, 1 000 sources, 100 snapshots par source, 100 propositions et 100 approbations. Il verifie les totaux exacts du centre de pilotage et les listes bornees a dix elements. Un test de charge sur la topologie de production reste une etape operateur avant trafic significatif.
 
+## Validation de fermeture
+
+Le head `3d0f7ca040d5fda99df94b75f9033fc42919e8be` a passe le run GitHub Actions `29306404397`: installation figee, audit des dependances de production, migrations propres et upgrade, sauvegarde/restauration, lint, typecheck, 44 fichiers et 143 tests, build de production et Playwright E2E. Aucun check obligatoire de ce run n'est ignore, annule ou en attente.
+
 ## Gate restant
 
-1. Faire passer la CI de fermeture avec tous les checkpoints.
-2. Fermer la PR #2 comme remplacee par la PR #4.
-3. Mettre la PR #4 en revue et la fusionner uniquement si elle est mergeable et verte.
-4. Verifier la CI de `main`.
-5. Creer `docs/PHASE_4_ENTRY_CHECK.md` seulement apres ce vert final.
+1. Faire passer la CI du checkpoint documentaire final.
+2. Mettre la PR #4 en revue et la fusionner uniquement si elle reste mergeable et verte.
+3. Verifier la CI de `main`.
+4. Creer `docs/PHASE_4_ENTRY_CHECK.md` seulement apres ce vert final.

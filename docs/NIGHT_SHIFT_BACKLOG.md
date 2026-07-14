@@ -65,7 +65,7 @@ Improved operational observability completed and green at `2747368`:
 
 Next unfinished work:
 
-1. Complete the PR #4 closure CI and full-diff review.
-2. Close PR #2 as superseded by PR #4 once the recovered command center is green.
-3. Merge PR #4 only after every required check passes and verify `main`.
+1. Pass the final documentation checkpoint CI and complete the PR #4 self-review.
+2. Mark PR #4 ready and merge only after every required check passes.
+3. Verify `main` after the stabilization merge.
 4. Commit the Phase 4 entry check only after the green stabilization merge.

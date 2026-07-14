@@ -7,10 +7,12 @@ Current stabilization checkpoint:
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
 - Draft PR #4 recovers the valid operational intent of obsolete PR #2 against the current dashboard services without cherry-picking its old-base patch.
+- PR #2 is closed without merge as superseded by PR #4, with its discussion history retained.
 - The command center now has tenant-scoped operational metrics, role-aware approvals, safe empty/error states and a full lead-to-worker-to-Radar Playwright path with second-tenant isolation.
 - Clean/upgrade PostgreSQL migration verification, catalog RLS/index checks, production dependency audit, backup/restore verification, bounded maintenance and terminal API recheck retries are part of the stabilization branch.
 - Production configuration rejects public demo, insecure cookies, test email, live integrations and invalid business timezones.
 - Connector Copilot revalidates mapping evidence and rejects unknown authentication or unsupported operation formats.
+- Head `3d0f7ca040d5fda99df94b75f9033fc42919e8be` passed complete GitHub Actions run `29306404397`: frozen install, dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, 44 files/143 tests, production build and Playwright E2E.
 - Phase 4 remains locked until PR #4 is merged, main CI is green, PR #2 is closed as superseded and `docs/PHASE_4_ENTRY_CHECK.md` is committed afterward.
 
 Last completed checkpoint:
@@ -153,22 +155,22 @@ Phase 2 closure:
 
 - PR #1 was squash-merged into `main` as `860f0719e9acc13b58636d5817dcbd8952b346b0` on 2026-07-12.
 - Main validation run `29212598708` passed ordered migrations on PostgreSQL 17, lint, typecheck, unit/integration tests, production build, and Playwright E2E.
-- Phase 2 is complete. PR #2 remains an isolated draft and was not included in the foundation merge.
+- Phase 2 is complete. PR #2 stayed isolated from the foundation merge and was later closed without merge as superseded by PR #4.
 
 Next unfinished task:
 
-1. Complete PR #4 closure CI and the final repository/diff review.
-2. Close PR #2 as superseded after the recovered command-center E2E is green.
-3. Merge PR #4 only with every required check green, then verify `main`.
+1. Pass the final documentation checkpoint CI and complete the PR #4 self-review.
+2. Mark PR #4 ready and merge only with every required check green.
+3. Verify `main` CI after the merge.
 4. Create the Phase 4 entry check only after the stabilization merge and green main.
 
-Phase 3 checkpoint in progress:
+Phase 3 completion history:
 
 - Phase 3 started from verified `main` SHA `05a7c7a099ad7ea458cb395cfdd9ccdf73a6f622`; run `29250246503` was green.
 - The first vertical slice now includes the Software Directory, approved-domain workflow, bounded source snapshots, safe OpenAPI JSON/YAML import, evidence-backed tenant mappings, explainable compatibility checks, disabled Connector Copilot proposals, mock contract tests, sandbox approval, private Connect Store, and a platform-admin interface.
 - PostgreSQL migrations `017`/`018` and SQL mirrors `0011`/`0012` add the Phase 3 models, tenant RLS and related-tenant integrity controls.
 - Local Node validation still hangs without diagnostics; `git diff --check` is used locally and GitHub Actions remains authoritative.
-- Draft PR #3 is open. Head `e971d1367527671670b2964bdfdc13cb45b2e780` passed both complete CI runs: push `29258483303` and pull request `29258489327`.
+- Draft PR #3 was opened during implementation. Head `e971d1367527671670b2964bdfdc13cb45b2e780` passed both complete CI runs: push `29258483303` and pull request `29258489327`; PR #3 was subsequently merged into `main`.
 - The API Change Monitor now compares snapshot content and HTTP validators, classifies contract/security/access changes, creates RLS-protected tenant impacts, runs static change contracts, blocks affected connectors, raises alerts, and requires an audited human decision on disabled repair plans.
 - Runtime migrations `019`/`020` and SQL mirrors `0013`/`0014` add change events, tenant impacts, RLS and proposal-tenant integrity.
 - API Change Monitor head `b0bd77fa1b6e64161abdcf7a78a031b1b1249d7a` passed complete push run `29264958738` and pull request run `29264962308`, including 111 tests, clean PostgreSQL migrations/RLS, production build and Playwright.

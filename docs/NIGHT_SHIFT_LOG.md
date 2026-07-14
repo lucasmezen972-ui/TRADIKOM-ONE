@@ -170,3 +170,7 @@
 - Hardened startup configuration, bounded maintenance retention, terminal source recheck attempts and Connector Copilot evidence/authentication/operation validation.
 - Added a PostgreSQL backup/restore CI procedure plus API security, learning, backup and production-readiness documentation.
 - Run `29304337927` passed dependency audit, migrations, lint, typecheck, unit/integration tests, production build and the recovered Playwright scenario before the backup and Connector Copilot checkpoints.
+- Completed the final transaction-client capability fix so injected PostgreSQL pools remain isolated; the scale test exposed and now covers the original global-pool regression.
+- Added bounded production-scale coverage for 10 000 contacts, 1 000 opportunities, 100 active workflows, 10 000 events, 1 000 API sources, 100 000 snapshots, 100 connector proposals and 100 approvals.
+- Closed obsolete PR #2 without merge after linking it to PR #4 and preserving its historical discussion.
+- Head `3d0f7ca040d5fda99df94b75f9033fc42919e8be` passed complete run `29306404397`: frozen install, production dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, 44 files/143 tests, production build and Playwright E2E.
