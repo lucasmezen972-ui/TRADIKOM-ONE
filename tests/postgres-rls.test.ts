@@ -706,6 +706,162 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(JSON.stringify(stored.rows[0])).not.toContain(subject);
     expect(JSON.stringify(stored.rows[0])).not.toContain(scope);
   });
+
+  it("isolates Sales AI assessments and their opportunity relations", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Sales RLS Owner A",
+      email: uniqueEmail("sales-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Sales RLS Owner B",
+      email: uniqueEmail("sales-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Sales RLS A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Sales RLS B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    for (const [owner, tenant, label] of [
+      [ownerA, tenantA, "a"],
+      [ownerB, tenantB, "b"],
+    ] as const) {
+      await services.saveOnboarding(owner.id, tenant.id, defaultGarageOnboarding());
+      await services.publishWebsite(owner.id, tenant.id);
+      await services.submitPublicLead(tenant.slug, {
+        name: `Sales RLS ${label}`,
+        email: uniqueEmail(`sales-rls-lead-${label}`),
+        phone: "+596 696 40 50 60",
+        message: "Demande commerciale tenant-scoped.",
+      });
+    }
+    const salesA = await services.generateSalesAiAssessments(ownerA.id, tenantA.id);
+    const salesB = await services.generateSalesAiAssessments(ownerB.id, tenantB.id);
+    const assessmentA = salesA.createdIds[0];
+    const assessmentB = salesB.createdIds[0];
+    const opportunityB = await ownerDb.query<{ id: string }>(
+      "select id from opportunities where tenant_id = $1 limit 1",
+      [tenantB.id],
+    );
+    if (!assessmentA || !assessmentB || !opportunityB.rows[0]) {
+      throw new Error("Sales AI RLS fixtures are incomplete.");
+    }
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    expect(
+      (await restrictedPool.query("select id from sales_ai_assessments")).rows,
+    ).toEqual([]);
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        assessments: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from sales_ai_assessments order by id",
+          )
+        ).rows,
+        evidence: (
+          await client.query<{ assessment_id: string; tenant_id: string }>(
+            "select assessment_id, tenant_id from sales_ai_evidence order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.assessments).toEqual([
+      { id: assessmentA, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.evidence).toHaveLength(6);
+    expect(
+      tenantAView.evidence.every(
+        (row) => row.assessment_id === assessmentA && row.tenant_id === tenantA.id,
+      ),
+    ).toBe(true);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into sales_ai_evidence (
+             id, tenant_id, assessment_id, evidence_type, evidence_ref, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'follow_up', $4, $5, $6, $7, $7)`,
+          [
+            id("sales_ai_evidence"),
+            tenantA.id,
+            assessmentB,
+            "cross-tenant",
+            "Preuve etrangere",
+            "refusee",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into sales_ai_assessments (
+             id, tenant_id, opportunity_id, fingerprint, status, score,
+             closing_estimate, confidence, priority, title, rationale,
+             recommended_action, risk_summary, action_label, action_href,
+             version, generation_version, generated_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, 'current', 50, 40, 80, 'medium', $5, $6,
+             $7, $8, $9, $10, 1, 'rls-test', $11, $12, $12
+           )`,
+          [
+            id("sales_ai_assessment"),
+            tenantA.id,
+            opportunityB.rows[0]!.id,
+            "c".repeat(64),
+            "Evaluation etrangere",
+            "La relation avec une opportunite etrangere doit etre refusee.",
+            "Ne creer aucune action.",
+            "Risque de fuite inter-tenant.",
+            "Ouvrir",
+            "/opportunites/refusee",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update sales_ai_assessments set score = 1 where id = $1",
+            [assessmentB],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from sales_ai_assessments where id = $1", [
+            assessmentB,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
 });
 
 function businessBrainFixture(label: string) {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Activity,
   BarChart3,
+  BadgeEuro,
   BrainCircuit,
   Bot,
   Building2,
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/mon-activite", label: "Mon activité", icon: Activity },
   { href: "/contacts", label: "Contacts", icon: Contact },
   { href: "/opportunites", label: "Opportunités", icon: BarChart3 },
+  { href: "/assistant-commercial", label: "Assistant commercial", icon: BadgeEuro },
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },

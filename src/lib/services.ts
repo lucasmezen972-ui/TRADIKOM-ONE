@@ -185,6 +185,10 @@ import {
   websiteAiProposalDecisionSchema,
   websiteAiProposalReferenceSchema,
 } from "@/modules/website-ai";
+import {
+  generateSalesAiAssessments,
+  getSalesAiWorkspace,
+} from "@/modules/sales-ai";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -325,6 +329,10 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof websiteAiProposalReferenceSchema>,
     ) => applyApprovedWebsiteAiProposal(db, userId, tenantId, input),
+    getSalesAiWorkspace: (userId: string, tenantId: string) =>
+      getSalesAiWorkspace(db, userId, tenantId),
+    generateSalesAiAssessments: (userId: string, tenantId: string) =>
+      generateSalesAiAssessments(db, userId, tenantId),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (

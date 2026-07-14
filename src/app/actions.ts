@@ -427,6 +427,18 @@ export async function applyWebsiteAiProposalAction(formData: FormData) {
   redirect(`/mon-site?iaApplication=${result.stale ? "stale" : "applied"}`);
 }
 
+export async function generateSalesAiAssessmentsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("sales_ai.generate", () =>
+    services.generateSalesAiAssessments(user.id, tenant.id),
+  );
+  revalidatePath("/assistant-commercial");
+  redirect(
+    `/assistant-commercial?analyse=1&nouvelles=${result.createdIds.length}`,
+  );
+}
+
 export async function updateSectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

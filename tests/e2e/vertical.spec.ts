@@ -213,6 +213,27 @@ test("Website AI applies an approved change to the draft while the public site s
   await publicPage.close();
 });
 
+test("Sales AI explains CRM priorities without creating outbound actions", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Assistant commercial" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Assistant commercial" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Actualiser l'analyse" }).click();
+  await expect(page.getByText(/Analyse terminee|Analyse terminée/)).toBeVisible();
+  const assessment = page.locator("article").first();
+  await expect(assessment.getByText("Preuves CRM", { exact: true })).toBeVisible();
+  await expect(assessment.getByText("Potentiel", { exact: true })).toBeVisible();
+  await expect(
+    assessment.getByRole("link", { name: "Ouvrir l'opportunité" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Envoyer|Devis|Remise|Contacter/i }),
+  ).toHaveCount(0);
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,
