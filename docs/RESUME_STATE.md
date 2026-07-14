@@ -1,6 +1,6 @@
 # Resume State
 
-Branch: `codex/phase-3-api-intelligence`
+Branch: `codex/phase-3b-continuous-api-scout`
 
 Last completed checkpoint:
 
@@ -146,11 +146,11 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Perform the final Phase 3 security, migration, authorization, secret and complete-diff review.
-2. Update PR #3, run the closure CI, then mark it ready and merge only if every documented gate passes.
-3. Keep production connector activation, live writes and unrestricted crawling disabled.
+1. Begin Phase 3b scheduled monitoring of already approved official API sources from merge `c0edf7b5a76197008a38ac0d2da4e8b00e822577`.
+2. Reuse the bounded source recheck worker and API Change Monitor; do not add unrestricted crawling.
+3. Keep production connector activation and live writes disabled.
 
-Phase 3 checkpoint in progress:
+Phase 3 closure:
 
 - Phase 3 started from verified `main` SHA `05a7c7a099ad7ea458cb395cfdd9ccdf73a6f622`; run `29250246503` was green.
 - The first vertical slice now includes the Software Directory, approved-domain workflow, bounded source snapshots, safe OpenAPI JSON/YAML import, evidence-backed tenant mappings, explainable compatibility checks, disabled Connector Copilot proposals, mock contract tests, sandbox approval, private Connect Store, and a platform-admin interface.
@@ -180,3 +180,7 @@ Phase 3 checkpoint in progress:
 - Reusable mapping head `4af425ae8240f487d83a8dc29c47b84a57cf7e10` passed complete push run `29300124894` and pull request run `29300127676`: ordered migrations, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
 - API Intelligence operational health is now exposed through a bounded, read-only platform-admin service. It reports global source/recheck/change counts and tenant-scoped mapping, repair, sandbox, contract and audit counts without returning raw URLs, payloads, network errors or secrets.
 - Observability head `27473684413c32ea499ba577b7c77dffd0e8ba68` passed complete push run `29300616222` and pull request run `29300618426`: ordered migrations, lint, typecheck, 43 test files/137 tests, production build and three Playwright scenarios.
+- PR #3 closure head `a7e76767afa07804014837b18856ae30207aeb64` passed complete push run `29300992102` and pull request run `29300994282` after the final documentation and security review.
+- PR #3 was squash-merged into `main` as `c0edf7b5a76197008a38ac0d2da4e8b00e822577` on 2026-07-14.
+- Main validation run `29301275644` passed ordered migrations on PostgreSQL 17, RLS coverage, lint, typecheck, 43 test files/137 tests, production build and three Playwright scenarios.
+- Phase 3 is complete. Branch `codex/phase-3b-continuous-api-scout` starts from the validated merge. PR #2 remains isolated.

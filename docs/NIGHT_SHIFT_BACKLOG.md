@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-Phase 2 has no unfinished blockers. PR #2 remains isolated.
+Phase 2 and Phase 3 have no unfinished blockers. PR #2 remains isolated.
 
 Completed for the first Phase 3 checkpoint:
 
@@ -65,6 +65,12 @@ Improved operational observability completed and green at `2747368`:
 
 Next unfinished work:
 
-1. Complete the final Phase 3 security, migration, authorization, secret and complete-diff review.
-2. Update PR #3, validate the closure head through GitHub Actions, then apply the documented ready/merge gate.
+1. Begin Phase 3b continuous monitoring from validated main merge `c0edf7b`.
+2. Schedule only already approved official sources through the existing bounded recheck and change-monitor paths.
 3. Keep live writes, production connector approval and unrestricted crawling disabled.
+
+Phase 3 closure completed:
+
+1. Closure head `a7e7676` passed push run `29300992102` and pull request run `29300994282`.
+2. PR #3 was squash-merged as `c0edf7b`; main run `29301275644` passed the complete suite.
+3. Branch `codex/phase-3b-continuous-api-scout` was created from the validated merge.

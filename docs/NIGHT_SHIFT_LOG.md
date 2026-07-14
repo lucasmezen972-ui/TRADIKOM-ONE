@@ -160,3 +160,7 @@
 - Implemented bounded API Intelligence operational health reads for platform and tenant state, including scheduled rechecks, pending source decisions, contract changes, mapping approvals, blocked impacts, connector repairs, sandbox approvals, failed contracts and audited actions.
 - Restricted the health service to platform administrators and excluded raw URLs, payloads, network errors, error codes and secrets from its output; added tenant-isolation and authorization coverage plus the French `Sante operationnelle` administration panel.
 - Observability head `2747368` passed both complete CI runs (`29300616222` push and `29300618426` pull request), including ordered migrations, lint, typecheck, 43 files/137 tests, production build and three Playwright scenarios.
+- Final Phase 3 documentation and complete-diff security review head `a7e7676` passed both closure runs (`29300992102` push and `29300994282` pull request). No secret, empty test, exclusive test marker or unsafe production shortcut was found.
+- Marked PR #3 ready and squash-merged it into `main` as `c0edf7b5a76197008a38ac0d2da4e8b00e822577` without including PR #2.
+- Main run `29301275644` passed ordered PostgreSQL migrations, RLS, lint, typecheck, 43 files/137 tests, production build and three Playwright scenarios.
+- Created `codex/phase-3b-continuous-api-scout` from the validated Phase 3 merge for bounded official-source monitoring.
