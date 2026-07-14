@@ -234,6 +234,50 @@ test("Sales AI explains CRM priorities without creating outbound actions", async
   ).toHaveCount(0);
 });
 
+test("Financial AI explains declared estimates without accounting or external writes", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Pilotage financier" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Pilotage financier" }),
+  ).toBeVisible();
+  await page.getByLabel("Période").fill("2026-07");
+  await page.getByLabel("Revenu mensuel (€)").fill("120000");
+  await page.getByLabel("Charges d'exploitation (€)").fill("90000");
+  await page.getByLabel("Solde de trésorerie (€)").fill("25000");
+  await page.getByLabel("Encaissements du mois (€)").fill("100000");
+  await page.getByLabel("Décaissements du mois (€)").fill("110000");
+  await page.getByLabel("Créances clients (€)").fill("15000");
+  await page.getByLabel("Dettes fournisseurs (€)").fill("18000");
+  await page.getByLabel("Coût marketing (€)").fill("4000");
+  await page.getByLabel("Revenu attribué au marketing (€)").fill("10000");
+  await page.getByLabel("Coût commercial (€)").fill("3000");
+  await page.getByLabel("Revenu attribué au commercial (€)").fill("9000");
+  await page.getByLabel("Coût du site web (€)").fill("1000");
+  await page.getByLabel("Coût des automatisations (€)").fill("500");
+  await page.getByLabel("Nouveaux clients").fill("10");
+  await page.getByLabel("Clients actifs").fill("80");
+  await page.getByLabel("Durée client moyenne en mois").fill("24");
+  await page
+    .getByLabel("Source ou justificatif interne")
+    .fill("Revue mensuelle validée pour le scénario Playwright.");
+  await page
+    .getByRole("button", { name: "Enregistrer les données déclarées" })
+    .click();
+  await expect(page.getByText("Photographie financière enregistrée.")).toBeVisible();
+  await page.getByRole("button", { name: "Actualiser l'estimation" }).click();
+  await expect(page.getByText("Estimation calculée")).toBeVisible();
+  await expect(page.getByText("Résultat estimé", { exact: true })).toBeVisible();
+  await expect(page.getByText("Marge estimée", { exact: true })).toBeVisible();
+  await expect(page.getByText("Projection indicative à 3 mois", { exact: true })).toBeVisible();
+  await expect(page.getByText("Données insuffisantes").first()).toBeVisible();
+  await expect(page.getByText("Preuves et formules utilisées")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Payer|Virer|Synchroniser la banque|Envoyer/i }),
+  ).toHaveCount(0);
+});
+
 test("Reputation AI prepares an approved response without publishing it", async ({
   page,
 }) => {

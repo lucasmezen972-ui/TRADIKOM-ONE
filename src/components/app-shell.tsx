@@ -16,6 +16,7 @@ import {
   PlugZap,
   Settings,
   Star,
+  WalletCards,
   Workflow,
 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
@@ -44,6 +45,7 @@ const navItems = [
   { href: "/assistant-commercial", label: "Assistant commercial", icon: BadgeEuro },
   { href: "/reputation", label: "Réputation", icon: Star },
   { href: "/veille-concurrentielle", label: "Veille concurrents", icon: Binoculars },
+  { href: "/pilotage-financier", label: "Pilotage financier", icon: WalletCards },
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },

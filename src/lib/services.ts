@@ -211,6 +211,12 @@ import {
   getCompetitorIntelligenceWorkspace,
   submitCompetitorInsightForApproval,
 } from "@/modules/competitor-intelligence";
+import {
+  financialInputSnapshotSchema,
+  generateFinancialAssessment,
+  getFinancialAiWorkspace,
+  recordFinancialInputSnapshot,
+} from "@/modules/financial-ai";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -398,6 +404,15 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof competitorInsightDecisionSchema>,
     ) => decideCompetitorInsight(db, userId, tenantId, input),
+    getFinancialAiWorkspace: (userId: string, tenantId: string) =>
+      getFinancialAiWorkspace(db, userId, tenantId),
+    recordFinancialInputSnapshot: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof financialInputSnapshotSchema>,
+    ) => recordFinancialInputSnapshot(db, userId, tenantId, input),
+    generateFinancialAssessment: (userId: string, tenantId: string) =>
+      generateFinancialAssessment(db, userId, tenantId),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (

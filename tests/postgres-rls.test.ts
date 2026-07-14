@@ -1323,6 +1323,185 @@ describeIfPostgres("PostgreSQL RLS", () => {
     );
     expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
   });
+
+  it("isolates Financial AI reads, writes and relations by tenant", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Financial RLS A",
+      email: uniqueEmail("financial-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Financial RLS B",
+      email: uniqueEmail("financial-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Financial tenant A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Financial tenant B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const financialInput = {
+      period: "2026-07",
+      monthlyRevenueCents: 1_000_000,
+      operatingCostsCents: 800_000,
+      cashBalanceCents: 500_000,
+      cashInflowsCents: 1_000_000,
+      cashOutflowsCents: 900_000,
+      receivablesCents: 100_000,
+      payablesCents: 80_000,
+      marketingSpendCents: 0,
+      salesSpendCents: 0,
+      websiteSpendCents: 0,
+      automationSpendCents: 0,
+      newCustomers: 0,
+      activeCustomers: 0,
+      evidenceSummary: "Données de test validées pour la politique RLS.",
+    };
+    const snapshotA = await services.recordFinancialInputSnapshot(
+      ownerA.id,
+      tenantA.id,
+      financialInput,
+    );
+    const snapshotB = await services.recordFinancialInputSnapshot(
+      ownerB.id,
+      tenantB.id,
+      financialInput,
+    );
+    const assessmentA = await services.generateFinancialAssessment(
+      ownerA.id,
+      tenantA.id,
+    );
+    const assessmentB = await services.generateFinancialAssessment(
+      ownerB.id,
+      tenantB.id,
+    );
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    for (const table of [
+      "financial_input_snapshots",
+      "financial_assessments",
+      "financial_assessment_evidence",
+      "financial_alerts",
+    ]) {
+      expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
+    }
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        snapshots: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from financial_input_snapshots order by id",
+          )
+        ).rows,
+        assessments: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from financial_assessments order by id",
+          )
+        ).rows,
+        evidenceTenants: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from financial_assessment_evidence",
+          )
+        ).rows,
+        alertTenants: (
+          await client.query<{ tenant_id: string }>(
+            "select distinct tenant_id from financial_alerts",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.snapshots).toEqual([
+      { id: snapshotA.snapshotId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.assessments).toEqual([
+      { id: assessmentA.assessmentId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.evidenceTenants).toEqual([{ tenant_id: tenantA.id }]);
+    expect(tenantAView.alertTenants).toEqual([]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into financial_assessment_evidence (
+             id, tenant_id, assessment_id, evidence_type, source_ref,
+             label, observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'formula', $4, $5, $6, $7, $7)`,
+          [
+            id("financial_evidence"),
+            tenantA.id,
+            assessmentB.assessmentId,
+            "rls-test",
+            "Preuve inter-tenant",
+            "Cette preuve doit être refusée.",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into financial_assessments (
+             id, tenant_id, snapshot_id, period_month, fingerprint, status,
+             version, monthly_revenue_cents, estimated_profit_cents,
+             cash_flow_cents, pipeline_value_cents, weighted_pipeline_value_cents,
+             forecast_three_months_cents, confidence, rationale, limitations,
+             recommended_action, generation_version, generated_by,
+             created_at, updated_at
+           ) values (
+             $1, $2, $3, '2026-08', $4, 'current', 1, 0, 0, 0, 0, 0, 0,
+             50, $5, $6, $7, 'rls-test', $8, $9, $9
+           )`,
+          [
+            id("financial_assessment"),
+            tenantA.id,
+            snapshotB.snapshotId,
+            "f".repeat(64),
+            "Une relation inter-tenant doit être refusée par PostgreSQL.",
+            "Aucune donnée comptable ne doit être déduite de cette tentative.",
+            "Ne déclencher aucune action à partir de cette tentative.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update financial_input_snapshots set evidence_summary = 'interdit' where id = $1",
+            [snapshotB.snapshotId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from financial_assessments where id = $1", [
+            assessmentB.assessmentId,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
 });
 
 function businessBrainFixture(label: string) {

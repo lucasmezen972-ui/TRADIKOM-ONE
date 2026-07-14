@@ -582,6 +582,58 @@ export async function decideCompetitorInsightAction(formData: FormData) {
   redirect(`/veille-concurrentielle?decision=${decision}`);
 }
 
+export async function recordFinancialInputSnapshotAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("financial_ai.input_record", () =>
+    services.recordFinancialInputSnapshot(user.id, tenant.id, {
+      period: text(formData, "period"),
+      monthlyRevenueCents: moneyToCents(text(formData, "monthlyRevenue")),
+      operatingCostsCents: moneyToCents(text(formData, "operatingCosts")),
+      cashBalanceCents: moneyToCents(text(formData, "cashBalance")),
+      cashInflowsCents: moneyToCents(text(formData, "cashInflows")),
+      cashOutflowsCents: moneyToCents(text(formData, "cashOutflows")),
+      receivablesCents: moneyToCents(text(formData, "receivables")),
+      payablesCents: moneyToCents(text(formData, "payables")),
+      marketingSpendCents: moneyToCents(text(formData, "marketingSpend")),
+      salesSpendCents: moneyToCents(text(formData, "salesSpend")),
+      websiteSpendCents: moneyToCents(text(formData, "websiteSpend")),
+      automationSpendCents: moneyToCents(text(formData, "automationSpend")),
+      newCustomers: integerValue(formData, "newCustomers"),
+      activeCustomers: integerValue(formData, "activeCustomers"),
+      averageLifetimeMonths: optionalIntegerValue(
+        formData,
+        "averageLifetimeMonths",
+      ),
+      marketingAttributedRevenueCents: optionalMoneyToCents(
+        text(formData, "marketingAttributedRevenue"),
+      ),
+      salesAttributedRevenueCents: optionalMoneyToCents(
+        text(formData, "salesAttributedRevenue"),
+      ),
+      websiteAttributedRevenueCents: optionalMoneyToCents(
+        text(formData, "websiteAttributedRevenue"),
+      ),
+      automationSavingsCents: optionalMoneyToCents(
+        text(formData, "automationSavings"),
+      ),
+      evidenceSummary: text(formData, "evidenceSummary"),
+    }),
+  );
+  revalidatePath("/pilotage-financier");
+  redirect("/pilotage-financier?donnees=1");
+}
+
+export async function generateFinancialAssessmentAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("financial_ai.generate", () =>
+    services.generateFinancialAssessment(user.id, tenant.id),
+  );
+  revalidatePath("/pilotage-financier");
+  redirect(`/pilotage-financier?analyse=1&nouvelle=${result.created ? "1" : "0"}`);
+}
+
 export async function updateSectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
@@ -1266,6 +1318,20 @@ function list(formData: FormData, key: string) {
 function moneyToCents(value: string) {
   const amount = Number.parseFloat(value.replace(",", "."));
   return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+}
+
+function optionalMoneyToCents(value: string) {
+  return value ? moneyToCents(value) : null;
+}
+
+function integerValue(formData: FormData, key: string) {
+  const value = Number.parseInt(text(formData, key), 10);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function optionalIntegerValue(formData: FormData, key: string) {
+  const raw = text(formData, key);
+  return raw ? integerValue(formData, key) : null;
 }
 
 function mergeFieldSource(
