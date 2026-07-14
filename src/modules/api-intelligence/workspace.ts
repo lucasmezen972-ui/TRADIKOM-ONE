@@ -2,6 +2,7 @@ import type { DbClient } from "@/lib/db";
 import { safeJson } from "@/lib/security";
 import { listApiClaimsForProduct } from "@/modules/api-intelligence/repository";
 import type { ApiChangeSummary } from "@/modules/api-intelligence/change-monitor/schemas";
+import { getApiIntelligenceObservability } from "@/modules/api-intelligence/observability";
 import { assertPlatformAdmin } from "@/modules/platform-admin";
 
 type DomainRow = {
@@ -152,6 +153,11 @@ export async function getApiIntelligenceWorkspace(
   tenantId: string,
 ) {
   await assertPlatformAdmin(db, userId, tenantId);
+  const observability = await getApiIntelligenceObservability(
+    db,
+    userId,
+    tenantId,
+  );
 
   const domains = await db.query<DomainRow>(
     `select software_domains.id, software_domains.software_id,
@@ -382,6 +388,7 @@ export async function getApiIntelligenceWorkspace(
   const claims = await listApiClaimsForProduct(db);
 
   return {
+    observability,
     domains: domains.rows.map((row) => ({
       id: row.id,
       softwareId: row.software_id,

@@ -121,6 +121,7 @@ import {
   fetchApprovedApiSource,
   configureApiSourceRecheck,
   getApiIntelligenceWorkspace,
+  getApiIntelligenceObservability,
   getLatestCompatibilityCheck,
   generateApprovedConnectorRepair,
   persistApiPreview,
@@ -563,6 +564,11 @@ export function createServices(
     ) => runCompatibilityCheck(db, userId, tenantId, input),
     getLatestCompatibilityCheck: (userId: string, tenantId: string) =>
       getLatestCompatibilityCheck(db, userId, tenantId),
+    getApiIntelligenceObservability: (
+      userId: string,
+      tenantId: string,
+      now?: Date,
+    ) => getApiIntelligenceObservability(db, userId, tenantId, now),
     generateConnectorProposal: (
       userId: string,
       tenantId: string,

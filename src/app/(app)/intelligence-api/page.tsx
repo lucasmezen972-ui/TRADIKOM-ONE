@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  Activity,
   Braces,
   Check,
   Clock,
@@ -68,6 +69,12 @@ export default async function ApiIntelligencePage() {
   const approvedProducts = workspace.products.filter((product) =>
     approvedSoftwareIds.has(product.softwareId),
   );
+  const observabilityTone =
+    workspace.observability.status === "critical"
+      ? "danger"
+      : workspace.observability.status === "attention"
+        ? "warning"
+        : "positive";
 
   return (
     <div className="grid gap-8">
@@ -85,6 +92,54 @@ export default async function ApiIntelligencePage() {
           <StatusPill label={`${storeEntries.length} connecteurs sandbox`} />
         </div>
       </header>
+
+      <section>
+        <ToolPanel icon={Activity} title="Santé opérationnelle">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+            <p className="text-sm font-semibold text-slate-700">
+              Observation du {formatDateTime(workspace.observability.capturedAt)}
+            </p>
+            <StatusPill
+              label={
+                workspace.observability.status === "healthy"
+                  ? "Sain"
+                  : workspace.observability.status === "attention"
+                    ? "À surveiller"
+                    : "Action requise"
+              }
+              tone={observabilityTone}
+            />
+          </div>
+          <div className="grid gap-6 pt-4 lg:grid-cols-2">
+            <OperationalMetrics
+              title="Plateforme"
+              metrics={[
+                ["Domaines approuvés", workspace.observability.global.approvedDomains],
+                ["Sources officielles", workspace.observability.global.officialSources],
+                ["Relectures planifiées", workspace.observability.global.scheduledSources],
+                ["Relectures dues", workspace.observability.global.dueRechecks],
+                ["Relectures en reprise", workspace.observability.global.retryingRechecks],
+                ["Relectures bloquées", workspace.observability.global.blockedRechecks],
+                ["Candidats à examiner", workspace.observability.global.pendingCandidates],
+                ["Claims à examiner", workspace.observability.global.pendingClaims],
+              ]}
+            />
+            <OperationalMetrics
+              title="Organisation active"
+              metrics={[
+                ["Mappings à examiner", workspace.observability.tenant.pendingMappings],
+                ["Mises à niveau bloquées", workspace.observability.tenant.blockedImpacts],
+                ["Réparations à décider", workspace.observability.tenant.pendingRepairDecisions],
+                ["Réparations générées", workspace.observability.tenant.generatedRepairs],
+                ["Approbations sandbox", workspace.observability.tenant.pendingSandboxApprovals],
+                ["Contrats échoués sur 24 h", workspace.observability.tenant.failedContracts24h],
+                ["Actions auditées sur 24 h", workspace.observability.tenant.auditedActions24h],
+                ["Changements détectés sur 24 h", workspace.observability.global.changes24h],
+              ]}
+            />
+          </div>
+        </ToolPanel>
+      </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <ToolPanel icon={Database} title="Répertoire logiciel">
@@ -891,17 +946,40 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function OperationalMetrics({
+  title,
+  metrics,
+}: {
+  title: string;
+  metrics: ReadonlyArray<readonly [string, number]>;
+}) {
+  return (
+    <div>
+      <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+      <dl className="mt-2 divide-y divide-slate-100 text-sm">
+        {metrics.map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between gap-4 py-2">
+            <dt className="text-slate-600">{label}</dt>
+            <dd className="font-semibold tabular-nums text-slate-950">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function StatusPill({
   label,
   tone = "neutral",
 }: {
   label: string;
-  tone?: "neutral" | "positive" | "warning";
+  tone?: "neutral" | "positive" | "warning" | "danger";
 }) {
   const colors = {
     neutral: "bg-slate-100 text-slate-700",
     positive: "bg-emerald-100 text-emerald-800",
     warning: "bg-amber-100 text-amber-900",
+    danger: "bg-red-100 text-red-800",
   };
   return <span className={`rounded-md px-2 py-1 text-xs font-semibold ${colors[tone]}`}>{label}</span>;
 }
