@@ -275,6 +275,64 @@ test("Reputation AI prepares an approved response without publishing it", async 
   ).toHaveCount(0);
 });
 
+test("Competitor Intelligence compares manual public evidence without crawling", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Veille concurrents" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Veille concurrentielle" }),
+  ).toBeVisible();
+  const marker = `Concurrent Playwright ${Date.now()}`;
+  await page.getByLabel("Nom du concurrent").fill(marker);
+  await page
+    .getByLabel("Site public HTTPS, facultatif")
+    .fill("https://competitor-playwright.test/");
+  await page.getByRole("button", { name: "Ajouter le concurrent" }).click();
+  await expect(
+    page.getByText("Concurrent ajouté sans collecte externe."),
+  ).toBeVisible();
+
+  await page.getByLabel("Catégorie").selectOption("price");
+  await page.getByLabel("Évolution déclarée").selectOption("decrease");
+  await page.getByLabel("Type de source publique").selectOption("official_website");
+  await page
+    .getByLabel("URL publique HTTPS")
+    .fill("https://competitor-playwright.test/pricing");
+  await page.getByLabel("Titre factuel").fill("Baisse de prix publique");
+  await page.getByLabel("Valeur observée, facultative").fill("95 EUR");
+  await page
+    .getByLabel("Résumé factuel")
+    .fill("La page tarifaire publique affiche un forfait à 95 euros.");
+  await page
+    .getByLabel(/source publique légalement accessible/)
+    .check();
+  await page
+    .getByLabel(/aucun contenu protégé, privé/)
+    .check();
+  await page.getByRole("button", { name: "Enregistrer l'observation" }).click();
+  await expect(page.getByText("Observation publique enregistrée.")).toBeVisible();
+  await page.getByRole("button", { name: "Comparer les observations" }).click();
+  await expect(page.getByText(/Comparaison terminée/)).toBeVisible();
+
+  const insight = page.locator("article").filter({ hasText: marker }).last();
+  await expect(insight.getByText("Preuves comparées", { exact: true })).toBeVisible();
+  await expect(insight.getByText(/seconde observation publique indépendante/)).toBeVisible();
+  await insight.getByRole("button", { name: "Soumettre pour décision" }).click();
+  const pending = page.locator("article").filter({ hasText: marker }).last();
+  await pending
+    .getByLabel("Motif de décision")
+    .fill("Observation conservée pour planification interne uniquement.");
+  await pending
+    .getByRole("button", { name: "Approuver pour planification" })
+    .click();
+  const approved = page.locator("article").filter({ hasText: marker }).last();
+  await expect(approved.getByText("Approuvée pour planification")).toBeVisible();
+  await expect(
+    approved.getByRole("button", { name: /Contacter|Publier|Lancer|Scraper/i }),
+  ).toHaveCount(0);
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,

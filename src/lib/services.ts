@@ -199,6 +199,18 @@ import {
   reputationReviewSchema,
   submitReputationProposalForApproval,
 } from "@/modules/reputation-ai";
+import {
+  competitorInsightDecisionSchema,
+  competitorInsightReferenceSchema,
+  competitorObservationSchema,
+  competitorProfileSchema,
+  createCompetitorObservation,
+  createCompetitorProfile,
+  decideCompetitorInsight,
+  generateCompetitorInsights,
+  getCompetitorIntelligenceWorkspace,
+  submitCompetitorInsightForApproval,
+} from "@/modules/competitor-intelligence";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -362,6 +374,30 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof reputationProposalDecisionSchema>,
     ) => decideReputationProposal(db, userId, tenantId, input),
+    getCompetitorIntelligenceWorkspace: (userId: string, tenantId: string) =>
+      getCompetitorIntelligenceWorkspace(db, userId, tenantId),
+    createCompetitorProfile: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorProfileSchema>,
+    ) => createCompetitorProfile(db, userId, tenantId, input),
+    createCompetitorObservation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorObservationSchema>,
+    ) => createCompetitorObservation(db, userId, tenantId, input),
+    generateCompetitorInsights: (userId: string, tenantId: string) =>
+      generateCompetitorInsights(db, userId, tenantId),
+    submitCompetitorInsightForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorInsightReferenceSchema>,
+    ) => submitCompetitorInsightForApproval(db, userId, tenantId, input),
+    decideCompetitorInsight: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof competitorInsightDecisionSchema>,
+    ) => decideCompetitorInsight(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (

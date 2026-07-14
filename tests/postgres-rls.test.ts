@@ -1074,6 +1074,255 @@ describeIfPostgres("PostgreSQL RLS", () => {
     );
     expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
   });
+
+  it("isolates competitor observations, insights, evidence and decisions", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Competitor RLS Owner A",
+      email: uniqueEmail("competitor-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Competitor RLS Owner B",
+      email: uniqueEmail("competitor-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Competitor RLS A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Competitor RLS B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const profileA = await services.createCompetitorProfile(ownerA.id, tenantA.id, {
+      name: `Concurrent A ${randomUUID()}`,
+    });
+    const profileB = await services.createCompetitorProfile(ownerB.id, tenantB.id, {
+      name: `Concurrent B ${randomUUID()}`,
+    });
+    const observationA = await services.createCompetitorObservation(ownerA.id, tenantA.id, {
+      competitorId: profileA.competitorId,
+      category: "price",
+      direction: "increase",
+      sourceType: "official_website",
+      sourceUrl: "https://competitor-a.example.org/pricing",
+      title: "Prix public A",
+      summary: "Une page publique affiche une évolution de prix pour A.",
+      observedAt: "2026-07-14T08:00:00.000Z",
+      publicSourceConfirmed: true,
+      protectedContentExcluded: true,
+    });
+    const observationB = await services.createCompetitorObservation(ownerB.id, tenantB.id, {
+      competitorId: profileB.competitorId,
+      category: "service",
+      direction: "new",
+      sourceType: "public_announcement",
+      sourceUrl: "https://competitor-b.example.org/service",
+      title: "Service public B",
+      summary: "Une annonce publique présente un nouveau service pour B.",
+      observedAt: "2026-07-14T09:00:00.000Z",
+      publicSourceConfirmed: true,
+      protectedContentExcluded: true,
+    });
+    const generatedA = await services.generateCompetitorInsights(ownerA.id, tenantA.id);
+    const generatedB = await services.generateCompetitorInsights(ownerB.id, tenantB.id);
+    const insightA = generatedA.createdIds[0];
+    const insightB = generatedB.createdIds[0];
+    if (!insightA || !insightB) {
+      throw new Error("Competitor Intelligence RLS fixtures are incomplete.");
+    }
+    await services.submitCompetitorInsightForApproval(ownerA.id, tenantA.id, {
+      insightId: insightA,
+    });
+    await services.decideCompetitorInsight(ownerA.id, tenantA.id, {
+      insightId: insightA,
+      decision: "approved",
+      reason: "Décision de planification tenant A.",
+    });
+    await services.submitCompetitorInsightForApproval(ownerB.id, tenantB.id, {
+      insightId: insightB,
+    });
+    await services.decideCompetitorInsight(ownerB.id, tenantB.id, {
+      insightId: insightB,
+      decision: "rejected",
+      reason: "Décision de planification tenant B.",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    for (const table of [
+      "competitor_profiles",
+      "competitor_observations",
+      "competitor_insights",
+      "competitor_insight_evidence",
+      "competitor_insight_decisions",
+    ]) {
+      expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
+    }
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        profiles: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from competitor_profiles order by id",
+          )
+        ).rows,
+        observations: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from competitor_observations order by id",
+          )
+        ).rows,
+        insights: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from competitor_insights order by id",
+          )
+        ).rows,
+        evidence: (
+          await client.query<{ insight_id: string; tenant_id: string }>(
+            "select insight_id, tenant_id from competitor_insight_evidence order by id",
+          )
+        ).rows,
+        decisions: (
+          await client.query<{ insight_id: string; tenant_id: string }>(
+            "select insight_id, tenant_id from competitor_insight_decisions order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.profiles).toEqual([
+      { id: profileA.competitorId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.observations).toEqual([
+      { id: observationA.observationId, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.insights).toEqual([{ id: insightA, tenant_id: tenantA.id }]);
+    expect(tenantAView.evidence).toEqual([
+      { insight_id: insightA, tenant_id: tenantA.id },
+    ]);
+    expect(tenantAView.decisions).toEqual([
+      { insight_id: insightA, tenant_id: tenantA.id },
+    ]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_observations (
+             id, tenant_id, competitor_id, category, direction, source_type,
+             source_url, title, summary, content_hash, observed_at,
+             recorded_by, created_at
+           ) values (
+             $1, $2, $3, 'price', 'changed', 'official_website',
+             $4, $5, $6, $7, $8, $9, $8
+           )`,
+          [
+            id("competitor_observation"),
+            tenantA.id,
+            profileB.competitorId,
+            "https://cross.example.org/",
+            "Observation étrangère",
+            "Cette relation concurrente étrangère doit être refusée.",
+            "c".repeat(64),
+            nowIso(),
+            ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_insights (
+             id, tenant_id, competitor_id, category, latest_observation_id,
+             fingerprint, impact, confidence, title, rationale,
+             recommended_action, status, version, generation_version,
+             generated_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, 'service', $4, $5, 'watch', 70, $6, $7,
+             $8, 'proposed', 1, 'rls-test', $9, $10, $10
+           )`,
+          [
+            id("competitor_insight"),
+            tenantA.id,
+            profileA.competitorId,
+            observationB.observationId,
+            "d".repeat(64),
+            "Analyse étrangère",
+            "La relation avec une observation étrangère doit être refusée.",
+            "Ne déclencher aucune action externe à partir de cette ligne.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_insight_evidence (
+             id, tenant_id, insight_id, observation_id, label,
+             observed_value, captured_at, created_at
+           ) values ($1, $2, $3, $4, $5, $6, $7, $7)`,
+          [
+            id("competitor_evidence"),
+            tenantA.id,
+            insightB,
+            observationA.observationId,
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into competitor_insight_decisions (
+             id, tenant_id, insight_id, decision, reason, decided_by, created_at
+           ) values ($1, $2, $3, 'rejected', $4, $5, $6)`,
+          [
+            id("competitor_decision"),
+            tenantA.id,
+            insightB,
+            "Décision inter-tenant refusée.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update competitor_profiles set name = 'interdit' where id = $1",
+            [profileB.competitorId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from competitor_observations where id = $1", [
+            observationB.observationId,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
 });
 
 function businessBrainFixture(label: string) {

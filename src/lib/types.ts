@@ -332,7 +332,8 @@ export type DashboardPendingApproval = DashboardActionItem & {
     | "strategic"
     | "marketing"
     | "website_ai"
-    | "reputation";
+    | "reputation"
+    | "competitor";
 };
 
 export type DashboardData = {

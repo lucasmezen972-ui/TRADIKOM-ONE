@@ -24,6 +24,11 @@ import type {
   BusinessBrainEvidenceType,
 } from "@/modules/business-brain";
 import { reputationSourceSchema } from "@/modules/reputation-ai";
+import {
+  competitorCategorySchema,
+  competitorDirectionSchema,
+  competitorSourceTypeSchema,
+} from "@/modules/competitor-intelligence";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -497,6 +502,84 @@ export async function decideReputationProposalAction(formData: FormData) {
   revalidatePath("/reputation");
   revalidatePath("/aujourdhui");
   redirect(`/reputation?decision=${decision}`);
+}
+
+export async function createCompetitorProfileAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("competitor.profile_create", () =>
+    services.createCompetitorProfile(user.id, tenant.id, {
+      name: text(formData, "name"),
+      websiteUrl: text(formData, "websiteUrl") || undefined,
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  redirect("/veille-concurrentielle?concurrentCree=1");
+}
+
+export async function createCompetitorObservationAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("competitor.observation_create", () =>
+    services.createCompetitorObservation(user.id, tenant.id, {
+      competitorId: text(formData, "competitorId"),
+      category: competitorCategorySchema.parse(text(formData, "category")),
+      direction: competitorDirectionSchema.parse(text(formData, "direction")),
+      sourceType: competitorSourceTypeSchema.parse(text(formData, "sourceType")),
+      sourceUrl: text(formData, "sourceUrl"),
+      title: text(formData, "title"),
+      summary: text(formData, "summary"),
+      observedValue: text(formData, "observedValue") || undefined,
+      observedAt: text(formData, "observedAt"),
+      publicSourceConfirmed: formData.get("publicSourceConfirmed") === "on",
+      protectedContentExcluded: formData.get("protectedContentExcluded") === "on",
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  redirect("/veille-concurrentielle?observationCreee=1");
+}
+
+export async function generateCompetitorInsightsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("competitor.generate", () =>
+    services.generateCompetitorInsights(user.id, tenant.id),
+  );
+  revalidatePath("/veille-concurrentielle");
+  redirect(
+    `/veille-concurrentielle?analyse=1&nouvelles=${result.createdIds.length}`,
+  );
+}
+
+export async function submitCompetitorInsightAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("competitor.submit", () =>
+    services.submitCompetitorInsightForApproval(user.id, tenant.id, {
+      insightId: text(formData, "insightId"),
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  revalidatePath("/aujourdhui");
+  redirect("/veille-concurrentielle?soumise=1");
+}
+
+export async function decideCompetitorInsightAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("competitor.decide", () =>
+    services.decideCompetitorInsight(user.id, tenant.id, {
+      insightId: text(formData, "insightId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/veille-concurrentielle");
+  revalidatePath("/aujourdhui");
+  redirect(`/veille-concurrentielle?decision=${decision}`);
 }
 
 export async function updateSectionAction(formData: FormData) {
