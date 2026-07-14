@@ -1,6 +1,5 @@
 import type { DbClient } from "@/lib/db";
 import type {
-  DashboardActionItem,
   DashboardApiSourceFailure,
   DashboardPendingApproval,
 } from "@/lib/types";

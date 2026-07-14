@@ -8,7 +8,8 @@ export default function TodayError({ reset }: { reset: () => void }) {
       <AlertTriangle className="text-red-600" size={24} aria-hidden />
       <h1 className="mt-4 text-2xl font-bold">Le centre de pilotage est indisponible.</h1>
       <p className="mt-2 text-slate-600">
-        Les données n'ont pas pu être chargées. Aucune information interne n'a été affichée.
+        Les données n&apos;ont pas pu être chargées. Aucune information interne
+        n&apos;a été affichée.
       </p>
       <button
         type="button"

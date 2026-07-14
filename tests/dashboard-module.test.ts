@@ -53,8 +53,8 @@ describe("dashboard module", () => {
       workflowFailures: 1,
       deadLetters: 1,
       connectorIssues: 1,
-      apiSourceFailures: 0,
-      breakingApiChanges: 0,
+      apiSourceFailures: 1,
+      breakingApiChanges: 1,
       pendingApprovals: 1,
     });
     expect(dashboard.commandCenter).toMatchObject({
@@ -68,6 +68,8 @@ describe("dashboard module", () => {
     expect(dashboard.commandCenter.opportunitiesNeedingFollowUp).toHaveLength(1);
     expect(dashboard.commandCenter.workflowFailures).toHaveLength(1);
     expect(dashboard.commandCenter.deadLetters).toHaveLength(1);
+    expect(dashboard.commandCenter.apiSourceFailures).toHaveLength(1);
+    expect(dashboard.commandCenter.breakingApiChanges).toHaveLength(1);
     expect(dashboard.commandCenter.pendingApprovals).toHaveLength(1);
     expect(dashboard.detectedOpportunities).toHaveLength(1);
     expect(dashboard.commandCenter.website).toMatchObject({
@@ -300,4 +302,119 @@ async function seedOperationalDashboard(
     "update websites set current_draft_version_id = $1 where tenant_id = $2 and id = $3",
     ["draft-newer-than-publication", tenantId, websiteId],
   );
+  await seedApiIntelligenceDashboard(db, userId, tenantId);
+}
+
+async function seedApiIntelligenceDashboard(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  const now = "2026-07-14T06:00:00.000Z";
+  await db.query(
+    `insert into software_directory_entries (
+       id, canonical_name, aliases, vendor, official_domain, country,
+       supported_regions, languages, industries, categories,
+       official_website, developer_portal, support_page,
+       partner_program_page, pricing_information_page, verification_status,
+       confidence_score, last_verified_at, evidence_count, created_by,
+       created_at, updated_at
+     ) values (
+       'dashboard-software', 'Dashboard API', '[]', 'Dashboard Vendor',
+       'dashboard.example.test', null, '[]', '["fr"]', '[]', '[]',
+       'https://dashboard.example.test', null, null, null, null, 'verified',
+       100, $1, 1, $2, $1, $1
+     )`,
+    [now, userId],
+  );
+  await db.query(
+    `insert into api_products (
+       id, software_id, name, api_style, version, base_url,
+       documentation_url, openapi_url, postman_collection_url,
+       graphql_schema_url, authentication_type, oauth_metadata, scopes,
+       webhook_support, sandbox_support, partner_access_requirement,
+       access_level, rate_limit_information, deprecation_status, terms_url,
+       confidence_score, last_verified_at, created_at, updated_at
+     ) values (
+       'dashboard-api', 'dashboard-software', 'Dashboard API', 'rest', '1',
+       'https://api.dashboard.example.test',
+       'https://dashboard.example.test/docs', null, null, null, 'none', '{}',
+       '[]', 0, 1, 0, 'public', null, 'active', null, 100, $1, $1, $1
+     )`,
+    [now],
+  );
+  await db.query(
+    `insert into api_sources (
+       id, software_id, api_product_id, canonical_url, source_type,
+       source_classification, publisher_domain, created_by, created_at
+     ) values (
+       'dashboard-source', 'dashboard-software', 'dashboard-api',
+       'https://dashboard.example.test/openapi.json',
+       'official_openapi_specification', 'official',
+       'dashboard.example.test', $1, $2
+     )`,
+    [userId, now],
+  );
+  await db.query(
+    `insert into api_source_recheck_schedules (
+       id, source_id, context_tenant_id, configured_by, enabled,
+       interval_seconds, next_run_at, processing_started_at, lease_id,
+       last_run_at, last_success_at, last_status, consecutive_failures,
+       last_error_code, created_at, updated_at
+     ) values (
+       'dashboard-recheck', 'dashboard-source', $1, $2, 1, 3600, $3,
+       null, null, $3, null, 'blocked', 3, 'source_unavailable', $3, $3
+     )`,
+    [tenantId, userId, now],
+  );
+  for (const [snapshotId, hash] of [
+    ["dashboard-snapshot-before", "a".repeat(64)],
+    ["dashboard-snapshot-after", "b".repeat(64)],
+  ]) {
+    await db.query(
+      `insert into api_source_snapshots (
+         id, source_id, retrieved_at, http_status, etag, last_modified,
+         content_hash, parser_version, robots_decision,
+         access_policy_decision, content_type, content, safe_metadata,
+         created_at
+       ) values ($1, 'dashboard-source', $2, 200, null, null, $3,
+         'dashboard-test', 'allowed', 'allowed', 'application/json', '{}',
+         '{}', $2)`,
+      [snapshotId, now, hash],
+    );
+  }
+  await db.query(
+    `insert into api_change_events (
+       id, api_product_id, source_id, previous_snapshot_id,
+       current_snapshot_id, primary_classification, classifications,
+       summary, requires_approval, detected_at, created_at
+     ) values (
+       'dashboard-change', 'dashboard-api', 'dashboard-source',
+       'dashboard-snapshot-before', 'dashboard-snapshot-after', 'breaking',
+       '["breaking"]', '{}', 1, $1, $1
+     )`,
+    [now],
+  );
+  for (const suffix of ["one", "two"]) {
+    const proposalId = `dashboard-proposal-${suffix}`;
+    await db.query(
+      `insert into connector_proposals (
+         id, tenant_id, software_id, api_product_id, name, version, status,
+         enabled, manifest, unresolved_questions, risk_assessment, created_by,
+         created_at, updated_at
+       ) values ($1, $2, 'dashboard-software', 'dashboard-api', $3, '0.1.0',
+         'change_review_required', 0, '{}', '[]', '{}', $4, $5, $5)`,
+      [proposalId, tenantId, `Connecteur ${suffix}`, userId, now],
+    );
+    await db.query(
+      `insert into api_change_impacts (
+         id, tenant_id, api_change_event_id, connector_proposal_id,
+         contract_run_id, status, upgrade_blocked, repair_proposal,
+         contract_test_status, contract_test_results, approval_status,
+         decided_by, decision_reason, decided_at, created_at, updated_at
+       ) values ($1, $2, 'dashboard-change', $3, null, 'review_required', 1,
+         '{}', 'failed', '{}', 'pending', null, null, null, $4, $4)`,
+      [`dashboard-impact-${suffix}`, tenantId, proposalId, now],
+    );
+  }
 }
