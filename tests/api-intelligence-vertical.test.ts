@@ -183,6 +183,41 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       mappingId: mapping.mappingId,
       status: "approved",
     });
+    const globalMapping = await services.promoteApprovedTenantMapping(
+      admin.id,
+      tenant.id,
+      {
+        mappingId: mapping.mappingId,
+        reason: "Mapping structurel confirme par une preuve officielle.",
+      },
+    );
+    expect(globalMapping).toMatchObject({ status: "approved", created: true });
+    const duplicatePromotion = await services.promoteApprovedTenantMapping(
+      admin.id,
+      tenant.id,
+      {
+        mappingId: mapping.mappingId,
+        reason: "Verification de deduplication du modele global.",
+      },
+    );
+    expect(duplicatePromotion).toEqual({
+      ...globalMapping,
+      created: false,
+    });
+    const globalRows = await db.query<{
+      source_entity: string;
+      canonical_entity: string;
+      approval_status: string;
+    }>(
+      "select source_entity, canonical_entity, approval_status from api_global_mappings",
+    );
+    expect(globalRows.rows).toEqual([
+      {
+        source_entity: "Customer",
+        canonical_entity: "Contact",
+        approval_status: "approved",
+      },
+    ]);
 
     const compatibility = await services.runCompatibilityCheck(
       admin.id,
@@ -251,6 +286,38 @@ describe("Phase 3 API Intelligence vertical slice", () => {
     const otherTenant = await services.createTenant(admin.id, {
       name: "Autre organisation",
       category: "Services",
+    });
+    const reusedMapping = await services.proposeTenantMappingFromGlobal(
+      admin.id,
+      otherTenant.id,
+      { globalMappingId: globalMapping.globalMappingId },
+    );
+    expect(reusedMapping.status).toBe("pending");
+    const reusedMappingRow = await db.query<{
+      tenant_id: string;
+      approval_status: string;
+      source_entity: string;
+      canonical_entity: string;
+    }>(
+      "select tenant_id, approval_status, source_entity, canonical_entity from api_tenant_mappings where id = $1",
+      [reusedMapping.mappingId],
+    );
+    expect(reusedMappingRow.rows).toEqual([
+      {
+        tenant_id: otherTenant.id,
+        approval_status: "pending",
+        source_entity: "Customer",
+        canonical_entity: "Contact",
+      },
+    ]);
+    await expect(
+      services.proposeTenantMappingFromGlobal(admin.id, otherTenant.id, {
+        globalMappingId: globalMapping.globalMappingId,
+      }),
+    ).rejects.toMatchObject({ code: "mapping_already_exists" });
+    await services.decideTenantOntologyMapping(admin.id, otherTenant.id, {
+      mappingId: reusedMapping.mappingId,
+      status: "approved",
     });
     expect(
       await services.getPrivateConnectStore(admin.id, otherTenant.id),
@@ -470,6 +537,8 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       "api_intelligence.openapi_imported",
       "api_intelligence.claim_approved",
       "api_intelligence.mapping_approved",
+      "api_intelligence.global_mapping_promoted",
+      "api_intelligence.global_mapping_reused",
       "connector_copilot.proposal_generated",
       "connector_copilot.contract_tests_completed",
       "connector_copilot.sandbox_approval_requested",
@@ -510,6 +579,17 @@ describe("Phase 3 API Intelligence vertical slice", () => {
     await expect(
       services.generateApprovedConnectorRepair(owner.id, tenant.id, {
         impactId: "impact_missing",
+      }),
+    ).rejects.toBeInstanceOf(PlatformAdminError);
+    await expect(
+      services.promoteApprovedTenantMapping(owner.id, tenant.id, {
+        mappingId: "mapping_missing",
+        reason: "Tentative non autorisee.",
+      }),
+    ).rejects.toBeInstanceOf(PlatformAdminError);
+    await expect(
+      services.proposeTenantMappingFromGlobal(owner.id, tenant.id, {
+        globalMappingId: "global_mapping_missing",
       }),
     ).rejects.toBeInstanceOf(PlatformAdminError);
   });

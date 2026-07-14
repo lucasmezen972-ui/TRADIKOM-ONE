@@ -129,7 +129,9 @@ import {
   previewApiSnapshot,
   previewOpenApiSnapshot,
   previewPostmanSnapshot,
+  promoteApprovedTenantMapping,
   proposeTenantOntologyMapping,
+  proposeTenantMappingFromGlobal,
   runCompatibilityCheck,
   scanApprovedSoftwareDomain,
   type DiscoveryTransport,
@@ -516,6 +518,16 @@ export function createServices(
       tenantId: string,
       input: { mappingId: string; status: "approved" | "rejected" },
     ) => decideTenantOntologyMapping(db, userId, tenantId, input),
+    promoteApprovedTenantMapping: (
+      userId: string,
+      tenantId: string,
+      input: { mappingId: string; reason: string },
+    ) => promoteApprovedTenantMapping(db, userId, tenantId, input),
+    proposeTenantMappingFromGlobal: (
+      userId: string,
+      tenantId: string,
+      input: { globalMappingId: string },
+    ) => proposeTenantMappingFromGlobal(db, userId, tenantId, input),
     decideApiClaim: (
       userId: string,
       tenantId: string,

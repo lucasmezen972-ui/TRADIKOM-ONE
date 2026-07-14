@@ -77,6 +77,16 @@ type MappingRow = {
   approval_status: string;
 };
 
+type GlobalMappingRow = {
+  id: string;
+  api_product_id: string;
+  product_name: string;
+  source_entity: string;
+  canonical_entity: string;
+  confidence: number;
+  approval_status: string;
+};
+
 type CompatibilityRow = {
   id: string;
   api_product_id: string;
@@ -356,6 +366,19 @@ export async function getApiIntelligenceWorkspace(
      order by api_change_impacts.created_at desc`,
     [tenantId],
   );
+  const globalMappings = await db.query<GlobalMappingRow>(
+    `select api_global_mappings.id,
+            api_global_mappings.api_product_id,
+            api_products.name as product_name,
+            api_global_mappings.source_entity,
+            api_global_mappings.canonical_entity,
+            api_global_mappings.confidence,
+            api_global_mappings.approval_status
+     from api_global_mappings
+     join api_products on api_products.id = api_global_mappings.api_product_id
+     where api_global_mappings.approval_status = 'approved'
+     order by api_products.name asc, api_global_mappings.source_entity asc`,
+  );
   const claims = await listApiClaimsForProduct(db);
 
   return {
@@ -425,6 +448,15 @@ export async function getApiIntelligenceWorkspace(
     mappings: mappings.rows.map((row) => ({
       id: row.id,
       apiProductId: row.api_product_id,
+      sourceEntity: row.source_entity,
+      canonicalEntity: row.canonical_entity,
+      confidence: row.confidence,
+      status: row.approval_status,
+    })),
+    globalMappings: globalMappings.rows.map((row) => ({
+      id: row.id,
+      apiProductId: row.api_product_id,
+      productName: row.product_name,
       sourceEntity: row.source_entity,
       canonicalEntity: row.canonical_entity,
       confidence: row.confidence,

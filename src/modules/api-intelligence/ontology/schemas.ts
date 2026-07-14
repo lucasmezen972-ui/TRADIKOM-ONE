@@ -39,4 +39,13 @@ export const ontologyMappingInputSchema = z.object({
   evidenceId: z.string().min(1),
 });
 
+export const globalMappingPromotionSchema = z.object({
+  mappingId: z.string().min(1).max(160),
+  reason: z.string().trim().min(3).max(500),
+});
+
+export const globalMappingReuseSchema = z.object({
+  globalMappingId: z.string().min(1).max(160),
+});
+
 export type OntologyMappingInput = z.infer<typeof ontologyMappingInputSchema>;

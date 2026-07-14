@@ -757,6 +757,29 @@ export async function decideApiIntelligenceMappingAction(formData: FormData) {
   revalidatePath("/intelligence-api");
 }
 
+export async function promoteApiIntelligenceMappingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.mapping_promote", () =>
+    services.promoteApprovedTenantMapping(user.id, tenant.id, {
+      mappingId: text(formData, "mappingId"),
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function reuseApiIntelligenceMappingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.mapping_reuse", () =>
+    services.proposeTenantMappingFromGlobal(user.id, tenant.id, {
+      globalMappingId: text(formData, "globalMappingId"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
 export async function runApiCompatibilityCheckAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

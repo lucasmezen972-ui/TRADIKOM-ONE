@@ -30,7 +30,9 @@ import {
   generateApiChangeRepairAction,
   generateApiConnectorProposalAction,
   importApiIntelligenceSnapshotAction,
+  promoteApiIntelligenceMappingAction,
   proposeApiIntelligenceMappingAction,
+  reuseApiIntelligenceMappingAction,
   runApiCompatibilityCheckAction,
   runApiConnectorContractAction,
   scanApiIntelligenceDomainAction,
@@ -639,9 +641,54 @@ export default async function ApiIntelligencePage() {
                     <DecisionForm action={decideApiIntelligenceMappingAction} idName="mappingId" id={mapping.id} decisionName="status" decision="approved" label="Approuver" icon="check" />
                     <DecisionForm action={decideApiIntelligenceMappingAction} idName="mappingId" id={mapping.id} decisionName="status" decision="rejected" label="Rejeter" icon="x" />
                   </div>
+                ) : mapping.status === "approved" ? (
+                  <form action={promoteApiIntelligenceMappingAction}>
+                    <input name="mappingId" type="hidden" value={mapping.id} />
+                    <input name="reason" type="hidden" value="Mapping structurel approuvé et preuve officielle vérifiée." />
+                    <button className={secondaryButtonClass}>
+                      <Network size={15} aria-hidden />
+                      Partager comme modèle
+                    </button>
+                  </form>
                 ) : null}
               </div>
             ))}
+          </div>
+          <div className="mt-5 border-t border-slate-200 pt-4">
+            <h3 className="text-sm font-bold text-slate-900">Modèles globaux approuvés</h3>
+            <div className="mt-2 divide-y divide-slate-100">
+              {workspace.globalMappings.length === 0 ? (
+                <EmptyState label="Aucun modèle global" />
+              ) : (
+                workspace.globalMappings.map((mapping) => {
+                  const alreadyProposed = workspace.mappings.some(
+                    (tenantMapping) =>
+                      tenantMapping.apiProductId === mapping.apiProductId &&
+                      tenantMapping.sourceEntity === mapping.sourceEntity &&
+                      tenantMapping.canonicalEntity === mapping.canonicalEntity,
+                  );
+                  return (
+                    <div key={mapping.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                      <div>
+                        <p className="font-semibold">{mapping.sourceEntity} → {mapping.canonicalEntity}</p>
+                        <p className="text-xs text-slate-500">{mapping.productName} · Confiance {mapping.confidence}%</p>
+                      </div>
+                      {!alreadyProposed ? (
+                        <form action={reuseApiIntelligenceMappingAction}>
+                          <input name="globalMappingId" type="hidden" value={mapping.id} />
+                          <button className={secondaryButtonClass}>
+                            <Braces size={15} aria-hidden />
+                            Proposer à l’organisation
+                          </button>
+                        </form>
+                      ) : (
+                        <StatusPill label="Déjà proposé" tone="neutral" />
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </ToolPanel>
 
