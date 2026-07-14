@@ -104,12 +104,24 @@ export async function generateConnectorProposal(
         "Le mode d'authentification API n'est pas pris en charge.",
       );
     }
+    const supportedMethods = [
+      "get",
+      "post",
+      "put",
+      "patch",
+      "delete",
+      "head",
+      "options",
+    ] as const;
+    const normalizedOperations = operations.map((operation) => ({
+      ...operation,
+      method: operation.method.toLowerCase(),
+    }));
     if (
-      operations.some(
+      normalizedOperations.some(
         (operation) =>
-          !["get", "post", "put", "patch", "delete", "head", "options"].includes(
-            operation.method,
-          ) || !operation.path.startsWith("/"),
+          !supportedMethods.some((method) => method === operation.method) ||
+          !operation.path.startsWith("/"),
       )
     ) {
       throw new ConnectorCopilotError(
@@ -125,7 +137,7 @@ export async function generateConnectorProposal(
       enabled: false,
       apiProductId: apiProduct.id,
       authentication: { type: authentication.data },
-      capabilities: operations.map((operation) => ({
+      capabilities: normalizedOperations.map((operation) => ({
         operationKey: operation.operationKey,
         method: operation.method,
         path: operation.path,
