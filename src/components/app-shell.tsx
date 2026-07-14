@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Activity,
   BarChart3,
+  BrainCircuit,
   Bot,
   Building2,
   Contact,
@@ -25,6 +26,11 @@ type AppShellProps = {
 
 const navItems = [
   { href: "/aujourdhui", label: "Aujourd'hui", icon: Gauge },
+  {
+    href: "/cerveau-entreprise",
+    label: "Cerveau d'entreprise",
+    icon: BrainCircuit,
+  },
   { href: "/mon-activite", label: "Mon activité", icon: Activity },
   { href: "/contacts", label: "Contacts", icon: Contact },
   { href: "/opportunites", label: "Opportunités", icon: BarChart3 },

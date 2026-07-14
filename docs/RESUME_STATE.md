@@ -1,8 +1,16 @@
 # Resume State
 
-Branch: `main`
+Branch: `codex/phase-4-autonomous-platform`
 
-Current stabilization checkpoint:
+Current Phase 4 checkpoint:
+
+- Phase 4 started from green `main` head `49c78d1e4e720a9a0b32596f64c01d3ec8d3b70d`; GitHub Actions run `29309008452` passed the complete suite.
+- The first vertical slice implements the Business Brain foundation under `src/modules/business-brain/`.
+- Tenant-owned memory entries require evidence, confidence and reviewer provenance; revisions are immutable versions and archival preserves history.
+- Composite tenant foreign keys, PostgreSQL RLS, tenant-scoped services, role checks, transactions and audit logs protect every write.
+- The French `Cerveau d'entreprise` page combines manual memory with live Business Twin, CRM, team, workflow, website, connector and API signals without duplicating those source records.
+- Focused module, rollback, restricted-role PostgreSQL and Playwright tests are included.
+- Local typecheck and focused Vitest remained blocked without diagnostics and were stopped after bounded waits. `git diff --check` passed; CI validation is pending for the first Phase 4 checkpoint.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -160,8 +168,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Confirm the `main` CI for the Phase 4 entry-check documentation commit.
-2. Keep Phase 4 implementation stopped until a separate authorized prompt starts it from green `main`.
+1. Push the Business Brain foundation checkpoint and make the complete GitHub Actions suite green.
+2. Open the draft Phase 4 pull request with exact implemented scope and limitations.
+3. Continue with the evidence-backed Strategic Advisor recommendation model after the checkpoint is green.
 
 Phase 3 completion history:
 

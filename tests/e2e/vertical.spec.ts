@@ -23,6 +23,60 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
   await expect(page.getByText("lead-playwright@example.com")).toBeVisible();
 });
 
+test("the Business Brain versions and archives verified tenant memory", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Cerveau d'entreprise" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Cerveau d'entreprise" }),
+  ).toBeVisible();
+
+  const suffix = Date.now();
+  const title = `Objectif Playwright ${suffix}`;
+  const createForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Enregistrer", exact: true }),
+  });
+  await createForm.getByLabel("Domaine").selectOption("objectives");
+  await createForm.getByLabel("Titre").fill(title);
+  await createForm
+    .getByLabel("Résumé")
+    .fill("Atteindre un objectif commercial validé par la direction.");
+  await createForm.getByLabel("Confiance").fill("92");
+  await createForm
+    .getByLabel("Preuve ou constat")
+    .fill("Décision consignée dans le compte-rendu de direction.");
+  await createForm.getByRole("button", { name: "Enregistrer", exact: true }).click();
+
+  await expect(page.getByText("Information ajoutée à la mémoire.")).toBeVisible();
+  const memory = page.locator("article").filter({ hasText: title });
+  await expect(memory).toBeVisible();
+  await expect(memory.getByText("v1 · 92%")).toBeVisible();
+
+  await memory.getByText("Créer une nouvelle version").click();
+  const revisedTitle = `${title} révisé`;
+  const revisionForm = memory.locator("form").filter({
+    has: page.getByRole("button", { name: "Enregistrer la version" }),
+  });
+  await revisionForm.getByLabel("Titre").fill(revisedTitle);
+  await revisionForm
+    .getByLabel("Résumé")
+    .fill("Atteindre un objectif commercial révisé et validé.");
+  await revisionForm
+    .getByLabel("Preuve ou constat")
+    .fill("Nouvelle décision enregistrée pendant la revue mensuelle.");
+  await revisionForm
+    .getByRole("button", { name: "Enregistrer la version" })
+    .click();
+
+  const revisedMemory = page.locator("article").filter({ hasText: revisedTitle });
+  await expect(page.getByText("Nouvelle version enregistrée.")).toBeVisible();
+  await expect(revisedMemory.getByText("v2 · 92%")).toBeVisible();
+  await revisedMemory.getByRole("button", { name: "Archiver" }).click();
+  await expect(page.getByText("Information archivée.")).toBeVisible();
+  await expect(page.getByText(revisedTitle)).toHaveCount(0);
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,

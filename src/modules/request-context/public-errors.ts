@@ -5,6 +5,7 @@ import { CrmError } from "@/modules/crm";
 import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
+import { BusinessBrainError } from "@/modules/business-brain";
 
 export type PublicError = {
   code: string;
@@ -30,6 +31,7 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof ConnectorError) return mapConnectorError(error);
   if (error instanceof CrmError) return mapCrmError(error);
   if (error instanceof WorkflowError) return mapWorkflowError(error);
+  if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
 
   if (error instanceof ZodError) {
     return {
@@ -133,6 +135,31 @@ function mapWorkflowError(error: WorkflowError): PublicError {
     "workflow",
     "Action d'automatisation impossible.",
     409,
+  );
+}
+
+function mapBusinessBrainError(error: BusinessBrainError): PublicError {
+  if (error.code === "business_brain_entry_not_found") {
+    return publicError(
+      error.code,
+      "business_brain",
+      "Information introuvable.",
+      404,
+    );
+  }
+  if (error.code === "business_brain_revision_conflict") {
+    return publicError(
+      error.code,
+      "business_brain",
+      "Cette information a déjà été modifiée.",
+      409,
+    );
+  }
+  return publicError(
+    error.code,
+    "business_brain",
+    "La mémoire de l'entreprise est indisponible.",
+    503,
   );
 }
 

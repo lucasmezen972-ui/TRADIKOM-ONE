@@ -19,6 +19,10 @@ import type { Role, WebsiteTemplateKey } from "@/lib/types";
 import { isPublicDemoEnabled } from "@/modules/demo";
 import { canonicalEntitySchema } from "@/modules/api-intelligence";
 import { sourceTypeSchema } from "@/modules/software-directory";
+import type {
+  BusinessBrainDomain,
+  BusinessBrainEvidenceType,
+} from "@/modules/business-brain";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -214,6 +218,65 @@ export async function saveOnboardingAction(formData: FormData) {
   });
   revalidatePath("/", "layout");
   redirect("/mon-site");
+}
+
+export async function createBusinessBrainEntryAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("business_brain.entry_create", () =>
+    services.createBusinessBrainEntry(user.id, tenant.id, {
+      domain: text(formData, "domain") as BusinessBrainDomain,
+      title: text(formData, "title"),
+      summary: text(formData, "summary"),
+      details: text(formData, "details"),
+      confidence: text(formData, "confidence"),
+      sourceType: "manual",
+      sourceRef: text(formData, "sourceRef") || undefined,
+      evidenceType: text(
+        formData,
+        "evidenceType",
+      ) as BusinessBrainEvidenceType,
+      evidenceSummary: text(formData, "evidenceSummary"),
+    }),
+  );
+  revalidatePath("/cerveau-entreprise");
+  redirect("/cerveau-entreprise?ajout=1");
+}
+
+export async function reviseBusinessBrainEntryAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("business_brain.entry_revise", () =>
+    services.reviseBusinessBrainEntry(user.id, tenant.id, {
+      entryId: text(formData, "entryId"),
+      domain: text(formData, "domain") as BusinessBrainDomain,
+      title: text(formData, "title"),
+      summary: text(formData, "summary"),
+      details: text(formData, "details"),
+      confidence: text(formData, "confidence"),
+      sourceType: "manual",
+      sourceRef: text(formData, "sourceRef") || undefined,
+      evidenceType: text(
+        formData,
+        "evidenceType",
+      ) as BusinessBrainEvidenceType,
+      evidenceSummary: text(formData, "evidenceSummary"),
+    }),
+  );
+  revalidatePath("/cerveau-entreprise");
+  redirect("/cerveau-entreprise?revision=1");
+}
+
+export async function archiveBusinessBrainEntryAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("business_brain.entry_archive", () =>
+    services.archiveBusinessBrainEntry(user.id, tenant.id, {
+      entryId: text(formData, "entryId"),
+    }),
+  );
+  revalidatePath("/cerveau-entreprise");
+  redirect("/cerveau-entreprise?archive=1");
 }
 
 export async function updateSectionAction(formData: FormData) {

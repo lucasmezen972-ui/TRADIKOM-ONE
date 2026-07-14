@@ -176,3 +176,11 @@
 - Head `3d0f7ca040d5fda99df94b75f9033fc42919e8be` passed complete run `29306404397`: frozen install, production dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, 44 files/143 tests, production build and Playwright E2E.
 - Documentation head `a9dfac8144a128054e6cd13b11ecef213f20ba89` passed final PR run `29306727669`; PR #4 was marked ready and squash-merged as `83371cb5144f8c70b4fd90df8eb88079bf3658c2`.
 - Post-merge `main` run `29307027757` passed the complete suite. Added the Phase 4 entry check without creating a Phase 4 branch or starting Phase 4 implementation.
+
+## Phase 4 - Autonomous Business Platform
+
+- Verified green Phase 4 entry head `49c78d1e4e720a9a0b32596f64c01d3ec8d3b70d` and complete GitHub Actions run `29309008452`, then created `codex/phase-4-autonomous-platform`.
+- Implemented the first Business Brain vertical slice with tenant-owned evidence-backed entries, immutable revisions, archival, role authorization, transactional audit and PostgreSQL RLS.
+- Added a bounded read model that combines Business Twin, CRM, team, workflow, website, connector and API signals without copying their records into a separate silo.
+- Added the French `Cerveau d'entreprise` workspace with coverage, operational signals, create/revise/archive controls, read-only behavior and safe empty/error states.
+- Added module, rollback, PostgreSQL restricted-role and Playwright coverage. Local Node validation hung without diagnostics and was stopped after bounded waits; `git diff --check` passed and GitHub Actions remains authoritative.

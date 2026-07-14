@@ -374,6 +374,94 @@ describeIfPostgres("PostgreSQL RLS", () => {
     ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
   });
 
+  it("isolates Business Brain entries and their evidence", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Brain RLS Owner A",
+      email: uniqueEmail("brain-rls-owner-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Brain RLS Owner B",
+      email: uniqueEmail("brain-rls-owner-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Brain RLS A ${randomUUID()}`,
+      category: "Services",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Brain RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const entryA = await services.createBusinessBrainEntry(
+      ownerA.id,
+      tenantA.id,
+      businessBrainFixture("Tenant A"),
+    );
+    const entryB = await services.createBusinessBrainEntry(
+      ownerB.id,
+      tenantB.id,
+      businessBrainFixture("Tenant B"),
+    );
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    const noContext = await restrictedPool.query<{ id: string }>(
+      "select id from business_brain_entries order by id",
+    );
+    expect(noContext.rows).toEqual([]);
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => {
+        const entries = await client.query<{ id: string; tenant_id: string }>(
+          "select id, tenant_id from business_brain_entries order by id",
+        );
+        const evidence = await client.query<{
+          entry_id: string;
+          tenant_id: string;
+        }>("select entry_id, tenant_id from business_brain_evidence order by id");
+        return { entries: entries.rows, evidence: evidence.rows };
+      },
+    );
+    expect(tenantAView).toEqual({
+      entries: [{ id: entryA, tenant_id: tenantA.id }],
+      evidence: [{ entry_id: entryA, tenant_id: tenantA.id }],
+    });
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into business_brain_evidence (
+             id, tenant_id, entry_id, evidence_type, source_ref, summary,
+             captured_at, created_by, created_at
+           ) values ($1, $2, $3, 'observation', null, $4, $5, $6, $5)`,
+          [
+            id("brain_evidence"),
+            tenantA.id,
+            entryB,
+            "Preuve étrangère refusée.",
+            nowIso(),
+            ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+  });
+
   it("consumes rate limits atomically under PostgreSQL concurrency", async () => {
     if (!databaseUrl) {
       throw new Error("DATABASE_URL is required for this test.");
@@ -413,6 +501,19 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(JSON.stringify(stored.rows[0])).not.toContain(scope);
   });
 });
+
+function businessBrainFixture(label: string) {
+  return {
+    domain: "company" as const,
+    title: `Mémoire ${label}`,
+    summary: `Information vérifiée pour ${label}.`,
+    details: "",
+    confidence: 90,
+    sourceType: "manual" as const,
+    evidenceType: "observation" as const,
+    evidenceSummary: `Observation validée pour ${label}.`,
+  };
+}
 
 async function insertContact(
   db: ReturnType<typeof pgPoolAsSqlClient>,

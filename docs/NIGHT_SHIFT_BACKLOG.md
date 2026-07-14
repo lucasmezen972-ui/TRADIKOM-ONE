@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 implementation remains stopped until a separate authorized prompt starts from green `main`.
+Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 
 Completed for the first Phase 3 checkpoint:
 
@@ -65,5 +65,7 @@ Improved operational observability completed and green at `2747368`:
 
 Next unfinished work:
 
-1. Confirm the `main` CI for the Phase 4 entry-check documentation commit.
-2. Do not start Phase 4 implementation as part of Phase 3.5 stabilization.
+1. Validate the Business Brain foundation through the complete GitHub Actions suite and fix failures immediately.
+2. Open and maintain the draft Phase 4 pull request with exact limitations.
+3. Implement the Strategic Advisor as evidence-backed, explainable recommendation proposals with confidence, effort, gain, ROI, risk and approval state.
+4. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.

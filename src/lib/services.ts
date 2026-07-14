@@ -53,6 +53,15 @@ import {
   onboardingSchema,
   saveBusinessTwin,
 } from "@/modules/business-twin";
+import {
+  archiveBusinessBrainEntry,
+  archiveBusinessBrainEntrySchema,
+  createBusinessBrainEntry,
+  createBusinessBrainEntrySchema,
+  getBusinessBrain,
+  reviseBusinessBrainEntry,
+  reviseBusinessBrainEntrySchema,
+} from "@/modules/business-brain";
 import { getAuditLogs } from "@/modules/audit";
 import { getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
@@ -227,6 +236,23 @@ export function createServices(
     ) => saveBusinessTwin(db, userId, tenantId, input),
     getOnboarding: (userId: string, tenantId: string) =>
       getBusinessTwin(db, userId, tenantId),
+    getBusinessBrain: (userId: string, tenantId: string) =>
+      getBusinessBrain(db, userId, tenantId),
+    createBusinessBrainEntry: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof createBusinessBrainEntrySchema>,
+    ) => createBusinessBrainEntry(db, userId, tenantId, input),
+    reviseBusinessBrainEntry: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseBusinessBrainEntrySchema>,
+    ) => reviseBusinessBrainEntry(db, userId, tenantId, input),
+    archiveBusinessBrainEntry: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof archiveBusinessBrainEntrySchema>,
+    ) => archiveBusinessBrainEntry(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (
