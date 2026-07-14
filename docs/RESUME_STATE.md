@@ -10,7 +10,8 @@ Current Phase 4 checkpoint:
 - Composite tenant foreign keys, PostgreSQL RLS, tenant-scoped services, role checks, transactions and audit logs protect every write.
 - The French `Cerveau d'entreprise` page combines manual memory with live Business Twin, CRM, team, workflow, website, connector and API signals without duplicating those source records.
 - Focused module, rollback, restricted-role PostgreSQL and Playwright tests are included.
-- Local typecheck and focused Vitest remained blocked without diagnostics and were stopped after bounded waits. `git diff --check` passed; CI validation is pending for the first Phase 4 checkpoint.
+- Local typecheck and focused Vitest remained blocked without diagnostics and were stopped after bounded waits. `git diff --check` passed.
+- Business Brain head `1ea4e1e280777ee17fe90fcc6e00c45aef93134d` passed complete GitHub Actions run `29333961495`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -168,9 +169,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Push the Business Brain foundation checkpoint and make the complete GitHub Actions suite green.
-2. Open the draft Phase 4 pull request with exact implemented scope and limitations.
-3. Continue with the evidence-backed Strategic Advisor recommendation model after the checkpoint is green.
+1. Implement the evidence-backed Strategic Advisor recommendation model with explicit reason, confidence, expected gain, effort, ROI, risk and approval state.
+2. Keep recommendations in proposal-only mode; no external send or production write may execute without approval.
+3. Validate the next coherent checkpoint through GitHub Actions and update draft PR #5.
 
 Phase 3 completion history:
 

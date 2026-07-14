@@ -184,3 +184,4 @@
 - Added a bounded read model that combines Business Twin, CRM, team, workflow, website, connector and API signals without copying their records into a separate silo.
 - Added the French `Cerveau d'entreprise` workspace with coverage, operational signals, create/revise/archive controls, read-only behavior and safe empty/error states.
 - Added module, rollback, PostgreSQL restricted-role and Playwright coverage. Local Node validation hung without diagnostics and was stopped after bounded waits; `git diff --check` passed and GitHub Actions remains authoritative.
+- Business Brain head `1ea4e1e` passed complete PR run `29333961495` in 4m36s: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.

@@ -36,7 +36,7 @@ Focused tests cover:
 - Business Twin and operational coverage signals;
 - the browser flow for creation, revision and archival.
 
-Local Node commands remain unreliable and were stopped after a bounded wait. `git diff --check` passed; GitHub Actions is the authoritative validation environment.
+Local Node commands remain unreliable and were stopped after a bounded wait. `git diff --check` passed. Business Brain head `1ea4e1e280777ee17fe90fcc6e00c45aef93134d` passed complete GitHub Actions run `29333961495`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
 
 ## Current limitations
 

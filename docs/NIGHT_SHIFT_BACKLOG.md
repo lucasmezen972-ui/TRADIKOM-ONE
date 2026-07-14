@@ -65,7 +65,6 @@ Improved operational observability completed and green at `2747368`:
 
 Next unfinished work:
 
-1. Validate the Business Brain foundation through the complete GitHub Actions suite and fix failures immediately.
-2. Open and maintain the draft Phase 4 pull request with exact limitations.
-3. Implement the Strategic Advisor as evidence-backed, explainable recommendation proposals with confidence, effort, gain, ROI, risk and approval state.
-4. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
+1. Business Brain foundation is green at `1ea4e1e` in GitHub Actions run `29333961495`; draft PR #5 is open.
+2. Implement the Strategic Advisor as evidence-backed, explainable recommendation proposals with confidence, effort, gain, ROI, risk and approval state.
+3. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
