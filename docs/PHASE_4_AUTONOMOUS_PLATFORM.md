@@ -138,3 +138,22 @@ Runtime migrations `037`/`038` and SQL mirrors `0031`/`0032` add reviews, respon
 Initial CI run `29346153870` exposed a missing shared dashboard approval type. Run `29346380889` then exposed the required PostgreSQL approval policy field. Run `29346943623` made all non-browser gates green and revealed a real navigation overlap after the new module was added. Final head `0f783bc5fead15ee72ff3a03eb311898185e81ce` passed complete GitHub Actions run `29347576934` in 7m19s, including ten Playwright scenarios.
 
 Current limitations remain deliberate: reviews must be imported manually, authenticity is not evaluated, external review platforms are not monitored, and approved drafts cannot be sent or published from TRADIKOM ONE.
+
+## Competitor Intelligence
+
+The seventh vertical slice records legal public competitor observations manually and turns them into evidence-backed planning proposals without crawling or scraping.
+
+Implemented behavior:
+
+- Tenant-owned competitor profiles store only a name and optional normalized public HTTPS reference. The platform never opens that reference automatically.
+- Authorized operators record immutable observations across price, website, SEO, service, product, Google position, advertising, public social activity, reviews, opening hours, jobs and partnerships.
+- Every observation requires a declared direction, public source type, HTTPS evidence URL, factual title and summary, occurrence date and explicit confirmations that the source is public and protected/private content was excluded.
+- Stored source references remove query strings, fragments and credentials; sensitive URL parameters and local/non-public references are rejected before persistence.
+- Deterministic rules compare the latest two observations per competitor/category, preserve immutable evidence and classify only `opportunity`, `risk` or `watch` with a confidence score and internal recommendation.
+- A single observation remains a baseline and explicitly requires a second public proof before a trend can be asserted.
+- Submission, approval and rejection use tenant-scoped generic approvals and immutable decision history. Approval is planning-only and cannot change prices, launch campaigns, contact competitors or trigger a workflow.
+- The French `Veille concurrentielle` workspace and command center expose the complete evidence/decision path. Audit metadata excludes source URLs and observation text.
+
+Runtime migrations `039`/`040` and SQL mirrors `0033`/`0034` add profiles, observations, insights, evidence and decisions with tenant-leading indexes, composite tenant relations and PostgreSQL RLS. Tests cover URL safety, deduplication, evidence comparison, proposal versioning, pending supersession, approval/rejection, safe audit metadata, forced rollback, application authorization, restricted-role cross-tenant CRUD and relations, command-center routing, no operational side effects and Playwright.
+
+Head `86786830a0c36b561a1ce37e543c4520062cab3b` passed complete GitHub Actions run `29350066863` on the first attempt in 7m30s, including eleven Playwright scenarios. Automatic monitoring, network fetches, search-position collection and protected-content scraping remain intentionally unavailable.

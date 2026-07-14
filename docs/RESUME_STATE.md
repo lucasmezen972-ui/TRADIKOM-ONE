@@ -37,6 +37,11 @@ Current Phase 4 checkpoint:
 - Module tests cover deduplication, deterministic classification, approval boundaries, safe audits, forced rollback and no external/operational side effects. Restricted-role PostgreSQL tests cover cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers import through approved non-publication.
 - CI found and fixed the shared dashboard approval union, the mandatory PostgreSQL approval policy field and a desktop navigation overlap caused by the expanded module list.
 - Reputation AI head `0f783bc5fead15ee72ff3a03eb311898185e81ce` passed complete GitHub Actions run `29347576934` in 7m19s: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and ten Playwright scenarios.
+- Competitor Intelligence now stores manually confirmed legal public observations, strips unsafe URL components and compares only tenant-owned evidence without crawling or protected-content scraping.
+- Deterministic insights require one or two immutable observation citations, classify opportunity/risk/watch, remain planning-only and use tenant-scoped approval/rejection history. No price, campaign, workflow, connector or external contact action is available.
+- Runtime migrations `039`/`040` and SQL mirrors `0033`/`0034` protect competitor profiles, observations, insights, evidence and decisions with composite tenant relations, indexes and PostgreSQL RLS.
+- Module tests cover URL safety, deduplication, versioning, pending supersession, approval, rejection, safe audits, rollback and no side effects. Restricted-role PostgreSQL coverage verifies cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers the complete French workflow.
+- Competitor Intelligence head `86786830a0c36b561a1ce37e543c4520062cab3b` passed complete GitHub Actions run `29350066863` on the first attempt in 7m30s, including eleven Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -194,9 +199,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded Competitor Intelligence slice from manually imported observations of legal public sources only.
-2. Track versioned price, website, service, product, opening-hour, job, partnership, review, SEO, advertising or social observations without crawling, scraping protected content or asserting facts without evidence.
-3. Keep analysis and recommended responses in planning state, preserve tenant isolation and validate the complete checkpoint through GitHub Actions.
+1. Implement the first bounded Financial AI slice from existing tenant CRM, opportunity and Business Brain evidence.
+2. Provide explicit estimates for recorded pipeline value, revenue potential, margin/cash-flow inputs and ROI signals without inventing accounting data or replacing accounting software.
+3. Keep forecasts explainable, confidence-scored and planning-only; require evidence, tenant isolation and complete GitHub Actions validation.
 
 Phase 3 completion history:
 
