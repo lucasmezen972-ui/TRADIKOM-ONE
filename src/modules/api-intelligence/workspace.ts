@@ -43,6 +43,22 @@ type SourceRow = {
   recheck_last_error_code: string | null;
 };
 
+type DiscoveryCandidateRow = {
+  id: string;
+  software_id: string;
+  software_name: string;
+  domain_id: string;
+  canonical_url: string;
+  source_type: string;
+  confidence: number;
+  discovery_reason: string;
+  sitemap_url: string;
+  status: string;
+  api_source_id: string | null;
+  last_seen_at: string;
+  decision_reason: string | null;
+};
+
 type SchemaRow = {
   id: string;
   api_product_id: string;
@@ -175,6 +191,32 @@ export async function getApiIntelligenceWorkspace(
        on recheck.source_id = api_sources.id
      order by software_directory_entries.canonical_name asc,
               api_sources.canonical_url asc`,
+  );
+  const discoveryCandidates = await db.query<DiscoveryCandidateRow>(
+    `select api_discovery_candidates.id,
+            api_discovery_candidates.software_id,
+            software_directory_entries.canonical_name as software_name,
+            api_discovery_candidates.domain_id,
+            api_discovery_candidates.canonical_url,
+            api_discovery_candidates.source_type,
+            api_discovery_candidates.confidence,
+            api_discovery_candidates.discovery_reason,
+            api_discovery_candidates.sitemap_url,
+            api_discovery_candidates.status,
+            api_discovery_candidates.api_source_id,
+            api_discovery_candidates.last_seen_at,
+            api_discovery_candidates.decision_reason
+     from api_discovery_candidates
+     join software_directory_entries
+       on software_directory_entries.id = api_discovery_candidates.software_id
+     order by
+       case api_discovery_candidates.status
+         when 'under_review' then 0
+         when 'accepted' then 1
+         else 2
+       end,
+       api_discovery_candidates.confidence desc,
+       api_discovery_candidates.last_seen_at desc`,
   );
   const schemas = await db.query<SchemaRow>(
     `select api_schemas.id, api_schemas.api_product_id,
@@ -333,6 +375,21 @@ export async function getApiIntelligenceWorkspace(
             lastErrorCode: row.recheck_last_error_code ?? undefined,
           }
         : undefined,
+    })),
+    discoveryCandidates: discoveryCandidates.rows.map((row) => ({
+      id: row.id,
+      softwareId: row.software_id,
+      softwareName: row.software_name,
+      domainId: row.domain_id,
+      url: row.canonical_url,
+      sourceType: row.source_type,
+      confidence: row.confidence,
+      reason: row.discovery_reason,
+      sitemapUrl: row.sitemap_url,
+      status: row.status,
+      apiSourceId: row.api_source_id ?? undefined,
+      lastSeenAt: row.last_seen_at,
+      decisionReason: row.decision_reason ?? undefined,
     })),
     schemas: schemas.rows.map((row) => ({
       id: row.id,

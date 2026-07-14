@@ -37,40 +37,16 @@ export async function fetchUnderDiscoveryPolicy(input: {
   approvedDomain: string;
   etag?: string;
   lastModified?: string;
+  accept?: string;
+  maxBytes?: number;
   transport?: DiscoveryTransport;
   lookupImpl?: DiscoveryDnsLookup;
 }) {
-  const target = validateDiscoveryUrl(input.url, input.approvedDomain);
+  const { target, content: robotsContent } = await fetchDiscoveryRobots(input);
   const transport = input.transport ?? defaultDiscoveryTransport;
-  const robotsUrl = new URL("/robots.txt", target.origin);
-  const robots = await timedRequest((signal) =>
-    transport(robotsUrl, {
-      headers: { "user-agent": discoveryUserAgent, accept: "text/plain" },
-      maxBytes: robotsMaxBytes,
-      signal,
-      lookupImpl: input.lookupImpl,
-    }),
-  );
-  if (robots.status >= 500) {
-    throw new DiscoveryError(
-      "robots_unavailable",
-      "Politique robots indisponible.",
-    );
-  }
   if (
-    robots.status !== 404 &&
-    (robots.status < 200 || robots.status >= 300)
-  ) {
-    throw new DiscoveryError(
-      "robots_denied",
-      "Acces robots refuse par l'editeur.",
-    );
-  }
-  if (
-    robots.status !== 404 &&
-    robots.status >= 200 &&
-    robots.status < 300 &&
-    !evaluateRobots(robots.body, target.pathname || "/")
+    robotsContent &&
+    !evaluateRobots(robotsContent, target.pathname || "/")
   ) {
     throw new DiscoveryError("robots_denied", "Analyse refusee par robots.txt.");
   }
@@ -78,6 +54,7 @@ export async function fetchUnderDiscoveryPolicy(input: {
   const headers: Record<string, string> = {
     "user-agent": discoveryUserAgent,
     accept:
+      input.accept ??
       "application/json, application/yaml, text/yaml, text/plain;q=0.8, text/html;q=0.5",
     "accept-encoding": "identity",
   };
@@ -86,7 +63,7 @@ export async function fetchUnderDiscoveryPolicy(input: {
   const response = await timedRequest((signal) =>
     transport(target, {
       headers,
-      maxBytes: sourceMaxBytes,
+      maxBytes: boundedSourceMaxBytes(input.maxBytes),
       signal,
       lookupImpl: input.lookupImpl,
     }),
@@ -130,6 +107,56 @@ export async function fetchUnderDiscoveryPolicy(input: {
       bytes: Buffer.byteLength(redactedContent),
     },
   };
+}
+
+export async function fetchDiscoveryRobots(input: {
+  url: string;
+  approvedDomain: string;
+  transport?: DiscoveryTransport;
+  lookupImpl?: DiscoveryDnsLookup;
+}) {
+  const target = validateDiscoveryUrl(input.url, input.approvedDomain);
+  const transport = input.transport ?? defaultDiscoveryTransport;
+  const robotsUrl = new URL("/robots.txt", target.origin);
+  const robots = await timedRequest((signal) =>
+    transport(robotsUrl, {
+      headers: {
+        "user-agent": discoveryUserAgent,
+        accept: "text/plain",
+        "accept-encoding": "identity",
+      },
+      maxBytes: robotsMaxBytes,
+      signal,
+      lookupImpl: input.lookupImpl,
+    }),
+  );
+  if (robots.status >= 500) {
+    throw new DiscoveryError(
+      "robots_unavailable",
+      "Politique robots indisponible.",
+    );
+  }
+  if (
+    robots.status !== 404 &&
+    (robots.status < 200 || robots.status >= 300)
+  ) {
+    throw new DiscoveryError(
+      "robots_denied",
+      "Acces robots refuse par l'editeur.",
+    );
+  }
+  return {
+    target,
+    content: robots.status === 404 ? "" : robots.body,
+  };
+}
+
+function boundedSourceMaxBytes(value?: number) {
+  if (value === undefined) return sourceMaxBytes;
+  if (!Number.isInteger(value) || value < 1) {
+    throw new DiscoveryError("response_too_large", "Limite de taille invalide.");
+  }
+  return Math.min(value, sourceMaxBytes);
 }
 
 export function redactUntrustedContent(content: string) {

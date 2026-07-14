@@ -46,3 +46,16 @@ export function evaluateRobots(
     .sort((left, right) => right.path.length - left.path.length)[0];
   return matched?.allow ?? true;
 }
+
+export function listSitemapsFromRobots(content: string) {
+  const locations: string[] = [];
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.split("#")[0]!.trim();
+    const separator = line.indexOf(":");
+    if (separator < 0) continue;
+    if (line.slice(0, separator).trim().toLowerCase() !== "sitemap") continue;
+    const location = line.slice(separator + 1).trim();
+    if (location && !locations.includes(location)) locations.push(location);
+  }
+  return locations;
+}

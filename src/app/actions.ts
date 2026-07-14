@@ -612,6 +612,32 @@ export async function decideApiIntelligenceDomainAction(formData: FormData) {
   revalidatePath("/intelligence-api");
 }
 
+export async function scanApiIntelligenceDomainAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.domain_scan", () =>
+    services.scanApprovedSoftwareDomain(user.id, tenant.id, {
+      domainId: text(formData, "domainId"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
+export async function decideApiDiscoveryCandidateAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const status = text(formData, "status") as "accepted" | "rejected";
+  await safeServerAction("api_intelligence.discovery_candidate_decide", () =>
+    services.decideApiDiscoveryCandidate(user.id, tenant.id, {
+      candidateId: text(formData, "candidateId"),
+      status,
+      apiProductId: text(formData, "apiProductId") || undefined,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+}
+
 export async function createApiIntelligenceProductAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

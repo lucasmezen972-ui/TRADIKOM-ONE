@@ -507,6 +507,17 @@ export async function findApiSourceById(db: DbClient, sourceId: string) {
   return result.rows[0] ?? null;
 }
 
+export async function findApiSourceByCanonicalUrl(
+  db: DbClient,
+  canonicalUrl: string,
+) {
+  const result = await db.query<ApiSourceRow>(
+    "select * from api_sources where canonical_url = $1",
+    [canonicalUrl],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function insertApiSourceSnapshot(
   db: DbClient,
   input: {

@@ -22,6 +22,7 @@ import {
   createApiIntelligenceSoftwareAction,
   decideApiConnectorApprovalAction,
   decideApiChangeRepairAction,
+  decideApiDiscoveryCandidateAction,
   decideApiIntelligenceClaimAction,
   decideApiIntelligenceDomainAction,
   decideApiIntelligenceMappingAction,
@@ -31,6 +32,7 @@ import {
   proposeApiIntelligenceMappingAction,
   runApiCompatibilityCheckAction,
   runApiConnectorContractAction,
+  scanApiIntelligenceDomainAction,
   submitApiConnectorApprovalAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -141,6 +143,15 @@ export default async function ApiIntelligencePage() {
                     <p className="mt-1 break-all text-sm text-slate-600">{domain.domain}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {domain.status === "approved" ? (
+                      <form action={scanApiIntelligenceDomainAction}>
+                        <input name="domainId" type="hidden" value={domain.id} />
+                        <button className={secondaryButtonClass}>
+                          <ScanSearch size={15} aria-hidden />
+                          Scanner le sitemap
+                        </button>
+                      </form>
+                    ) : null}
                     {domain.status !== "approved" ? (
                       <DecisionForm
                         action={decideApiIntelligenceDomainAction}
@@ -168,6 +179,79 @@ export default async function ApiIntelligencePage() {
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        </ToolPanel>
+      </section>
+
+      <section>
+        <ToolPanel icon={ScanSearch} title="Candidats découverts">
+          <div className="divide-y divide-slate-100">
+            {workspace.discoveryCandidates.length === 0 ? (
+              <EmptyState label="Aucun candidat détecté" />
+            ) : (
+              workspace.discoveryCandidates.map((candidate) => {
+                const candidateProducts = approvedProducts.filter(
+                  (product) => product.softwareId === candidate.softwareId,
+                );
+                return (
+                  <div key={candidate.id} className="grid gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)] xl:items-center">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{candidate.softwareName}</p>
+                        <StatusPill
+                          label={statusLabel(candidate.status)}
+                          tone={statusTone(candidate.status)}
+                        />
+                        <StatusPill label={`${candidate.confidence} %`} />
+                      </div>
+                      <p className="mt-1 break-all text-sm text-slate-700">{candidate.url}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {sourceTypeLabel(candidate.sourceType)} · {candidate.reason}
+                      </p>
+                    </div>
+                    {candidate.status === "under_review" ? (
+                      <div className="flex max-w-full flex-wrap items-end gap-2">
+                        <form action={decideApiDiscoveryCandidateAction} className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
+                          <input name="candidateId" type="hidden" value={candidate.id} />
+                          <input name="status" type="hidden" value="accepted" />
+                          <input name="reason" type="hidden" value="Source officielle vérifiée depuis le sitemap approuvé." />
+                          <label className="grid min-w-52 flex-1 gap-1 text-xs font-semibold text-slate-600">
+                            Produit API
+                            <select className={inputClass} name="apiProductId" required>
+                              <option value="">Sélectionner</option>
+                              {candidateProducts.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name} {product.version}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button className={secondaryButtonClass} disabled={candidateProducts.length === 0}>
+                            <Check size={15} aria-hidden />
+                            Ajouter
+                          </button>
+                        </form>
+                        <form action={decideApiDiscoveryCandidateAction}>
+                          <input name="candidateId" type="hidden" value={candidate.id} />
+                          <input name="status" type="hidden" value="rejected" />
+                          <input name="reason" type="hidden" value="Candidat non retenu après revue." />
+                          <button className={secondaryButtonClass}>
+                            <X size={15} aria-hidden />
+                            Rejeter
+                          </button>
+                        </form>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500">
+                        {candidate.status === "accepted"
+                          ? "Source enregistrée, analyse manuelle requise."
+                          : candidate.decisionReason ?? "Candidat rejeté."}
+                      </p>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </ToolPanel>
@@ -825,7 +909,7 @@ function shortId(value: string) {
 }
 
 function statusTone(status: string): "neutral" | "positive" | "warning" {
-  if (["approved", "passed", "approved_for_sandbox"].includes(status)) return "positive";
+  if (["accepted", "approved", "passed", "approved_for_sandbox"].includes(status)) return "positive";
   if (["pending", "paused", "under_review"].includes(status)) return "warning";
   return "neutral";
 }
@@ -833,6 +917,7 @@ function statusTone(status: string): "neutral" | "positive" | "warning" {
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     approved: "Approuvé",
+    accepted: "Accepté",
     approved_for_sandbox: "Approuvé sandbox",
     additive: "Additif",
     blocked: "Bloqué",

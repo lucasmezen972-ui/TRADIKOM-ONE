@@ -4,9 +4,12 @@ import { describe, expect, it } from "vitest";
 import { buildSchema, introspectionFromSchema } from "graphql";
 import {
   DiscoveryError,
+  canonicalizeDiscoveredUrl,
+  classifyDiscoveredApiCandidate,
   evaluateRobots,
   fetchUnderDiscoveryPolicy,
   redactUntrustedContent,
+  parseSitemapDocument,
   resolvePublicDiscoveryAddress,
   validateDiscoveryUrl,
 } from "../src/modules/api-intelligence/discovery";
@@ -248,6 +251,74 @@ Disallow: /private
     expect(serialized).toContain("Create contact");
     expect(serialized).toContain("baseUrl");
     expect(serialized).toContain("[REDACTED]");
+  });
+});
+
+describe("bounded sitemap discovery", () => {
+  it("parses URL sets and indexes without entities", () => {
+    expect(
+      parseSitemapDocument(`<?xml version="1.0"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://docs.vendor.test/openapi.json</loc></url>
+          <url><loc>https://docs.vendor.test/reference</loc></url>
+        </urlset>`),
+    ).toEqual({
+      kind: "urlset",
+      locations: [
+        "https://docs.vendor.test/openapi.json",
+        "https://docs.vendor.test/reference",
+      ],
+    });
+    expect(
+      parseSitemapDocument(`
+        <sitemapindex>
+          <sitemap><loc>https://docs.vendor.test/sitemap-api.xml</loc></sitemap>
+        </sitemapindex>`),
+    ).toEqual({
+      kind: "sitemapindex",
+      locations: ["https://docs.vendor.test/sitemap-api.xml"],
+    });
+    expect(() =>
+      parseSitemapDocument(
+        '<!DOCTYPE urlset [<!ENTITY secret "value">]><urlset />',
+      ),
+    ).toThrowError(DiscoveryError);
+    expect(() => parseSitemapDocument("<urlset><url></urlset>"))
+      .toThrowError(DiscoveryError);
+  });
+
+  it("canonicalizes exact-domain URLs and classifies only useful candidates", () => {
+    expect(
+      canonicalizeDiscoveredUrl(
+        "https://docs.vendor.test/openapi.json?utm_source=test&version=2",
+        "docs.vendor.test",
+      ),
+    ).toBe("https://docs.vendor.test/openapi.json?version=2");
+    expect(() =>
+      canonicalizeDiscoveredUrl(
+        "https://sub.docs.vendor.test/openapi.json",
+        "docs.vendor.test",
+      ),
+    ).toThrowError(DiscoveryError);
+    expect(() =>
+      canonicalizeDiscoveredUrl(
+        "https://docs.vendor.test/openapi.json?token=secret",
+        "docs.vendor.test",
+      ),
+    ).toThrowError(DiscoveryError);
+    expect(
+      classifyDiscoveredApiCandidate(
+        "https://docs.vendor.test/.well-known/openid-configuration",
+      ),
+    ).toMatchObject({ sourceType: "official_oauth_metadata", confidence: 98 });
+    expect(
+      classifyDiscoveredApiCandidate(
+        "https://docs.vendor.test/spec/openapi.yaml",
+      ),
+    ).toMatchObject({ sourceType: "official_openapi_specification" });
+    expect(
+      classifyDiscoveredApiCandidate("https://docs.vendor.test/about"),
+    ).toBeNull();
   });
 });
 

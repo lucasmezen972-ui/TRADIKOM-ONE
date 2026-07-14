@@ -117,6 +117,7 @@ import {
   decideTenantOntologyMapping,
   decideApiChangeRepair,
   decideApiClaim,
+  decideApiDiscoveryCandidate,
   fetchApprovedApiSource,
   configureApiSourceRecheck,
   getApiIntelligenceWorkspace,
@@ -129,6 +130,7 @@ import {
   previewPostmanSnapshot,
   proposeTenantOntologyMapping,
   runCompatibilityCheck,
+  scanApprovedSoftwareDomain,
   type DiscoveryTransport,
   type ApiSourceRecheckConfiguration,
   type OntologyMappingInput,
@@ -432,6 +434,24 @@ export function createServices(
         reason: string;
       },
     ) => decideSoftwareDomain(db, userId, tenantId, input),
+    scanApprovedSoftwareDomain: (
+      userId: string,
+      tenantId: string,
+      input: { domainId: string },
+    ) =>
+      scanApprovedSoftwareDomain(db, userId, tenantId, input, {
+        transport: dependencies.discoveryTransport,
+      }),
+    decideApiDiscoveryCandidate: (
+      userId: string,
+      tenantId: string,
+      input: {
+        candidateId: string;
+        status: "accepted" | "rejected";
+        apiProductId?: string;
+        reason: string;
+      },
+    ) => decideApiDiscoveryCandidate(db, userId, tenantId, input),
     createApiProductRecord: (
       userId: string,
       tenantId: string,
