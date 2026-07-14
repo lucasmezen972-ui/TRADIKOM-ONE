@@ -694,6 +694,39 @@ test("Self Improvement explains a measured issue without changing operations", a
   expect(after.rows[0]).toEqual(before.rows[0]);
 });
 
+test("operational health distinguishes measured incidents from unknown telemetry", async ({
+  page,
+}) => {
+  await openDemo(page);
+  const db = await getDb();
+  const demo = await db.query<{ tenant_id: string }>(
+    "select id as tenant_id from tenants where slug = $1 limit 1",
+    ["garage-caraibes-auto"],
+  );
+  const tenantId = demo.rows[0]?.tenant_id;
+  if (!tenantId) throw new Error("Le tenant de démonstration est introuvable.");
+  await db.query(
+    `update connectors set status = 'Connecté', health = 'error', updated_at = $1
+     where tenant_id = $2 and connector_key = 'mock_business'`,
+    [new Date().toISOString(), tenantId],
+  );
+
+  await page.goto("/sante-operationnelle");
+  await expect(
+    page.getByRole("heading", { name: "Santé opérationnelle" }),
+  ).toBeVisible();
+  const connectors = page.locator("article").filter({ hasText: "Connecteurs" });
+  await expect(connectors.getByText("Action requise", { exact: true })).toBeVisible();
+  const workers = page.locator("article").filter({ hasText: "Agents de traitement" });
+  await expect(workers.getByText("Non instrumenté", { exact: true })).toBeVisible();
+  await expect(page.getByText("Aucun état sain n'est supposé")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: /Redémarrer|Corriger|Exécuter|Activer|Synchroniser/i,
+    }),
+  ).toHaveCount(0);
+});
+
 async function openDemo(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: /Ouvrir la d.mo/i }).click();

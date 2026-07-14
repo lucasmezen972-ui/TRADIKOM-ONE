@@ -10,6 +10,7 @@ import {
   Contact,
   Gauge,
   Globe2,
+  HeartPulse,
   Lightbulb,
   LibraryBig,
   Megaphone,
@@ -61,6 +62,7 @@ const navItems = [
     icon: LibraryBig,
   },
   { href: "/ameliorations", label: "Améliorations", icon: Sparkles },
+  { href: "/sante-operationnelle", label: "Santé", icon: HeartPulse },
   { href: "/resultats", label: "Résultats", icon: Bot },
   { href: "/parametres", label: "Paramètres", icon: Settings },
 ];

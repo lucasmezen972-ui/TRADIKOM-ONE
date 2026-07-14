@@ -246,6 +246,7 @@ import {
   getSelfImprovementWorkspace,
   selfImprovementDecisionSchema,
 } from "@/modules/self-improvement";
+import { getEnterpriseObservability } from "@/modules/enterprise-observability";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -866,5 +867,7 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof selfImprovementDecisionSchema>,
     ) => decideSelfImprovementProposal(db, userId, tenantId, input),
+    getEnterpriseObservability: (userId: string, tenantId: string) =>
+      getEnterpriseObservability(db, userId, tenantId),
   };
 }
