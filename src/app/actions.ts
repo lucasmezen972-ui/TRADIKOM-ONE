@@ -588,17 +588,17 @@ export async function recordFinancialInputSnapshotAction(formData: FormData) {
   await safeServerAction("financial_ai.input_record", () =>
     services.recordFinancialInputSnapshot(user.id, tenant.id, {
       period: text(formData, "period"),
-      monthlyRevenueCents: moneyToCents(text(formData, "monthlyRevenue")),
-      operatingCostsCents: moneyToCents(text(formData, "operatingCosts")),
-      cashBalanceCents: moneyToCents(text(formData, "cashBalance")),
-      cashInflowsCents: moneyToCents(text(formData, "cashInflows")),
-      cashOutflowsCents: moneyToCents(text(formData, "cashOutflows")),
-      receivablesCents: moneyToCents(text(formData, "receivables")),
-      payablesCents: moneyToCents(text(formData, "payables")),
-      marketingSpendCents: moneyToCents(text(formData, "marketingSpend")),
-      salesSpendCents: moneyToCents(text(formData, "salesSpend")),
-      websiteSpendCents: moneyToCents(text(formData, "websiteSpend")),
-      automationSpendCents: moneyToCents(text(formData, "automationSpend")),
+      monthlyRevenueCents: strictMoneyToCents(text(formData, "monthlyRevenue")),
+      operatingCostsCents: strictMoneyToCents(text(formData, "operatingCosts")),
+      cashBalanceCents: strictMoneyToCents(text(formData, "cashBalance")),
+      cashInflowsCents: strictMoneyToCents(text(formData, "cashInflows")),
+      cashOutflowsCents: strictMoneyToCents(text(formData, "cashOutflows")),
+      receivablesCents: strictMoneyToCents(text(formData, "receivables")),
+      payablesCents: strictMoneyToCents(text(formData, "payables")),
+      marketingSpendCents: strictMoneyToCents(text(formData, "marketingSpend")),
+      salesSpendCents: strictMoneyToCents(text(formData, "salesSpend")),
+      websiteSpendCents: strictMoneyToCents(text(formData, "websiteSpend")),
+      automationSpendCents: strictMoneyToCents(text(formData, "automationSpend")),
       newCustomers: integerValue(formData, "newCustomers"),
       activeCustomers: integerValue(formData, "activeCustomers"),
       averageLifetimeMonths: optionalIntegerValue(
@@ -1321,12 +1321,17 @@ function moneyToCents(value: string) {
 }
 
 function optionalMoneyToCents(value: string) {
-  return value ? moneyToCents(value) : null;
+  return value ? strictMoneyToCents(value) : null;
+}
+
+function strictMoneyToCents(value: string) {
+  const amount = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(amount) ? Math.round(amount * 100) : Number.NaN;
 }
 
 function integerValue(formData: FormData, key: string) {
   const value = Number.parseInt(text(formData, key), 10);
-  return Number.isFinite(value) ? value : 0;
+  return Number.isFinite(value) ? value : Number.NaN;
 }
 
 function optionalIntegerValue(formData: FormData, key: string) {

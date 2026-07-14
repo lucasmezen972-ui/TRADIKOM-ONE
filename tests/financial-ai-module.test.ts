@@ -61,6 +61,26 @@ describe("Financial AI module", () => {
     await services.generateSalesAiAssessments(owner.id, tenant.id);
     const operationalBefore = await countOperationalEffects(db, tenant.id);
 
+    await expect(
+      services.recordFinancialInputSnapshot(owner.id, tenant.id, {
+        period: "2026-07",
+        monthlyRevenueCents: Number.NaN,
+        operatingCostsCents: 0,
+        cashBalanceCents: 0,
+        cashInflowsCents: 0,
+        cashOutflowsCents: 0,
+        receivablesCents: 0,
+        payablesCents: 0,
+        marketingSpendCents: 0,
+        salesSpendCents: 0,
+        websiteSpendCents: 0,
+        automationSpendCents: 0,
+        newCustomers: 0,
+        activeCustomers: 0,
+        evidenceSummary: "Une saisie invalide ne doit jamais devenir zéro.",
+      }),
+    ).rejects.toThrow();
+
     const snapshot = await services.recordFinancialInputSnapshot(
       owner.id,
       tenant.id,
