@@ -8,6 +8,7 @@
 - `src/modules/api-intelligence/analyzer/`: analyse deterministe OpenAPI JSON/YAML, Postman Collection v2.1 JSON, GraphQL SDL/introspection JSON fournis et metadonnees OAuth JSON officielles, puis previsualisation.
 - `src/modules/api-intelligence/change-monitor/`: comparaison deterministe, classification, impacts tenant, contrats de changement et plans de reparation.
 - `src/modules/api-intelligence/ontology/`: mappings tenant avec preuve et approbation.
+- `src/modules/api-intelligence/observability/`: comptes de sante globaux et tenant en lecture seule, sans donnees source sensibles.
 - `src/modules/api-intelligence/compatibility.ts`: resultat tenant explique par operations, mappings et preuves.
 - `src/modules/connector-copilot/`: manifestes desactives, tests mock, demandes d'approbation et Connect Store prive.
 
@@ -61,6 +62,8 @@ Un mapping tenant ne peut jamais etre promu automatiquement en connaissance glob
 La promotion d'un mapping exige un administrateur plateforme, un mapping tenant approuve et une preuve officielle encore approuvee. Le modele global ne contient aucune reference au tenant source. Sa reutilisation produit un nouveau mapping tenant `pending`; l'approbation d'origine ne traverse jamais la frontiere tenant.
 
 Les reparations sont des propositions versionnees reliees a un impact, au connecteur source et au snapshot courant. Les triggers PostgreSQL imposent le meme tenant et le meme produit API pour toutes ces relations. Les imports conservent les anciennes preuves encore referencees par un mapping, mais les operations, schemas, claims et preuves du nouveau snapshot utilisent des identifiants distincts.
+
+La sante operationnelle agrege uniquement des comptes bornes. Les indicateurs globaux exigent le role administrateur plateforme; chaque indicateur tenant applique un filtre `tenant_id`. Les repositories ne remontent ni URL, ni contenu de snapshot, ni payload, ni erreur reseau brute, ni secret.
 
 ## Frontieres actuelles
 

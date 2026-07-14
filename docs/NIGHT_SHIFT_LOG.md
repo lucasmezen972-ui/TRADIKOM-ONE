@@ -154,3 +154,9 @@
 - GitHub Actions exposed that replacing an imported contract could delete evidence still referenced by an approved mapping in `4d51254`. Fix `2bd0881` preserves referenced historical claims/evidence, versions operation and schema identities by snapshot, and prevents old approvals from authorizing the new contract. Both complete runs passed (`29299530060` push and `29299531581` pull request), including 42 files/135 tests, PostgreSQL RLS, build and three Playwright scenarios.
 - Implemented reusable approved mapping intelligence: explicit platform-admin promotion from an approved tenant mapping, official-evidence revalidation, global structural deduplication, no tenant/sample/private-rule fields, and reuse as a new pending tenant proposal with separate approval and audit.
 - Reusable mapping head `4af425a` passed both complete CI runs (`29300124894` push and `29300127676` pull request), including ordered migrations, lint, typecheck, 42 files/135 tests, production build and three Playwright scenarios.
+
+## 2026-07-14
+
+- Implemented bounded API Intelligence operational health reads for platform and tenant state, including scheduled rechecks, pending source decisions, contract changes, mapping approvals, blocked impacts, connector repairs, sandbox approvals, failed contracts and audited actions.
+- Restricted the health service to platform administrators and excluded raw URLs, payloads, network errors, error codes and secrets from its output; added tenant-isolation and authorization coverage plus the French `Sante operationnelle` administration panel.
+- Observability head `2747368` passed both complete CI runs (`29300616222` push and `29300618426` pull request), including ordered migrations, lint, typecheck, 43 files/137 tests, production build and three Playwright scenarios.

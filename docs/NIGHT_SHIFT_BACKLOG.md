@@ -57,7 +57,14 @@ Reusable approved mapping intelligence completed and green at `4af425a`:
 2. Global knowledge stores structural mapping fields and evidence only, without tenant IDs, sample values or automatic promotion.
 3. Reuse in another tenant creates a deduplicated pending proposal that still requires an explicit tenant-scoped approval and audit.
 
+Improved operational observability completed and green at `2747368`:
+
+1. Platform administrators receive bounded health totals for approved sources, recheck state, pending sitemap decisions, reviewed claims and recent contract changes.
+2. Tenant-scoped health totals cover pending mappings, blocked impacts, repair decisions, sandbox approvals, failed contracts and audited API Intelligence actions.
+3. The read model exposes no raw source URLs, payloads, error messages, error codes or secrets and is covered for role and tenant isolation.
+
 Next unfinished work:
 
-1. Begin P3 improved observability for API Intelligence security and worker operations.
-2. Keep live writes, production connector approval and unrestricted crawling disabled.
+1. Complete the final Phase 3 security, migration, authorization, secret and complete-diff review.
+2. Update PR #3, validate the closure head through GitHub Actions, then apply the documented ready/merge gate.
+3. Keep live writes, production connector approval and unrestricted crawling disabled.

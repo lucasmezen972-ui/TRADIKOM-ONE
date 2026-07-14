@@ -146,8 +146,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Begin P3 improved observability for API Intelligence security and worker operations.
-2. Keep production connector activation and unrestricted crawling disabled.
+1. Perform the final Phase 3 security, migration, authorization, secret and complete-diff review.
+2. Update PR #3, run the closure CI, then mark it ready and merge only if every documented gate passes.
+3. Keep production connector activation, live writes and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
 
@@ -177,3 +178,5 @@ Phase 3 checkpoint in progress:
 - Approved tenant mappings can now be promoted into global structural knowledge only by a platform administrator and only while their official evidence remains approved. No tenant identifier, sample value or private rule is copied into the global record.
 - Reusing a global mapping in another tenant creates a deduplicated `pending` proposal and requires a separate approval. Runtime migration `026` and SQL mirror `0020` add bounded promotion metadata and structural uniqueness.
 - Reusable mapping head `4af425ae8240f487d83a8dc29c47b84a57cf7e10` passed complete push run `29300124894` and pull request run `29300127676`: ordered migrations, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
+- API Intelligence operational health is now exposed through a bounded, read-only platform-admin service. It reports global source/recheck/change counts and tenant-scoped mapping, repair, sandbox, contract and audit counts without returning raw URLs, payloads, network errors or secrets.
+- Observability head `27473684413c32ea499ba577b7c77dffd0e8ba68` passed complete push run `29300616222` and pull request run `29300618426`: ordered migrations, lint, typecheck, 43 test files/137 tests, production build and three Playwright scenarios.

@@ -102,6 +102,12 @@ Un administrateur plateforme peut promouvoir un mapping tenant seulement lorsqu'
 
 La reutilisation dans un autre tenant cree une nouvelle proposition `pending`, dedupliquee par sa forme structurelle. Elle n'alimente la compatibilite ou Connector Copilot qu'apres une nouvelle approbation tenant auditee. Il n'existe aucune promotion ou approbation automatique.
 
+## Sante operationnelle
+
+Un administrateur plateforme dispose d'une vue en lecture seule sur l'etat d'API Intelligence. Les indicateurs globaux couvrent les domaines approuves, sources officielles, relectures planifiees, candidats sitemap, claims en attente et changements recents. Les indicateurs tenant couvrent les mappings, impacts bloques, reparations, approbations sandbox, contrats en echec et actions auditees recentes.
+
+Le service retourne uniquement des comptes bornes et un etat `healthy`, `attention` ou `critical`. Il ne retourne ni URL de source, ni contenu, ni payload, ni code ou message reseau, ni secret. L'acces exige le role administrateur plateforme et les comptes tenant restent filtres par `tenant_id`.
+
 ## Limites assumees
 
 - Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML, Postman Collection v2.1 en JSON, GraphQL fourni en SDL ou introspection JSON et les metadonnees OAuth officielles en JSON.
@@ -134,4 +140,6 @@ La reutilisation dans un autre tenant cree une nouvelle proposition `pending`, d
 - Runs push `29299530060` et pull request `29299531581`: migrations PostgreSQL/RLS, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
 - Le checkpoint d'intelligence de mappings reutilisables est vert au head `4af425ae8240f487d83a8dc29c47b84a57cf7e10`.
 - Runs push `29300124894` et pull request `29300127676`: migrations PostgreSQL, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
-- La PR #3 reste en brouillon pendant la suite de Phase 3.
+- Le checkpoint d'observabilite operationnelle est vert au head `27473684413c32ea499ba577b7c77dffd0e8ba68`.
+- Runs push `29300616222` et pull request `29300618426`: migrations PostgreSQL, lint, types, 43 fichiers/137 tests, build production et trois Playwright passes.
+- La PR #3 reste en brouillon jusqu'a la revue finale complete et au passage de la CI de cloture.
