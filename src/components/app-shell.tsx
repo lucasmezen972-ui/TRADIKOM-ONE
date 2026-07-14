@@ -12,6 +12,7 @@ import {
   Globe2,
   Lightbulb,
   Megaphone,
+  PackageSearch,
   ScanSearch,
   PlugZap,
   Settings,
@@ -51,6 +52,7 @@ const navItems = [
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },
+  { href: "/catalogue", label: "Catalogue privé", icon: PackageSearch },
   { href: "/resultats", label: "Résultats", icon: Bot },
   { href: "/parametres", label: "Paramètres", icon: Settings },
 ];

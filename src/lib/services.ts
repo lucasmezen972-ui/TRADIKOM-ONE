@@ -227,6 +227,12 @@ import {
   reviseAiEmployeeProfile,
   reviseAiEmployeeProfileSchema,
 } from "@/modules/ai-employees";
+import {
+  getPrivateAppMarketplace,
+  previewPrivateMarketplaceInstallation,
+  previewMarketplaceInstallationSchema,
+  refreshPrivateAppMarketplace,
+} from "@/modules/app-marketplace";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -817,5 +823,14 @@ export function createServices(
       tenantId: string,
       input: { storeEntryId: string },
     ) => prepareConnectorInstallationPlan(db, userId, tenantId, input),
+    getPrivateAppMarketplace: (userId: string, tenantId: string) =>
+      getPrivateAppMarketplace(db, userId, tenantId),
+    refreshPrivateAppMarketplace: (userId: string, tenantId: string) =>
+      refreshPrivateAppMarketplace(db, userId, tenantId),
+    previewPrivateMarketplaceInstallation: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof previewMarketplaceInstallationSchema>,
+    ) => previewPrivateMarketplaceInstallation(db, userId, tenantId, input),
   };
 }

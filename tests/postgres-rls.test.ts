@@ -1620,6 +1620,155 @@ describeIfPostgres("PostgreSQL RLS", () => {
       activityDeleted: 0,
     });
   });
+
+  it("isolates private marketplace listings, previews and source relations", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Marketplace RLS Owner A",
+      email: uniqueEmail("marketplace-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Marketplace RLS Owner B",
+      email: uniqueEmail("marketplace-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: "Marketplace RLS A",
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: "Marketplace RLS B",
+      category: "Conseil juridique",
+    });
+    await services.refreshPrivateAppMarketplace(ownerA.id, tenantA.id);
+    await services.refreshPrivateAppMarketplace(ownerB.id, tenantB.id);
+    const workspaceA = await services.getPrivateAppMarketplace(ownerA.id, tenantA.id);
+    const workspaceB = await services.getPrivateAppMarketplace(ownerB.id, tenantB.id);
+    const listingA = workspaceA.listings[0];
+    const listingB = workspaceB.listings[0];
+    if (!listingA || !listingB) throw new Error("Marketplace RLS fixtures are missing.");
+    await services.previewPrivateMarketplaceInstallation(ownerA.id, tenantA.id, {
+      listingId: listingA.id,
+    });
+    await services.previewPrivateMarketplaceInstallation(ownerB.id, tenantB.id, {
+      listingId: listingB.id,
+    });
+    const foreignEmployee = await ownerPool.query<{ id: string }>(
+      `select id from ai_employee_profiles
+       where tenant_id = $1 and record_status = 'current'
+       order by id limit 1`,
+      [tenantB.id],
+    );
+    const foreignEmployeeId = foreignEmployee.rows[0]?.id;
+    if (!foreignEmployeeId) throw new Error("Foreign marketplace source is missing.");
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect(
+      (await restrictedPool.query("select id from private_marketplace_listings")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from marketplace_installation_previews")).rows,
+    ).toEqual([]);
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        listings: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from private_marketplace_listings",
+          )).rows[0]?.count ?? 0,
+        ),
+        previews: Number(
+          (await client.query<{ count: string }>(
+            "select count(*) as count from marketplace_installation_previews",
+          )).rows[0]?.count ?? 0,
+        ),
+      }),
+    );
+    expect(tenantAView).toEqual({ listings: 10, previews: 1 });
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into private_marketplace_listings (
+             id, tenant_id, listing_key, category, source_kind,
+             connector_plan_id, workflow_id, ai_employee_profile_id, title,
+             summary, fingerprint, record_status, visibility,
+             capabilities_snapshot, permissions_snapshot, provenance_snapshot,
+             version, supersedes_id, created_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, 'ai_employee', 'ai_employee_profile', null, null, $4,
+             'Source étrangère', 'Cette relation inter-tenant doit être refusée.',
+             $5, 'current', 'private', $6, $6, $6, 1, null, $7, $8, $8
+           )`,
+          [
+            id("marketplace_listing"),
+            tenantA.id,
+            `ai-employee:cross-${randomUUID()}`,
+            foreignEmployeeId,
+            "a".repeat(64),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into marketplace_installation_previews (
+             id, tenant_id, listing_id, listing_version, listing_fingerprint,
+             status, installation_mode, enabled, installation_steps,
+             permission_review, blockers, created_by, created_at
+           ) values ($1, $2, $3, 1, $4, 'ready', 'preview_only', 0,
+                     $5, $5, $5, $6, $7)`,
+          [
+            id("marketplace_preview"),
+            tenantA.id,
+            listingB.id,
+            "b".repeat(64),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update private_marketplace_listings set title = 'interdit' where id = $1",
+            [listingB.id],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query(
+            "delete from marketplace_installation_previews where listing_id = $1",
+            [listingB.id],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
 });
 
 function businessBrainFixture(label: string) {

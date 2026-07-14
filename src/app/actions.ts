@@ -1308,6 +1308,28 @@ export async function prepareConnectorInstallationPlanAction(
   revalidatePath("/connexions");
 }
 
+export async function refreshPrivateAppMarketplaceAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("app_marketplace.private_catalog_refresh", () =>
+    services.refreshPrivateAppMarketplace(user.id, tenant.id),
+  );
+  revalidatePath("/catalogue");
+}
+
+export async function previewPrivateMarketplaceInstallationAction(
+  formData: FormData,
+) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("app_marketplace.installation_preview", () =>
+    services.previewPrivateMarketplaceInstallation(user.id, tenant.id, {
+      listingId: text(formData, "listingId"),
+    }),
+  );
+  revalidatePath("/catalogue");
+}
+
 export async function decideApiChangeRepairAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
