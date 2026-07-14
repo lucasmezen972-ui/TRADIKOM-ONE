@@ -33,7 +33,13 @@ Supplied GraphQL import completed and green at `54b8199`:
 2. Deterministic query, mutation, subscription and type extraction without descriptions, deprecation reasons or default values.
 3. Transactional reviewed claims, stable evidence, compatibility reuse, change monitoring and audited vertical coverage.
 
+Official OAuth metadata import completed and green at `df9198e`:
+
+1. Bounded RFC 8414 JSON parsing for issuer, authorization/token/revocation endpoints, grants, response types, scopes, client authentication and PKCE support.
+2. HTTPS/private-target validation, secret and signed-metadata redaction, authoritative replay, transactional reviewed claims and coexistence with an operation contract.
+3. Deterministic change monitoring, tenant authorization, audited persistence, French administration controls and vertical regression coverage.
+
 Next unfinished work:
 
-1. Add the official OAuth metadata importer.
+1. Begin P3 approved-domain expansion with bounded sitemap/canonical candidate discovery on explicitly approved domains.
 2. Keep live writes, production connector approval and unrestricted crawling disabled.

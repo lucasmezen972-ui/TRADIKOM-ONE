@@ -11,7 +11,7 @@ Une source distante n'est accessible que lorsque:
 - `robots.txt` autorise le chemin;
 - la limite de frequence du domaine est disponible.
 
-La version actuelle accepte les specifications OpenAPI 3.0/3.1, collections Postman v2.1 et schemas GraphQL officiels ajoutes manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
+La version actuelle accepte les specifications OpenAPI 3.0/3.1, collections Postman v2.1, schemas GraphQL fournis et metadonnees OAuth officielles ajoutes manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
 
 ## Controles reseau
 
@@ -55,6 +55,8 @@ Pour Postman, seules la structure des dossiers, les methodes, chemins, noms de p
 
 Pour GraphQL, la source doit contenir un SDL ou un resultat d'introspection JSON deja fourni. Le systeme n'envoie jamais de requete d'introspection a un endpoint. Seuls les types, champs, arguments et signatures d'operations sont conserves; descriptions, raisons de deprecation et valeurs par defaut sont omises des claims structurels.
 
+Pour OAuth, la source doit etre un document JSON officiel d'autorisation-server metadata. Les endpoints structurels HTTPS publics, grants, scopes, methodes client et signaux PKCE peuvent etre conserves; credentials, jetons et metadonnees signees sont rediges avant stockage. Aucun endpoint OAuth n'est appele pendant l'analyse.
+
 ## Interdictions
 
 - Authentification, paywall ou tableau de bord prive.
@@ -63,5 +65,6 @@ Pour GraphQL, la source doit contenir un SDL ou un resultat d'introspection JSON
 - Reference OpenAPI externe.
 - Remplacement croise OpenAPI/Postman d'un produit possedant deja des operations importees.
 - Introspection GraphQL en direct ou execution d'une operation GraphQL.
+- Execution d'un flux OAuth, appel d'un endpoint de token/revocation ou decodage d'une metadonnee signee.
 - Secret trouve dans une documentation.
 - Activation ou appel d'ecriture d'un connecteur genere.

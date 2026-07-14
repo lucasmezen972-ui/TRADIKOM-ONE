@@ -146,7 +146,7 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Add the official OAuth metadata importer.
+1. Begin P3 approved-domain expansion with bounded sitemap/canonical candidate discovery on explicitly approved domains.
 2. Keep production connector activation and unrestricted crawling disabled.
 
 Phase 3 checkpoint in progress:
@@ -167,3 +167,5 @@ Phase 3 checkpoint in progress:
 - OpenAPI and Postman operation imports are intentionally exclusive per API product until a future multi-source operation model exists; a cross-format replacement is rejected instead of deleting the current operation set.
 - Official GraphQL sources now accept bounded supplied SDL or supplied introspection JSON through the official `graphql` parser. No endpoint introspection or schema request is generated; descriptions, deprecation reasons and default values are omitted from persisted structural claims.
 - GraphQL import head `54b81993eed7a95b58a0ffdd37beec8e8e9079d9` passed complete push run `29293876882` and pull request run `29293878753`: ordered PostgreSQL migrations, lint, typecheck, 40 test files/129 tests, production build and three Playwright scenarios.
+- Official OAuth authorization-server metadata now augments an API product with bounded issuer, endpoint, grant, scope, client-authentication, PKCE and revocation facts without replacing its operation contract. Metadata is imported under review and no authorization or token request is sent.
+- OAuth import head `df9198e7677af862f9abc6fbdbb25169566788ea` passed complete push run `29294952077` and pull request run `29294954700`: ordered PostgreSQL migrations, lint, typecheck, 41 test files/132 tests, production build and three Playwright scenarios.

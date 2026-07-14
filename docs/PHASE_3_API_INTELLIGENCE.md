@@ -14,10 +14,10 @@ L'espace administrateur `Intelligence API` permet a un administrateur plateforme
 
 1. enregistrer un logiciel et soumettre son domaine officiel;
 2. approuver ou suspendre ce domaine;
-3. enregistrer un produit API et une source OpenAPI, Postman ou GraphQL officielle;
+3. enregistrer un produit API et une source OpenAPI, Postman, GraphQL ou OAuth officielle;
 4. recuperer la source sous la politique de decouverte;
 5. conserver un snapshot avec provenance, ETag, Last-Modified et hash;
-6. previsualiser puis importer un document OpenAPI JSON/YAML, une collection Postman v2.1 JSON ou un schema GraphQL fourni;
+6. previsualiser puis importer un document OpenAPI JSON/YAML, une collection Postman v2.1 JSON, un schema GraphQL fourni ou des metadonnees OAuth officielles;
 7. extraire les operations, schemas et preuves puis approuver leurs claims;
 8. proposer puis approuver un mapping tenant vers l'ontologie canonique;
 9. produire une analyse de compatibilite explicable;
@@ -72,6 +72,8 @@ ETag, Last-Modified, hash et redaction.
 - Les collections Postman sont bornees en taille, profondeur, dossiers, variables, exemples et scripts; aucune valeur, corps, requete ou script n'est execute ou persiste.
 - Les schemas GraphQL utilisent le parseur officiel, acceptent uniquement du SDL ou un resultat d'introspection JSON fourni et bornent taille, tokens, profondeur, noeuds, types, champs, arguments et operations.
 - Aucune introspection GraphQL en direct n'est envoyee; descriptions, raisons de deprecation et valeurs par defaut ne sont pas persistees dans les claims structurels.
+- Les metadonnees OAuth JSON sont bornees et validees; seuls issuer, endpoints HTTPS publics, grants, response types, scopes, methodes client et signaux PKCE sont conserves.
+- Aucun flux OAuth, appel de token ou revocation n'est execute. Les credentials et metadonnees signees sont rediges avant stockage; seule leur presence structurelle peut etre notee.
 - Une previsualisation est reverifiee contre le snapshot autoritatif avant persistance.
 - Les metadonnees, operations et schemas importes restent `under_review` jusqu'a une decision humaine auditee.
 - Un mapping doit citer la preuve exacte d'un schema approuve.
@@ -84,7 +86,7 @@ ETag, Last-Modified, hash et redaction.
 
 ## Limites assumees
 
-- Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML, Postman Collection v2.1 en JSON et GraphQL fourni en SDL ou introspection JSON. OAuth reste a implementer.
+- Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML, Postman Collection v2.1 en JSON, GraphQL fourni en SDL ou introspection JSON et les metadonnees OAuth officielles en JSON.
 - Un produit API conserve un seul format autoritatif pour ses operations: un remplacement OpenAPI/Postman est refuse tant que le modele multi-source n'existe pas.
 - L'ajout de source reste manuel et limite a une URL approuvee. Les relectures planifiees sont disponibles; le scan de sitemap et la detection de nouvelles pages restent a implementer.
 - Les tests de contrat sont mock uniquement. Aucun appel sandbox externe ni ecriture reelle n'est execute.
@@ -106,4 +108,6 @@ ETag, Last-Modified, hash et redaction.
 - Runs push `29291951679` et pull request `29291954167`: migrations PostgreSQL, lint, types, 38 fichiers/126 tests, build production et trois Playwright passes.
 - Le checkpoint GraphQL fourni est vert au head `54b81993eed7a95b58a0ffdd37beec8e8e9079d9`.
 - Runs push `29293876882` et pull request `29293878753`: migrations PostgreSQL, lint, types, 40 fichiers/129 tests, build production et trois Playwright passes.
+- Le checkpoint OAuth est vert au head `df9198e7677af862f9abc6fbdbb25169566788ea`.
+- Runs push `29294952077` et pull request `29294954700`: migrations PostgreSQL, lint, types, 41 fichiers/132 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.
