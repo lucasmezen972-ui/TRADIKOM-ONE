@@ -101,8 +101,9 @@ export function canonicalizeDiscoveredUrl(value: string, approvedDomain: string)
 
 export function classifyDiscoveredApiCandidate(canonicalUrl: string) {
   const url = new URL(canonicalUrl);
-  const signal = `${url.pathname} ${url.search}`.toLowerCase();
-  if (/\/(?:\.well-known\/)?(?:openid-configuration|oauth-authorization-server)(?:\/|$)/.test(signal)) {
+  const pathname = url.pathname.toLowerCase();
+  const signal = `${pathname} ${url.search}`.toLowerCase();
+  if (/\/(?:\.well-known\/)?(?:openid-configuration|oauth-authorization-server)\/?$/.test(pathname)) {
     return candidate("official_oauth_metadata", 98, "Metadonnees OAuth officielles");
   }
   if (/(?:openapi|swagger).*(?:\.json|\.ya?ml)|(?:\.json|\.ya?ml).*(?:openapi|swagger)/.test(signal)) {
