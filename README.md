@@ -55,6 +55,10 @@ La Phase 2 est fusionnee dans `main` par la PR #1. Elle apporte PostgreSQL, RLS,
 
 La Phase 3 est fusionnee dans `main` par la PR #3. API Intelligence accepte uniquement des sources officielles explicitement approuvees, importe des contrats bornes, conserve les preuves et genere des propositions de connecteurs toujours desactivees. Voir `docs/PHASE_3_API_INTELLIGENCE.md` et `docs/API_SECURITY_MODEL.md`.
 
+## Phase 4
+
+La Phase 4 ajoute le Business Brain, les moteurs de conseil strategique, marketing, site, vente, reputation, concurrence et finance, les profils d'equipe IA, les catalogues prives, l'amelioration continue et la sante operationnelle. Les moteurs restent explicables, tenant-scoped et soumis au controle humain; ils ne peuvent ni envoyer, publier, payer, installer ou activer un connecteur de production automatiquement. Voir `docs/PHASE_4_AUTONOMOUS_PLATFORM.md`.
+
 ## Limites de production
 
 - Aucun connecteur genere n'est active en production.

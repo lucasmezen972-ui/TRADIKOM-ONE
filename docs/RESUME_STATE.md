@@ -224,9 +224,11 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded Enterprise Observability slice from existing persisted health signals.
-2. Expose tenant-scoped database, worker, queue, notification, API and connector status with safe thresholds and direct actions.
-3. Keep CPU, memory, storage, provider cost and unavailable external channels explicitly unmeasured until a trusted runtime telemetry source exists.
+1. No Phase 4 implementation task remains.
+2. Enterprise Observability is green at `9880457` in complete run `29365672444`: clean/upgrade migrations, backup/restore, lint, typecheck, 183 tests, production build and sixteen Playwright scenarios.
+3. The tenant health read model measures database access, queues, workflows, internal email processing, API checks, connectors and webhook-security signals without returning payloads, messages, recipients, URLs, errors or secrets.
+4. Worker heartbeat, external AI, production SMS/WhatsApp, CPU, memory, storage and provider cost remain explicitly unavailable until trusted telemetry exists.
+5. Preserve the Phase 4 safety boundary: no automatic recommendation execution, public marketplace sharing, payment, production connector activation, unrestricted Internet collection, external send or autonomous publication.
 
 Phase 3 completion history:
 

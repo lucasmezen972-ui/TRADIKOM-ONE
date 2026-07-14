@@ -63,7 +63,7 @@ Improved operational observability completed and green at `2747368`:
 2. Tenant-scoped health totals cover pending mappings, blocked impacts, repair decisions, sandbox approvals, failed contracts and audited API Intelligence actions.
 3. The read model exposes no raw source URLs, payloads, error messages, error codes or secrets and is covered for role and tenant isolation.
 
-Next unfinished work:
+Phase 4 completion:
 
 1. Business Brain foundation is green at `1ea4e1e` in GitHub Actions run `29333961495`; draft PR #5 is open.
 2. Strategic Advisor is green at `4fcb9e2` in complete GitHub Actions run `29335663755`, with evidence, explainability, planning-only approval and no execution side effects.
@@ -78,5 +78,6 @@ Next unfinished work:
 11. Private App Marketplace is green at `8713dee` in complete GitHub Actions run `29359217460`, with immutable tenant-private listings, disabled installation previews, composite source relations and no operational side effects.
 12. Private Automation Marketplace is green at `954a77b` in complete GitHub Actions run `29361102893`, with input-value stripping, immutable tenant-private packages, review-only previews, composite relations and no operational side effects.
 13. Self Improvement is green at `df82be7` in complete GitHub Actions run `29363352123`, with seven measurable rule families, numeric evidence, immutable versions/decisions, explicit unavailable telemetry and no operational side effects.
-14. Continue with bounded Enterprise Observability using existing database, worker, queue, delivery, API and connector health records.
-15. Keep unsupported infrastructure metrics explicit and automatic changes, public sharing, purchases, connector activation, external sends, production installation and one-click execution unavailable.
+14. Enterprise Observability is green at `9880457` in complete run `29365672444`, with tenant-scoped persisted signals, sensitive-content exclusion, read-only behavior, tenant-leading indexes and sixteen Playwright scenarios.
+15. Worker heartbeat, external AI, production SMS/WhatsApp, CPU, memory, storage and provider cost remain explicitly unavailable rather than receiving invented health states.
+16. No Phase 4 implementation task remains. Automatic changes, public sharing, purchases, connector activation, external sends, production installation, unrestricted crawling and one-click execution remain unavailable by design.

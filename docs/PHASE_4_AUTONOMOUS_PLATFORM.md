@@ -280,3 +280,25 @@ Runtime migrations `051`/`052` and SQL mirrors `0045`/`0046` add proposals, evid
 Initial run `29362866550` passed migrations, backup/restore, lint and typecheck, then exposed two fixture-count assumptions while 179 tests passed. Test-only head `df82be733680d340ffc9d760b3ce730422b86fdb` aligned the assertions with already-provisioned measurable signals and passed complete GitHub Actions run `29363352123`: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, 181 unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
 
 Current limitations are deliberate: analysis is explicit and deterministic rather than continuously scheduled, and only signals supported by current persisted evidence are measured. No proposal can execute its recommendation automatically.
+
+## Enterprise Observability
+
+The final Phase 4 vertical slice exposes tenant-scoped operational health from persisted application facts. It does not create a second telemetry store or infer infrastructure health from missing data.
+
+Implemented behavior:
+
+- One bounded read model reports database access, event queues, workflow runs, the internal email queue, tenant API checks, connectors and application webhook-security signals.
+- Deterministic thresholds distinguish `healthy`, `attention` and `critical`: failed or stale queue work, failed workflows, failed internal email dispatches, blocked API checks, failed contracts, blocked upgrades and connector errors require review.
+- Database health means only that the authorized tenant-scoped health query succeeded. It is not presented as a storage, replication or latency guarantee.
+- Worker heartbeat, external AI providers, production SMS, production WhatsApp, host CPU, memory, storage and provider cost remain `unavailable` because no trustworthy telemetry source exists.
+- The French `Sante operationnelle` workspace exposes fifteen stable cards, direct internal review links, a safe error state and no restart, repair, execute, activate or synchronize control.
+- Every query includes the tenant identifier or the tenant context identifier. Counts exclude raw event payloads, notification messages and recipients, URLs, error text, credentials and customer data.
+- The read path has no audit or operational side effect. Repeated reads cannot create workflows, events, activities, notifications or external actions.
+
+Runtime migration `053` and SQL mirror `0047` add tenant-leading indexes for event queues, workflow runs, notifications, connectors, connector syncs, webhook deliveries/endpoints, contract runs, blocked API impacts and source rechecks. No business table or stored value is changed.
+
+Focused tests cover measured incidents, deterministic clean states, unsupported telemetry, application authorization, cross-tenant isolation, content redaction and read-only behavior. Playwright proves that a real connector incident is visible while absent worker telemetry remains explicitly unknown and no automatic-action button is exposed.
+
+Initial run `29364899912` passed dependency audit, migrations, backup/restore, lint, typecheck, 183 tests and the production build before one Playwright locator matched the same truthful `Non instrumente` label twice. The scoped assertion plus observability indexes at head `98804578aa0131f8f8aeb7cb9b5c880d9607c54c` passed complete run `29365672444`, including all sixteen Playwright scenarios.
+
+Phase 4 implementation is complete. Deliberate limits remain: engines are deterministic and evidence-based, external sends and production connector activation are disabled, marketplace artifacts cannot install or execute, Internet collection is bounded and approval-gated, financial outputs are indicative, and unsupported runtime/provider telemetry remains unknown.
