@@ -1295,6 +1295,19 @@ export async function decideApiConnectorApprovalAction(formData: FormData) {
   revalidatePath("/intelligence-api");
 }
 
+export async function prepareConnectorInstallationPlanAction(
+  formData: FormData,
+) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("universal_connector.installation_plan_prepare", () =>
+    services.prepareConnectorInstallationPlan(user.id, tenant.id, {
+      storeEntryId: text(formData, "storeEntryId"),
+    }),
+  );
+  revalidatePath("/connexions");
+}
+
 export async function decideApiChangeRepairAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

@@ -169,6 +169,10 @@ import {
   submitConnectorForSandboxApproval,
   type MockContractExecutor,
 } from "@/modules/connector-copilot";
+import {
+  getUniversalConnectorWorkspace,
+  prepareConnectorInstallationPlan,
+} from "@/modules/universal-connectors";
 import { isPlatformAdmin } from "@/modules/platform-admin";
 import {
   decideStrategicRecommendation,
@@ -806,5 +810,12 @@ export function createServices(
     ) => decideConnectorSandboxApproval(db, userId, tenantId, input),
     getPrivateConnectStore: (userId: string, tenantId: string) =>
       getPrivateConnectStore(db, userId, tenantId),
+    getUniversalConnectorWorkspace: (userId: string, tenantId: string) =>
+      getUniversalConnectorWorkspace(db, userId, tenantId),
+    prepareConnectorInstallationPlan: (
+      userId: string,
+      tenantId: string,
+      input: { storeEntryId: string },
+    ) => prepareConnectorInstallationPlan(db, userId, tenantId, input),
   };
 }

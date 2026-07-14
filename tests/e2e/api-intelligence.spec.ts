@@ -166,4 +166,18 @@ test("un administrateur publie un connecteur desactive dans le Connect Store pri
   const storeCard = page.locator("article").filter({ hasText: connectorName });
   await expect(storeCard).toContainText("Sandbox uniquement");
   await expect(storeCard).toContainText("Désactivée");
+
+  await page.goto("/connexions");
+  await expect(page.getByRole("heading", { name: "Plans de connexion" })).toBeVisible();
+  const planningCard = page.locator("article").filter({ hasText: connectorName });
+  await expect(planningCard.getByText("adéquation documentée")).toBeVisible();
+  await expect(planningCard.getByText(/2 opérations · 1 correspondances/)).toBeVisible();
+  await expect(planningCard.getByText("createCustomer · écriture avec approbation")).toBeVisible();
+  await planningCard
+    .getByRole("button", { name: "Préparer le plan sandbox" })
+    .click();
+  await expect(planningCard.getByText("Plan v1 prêt, désactivé")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Activer|Installer|Connecter en production/i }),
+  ).toHaveCount(0);
 });

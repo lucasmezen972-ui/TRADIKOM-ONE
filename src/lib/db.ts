@@ -207,6 +207,16 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "044_phase4_ai_employees_rls", sql: phase4AiEmployeesRlsMigrationSql }]
       : []),
+    {
+      id: "045_phase4_universal_connectors",
+      sql: phase4UniversalConnectorsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "046_phase4_universal_connectors_rls",
+          sql: phase4UniversalConnectorsRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -2941,6 +2951,62 @@ create policy tenant_isolation on ai_employee_profiles
 
 drop policy if exists tenant_isolation on ai_employee_activity_logs;
 create policy tenant_isolation on ai_employee_activity_logs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase4UniversalConnectorsMigrationSql = `
+create unique index if not exists uq_private_connect_store_tenant_id
+  on private_connect_store_entries(tenant_id, id);
+
+create unique index if not exists uq_connector_proposals_tenant_id
+  on connector_proposals(tenant_id, id);
+
+create table if not exists connector_installation_plans (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  store_entry_id text not null,
+  connector_proposal_id text not null,
+  fingerprint text not null check (char_length(fingerprint) = 64),
+  record_status text not null check (record_status in ('current', 'superseded')),
+  enabled integer not null default 0 check (enabled = 0),
+  installation_mode text not null check (installation_mode = 'sandbox_only'),
+  tenant_industry text not null check (char_length(tenant_industry) between 1 and 160),
+  industry_match text not null check (industry_match in ('aligned', 'not_documented')),
+  capabilities_snapshot text not null check (char_length(capabilities_snapshot) between 2 and 12000),
+  evidence_summary text not null check (char_length(evidence_summary) between 2 and 8000),
+  blockers text not null check (char_length(blockers) between 2 and 4000),
+  version integer not null check (version >= 1),
+  supersedes_id text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, store_entry_id, version),
+  foreign key (tenant_id, store_entry_id)
+    references private_connect_store_entries(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, connector_proposal_id)
+    references connector_proposals(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, supersedes_id)
+    references connector_installation_plans(tenant_id, id) on delete restrict
+);
+
+create unique index if not exists idx_connector_installation_plans_current
+  on connector_installation_plans(tenant_id, store_entry_id)
+  where record_status = 'current';
+
+create index if not exists idx_connector_installation_plans_tenant_status
+  on connector_installation_plans(tenant_id, record_status, updated_at desc);
+
+create index if not exists idx_connector_installation_plans_tenant_proposal
+  on connector_installation_plans(tenant_id, connector_proposal_id, version desc);
+`;
+
+const phase4UniversalConnectorsRlsMigrationSql = `
+alter table connector_installation_plans enable row level security;
+
+drop policy if exists tenant_isolation on connector_installation_plans;
+create policy tenant_isolation on connector_installation_plans
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;

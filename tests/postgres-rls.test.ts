@@ -139,6 +139,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "select email from contacts order by email",
     );
     expect(noContext.rows).toEqual([]);
+    const noConnectorPlans = await restrictedPool.query<{ id: string }>(
+      "select id from connector_installation_plans order by id",
+    );
+    expect(noConnectorPlans.rows).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -188,6 +192,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
           id: string;
           tenant_id: string;
         }>("select id, tenant_id from connector_repair_proposals order by id");
+        const connectorPlans = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from connector_installation_plans order by id");
 
         return {
           tenants: tenants.rows,
@@ -198,6 +206,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
           connectorProposals: connectorProposals.rows,
           apiChangeImpacts: apiChangeImpacts.rows,
           connectorRepairs: connectorRepairs.rows,
+          connectorPlans: connectorPlans.rows,
         };
       },
     );
@@ -216,6 +225,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ],
       connectorRepairs: [
         { id: apiIntelligence.repairAId, tenant_id: tenantA.id },
+      ],
+      connectorPlans: [
+        { id: apiIntelligence.planAId, tenant_id: tenantA.id },
       ],
     });
 
@@ -373,6 +385,54 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ),
       ),
     ).rejects.toThrow(/Cross-tenant relation|Related tenant row/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into connector_installation_plans (
+             id, tenant_id, store_entry_id, connector_proposal_id, fingerprint,
+             record_status, enabled, installation_mode, tenant_industry,
+             industry_match, capabilities_snapshot, evidence_summary, blockers,
+             version, supersedes_id, created_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, $5, 'current', 0, 'sandbox_only',
+             'Garage automobile', 'aligned', $6, $7, $8, 2, null, $9, $10, $10
+           )`,
+          [
+            id("connector_plan"),
+            tenantA.id,
+            apiIntelligence.storeBId,
+            apiIntelligence.proposalBId,
+            "c".repeat(64),
+            toJson([]),
+            toJson({ contractStatus: "passed" }),
+            toJson([]),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenConnectorPlanWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update connector_installation_plans set tenant_industry = 'interdit' where id = $1",
+            [apiIntelligence.planBId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query(
+            "delete from connector_installation_plans where id = $1",
+            [apiIntelligence.planBId],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenConnectorPlanWrites).toEqual({ updated: 0, deleted: 0 });
   });
 
   it("isolates Business Brain entries and their evidence", async () => {
@@ -1624,6 +1684,10 @@ async function insertApiIntelligenceTenantFixtures(
   const impactBId = id("impact_b");
   const repairAId = id("repair_a");
   const repairBId = id("repair_b");
+  const storeAId = id("store_a");
+  const storeBId = id("store_b");
+  const planAId = id("connector_plan_a");
+  const planBId = id("connector_plan_b");
   await db.query(
     `insert into software_directory_entries (
        id, canonical_name, aliases, vendor, official_domain, country,
@@ -1722,6 +1786,44 @@ async function insertApiIntelligenceTenantFixtures(
         toJson({ level: "low" }),
         ownerId,
         now,
+        now,
+      ],
+    );
+  }
+  for (const [storeId, planId, tenantId, proposalId] of [
+    [storeAId, planAId, tenantAId, proposalAId],
+    [storeBId, planBId, tenantBId, proposalBId],
+  ]) {
+    await db.query(
+      `insert into private_connect_store_entries (
+         id, tenant_id, connector_proposal_id, verification_status,
+         installation_status, last_tested_at, known_limitations,
+         created_at, updated_at
+       ) values ($1, $2, $3, 'approved_for_sandbox', 'not_installed',
+                 $4, $5, $4, $4)`,
+      [storeId, tenantId, proposalId, now, toJson([])],
+    );
+    await db.query(
+      `insert into connector_installation_plans (
+         id, tenant_id, store_entry_id, connector_proposal_id, fingerprint,
+         record_status, enabled, installation_mode, tenant_industry,
+         industry_match, capabilities_snapshot, evidence_summary, blockers,
+         version, supersedes_id, created_by, created_at, updated_at
+       ) values (
+         $1, $2, $3, $4, $5, 'current', 0, 'sandbox_only',
+         'Garage automobile', 'not_documented', $6, $7, $8, 1, null, $9,
+         $10, $10
+       )`,
+      [
+        planId,
+        tenantId,
+        storeId,
+        proposalId,
+        "d".repeat(64),
+        toJson([]),
+        toJson({ contractStatus: "mock" }),
+        toJson([]),
+        ownerId,
         now,
       ],
     );
@@ -1857,6 +1959,10 @@ async function insertApiIntelligenceTenantFixtures(
     impactBId,
     repairAId,
     repairBId,
+    storeAId,
+    storeBId,
+    planAId,
+    planBId,
   };
 }
 
