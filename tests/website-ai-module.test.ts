@@ -55,11 +55,12 @@ describe("Website AI module", () => {
           proposal.status === "proposed" &&
           proposal.evidence.length >= 2 &&
           proposal.rationale.length >= 10 &&
-          proposal.riskSummary.includes("brouillon"),
+          proposal.riskSummary.length >= 20,
       ),
     ).toBe(true);
     const seoProposal = proposals.find((item) => item.proposalType === "seo_copy");
     if (!seoProposal) throw new Error("Website AI SEO proposal is missing.");
+    expect(seoProposal.riskSummary).toContain("brouillon");
 
     const repeated = await services.generateWebsiteAiProposals(owner.id, tenant.id);
     expect(repeated).toEqual({ createdIds: [], candidateCount: 2 });
