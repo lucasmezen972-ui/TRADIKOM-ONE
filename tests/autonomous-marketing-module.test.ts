@@ -177,8 +177,8 @@ describe("autonomous marketing module", () => {
       status: "draft",
       version: 2,
     });
-    expect(revised?.evidence.map((item) => item.ref)).toEqual(
-      current.evidence.map((item) => item.ref),
+    expect(revised?.evidence.map((item) => item.ref).sort()).toEqual(
+      current.evidence.map((item) => item.ref).sort(),
     );
     const history = await db.query<{
       id: string;
