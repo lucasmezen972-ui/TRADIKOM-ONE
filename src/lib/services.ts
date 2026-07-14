@@ -189,6 +189,16 @@ import {
   generateSalesAiAssessments,
   getSalesAiWorkspace,
 } from "@/modules/sales-ai";
+import {
+  createReputationReview,
+  decideReputationProposal,
+  generateReputationProposals,
+  getReputationWorkspace,
+  reputationProposalDecisionSchema,
+  reputationProposalReferenceSchema,
+  reputationReviewSchema,
+  submitReputationProposalForApproval,
+} from "@/modules/reputation-ai";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -333,6 +343,25 @@ export function createServices(
       getSalesAiWorkspace(db, userId, tenantId),
     generateSalesAiAssessments: (userId: string, tenantId: string) =>
       generateSalesAiAssessments(db, userId, tenantId),
+    getReputationWorkspace: (userId: string, tenantId: string) =>
+      getReputationWorkspace(db, userId, tenantId),
+    createReputationReview: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reputationReviewSchema>,
+    ) => createReputationReview(db, userId, tenantId, input),
+    generateReputationProposals: (userId: string, tenantId: string) =>
+      generateReputationProposals(db, userId, tenantId),
+    submitReputationProposalForApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reputationProposalReferenceSchema>,
+    ) => submitReputationProposalForApproval(db, userId, tenantId, input),
+    decideReputationProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reputationProposalDecisionSchema>,
+    ) => decideReputationProposal(db, userId, tenantId, input),
     getWebsiteWorkspace: (userId: string, tenantId: string) =>
       getWebsiteWorkspace(db, userId, tenantId),
     updateWebsiteSection: (

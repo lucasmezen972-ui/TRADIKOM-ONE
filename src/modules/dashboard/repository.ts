@@ -285,7 +285,8 @@ export async function listPendingApprovalActions(
       | "connector"
       | "strategic"
       | "marketing"
-      | "website_ai";
+      | "website_ai"
+      | "reputation";
     created_at: string;
   }>(
     `select id,
@@ -293,6 +294,7 @@ export async function listPendingApprovalActions(
          when target_type = 'strategic_recommendation' then 'strategic'
          when target_type = 'marketing_campaign_proposal' then 'marketing'
          when target_type = 'website_ai_proposal' then 'website_ai'
+         when target_type = 'reputation_response' then 'reputation'
          else 'workflow'
        end as approval_type,
        created_at
@@ -315,6 +317,8 @@ export async function listPendingApprovalActions(
             ? "Validation marketing"
             : row.approval_type === "website_ai"
               ? "Validation de brouillon web"
+              : row.approval_type === "reputation"
+                ? "Validation d'une réponse à un avis"
           : "Approbation de connecteur",
     explanation: "Une décision autorisée est en attente.",
     actionLabel: "Examiner",
@@ -327,6 +331,8 @@ export async function listPendingApprovalActions(
             ? "/marketing"
             : row.approval_type === "website_ai"
               ? "/mon-site"
+              : row.approval_type === "reputation"
+                ? "/reputation"
           : "/intelligence-api",
     severity: "warning" as const,
     approvalType: row.approval_type,

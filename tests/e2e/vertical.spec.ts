@@ -234,6 +234,47 @@ test("Sales AI explains CRM priorities without creating outbound actions", async
   ).toHaveCount(0);
 });
 
+test("Reputation AI prepares an approved response without publishing it", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.getByRole("link", { name: "Réputation" }).click();
+  await expect(page.getByRole("heading", { name: "Réputation" })).toBeVisible();
+  const marker = `Avis Playwright ${Date.now()}`;
+  await page.getByLabel("Source déclarée").selectOption("manual_import");
+  await page.getByLabel("Note, facultative").selectOption("1");
+  await page
+    .getByLabel("Texte de l'avis")
+    .fill(`${marker} : retard, attente et problème non résolu.`);
+  await page.getByRole("button", { name: "Importer l'avis" }).click();
+  await expect(
+    page.getByText("Avis importé sans accès à une plateforme externe."),
+  ).toBeVisible();
+  await expect(page.getByText(new RegExp(marker)).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Analyser les avis" }).click();
+  await expect(page.getByText(/Analyse terminée/)).toBeVisible();
+  const proposal = page.locator("article").filter({ hasText: marker }).last();
+  await expect(proposal.getByText("Preuves utilisées", { exact: true })).toBeVisible();
+  await expect(
+    proposal.getByText(/Non évaluée : aucune identité/),
+  ).toBeVisible();
+  await proposal
+    .getByRole("button", { name: "Soumettre pour décision" })
+    .click();
+
+  const pending = page.locator("article").filter({ hasText: marker }).last();
+  await pending
+    .getByLabel("Motif de décision")
+    .fill("Réponse vérifiée, sans publication ni envoi automatique.");
+  await pending.getByRole("button", { name: "Approuver sans publier" }).click();
+  const approved = page.locator("article").filter({ hasText: marker }).last();
+  await expect(approved.getByText("Approuvée, non publiée")).toBeVisible();
+  await expect(
+    approved.getByRole("button", { name: /Publier|Envoyer la réponse/i }),
+  ).toHaveCount(0);
+});
+
 test("draft edits keep the published site and form online until publication", async ({
   context,
   page,

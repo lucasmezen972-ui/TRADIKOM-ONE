@@ -862,6 +862,218 @@ describeIfPostgres("PostgreSQL RLS", () => {
     );
     expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
   });
+
+  it("isolates Reputation AI reviews, proposals, evidence and decisions", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Reputation RLS Owner A",
+      email: uniqueEmail("reputation-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Reputation RLS Owner B",
+      email: uniqueEmail("reputation-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Reputation RLS A ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Reputation RLS B ${randomUUID()}`,
+      category: "Garage automobile",
+    });
+    const reviewA = await services.createReputationReview(ownerA.id, tenantA.id, {
+      source: "manual_import",
+      rating: 1,
+      reviewText: "Retard important et attente trop longue pour le tenant A.",
+      occurredAt: "2026-07-14T08:00:00.000Z",
+    });
+    const reviewB = await services.createReputationReview(ownerB.id, tenantB.id, {
+      source: "direct_feedback",
+      rating: 5,
+      reviewText: "Excellent accueil pour le tenant B.",
+      occurredAt: "2026-07-14T09:00:00.000Z",
+    });
+    const generatedA = await services.generateReputationProposals(ownerA.id, tenantA.id);
+    const generatedB = await services.generateReputationProposals(ownerB.id, tenantB.id);
+    const proposalA = generatedA.createdIds[0];
+    const proposalB = generatedB.createdIds[0];
+    if (!proposalA || !proposalB) {
+      throw new Error("Reputation AI RLS fixtures are incomplete.");
+    }
+    await services.submitReputationProposalForApproval(ownerA.id, tenantA.id, {
+      proposalId: proposalA,
+    });
+    await services.decideReputationProposal(ownerA.id, tenantA.id, {
+      proposalId: proposalA,
+      decision: "approved",
+      reason: "Validation tenant A sans publication.",
+    });
+    await services.submitReputationProposalForApproval(ownerB.id, tenantB.id, {
+      proposalId: proposalB,
+    });
+    await services.decideReputationProposal(ownerB.id, tenantB.id, {
+      proposalId: proposalB,
+      decision: "rejected",
+      reason: "Rejet tenant B sans publication.",
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    for (const table of [
+      "reputation_reviews",
+      "reputation_response_proposals",
+      "reputation_proposal_evidence",
+      "reputation_proposal_decisions",
+    ]) {
+      expect((await restrictedPool.query(`select id from ${table}`)).rows).toEqual([]);
+    }
+
+    const tenantAView = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        reviews: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from reputation_reviews order by id",
+          )
+        ).rows,
+        proposals: (
+          await client.query<{ id: string; tenant_id: string }>(
+            "select id, tenant_id from reputation_response_proposals order by id",
+          )
+        ).rows,
+        evidence: (
+          await client.query<{ proposal_id: string; tenant_id: string }>(
+            "select proposal_id, tenant_id from reputation_proposal_evidence order by id",
+          )
+        ).rows,
+        decisions: (
+          await client.query<{ proposal_id: string; tenant_id: string }>(
+            "select proposal_id, tenant_id from reputation_proposal_decisions order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAView.reviews).toEqual([{ id: reviewA.reviewId, tenant_id: tenantA.id }]);
+    expect(tenantAView.proposals).toEqual([{ id: proposalA, tenant_id: tenantA.id }]);
+    expect(tenantAView.evidence).toHaveLength(3);
+    expect(tenantAView.evidence.every((row) => row.proposal_id === proposalA)).toBe(true);
+    expect(tenantAView.decisions).toEqual([
+      { proposal_id: proposalA, tenant_id: tenantA.id },
+    ]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_reviews (
+             id, tenant_id, source, rating, review_text, content_hash,
+             occurred_at, imported_by, created_at
+           ) values ($1, $2, 'manual_import', 3, $3, $4, $5, $6, $5)`,
+          [
+            id("reputation_review"),
+            tenantB.id,
+            "Avis injecté dans un autre tenant.",
+            "a".repeat(64),
+            nowIso(),
+            ownerA.id,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_response_proposals (
+             id, tenant_id, review_id, fingerprint, sentiment, confidence,
+             risk_level, authenticity_status, rationale, response_draft,
+             improvement_plan, status, version, generation_version,
+             generated_by, created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, 'neutral', 60, 'low', 'not_assessed', $5,
+             $6, $7, 'proposed', 1, 'rls-test', $8, $9, $9
+           )`,
+          [
+            id("reputation_proposal"),
+            tenantA.id,
+            reviewB.reviewId,
+            "b".repeat(64),
+            "La relation avec un avis étranger doit être refusée.",
+            "Réponse non publiable.",
+            "Plan interne non exécutable.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_proposal_evidence (
+             id, tenant_id, proposal_id, evidence_type, evidence_ref,
+             label, observed_value, captured_at, created_at
+           ) values ($1, $2, $3, 'review_source', $4, $5, $6, $7, $7)`,
+          [
+            id("reputation_evidence"),
+            tenantA.id,
+            proposalB,
+            "cross-tenant",
+            "Preuve étrangère",
+            "refusée",
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into reputation_proposal_decisions (
+             id, tenant_id, proposal_id, decision, reason, decided_by, created_at
+           ) values ($1, $2, $3, 'rejected', $4, $5, $6)`,
+          [
+            id("reputation_decision"),
+            tenantA.id,
+            proposalB,
+            "Décision inter-tenant refusée.",
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update reputation_reviews set reviewer_alias = 'interdit' where id = $1",
+            [reviewB.reviewId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query(
+            "delete from reputation_response_proposals where id = $1",
+            [proposalB],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+  });
 });
 
 function businessBrainFixture(label: string) {

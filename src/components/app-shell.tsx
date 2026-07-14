@@ -14,6 +14,7 @@ import {
   ScanSearch,
   PlugZap,
   Settings,
+  Star,
   Workflow,
 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/contacts", label: "Contacts", icon: Contact },
   { href: "/opportunites", label: "Opportunités", icon: BarChart3 },
   { href: "/assistant-commercial", label: "Assistant commercial", icon: BadgeEuro },
+  { href: "/reputation", label: "Réputation", icon: Star },
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },

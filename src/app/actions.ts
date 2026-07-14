@@ -23,6 +23,7 @@ import type {
   BusinessBrainDomain,
   BusinessBrainEvidenceType,
 } from "@/modules/business-brain";
+import { reputationSourceSchema } from "@/modules/reputation-ai";
 
 export async function registerAction(formData: FormData) {
   const services = await getServices();
@@ -437,6 +438,65 @@ export async function generateSalesAiAssessmentsAction() {
   redirect(
     `/assistant-commercial?analyse=1&nouvelles=${result.createdIds.length}`,
   );
+}
+
+export async function createReputationReviewAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const rating = text(formData, "rating");
+  await safeServerAction("reputation.review_import", () =>
+    services.createReputationReview(user.id, tenant.id, {
+      source: reputationSourceSchema.parse(text(formData, "source")),
+      externalRef: text(formData, "externalRef") || undefined,
+      reviewerAlias: text(formData, "reviewerAlias") || undefined,
+      rating: rating ? Number(rating) : null,
+      reviewText: text(formData, "reviewText"),
+      occurredAt: text(formData, "occurredAt"),
+    }),
+  );
+  revalidatePath("/reputation");
+  redirect("/reputation?avisImporte=1");
+}
+
+export async function generateReputationProposalsAction() {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("reputation.generate", () =>
+    services.generateReputationProposals(user.id, tenant.id),
+  );
+  revalidatePath("/reputation");
+  redirect(`/reputation?analyse=1&nouvelles=${result.createdIds.length}`);
+}
+
+export async function submitReputationProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("reputation.submit", () =>
+    services.submitReputationProposalForApproval(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+    }),
+  );
+  revalidatePath("/reputation");
+  revalidatePath("/aujourdhui");
+  redirect("/reputation?soumise=1");
+}
+
+export async function decideReputationProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const decision = text(formData, "decision") === "approved"
+    ? "approved"
+    : "rejected";
+  await safeServerAction("reputation.decide", () =>
+    services.decideReputationProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      decision,
+      reason: text(formData, "reason"),
+    }),
+  );
+  revalidatePath("/reputation");
+  revalidatePath("/aujourdhui");
+  redirect(`/reputation?decision=${decision}`);
 }
 
 export async function updateSectionAction(formData: FormData) {
