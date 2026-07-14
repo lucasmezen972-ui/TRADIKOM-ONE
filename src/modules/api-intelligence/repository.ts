@@ -85,7 +85,7 @@ async function replaceApiContractImport(
 ) {
   await db.query(
     `delete from api_claims
-     where (subject_type = 'api_product' and subject_id = $1
+     where ((subject_type = 'api_product' and subject_id = $1
             and source_snapshot_id in (
               select api_source_snapshots.id
               from api_source_snapshots
@@ -102,7 +102,21 @@ async function replaceApiContractImport(
             ))
         or (subject_type = 'api_operation' and subject_id in (
               select id from api_operations where api_product_id = $1
-            ))`,
+            )))
+       and not exists (
+         select 1 from api_evidence
+         where api_evidence.claim_id = api_claims.id
+           and (
+             exists (
+               select 1 from api_tenant_mappings
+               where api_tenant_mappings.evidence_id = api_evidence.id
+             )
+             or exists (
+               select 1 from api_global_mappings
+               where api_global_mappings.evidence_id = api_evidence.id
+             )
+           )
+       )`,
     [preview.apiProductId],
   );
   await db.query("delete from api_operations where api_product_id = $1", [
@@ -165,7 +179,11 @@ async function replaceApiContractImport(
   claimIds.push(productClaimId);
 
   for (const schema of preview.schemas) {
-    const schemaId = stableId("schema", preview.apiProductId, schema.name);
+    const schemaId = stableId(
+      "schema",
+      preview.apiProductId,
+      `${preview.sourceHash}:${schema.name}`,
+    );
     await db.query(
       `insert into api_schemas (
          id, api_product_id, source_snapshot_id, schema_name,
@@ -180,11 +198,15 @@ async function replaceApiContractImport(
         input.createdAt,
       ],
     );
-    const claimId = stableId("claim_schema", preview.apiProductId, schema.name);
+    const claimId = stableId(
+      "claim_schema",
+      preview.apiProductId,
+      `${preview.sourceHash}:${schema.name}`,
+    );
     const evidenceId = stableId(
       "evidence_schema",
       preview.apiProductId,
-      schema.name,
+      `${preview.sourceHash}:${schema.name}`,
     );
     await insertClaimWithEvidence(db, {
       claimId,
@@ -209,7 +231,7 @@ async function replaceApiContractImport(
     const operationId = stableId(
       "operation",
       preview.apiProductId,
-      operation.operationKey,
+      `${preview.sourceHash}:${operation.operationKey}`,
     );
     await db.query(
       `insert into api_operations (
@@ -237,14 +259,14 @@ async function replaceApiContractImport(
     const claimId = stableId(
       "claim_operation",
       preview.apiProductId,
-      operation.operationKey,
+      `${preview.sourceHash}:${operation.operationKey}`,
     );
     await insertClaimWithEvidence(db, {
       claimId,
       evidenceId: stableId(
         "evidence_operation",
         preview.apiProductId,
-        operation.operationKey,
+        `${preview.sourceHash}:${operation.operationKey}`,
       ),
       snapshotId: preview.snapshotId,
       subjectType: "api_operation",
@@ -490,7 +512,8 @@ async function insertClaimWithEvidence(
     `insert into api_claims (
        id, source_snapshot_id, subject_type, subject_id, claim_type,
        claim_value, confidence, approval_status, created_at
-     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     on conflict (id) do nothing`,
     [
       input.claimId,
       input.snapshotId,
@@ -506,7 +529,8 @@ async function insertClaimWithEvidence(
   await db.query(
     `insert into api_evidence (
        id, claim_id, source_snapshot_id, locator, excerpt_hash, created_at
-     ) values ($1, $2, $3, $4, $5, $6)`,
+     ) values ($1, $2, $3, $4, $5, $6)
+     on conflict (id) do nothing`,
     [
       input.evidenceId,
       input.claimId,

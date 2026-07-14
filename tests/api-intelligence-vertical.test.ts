@@ -370,6 +370,24 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       tenant.id,
       changedPreview,
     );
+    await expect(
+      services.generateApprovedConnectorRepair(admin.id, tenant.id, {
+        impactId,
+      }),
+    ).rejects.toMatchObject({ code: "repair_not_ready" });
+    const preservedMappingEvidence = await db.query<{
+      source_snapshot_id: string;
+    }>(
+      `select api_evidence.source_snapshot_id
+       from api_tenant_mappings
+       join api_evidence on api_evidence.id = api_tenant_mappings.evidence_id
+       where api_tenant_mappings.tenant_id = $1
+         and api_tenant_mappings.id = $2`,
+      [tenant.id, mapping.mappingId],
+    );
+    expect(preservedMappingEvidence.rows).toEqual([
+      { source_snapshot_id: snapshot.id },
+    ]);
     for (const claimId of changedImport.claimIds) {
       await services.decideApiClaim(admin.id, tenant.id, {
         claimId,

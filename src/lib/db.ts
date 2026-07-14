@@ -146,6 +146,7 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "024_phase3_connector_repairs_rls", sql: phase3ConnectorRepairsRlsMigrationSql }]
       : []),
+    { id: "025_phase3_versioned_api_imports", sql: phase3VersionedApiImportsMigrationSql },
   ];
 }
 
@@ -1772,4 +1773,12 @@ create trigger connector_repairs_relation_integrity
     source_snapshot_id
   on connector_repair_proposals
   for each row execute function app_enforce_connector_repair_integrity();
+`;
+
+const phase3VersionedApiImportsMigrationSql = `
+alter table api_operations
+  drop constraint if exists api_operations_api_product_id_operation_key_key;
+
+create unique index if not exists uq_api_operations_product_snapshot_key
+  on api_operations(api_product_id, source_snapshot_id, operation_key);
 `;
