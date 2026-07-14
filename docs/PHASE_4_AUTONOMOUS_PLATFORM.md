@@ -61,3 +61,5 @@ Implemented behavior:
 - The French `Conseiller stratégique` workspace groups proposals by role and shows complete rationale and evidence before a decision.
 
 Focused tests cover deduplication, changed-evidence supersession, required provenance, tenant authorization, restricted-role RLS, command-center approval routing and the absence of workflow, connector, activity or domain-event side effects after approval.
+
+Strategic Advisor implementation head `ef9ee7de71a930e74b6fb30dd91752459f204d0d` passed every CI step except one ambiguous Playwright text selector in run `29335261251`. Test-only fix `4fcb9e2d572ac8c539ee2a862781bcd23ee31b21` made complete run `29335663755` green: dependency audit, migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and six Playwright scenarios.

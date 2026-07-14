@@ -15,7 +15,8 @@ Current Phase 4 checkpoint:
 - The Strategic Advisor checkpoint adds evidence-backed deterministic proposals with role, rationale, confidence, expected gain, effort, ROI, risk, direct action, approval state and immutable decision history.
 - Recommendation generation is deduplicated and supersedes stale pending evidence; approval is explicitly planning-only and creates no workflow, connector, activity or domain event.
 - Pending strategic decisions now route correctly from the command center to the French `Conseiller stratégique` page.
-- Local typecheck again hung without diagnostics and was stopped after 30 seconds. Manual review is complete; GitHub Actions validation is pending for this checkpoint.
+- Local typecheck again hung without diagnostics and was stopped after 30 seconds. GitHub Actions run `29335261251` passed every non-browser step and exposed one ambiguous `ROI` Playwright selector.
+- Test-only fix `4fcb9e2d572ac8c539ee2a862781bcd23ee31b21` passed complete run `29335663755`, including migrations, PostgreSQL RLS, lint, typecheck, unit/integration tests, production build and six Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -173,9 +174,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Validate the Strategic Advisor checkpoint through the complete GitHub Actions suite and fix failures immediately.
-2. After green CI, implement the first Autonomous Marketing proposal slice without campaign launch or external send.
-3. Keep all external sends and production writes disabled unless a later bounded executor has explicit approval and policy checks.
+1. Implement the first Autonomous Marketing proposal slice without campaign launch or external send.
+2. Reuse Business Brain evidence and Strategic Advisor approval patterns; do not create marketing claims without approved evidence.
+3. Validate the checkpoint through GitHub Actions and keep delivery/execution disabled.
 
 Phase 3 completion history:
 

@@ -66,6 +66,6 @@ Improved operational observability completed and green at `2747368`:
 Next unfinished work:
 
 1. Business Brain foundation is green at `1ea4e1e` in GitHub Actions run `29333961495`; draft PR #5 is open.
-2. Strategic Advisor implementation is complete locally with evidence, explainability, planning-only approval and no execution side effects; complete CI validation is pending.
-3. After green CI, implement Autonomous Marketing proposals without campaign launch or external send.
+2. Strategic Advisor is green at `4fcb9e2` in complete GitHub Actions run `29335663755`, with evidence, explainability, planning-only approval and no execution side effects.
+3. Implement Autonomous Marketing proposals without campaign launch or external send.
 4. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.

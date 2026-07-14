@@ -188,3 +188,4 @@
 - Implemented the Strategic Advisor proposal engine with multi-role explainability, required evidence, deterministic fingerprints, stale-proposal supersession, planning-only approval/rejection and decision history.
 - Integrated strategic approvals into the command center, added the French advisor workspace, and verified by tests that decisions do not create workflow, connector, activity or domain-event effects.
 - Added PostgreSQL migrations/RLS, tenant authorization, restricted-role relation tests and a Playwright proposal-to-approval scenario. Local typecheck hung and was stopped after 30 seconds; CI validation is pending.
+- Strategic Advisor run `29335261251` passed every step except an ambiguous Playwright `ROI` text match. Test-only fix `4fcb9e2` uses exact labels and complete run `29335663755` passed migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, build and six Playwright scenarios.
