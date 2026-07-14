@@ -7,6 +7,11 @@ export const maintenanceRetentionDays = {
   completedInvitations: 90,
   formSubmissionIdempotency: 180,
   webhookIdempotency: 180,
+  completedDomainEvents: 90,
+  sentNotifications: 180,
+  unreferencedApiSourceSnapshots: 365,
+  connectorContractRuns: 180,
+  supersededConnectorProposals: 365,
 } as const;
 
 export type MaintenanceSummary = {
@@ -19,6 +24,11 @@ export type MaintenanceSummary = {
   rateLimitBuckets: number;
   formSubmissionRecords: number;
   webhookIdempotencyKeys: number;
+  completedDomainEvents: number;
+  sentNotifications: number;
+  apiSourceSnapshots: number;
+  connectorContractRuns: number;
+  connectorProposals: number;
 };
 
 export async function runMaintenance(
@@ -83,6 +93,35 @@ export async function runMaintenance(
       before(now, maintenanceRetentionDays.webhookIdempotency),
       batchSize,
     ),
+    completedDomainEvents: await deleteBounded(
+      db,
+      "domain_events",
+      "status in ('succeeded', 'skipped') and updated_at <= $1",
+      [before(now, maintenanceRetentionDays.completedDomainEvents)],
+      batchSize,
+    ),
+    sentNotifications: await deleteBounded(
+      db,
+      "notifications",
+      "status = 'sent' and created_at <= $1",
+      [before(now, maintenanceRetentionDays.sentNotifications)],
+      batchSize,
+    ),
+    apiSourceSnapshots: await deleteUnreferencedApiSourceSnapshots(
+      db,
+      before(now, maintenanceRetentionDays.unreferencedApiSourceSnapshots),
+      batchSize,
+    ),
+    connectorContractRuns: await deleteOldConnectorContractRuns(
+      db,
+      before(now, maintenanceRetentionDays.connectorContractRuns),
+      batchSize,
+    ),
+    connectorProposals: await deleteOldConnectorProposals(
+      db,
+      before(now, maintenanceRetentionDays.supersededConnectorProposals),
+      batchSize,
+    ),
   };
 }
 
@@ -140,6 +179,122 @@ async function clearWebhookIdempotencyKeys(
        select id from webhook_deliveries
        where idempotency_key is not null and created_at <= $1
        order by created_at asc
+       limit $2
+     )
+     returning id`,
+    [cutoff, limit],
+  );
+  return result.rows.length;
+}
+
+async function deleteUnreferencedApiSourceSnapshots(
+  db: DbClient,
+  cutoff: string,
+  limit: number,
+) {
+  const result = await db.query<{ id: string }>(
+    `delete from api_source_snapshots
+     where id in (
+       select snapshots.id
+       from api_source_snapshots as snapshots
+       where snapshots.created_at <= $1
+         and not exists (
+           select 1 from api_schemas where source_snapshot_id = snapshots.id
+         )
+         and not exists (
+           select 1 from api_operations where source_snapshot_id = snapshots.id
+         )
+         and not exists (
+           select 1 from api_claims where source_snapshot_id = snapshots.id
+         )
+         and not exists (
+           select 1 from api_evidence where source_snapshot_id = snapshots.id
+         )
+         and not exists (
+           select 1 from api_change_events
+           where previous_snapshot_id = snapshots.id
+              or current_snapshot_id = snapshots.id
+         )
+         and not exists (
+           select 1 from connector_repair_proposals
+           where source_snapshot_id = snapshots.id
+         )
+       order by snapshots.created_at asc, snapshots.id asc
+       limit $2
+     )
+     returning id`,
+    [cutoff, limit],
+  );
+  return result.rows.length;
+}
+
+async function deleteOldConnectorContractRuns(
+  db: DbClient,
+  cutoff: string,
+  limit: number,
+) {
+  const result = await db.query<{ id: string }>(
+    `delete from connector_contract_runs
+     where id in (
+       select runs.id
+       from connector_contract_runs as runs
+       where runs.created_at <= $1
+         and not exists (
+           select 1 from api_change_impacts
+           where contract_run_id = runs.id
+         )
+         and exists (
+           select 1 from connector_contract_runs as newer
+           where newer.tenant_id = runs.tenant_id
+             and newer.connector_proposal_id = runs.connector_proposal_id
+             and (
+               newer.created_at > runs.created_at
+               or (newer.created_at = runs.created_at and newer.id > runs.id)
+             )
+         )
+       order by runs.created_at asc, runs.id asc
+       limit $2
+     )
+     returning id`,
+    [cutoff, limit],
+  );
+  return result.rows.length;
+}
+
+async function deleteOldConnectorProposals(
+  db: DbClient,
+  cutoff: string,
+  limit: number,
+) {
+  const result = await db.query<{ id: string }>(
+    `delete from connector_proposals
+     where id in (
+       select proposals.id
+       from connector_proposals as proposals
+       where proposals.updated_at <= $1
+         and proposals.status in ('superseded', 'rejected', 'abandoned')
+         and not exists (
+           select 1 from connector_contract_runs
+           where connector_proposal_id = proposals.id
+         )
+         and not exists (
+           select 1 from connector_approval_requests
+           where connector_proposal_id = proposals.id
+         )
+         and not exists (
+           select 1 from private_connect_store_entries
+           where connector_proposal_id = proposals.id
+         )
+         and not exists (
+           select 1 from api_change_impacts
+           where connector_proposal_id = proposals.id
+         )
+         and not exists (
+           select 1 from connector_repair_proposals
+           where source_connector_proposal_id = proposals.id
+              or replacement_connector_proposal_id = proposals.id
+         )
+       order by proposals.updated_at asc, proposals.id asc
        limit $2
      )
      returning id`,

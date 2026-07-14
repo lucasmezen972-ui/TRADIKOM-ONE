@@ -143,6 +143,30 @@ describe("scheduled maintenance", () => {
         old,
       ],
     );
+    await db.query(
+      `insert into domain_events (
+         id, tenant_id, actor_id, event_type, payload, status, attempts,
+         idempotency_key, correlation_id, next_run_at, last_error,
+         last_attempted_at, last_retry_delay_ms, failure_classification,
+         max_attempts, created_at, updated_at
+       ) values
+         ('event_completed_old', $1, $2, 'maintenance.completed', '{}',
+          'succeeded', 1, 'maintenance-completed', 'maintenance-correlation',
+          $3, null, $3, 0, null, 3, $3, $3),
+         ('event_failed_old', $1, $2, 'maintenance.failed', '{}',
+          'failed', 3, 'maintenance-failed', 'maintenance-correlation-failed',
+          $3, 'safe_failure', $3, 1000, 'max_attempts_exceeded', 3, $3, $3)`,
+      [tenant.id, user.id, old],
+    );
+    await db.query(
+      `insert into notifications (
+         id, tenant_id, channel, recipient_user_id, message, status, created_at
+       ) values
+         ('notification_sent_old', $1, 'mock_email', $2, 'Message sûr', 'sent', $3),
+         ('notification_queued_old', $1, 'mock_email', $2, 'Message en attente', 'queued', $3)`,
+      [tenant.id, user.id, old],
+    );
+    await seedPhase3RetentionFixtures(db, tenant.id, user.id);
 
     const summary = await runMaintenance(db, { now, batchSize: 50 });
 
@@ -156,6 +180,11 @@ describe("scheduled maintenance", () => {
       rateLimitBuckets: 1,
       formSubmissionRecords: 1,
       webhookIdempotencyKeys: 1,
+      completedDomainEvents: 1,
+      sentNotifications: 1,
+      apiSourceSnapshots: 1,
+      connectorContractRuns: 1,
+      connectorProposals: 1,
     });
     expect(await count(db, "audit_logs")).toBe(auditBefore + 1);
     const delivery = await db.query<{ idempotency_key: string | null }>(
@@ -163,6 +192,15 @@ describe("scheduled maintenance", () => {
       ["delivery_old"],
     );
     expect(delivery.rows[0]?.idempotency_key).toBeNull();
+    expect(await exists(db, "domain_events", "event_completed_old")).toBe(false);
+    expect(await exists(db, "domain_events", "event_failed_old")).toBe(true);
+    expect(await exists(db, "notifications", "notification_sent_old")).toBe(false);
+    expect(await exists(db, "notifications", "notification_queued_old")).toBe(true);
+    expect(await exists(db, "api_source_snapshots", "snapshot_unreferenced_old")).toBe(false);
+    expect(await exists(db, "api_source_snapshots", "snapshot_protected_old")).toBe(true);
+    expect(await exists(db, "connector_contract_runs", "contract_run_old")).toBe(false);
+    expect(await exists(db, "connector_contract_runs", "contract_run_current")).toBe(true);
+    expect(await exists(db, "connector_proposals", "proposal_superseded_old")).toBe(false);
   });
 
   it("honors the configured batch bound", async () => {
@@ -198,4 +236,117 @@ async function count(
     `select count(*) as count from ${table}`,
   );
   return Number(result.rows[0]?.count ?? 0);
+}
+
+async function exists(db: DbClient, table: string, id: string) {
+  const result = await db.query<{ id: string }>(
+    `select id from ${table} where id = $1`,
+    [id],
+  );
+  return result.rows.length > 0;
+}
+
+async function seedPhase3RetentionFixtures(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+) {
+  await db.query(
+    `insert into software_directory_entries (
+       id, canonical_name, aliases, vendor, official_domain, country,
+       supported_regions, languages, industries, categories,
+       official_website, developer_portal, support_page,
+       partner_program_page, pricing_information_page, verification_status,
+       confidence_score, last_verified_at, evidence_count, created_by,
+       created_at, updated_at
+     ) values (
+       'maintenance_software', 'Maintenance Software', '[]', 'Maintenance',
+       'maintenance.example.test', null, '[]', '["fr"]', '[]', '[]',
+       'https://maintenance.example.test', null, null, null, null,
+       'verified', 100, $1, 1, $2, $1, $1
+     )`,
+    [old, userId],
+  );
+  await db.query(
+    `insert into api_products (
+       id, software_id, name, api_style, version, base_url,
+       documentation_url, openapi_url, postman_collection_url,
+       graphql_schema_url, authentication_type, oauth_metadata, scopes,
+       webhook_support, sandbox_support, partner_access_requirement,
+       access_level, rate_limit_information, deprecation_status, terms_url,
+       confidence_score, last_verified_at, created_at, updated_at
+     ) values (
+       'maintenance_api', 'maintenance_software', 'Maintenance API', 'rest',
+       '1', 'https://api.maintenance.example.test',
+       'https://maintenance.example.test/docs', null, null, null, 'none',
+       '{}', '[]', 0, 1, 0, 'public', null, 'active', null, 100, $1, $1, $1
+     )`,
+    [old],
+  );
+  await db.query(
+    `insert into api_sources (
+       id, software_id, api_product_id, canonical_url, source_type,
+       source_classification, publisher_domain, created_by, created_at
+     ) values (
+       'maintenance_source', 'maintenance_software', 'maintenance_api',
+       'https://maintenance.example.test/openapi.json',
+       'official_openapi_specification', 'official',
+       'maintenance.example.test', $1, $2
+     )`,
+    [userId, old],
+  );
+  for (const [snapshotId, hash] of [
+    ["snapshot_unreferenced_old", "c".repeat(64)],
+    ["snapshot_protected_old", "d".repeat(64)],
+  ]) {
+    await db.query(
+      `insert into api_source_snapshots (
+         id, source_id, retrieved_at, http_status, etag, last_modified,
+         content_hash, parser_version, robots_decision,
+         access_policy_decision, content_type, content, safe_metadata,
+         created_at
+       ) values ($1, 'maintenance_source', $2, 200, null, null, $3,
+         'maintenance-test', 'allowed', 'allowed', 'application/json', '{}',
+         '{}', $2)`,
+      [snapshotId, old, hash],
+    );
+  }
+  await db.query(
+    `insert into api_claims (
+       id, source_snapshot_id, subject_type, subject_id, claim_type,
+       claim_value, confidence, approval_status, created_at
+     ) values (
+       'maintenance_claim', 'snapshot_protected_old', 'api_product',
+       'maintenance_api', 'availability', 'verified', 'high', 'approved', $1
+     )`,
+    [old],
+  );
+  for (const [proposalId, status, updatedAt] of [
+    ["proposal_active", "static_checks_passed", now.toISOString()],
+    ["proposal_superseded_old", "superseded", old],
+  ]) {
+    await db.query(
+      `insert into connector_proposals (
+         id, tenant_id, software_id, api_product_id, name, version, status,
+         enabled, manifest, unresolved_questions, risk_assessment, created_by,
+         created_at, updated_at
+       ) values ($1, $2, 'maintenance_software', 'maintenance_api', $3, '0.1.0',
+         $4, 0, '{}', '[]', '{}', $5, $6, $7)`,
+      [proposalId, tenantId, proposalId, status, userId, old, updatedAt],
+    );
+  }
+  for (const [runId, createdAt] of [
+    ["contract_run_old", old],
+    ["contract_run_current", now.toISOString()],
+  ]) {
+    await db.query(
+      `insert into connector_contract_runs (
+         id, tenant_id, connector_proposal_id, connector_version,
+         api_version, test_suite_version, environment, status, results,
+         safe_logs, created_at
+       ) values ($1, $2, 'proposal_active', '0.1.0', '1', 'maintenance-test',
+         'mock', 'passed', '{}', '[]', $3)`,
+      [runId, tenantId, createdAt],
+    );
+  }
 }

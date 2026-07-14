@@ -45,9 +45,10 @@ export type ConnectorDefinition<TConfig = unknown> = {
 };
 
 export function normalizeConnectorError(error: unknown): ConnectorError {
+  void error;
   return {
     code: "connector_error",
-    message: error instanceof Error ? error.message : "Erreur connecteur",
+    message: "Erreur connecteur",
     retryable: false,
   };
 }

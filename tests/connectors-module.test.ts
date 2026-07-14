@@ -7,6 +7,7 @@ import {
   getConnectors,
   getWebhookEndpointConfig,
   importCsvContacts,
+  normalizeConnectorError,
   receiveWebhook,
   rotateWebhookEndpointSecret,
   setWebhookEndpointStatus,
@@ -27,6 +28,18 @@ afterEach(async () => {
 });
 
 describe("connectors module", () => {
+  it("does not expose raw connector failures", () => {
+    const normalized = normalizeConnectorError(
+      new Error("Authorization: Bearer must-not-be-logged"),
+    );
+
+    expect(normalized).toEqual({
+      code: "connector_error",
+      message: "Erreur connecteur",
+      retryable: false,
+    });
+  });
+
   it("imports contacts, syncs the mock connector, and receives webhook leads", async () => {
     const { db, services } = await setup();
     const demo = await services.seedDemo();

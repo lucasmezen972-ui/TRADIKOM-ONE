@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-Phase 2 has no unfinished blockers. PR #2 remains isolated.
+Phase 2 and Phase 3 are merged. Phase 4 remains locked while PR #4 stabilizes the current product and supersedes obsolete PR #2.
 
 Completed for the first Phase 3 checkpoint:
 
@@ -65,6 +65,7 @@ Improved operational observability completed and green at `2747368`:
 
 Next unfinished work:
 
-1. Complete the final Phase 3 security, migration, authorization, secret and complete-diff review.
-2. Update PR #3, validate the closure head through GitHub Actions, then apply the documented ready/merge gate.
-3. Keep live writes, production connector approval and unrestricted crawling disabled.
+1. Pass the final documentation checkpoint CI and complete the PR #4 self-review.
+2. Mark PR #4 ready and merge only after every required check passes.
+3. Verify `main` after the stabilization merge.
+4. Commit the Phase 4 entry check only after the green stabilization merge.

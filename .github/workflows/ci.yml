@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -54,11 +57,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Verify migrations
-        run: pnpm db:migrate
+        run: |
+          pnpm db:migrate
+          pnpm db:verify
+
+      - name: Verify backup and restore
+        run: bash scripts/verify-backup-restore.sh
 
       - name: Lint
         run: pnpm lint

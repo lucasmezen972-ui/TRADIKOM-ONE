@@ -270,7 +270,9 @@ export function createServices(
         getPublishedSite,
       }),
     getDashboard: (userId: string, tenantId: string) =>
-      getDashboardData(db, userId, tenantId),
+      getDashboardData(db, userId, tenantId, {
+        timeZone: process.env.BUSINESS_TIME_ZONE,
+      }),
     getOpportunityRadar: (userId: string, tenantId: string) =>
       getOpportunityRadar(db, userId, tenantId),
     dismissOpportunityRadarAlert: (

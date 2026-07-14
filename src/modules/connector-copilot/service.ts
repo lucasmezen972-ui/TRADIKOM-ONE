@@ -23,6 +23,7 @@ import {
   upsertConnectStoreEntry,
 } from "@/modules/connector-copilot/repository";
 import {
+  connectorAuthenticationTypeSchema,
   connectorManifestSchema,
   connectorProposalInputSchema,
   type ConnectorManifest,
@@ -88,6 +89,46 @@ export async function generateConnectorProposal(
       tenantId,
       apiProduct.id,
     );
+    if (operations.length === 0 || mappings.length === 0) {
+      throw new ConnectorCopilotError(
+        "compatibility_not_ready",
+        "Les operations et correspondances doivent conserver des preuves approuvees.",
+      );
+    }
+    const authentication = connectorAuthenticationTypeSchema.safeParse(
+      apiProduct.authentication_type,
+    );
+    if (!authentication.success) {
+      throw new ConnectorCopilotError(
+        "unsupported_authentication",
+        "Le mode d'authentification API n'est pas pris en charge.",
+      );
+    }
+    const supportedMethods = [
+      "get",
+      "post",
+      "put",
+      "patch",
+      "delete",
+      "head",
+      "options",
+    ] as const;
+    const normalizedOperations = operations.map((operation) => ({
+      ...operation,
+      method: operation.method.toLowerCase(),
+    }));
+    if (
+      normalizedOperations.some(
+        (operation) =>
+          !supportedMethods.some((method) => method === operation.method) ||
+          !operation.path.startsWith("/"),
+      )
+    ) {
+      throw new ConnectorCopilotError(
+        "unsupported_operation",
+        "Une operation API approuvee utilise un format non pris en charge.",
+      );
+    }
     const manifest = connectorManifestSchema.parse({
       manifestVersion: "1",
       connectorKey: slug(`${software.canonical_name}_${apiProduct.version}`),
@@ -95,8 +136,8 @@ export async function generateConnectorProposal(
       version: "0.1.0",
       enabled: false,
       apiProductId: apiProduct.id,
-      authentication: { type: apiProduct.authentication_type },
-      capabilities: operations.map((operation) => ({
+      authentication: { type: authentication.data },
+      capabilities: normalizedOperations.map((operation) => ({
         operationKey: operation.operationKey,
         method: operation.method,
         path: operation.path,

@@ -1,12 +1,13 @@
 # Phase 3 - API Intelligence
 
-## Point de depart verifie
+## Etat fusionne
 
 - Base `main`: `05a7c7a099ad7ea458cb395cfdd9ccdf73a6f622`.
 - Phase 2 fusionnee par la PR #1.
 - Validation de `main`: run GitHub Actions `29250246503`, entierement vert.
-- Branche: `codex/phase-3-api-intelligence`.
-- La PR #2 reste separee et aucun de ses commits n'est inclus.
+- La PR #3 est fusionnee dans `main` au SHA `c0edf7b5a76197008a38ac0d2da4e8b00e822577`.
+- Le run `main` `29301275644` est vert.
+- La PR #2 est restee separee et aucun de ses commits n'est inclus dans la Phase 3.
 
 ## Premier parcours vertical
 
@@ -142,4 +143,4 @@ Le service retourne uniquement des comptes bornes et un etat `healthy`, `attenti
 - Runs push `29300124894` et pull request `29300127676`: migrations PostgreSQL, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
 - Le checkpoint d'observabilite operationnelle est vert au head `27473684413c32ea499ba577b7c77dffd0e8ba68`.
 - Runs push `29300616222` et pull request `29300618426`: migrations PostgreSQL, lint, types, 43 fichiers/137 tests, build production et trois Playwright passes.
-- La PR #3 reste en brouillon jusqu'a la revue finale complete et au passage de la CI de cloture.
+- La PR #3 a passe sa revue de cloture puis a ete fusionnee. La stabilisation ulterieure est suivie dans `docs/PHASE_3_5_STABILIZATION.md`.
