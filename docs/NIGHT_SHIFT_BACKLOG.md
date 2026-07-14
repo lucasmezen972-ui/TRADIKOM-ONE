@@ -72,5 +72,6 @@ Next unfinished work:
 5. Sales AI is green at `6a93480` in complete GitHub Actions run `29343934205`, with explainable CRM evidence and no message, quotation, pricing or discount path.
 6. Reputation AI is green at `0f783bc` in complete GitHub Actions run `29347576934`, with manual/imported evidence, explicit authenticity limits, planning-only approval and no external monitoring, send or publication path.
 7. Competitor Intelligence is green at `8678683` in complete GitHub Actions run `29350066863`, with confirmed legal public observations, safe URL storage, evidence comparison and no network fetch, scraping or external reaction path.
-8. Continue with bounded Financial AI from existing tenant evidence, as explainable planning support rather than accounting truth.
-9. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
+8. Financial AI is green at `02eaa2c` in complete GitHub Actions run `29352582873`, with declared/versioned inputs, explainable formulas, strict unavailable states, tenant isolation and no accounting or external write path.
+9. Continue with bounded AI Employee profiles: skills, memory scope, permissions, working hours, internal tools, approval limits, KPIs and immutable activity history.
+10. Keep all external sends, connector activation, campaigns, payments, publication and production writes unavailable to AI employees unless a separately reviewed future execution path is explicitly approved.

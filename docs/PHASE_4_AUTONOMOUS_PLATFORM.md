@@ -157,3 +157,25 @@ Implemented behavior:
 Runtime migrations `039`/`040` and SQL mirrors `0033`/`0034` add profiles, observations, insights, evidence and decisions with tenant-leading indexes, composite tenant relations and PostgreSQL RLS. Tests cover URL safety, deduplication, evidence comparison, proposal versioning, pending supersession, approval/rejection, safe audit metadata, forced rollback, application authorization, restricted-role cross-tenant CRUD and relations, command-center routing, no operational side effects and Playwright.
 
 Head `86786830a0c36b561a1ce37e543c4520062cab3b` passed complete GitHub Actions run `29350066863` on the first attempt in 7m30s, including eleven Playwright scenarios. Automatic monitoring, network fetches, search-position collection and protected-content scraping remain intentionally unavailable.
+
+## Financial AI
+
+The eighth vertical slice provides explainable financial decision support from tenant-declared monthly inputs and existing CRM/Business Brain evidence. It is not an accounting or banking subsystem.
+
+Implemented behavior:
+
+- Authorized operators record immutable, versioned monthly snapshots for revenue, operating costs, cash balance, cash movements, receivables, payables, acquisition/channel costs, customer counts and optional attributed gains.
+- Invalid numeric values are rejected instead of being silently converted to zero. Optional attribution remains null when it is not documented.
+- Deterministic formulas calculate estimated profit, margin, cash flow, indicative cash runway, customer acquisition cost, gross customer lifetime value and channel ROI only when their required inputs exist.
+- The three-month indicative projection is explicitly defined as three months of declared revenue plus the current Sales AI-weighted pipeline. It is not presented as an accounting forecast or collection schedule.
+- Current CRM opportunity value, Sales AI coverage and relevant pricing/margin/objective/KPI Business Brain records are cited as immutable evidence; Business Brain text is not interpreted as an invented amount.
+- Missing attribution produces `Données insuffisantes`, never a fabricated ROI. Negative cash flow, negative profit, low margin, supplier/customer timing gaps and missing attribution produce explainable alerts.
+- A revised monthly input supersedes the previous snapshot and invalidates its current assessment transactionally. Repeated analysis of unchanged evidence is deduplicated.
+- Audit metadata excludes financial amounts and explicitly records that no accounting write or external action was triggered.
+- The French `Pilotage financier` workspace exposes formulas, limits, evidence and alerts and contains no payment, bank synchronization or external execution control.
+
+Runtime migrations `041`/`042` and SQL mirrors `0035`/`0036` add snapshots, assessments, evidence and alerts with tenant-leading indexes, composite tenant relations and PostgreSQL RLS. Tests cover exact calculations, unavailable metrics, strict input rejection, versioning, deduplication, forced transactional rollback, application authorization, restricted-role cross-tenant reads/writes/relations, safe audit metadata, no operational side effects and Playwright.
+
+Head `02eaa2cab1467da8c989c29daf8828cb9ddc382a` passed complete GitHub Actions run `29352582873` in 8m11s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and twelve Playwright scenarios.
+
+Current limitations are deliberate: all financial values are tenant-declared, no bank or accounting provider is connected, attribution is not inferred, the projection is a planning scenario rather than certified guidance, and no financial operation can be executed.

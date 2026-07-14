@@ -42,6 +42,10 @@ Current Phase 4 checkpoint:
 - Runtime migrations `039`/`040` and SQL mirrors `0033`/`0034` protect competitor profiles, observations, insights, evidence and decisions with composite tenant relations, indexes and PostgreSQL RLS.
 - Module tests cover URL safety, deduplication, versioning, pending supersession, approval, rejection, safe audits, rollback and no side effects. Restricted-role PostgreSQL coverage verifies cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers the complete French workflow.
 - Competitor Intelligence head `86786830a0c36b561a1ce37e543c4520062cab3b` passed complete GitHub Actions run `29350066863` on the first attempt in 7m30s, including eleven Playwright scenarios.
+- Financial AI now uses versioned tenant-declared monthly inputs, current CRM opportunities, Sales AI weighting and relevant Business Brain records without inventing accounting values.
+- Deterministic formulas expose profit, margin, cash flow, indicative runway, CAC, CLV, attributed channel ROI and a clearly defined three-month planning projection. Missing attribution remains unavailable and invalid numeric input is rejected.
+- Runtime migrations `041`/`042` and SQL mirrors `0035`/`0036` add tenant-owned snapshots, assessments, evidence and alerts with composite relations, tenant-leading indexes and RLS. The French `Pilotage financier` workspace has no banking, payment, accounting-write or external action control.
+- Module, rollback/no-side-effect, application authorization, restricted-role PostgreSQL cross-tenant and Playwright coverage are included. Head `02eaa2cab1467da8c989c29daf8828cb9ddc382a` passed complete GitHub Actions run `29352582873` in 8m11s, including twelve Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -199,9 +203,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded Financial AI slice from existing tenant CRM, opportunity and Business Brain evidence.
-2. Provide explicit estimates for recorded pipeline value, revenue potential, margin/cash-flow inputs and ROI signals without inventing accounting data or replacing accounting software.
-3. Keep forecasts explainable, confidence-scored and planning-only; require evidence, tenant isolation and complete GitHub Actions validation.
+1. Implement the first bounded AI Employee slice with tenant-owned virtual employee profiles.
+2. Give each profile explicit skills, Business Brain memory scope, permissions, working hours, internal tools, approval limits, KPIs and an immutable activity log.
+3. Keep every employee prepare/suggest-only: no external send, connector activation, campaign, publication, payment or production write without a separately approved future execution path.
 
 Phase 3 completion history:
 
