@@ -91,11 +91,11 @@ test("the strategic advisor explains and approves a proposal without execution",
 
   const proposal = page.locator("article").filter({ hasText: "À décider" }).first();
   await expect(proposal).toBeVisible();
-  await expect(proposal.getByText("Pourquoi")).toBeVisible();
-  await expect(proposal.getByText("Gain attendu")).toBeVisible();
-  await expect(proposal.getByText("ROI")).toBeVisible();
-  await expect(proposal.getByText("Risques")).toBeVisible();
-  await expect(proposal.getByText("Preuves")).toBeVisible();
+  await expect(proposal.getByText("Pourquoi", { exact: true })).toBeVisible();
+  await expect(proposal.getByText("Gain attendu", { exact: true })).toBeVisible();
+  await expect(proposal.getByText("ROI", { exact: true })).toBeVisible();
+  await expect(proposal.getByText("Risques", { exact: true })).toBeVisible();
+  await expect(proposal.getByText("Preuves", { exact: true })).toBeVisible();
   await proposal
     .getByLabel("Motif de décision")
     .fill("Orientation validée pour planification humaine uniquement.");
