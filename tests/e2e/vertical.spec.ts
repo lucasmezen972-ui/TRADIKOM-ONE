@@ -28,7 +28,9 @@ test("a tenant administrator approves and simulates a DNS plan without applying 
 }) => {
   await openDemo(page);
   await page.goto("/connexions/domaines");
-  await expect(page.getByRole("heading", { name: "Domaines" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Domaines", exact: true }),
+  ).toBeVisible();
   const domain = `atelier-${Date.now()}.example.test`;
   await page.getByLabel("Nom de domaine").fill(domain);
   await page.getByLabel("Méthode").selectOption("mock_dns");
