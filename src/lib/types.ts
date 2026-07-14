@@ -127,6 +127,9 @@ export type Website = {
   templateKey: WebsiteTemplateKey;
   status: "draft" | "published";
   theme: WebsiteTheme;
+  currentVersionId?: string;
+  currentPublishedVersionId?: string;
+  currentDraftVersionId?: string;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
@@ -309,6 +312,23 @@ export type OpportunityRadarAlert = {
   resolvedAt?: string;
 };
 
+export type DashboardActionItem = {
+  id: string;
+  title: string;
+  explanation: string;
+  actionLabel: string;
+  actionHref: string;
+  severity: "info" | "warning" | "critical";
+};
+
+export type DashboardApiSourceFailure = DashboardActionItem & {
+  status: "blocked" | "retrying";
+};
+
+export type DashboardPendingApproval = DashboardActionItem & {
+  approvalType: "workflow" | "connector";
+};
+
 export type DashboardData = {
   tenant: Tenant;
   metrics: {
@@ -316,6 +336,14 @@ export type DashboardData = {
     contacts: number;
     pendingTasks: number;
     formSubmissions: number;
+    overdueTasks: number;
+    opportunitiesNeedingFollowUp: number;
+    workflowFailures: number;
+    deadLetters: number;
+    connectorIssues: number;
+    apiSourceFailures: number;
+    breakingApiChanges: number;
+    pendingApprovals: number;
   };
   websiteStatus: string;
   opportunitiesByStage: Array<{ stage: string; count: number }>;
@@ -323,4 +351,25 @@ export type DashboardData = {
   recentActivities: Activity[];
   workflowRuns: WorkflowRun[];
   detectedOpportunities: OpportunityRadarAlert[];
+  commandCenter: {
+    capturedAt: string;
+    timeZone: string;
+    dayStartedAt: string;
+    dayEndsAt: string;
+    priorityActions: DashboardActionItem[];
+    overdueTasks: DashboardActionItem[];
+    newLeads: DashboardActionItem[];
+    opportunitiesNeedingFollowUp: DashboardActionItem[];
+    workflowFailures: DashboardActionItem[];
+    deadLetters: DashboardActionItem[];
+    apiSourceFailures: DashboardApiSourceFailure[];
+    breakingApiChanges: DashboardActionItem[];
+    pendingApprovals: DashboardPendingApproval[];
+    website: {
+      status: "absent" | "draft" | "published";
+      label: string;
+      hasUnpublishedChanges: boolean;
+      publishedAt: string | null;
+    };
+  };
 };

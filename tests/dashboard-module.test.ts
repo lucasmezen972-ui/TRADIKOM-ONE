@@ -1,17 +1,84 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb } from "../src/lib/db";
+import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import { getDashboardData } from "../src/modules/dashboard";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
+const businessNow = new Date("2026-07-14T16:00:00.000Z");
+const dashboardInput = {
+  now: businessNow,
+  timeZone: "America/Martinique",
+  activityLimit: 8,
+  workflowLimit: 10,
+  itemLimit: 10,
+};
 
 afterEach(async () => {
   await Promise.all(opened.splice(0).map((db) => db.close()));
 });
 
 describe("dashboard module", () => {
-  it("keeps metrics tenant-scoped and rejects outsiders", async () => {
+  it("computes every operational metric in the configured business day", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const owner = await services.registerUser({
+      name: "Dashboard Owner",
+      email: "dashboard-owner@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(owner.id, {
+      name: "Dashboard Garage",
+      category: "Garage automobile",
+    });
+    await services.saveOnboarding(owner.id, tenant.id, defaultGarageOnboarding());
+    await services.publishWebsite(owner.id, tenant.id);
+    await seedOperationalDashboard(db, owner.id, tenant.id);
+
+    const dashboard = await getDashboardData(
+      db,
+      owner.id,
+      tenant.id,
+      dashboardInput,
+    );
+
+    expect(dashboard.metrics).toEqual({
+      newLeads: 1,
+      contacts: 2,
+      pendingTasks: 2,
+      formSubmissions: 1,
+      overdueTasks: 1,
+      opportunitiesNeedingFollowUp: 1,
+      workflowFailures: 1,
+      deadLetters: 1,
+      connectorIssues: 1,
+      apiSourceFailures: 0,
+      breakingApiChanges: 0,
+      pendingApprovals: 1,
+    });
+    expect(dashboard.commandCenter).toMatchObject({
+      capturedAt: businessNow.toISOString(),
+      timeZone: "America/Martinique",
+      dayStartedAt: "2026-07-14T04:00:00.000Z",
+      dayEndsAt: "2026-07-15T04:00:00.000Z",
+    });
+    expect(dashboard.commandCenter.newLeads).toHaveLength(1);
+    expect(dashboard.commandCenter.overdueTasks).toHaveLength(1);
+    expect(dashboard.commandCenter.opportunitiesNeedingFollowUp).toHaveLength(1);
+    expect(dashboard.commandCenter.workflowFailures).toHaveLength(1);
+    expect(dashboard.commandCenter.deadLetters).toHaveLength(1);
+    expect(dashboard.commandCenter.pendingApprovals).toHaveLength(1);
+    expect(dashboard.detectedOpportunities).toHaveLength(1);
+    expect(dashboard.commandCenter.website).toMatchObject({
+      status: "published",
+      hasUnpublishedChanges: true,
+    });
+    expect(dashboard.commandCenter.priorityActions[0]?.severity).toBe("critical");
+    expect(dashboard.commandCenter.priorityActions.every((item) => item.actionHref.startsWith("/"))).toBe(true);
+  });
+
+  it("keeps zero states, approval visibility and all reads tenant-scoped", async () => {
     const db = await createMemoryDb();
     opened.push(db);
     const services = createServices(db);
@@ -33,35 +100,204 @@ describe("dashboard module", () => {
       name: "Second Dashboard Garage",
       category: "Garage automobile",
     });
-    await services.saveOnboarding(
+    await db.query(
+      "insert into memberships (tenant_id, user_id, role, created_at) values ($1, $2, $3, $4)",
+      [firstTenant.id, secondOwner.id, "collaborator", businessNow.toISOString()],
+    );
+    await db.query(
+      `insert into approvals
+        (id, tenant_id, requested_by, policy, status, target_type, target_id, created_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        "approval-tenant-one",
+        firstTenant.id,
+        firstOwner.id,
+        "administrator_approval_required",
+        "pending",
+        "workflow_run",
+        "run-missing",
+        businessNow.toISOString(),
+      ],
+    );
+
+    const ownerView = await getDashboardData(
+      db,
       firstOwner.id,
       firstTenant.id,
-      defaultGarageOnboarding(),
+      dashboardInput,
     );
-    await services.publishWebsite(firstOwner.id, firstTenant.id);
-    await services.submitPublicLead(firstTenant.slug, {
-      name: "Dashboard Lead",
-      email: "dashboard-lead@example.com",
-      phone: "0696000010",
-      message: "Demande dashboard",
-      idempotencyKey: "dashboard-module-lead",
-    });
+    const collaboratorView = await getDashboardData(
+      db,
+      secondOwner.id,
+      firstTenant.id,
+      dashboardInput,
+    );
+    const cleanTenant = await getDashboardData(
+      db,
+      secondOwner.id,
+      secondTenant.id,
+      dashboardInput,
+    );
 
-    const first = await getDashboardData(db, firstOwner.id, firstTenant.id);
-    const second = await getDashboardData(db, secondOwner.id, secondTenant.id);
-
-    expect(first.metrics).toMatchObject({
-      newLeads: 1,
-      contacts: 1,
-      formSubmissions: 1,
-    });
-    expect(second.metrics).toMatchObject({
+    expect(ownerView.metrics.pendingApprovals).toBe(1);
+    expect(ownerView.commandCenter.pendingApprovals).toHaveLength(1);
+    expect(collaboratorView.metrics.pendingApprovals).toBe(0);
+    expect(collaboratorView.commandCenter.pendingApprovals).toEqual([]);
+    expect(cleanTenant.metrics).toMatchObject({
       newLeads: 0,
       contacts: 0,
+      pendingTasks: 0,
       formSubmissions: 0,
+      overdueTasks: 0,
+      opportunitiesNeedingFollowUp: 0,
+      workflowFailures: 0,
+      deadLetters: 0,
+      apiSourceFailures: 0,
+      breakingApiChanges: 0,
+      pendingApprovals: 0,
     });
+    expect(cleanTenant.detectedOpportunities).toEqual([]);
+    expect(cleanTenant.commandCenter.newLeads).toEqual([]);
+    expect(cleanTenant.commandCenter.overdueTasks).toEqual([]);
+    expect(cleanTenant.commandCenter.breakingApiChanges).toEqual([]);
     await expect(
-      getDashboardData(db, secondOwner.id, firstTenant.id),
-    ).rejects.toThrow("Acces refuse");
+      getDashboardData(db, firstOwner.id, secondTenant.id, dashboardInput),
+    ).rejects.toMatchObject({ code: "dashboard_access_denied" });
   });
 });
+
+async function seedOperationalDashboard(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  const stage = await db.query<{ id: string }>(
+    "select id from pipeline_stages where tenant_id = $1 order by position asc limit 1",
+    [tenantId],
+  );
+  const website = await db.query<{ id: string }>(
+    "select id from websites where tenant_id = $1 limit 1",
+    [tenantId],
+  );
+  const stageId = stage.rows[0]?.id;
+  const websiteId = website.rows[0]?.id;
+  if (!stageId || !websiteId) {
+    throw new Error("Dashboard fixture provisioning failed.");
+  }
+
+  for (const contact of [
+    ["contact-current", "Lead du jour", "lead-today@example.com", "active"],
+    ["contact-previous", "Lead precedent", "lead-previous@example.com", "active"],
+    ["contact-archived", "Contact archive", "archived@example.com", "archived"],
+  ]) {
+    await db.query(
+      `insert into contacts
+        (id, tenant_id, name, email, phone, status, source, tags, assigned_user_id, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
+      [
+        contact[0],
+        tenantId,
+        contact[1],
+        contact[2],
+        "0696000000",
+        contact[3],
+        "test",
+        "[]",
+        userId,
+        "2026-07-14T05:00:00.000Z",
+      ],
+    );
+  }
+  await db.query(
+    `insert into leads
+      (id, tenant_id, contact_id, source, status, opportunity_value, page_path, created_at)
+     values
+      ($1, $2, $3, 'website', 'new', 120000, '/', $4),
+      ($5, $2, $6, 'website', 'new', 90000, '/', $7)`,
+    [
+      "lead-current",
+      tenantId,
+      "contact-current",
+      "2026-07-14T05:00:00.000Z",
+      "lead-previous",
+      "contact-previous",
+      "2026-07-14T03:59:59.000Z",
+    ],
+  );
+  await db.query(
+    `insert into tasks
+      (id, tenant_id, title, status, assigned_user_id, due_at, related_type, related_id, created_at)
+     values
+      ('task-overdue', $1, 'Rappeler le lead', 'open', $2, $3, 'contact', 'contact-current', $4),
+      ('task-future', $1, 'Preparer le devis', 'open', $2, $5, 'contact', 'contact-current', $4),
+      ('task-done', $1, 'Tache terminee', 'done', $2, $3, 'contact', 'contact-current', $4)`,
+    [
+      tenantId,
+      userId,
+      "2026-07-14T12:00:00.000Z",
+      "2026-07-14T05:00:00.000Z",
+      "2026-07-16T12:00:00.000Z",
+    ],
+  );
+  await db.query(
+    `insert into opportunities
+      (id, tenant_id, contact_id, stage_id, value_cents, next_follow_up_at, lost_reason, created_at, updated_at)
+     values
+      ('opportunity-due', $1, 'contact-current', $2, 250000, $3, null, $4, $4),
+      ('opportunity-future', $1, 'contact-previous', $2, 180000, $5, null, $4, $4)`,
+    [
+      tenantId,
+      stageId,
+      "2026-07-14T18:00:00.000Z",
+      "2026-07-14T05:00:00.000Z",
+      "2026-07-16T18:00:00.000Z",
+    ],
+  );
+  await db.query(
+    `insert into workflow_runs
+      (id, tenant_id, workflow_key, trigger_name, status, summary, error, retry_count, created_at)
+     values
+      ('run-failed', $1, 'lead-follow-up', 'lead.created', 'failed', 'Relance lead en echec', 'safe_failure', 3, $2),
+      ('run-cancelled', $1, 'lead-follow-up', 'lead.created', 'cancelled', 'Relance annulee', null, 0, $2)`,
+    [tenantId, "2026-07-14T06:00:00.000Z"],
+  );
+  await db.query(
+    `insert into domain_events
+      (id, tenant_id, actor_id, event_type, payload, status, attempts, idempotency_key,
+       correlation_id, next_run_at, last_error, last_attempted_at, last_retry_delay_ms,
+       failure_classification, max_attempts, created_at, updated_at)
+     values
+      ('event-failed', $1, $2, 'lead.created', '{}', 'failed', 5, 'event-failed-key',
+       'correlation-safe', $3, 'safe_failure', $3, 60000, 'terminal', 5, $3, $3),
+      ('event-skipped', $1, $2, 'lead.created', '{}', 'skipped', 0, 'event-skipped-key',
+       'correlation-skipped', $3, null, null, 0, null, 5, $3, $3)`,
+    [tenantId, userId, "2026-07-14T06:00:00.000Z"],
+  );
+  await db.query(
+    `insert into form_submissions
+      (id, tenant_id, form_id, website_id, payload, created_contact_id, idempotency_key, created_at)
+     values ('submission-one', $1, null, $2, '{}', 'contact-current', 'submission-key', $3)`,
+    [tenantId, websiteId, "2026-07-14T05:00:00.000Z"],
+  );
+  await db.query(
+    `insert into approvals
+      (id, tenant_id, requested_by, policy, status, target_type, target_id, created_at)
+     values ('approval-one', $1, $2, 'administrator_approval_required', 'pending', 'workflow_run', 'run-failed', $3)`,
+    [tenantId, userId, "2026-07-14T06:00:00.000Z"],
+  );
+  await db.query(
+    `insert into opportunity_radar_alerts
+      (id, tenant_id, rule_key, severity, title, explanation, entity_type, entity_id,
+       action_label, action_href, status, detected_at, created_at, updated_at)
+     values
+      ('radar-active', $1, 'overdue_task', 'critical', 'Tache critique', 'Une tache attend une action.',
+       'task', 'task-overdue', 'Ouvrir', '/contacts/contact-current', 'active', $2, $2, $2),
+      ('radar-resolved', $1, 'failed_workflow', 'warning', 'Ancienne alerte', 'Alerte resolue.',
+       'workflow', 'run-cancelled', 'Ouvrir', '/automatisations', 'resolved', $2, $2, $2)`,
+    [tenantId, "2026-07-14T06:00:00.000Z"],
+  );
+  await db.query(
+    "update websites set current_draft_version_id = $1 where tenant_id = $2 and id = $3",
+    ["draft-newer-than-publication", tenantId, websiteId],
+  );
+}

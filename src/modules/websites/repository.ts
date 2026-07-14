@@ -14,6 +14,9 @@ type WebsiteRow = {
   template_key: WebsiteTemplateKey;
   theme: string;
   status: "draft" | "published";
+  current_version_id: string | null;
+  current_published_version_id: string | null;
+  current_draft_version_id: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -431,6 +434,9 @@ function mapWebsite(row: WebsiteRow): Website {
       text: "#111827",
       radius: "8px",
     }),
+    currentVersionId: row.current_version_id ?? undefined,
+    currentPublishedVersionId: row.current_published_version_id ?? undefined,
+    currentDraftVersionId: row.current_draft_version_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     publishedAt: row.published_at ?? undefined,

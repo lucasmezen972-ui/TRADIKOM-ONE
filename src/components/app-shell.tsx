@@ -25,14 +25,14 @@ type AppShellProps = {
 
 const navItems = [
   { href: "/aujourdhui", label: "Aujourd'hui", icon: Gauge },
-  { href: "/mon-activite", label: "Mon activite", icon: Activity },
+  { href: "/mon-activite", label: "Mon activité", icon: Activity },
   { href: "/contacts", label: "Contacts", icon: Contact },
-  { href: "/opportunites", label: "Opportunites", icon: BarChart3 },
+  { href: "/opportunites", label: "Opportunités", icon: BarChart3 },
   { href: "/mon-site", label: "Mon site", icon: Globe2 },
   { href: "/automatisations", label: "Automatisations", icon: Workflow },
   { href: "/connexions", label: "Connexions", icon: PlugZap },
-  { href: "/resultats", label: "Resultats", icon: Bot },
-  { href: "/parametres", label: "Parametres", icon: Settings },
+  { href: "/resultats", label: "Résultats", icon: Bot },
+  { href: "/parametres", label: "Paramètres", icon: Settings },
 ];
 
 export function AppShell({
@@ -103,7 +103,7 @@ export function AppShell({
         <form action={logoutAction} className="absolute bottom-5 left-5 right-5">
           <p className="mb-3 text-sm text-white/55">{userName}</p>
           <button className="w-full rounded-md border border-white/10 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10">
-            Deconnexion
+            Déconnexion
           </button>
         </form>
       </aside>
