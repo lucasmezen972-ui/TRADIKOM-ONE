@@ -19,13 +19,23 @@ import {
   decideApiChangeImpact,
   findApiChangeEventBySnapshots,
   findApiChangeImpact,
+  findConnectorRepairByImpact,
+  findConnectorRepairContext,
+  getSnapshotOperationApprovalCounts,
+  hasApprovedSnapshotMetadata,
   insertApiChangeContractRun,
   insertApiChangeEvent,
   insertApiChangeImpact,
+  insertConnectorRepairProposal,
+  listApprovedSnapshotOperations,
   listConnectorProposalsForApiProduct,
   mapApiChangeEvent,
 } from "@/modules/api-intelligence/change-monitor/repository";
-import { apiChangeDecisionSchema } from "@/modules/api-intelligence/change-monitor/schemas";
+import {
+  apiChangeDecisionSchema,
+  connectorRepairGenerationSchema,
+} from "@/modules/api-intelligence/change-monitor/schemas";
+import { insertConnectorProposal } from "@/modules/connector-copilot/repository";
 import { connectorManifestSchema } from "@/modules/connector-copilot/schemas";
 import { upsertDetectedOpportunityAlert } from "@/modules/opportunity-radar/repository";
 import { assertPlatformAdmin } from "@/modules/platform-admin";
@@ -33,6 +43,7 @@ import type {
   ApiSnapshotRow,
   ApiSourceRow,
 } from "@/modules/software-directory";
+import { findApiProductById } from "@/modules/software-directory";
 
 const globalReviewKinds = new Set([
   "access_policy_changed",
@@ -270,6 +281,169 @@ export async function decideApiChangeRepair(
   });
 }
 
+export async function generateApprovedConnectorRepair(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: unknown,
+) {
+  const parsed = connectorRepairGenerationSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertPlatformAdmin(transaction, userId, tenantId);
+    const context = await findConnectorRepairContext(
+      transaction,
+      tenantId,
+      parsed.impactId,
+    );
+    if (!context) {
+      throw new ApiChangeMonitorError(
+        "impact_not_found",
+        "Impact de changement API introuvable.",
+      );
+    }
+    if (
+      context.status !== "repair_approved" ||
+      context.approval_status !== "approved" ||
+      !context.upgrade_blocked
+    ) {
+      throw new ApiChangeMonitorError(
+        "repair_not_ready",
+        "Le plan de reparation doit etre approuve avant generation.",
+      );
+    }
+    if (
+      await findConnectorRepairByImpact(transaction, tenantId, parsed.impactId)
+    ) {
+      throw new ApiChangeMonitorError(
+        "repair_already_generated",
+        "Une version de reparation existe deja pour cet impact.",
+      );
+    }
+
+    const approvalCounts = await getSnapshotOperationApprovalCounts(
+      transaction,
+      context.api_product_id,
+      context.current_snapshot_id,
+    );
+    const metadataApproved = await hasApprovedSnapshotMetadata(
+      transaction,
+      context.api_product_id,
+      context.current_snapshot_id,
+    );
+    if (
+      !metadataApproved ||
+      approvalCounts.total === 0 ||
+      approvalCounts.total !== approvalCounts.approved
+    ) {
+      throw new ApiChangeMonitorError(
+        "repair_not_ready",
+        "Le snapshot courant doit etre importe et entierement approuve.",
+      );
+    }
+
+    const sourceManifest = connectorManifestSchema.parse(
+      safeJson<unknown>(context.source_manifest, null),
+    );
+    const apiProduct = await findApiProductById(
+      transaction,
+      context.api_product_id,
+    );
+    const operations = await listApprovedSnapshotOperations(
+      transaction,
+      context.api_product_id,
+      context.current_snapshot_id,
+    );
+    if (!apiProduct || operations.length !== approvalCounts.total) {
+      throw new ApiChangeMonitorError(
+        "repair_not_ready",
+        "Les preuves approuvees sont incompletes pour cette reparation.",
+      );
+    }
+
+    const replacementVersion = nextConnectorVersion(context.source_version);
+    const replacementManifest = connectorManifestSchema.parse({
+      ...sourceManifest,
+      version: replacementVersion,
+      enabled: false,
+      authentication: { type: apiProduct.authentication_type },
+      capabilities: operations.map((operation) => ({
+        operationKey: operation.operation_key,
+        method: operation.method,
+        path: operation.path,
+        direction: operation.capability,
+        timeoutMs: 10_000,
+        idempotencyRequired: operation.capability === "write",
+      })),
+    });
+    const replacementProposalId = id("proposal");
+    const repairId = id("repair");
+    const createdAt = nowIso();
+    await insertConnectorProposal(transaction, {
+      id: replacementProposalId,
+      tenantId,
+      softwareId: context.software_id,
+      apiProductId: context.api_product_id,
+      name: context.source_name,
+      manifest: replacementManifest,
+      unresolvedQuestions: [
+        "La version reparee doit repasser les tests mock et l'approbation sandbox.",
+      ],
+      riskAssessment: {
+        level: replacementManifest.capabilities.some(
+          (capability) => capability.direction === "write",
+        )
+          ? "medium"
+          : "low",
+        liveWritesAllowed: false,
+        repairOfProposalId: context.connector_proposal_id,
+        changeImpactId: parsed.impactId,
+        generatedFromApprovedSnapshot: context.current_snapshot_id,
+      },
+      createdBy: userId,
+      createdAt,
+    });
+    await insertConnectorRepairProposal(transaction, {
+      id: repairId,
+      tenantId,
+      impactId: parsed.impactId,
+      sourceProposalId: context.connector_proposal_id,
+      replacementProposalId,
+      sourceSnapshotId: context.current_snapshot_id,
+      generationSummary: {
+        generatorVersion: "connector-repair-1",
+        sourceVersion: context.source_version,
+        replacementVersion,
+        approvedOperationCount: operations.length,
+        enabled: false,
+        automaticActivation: false,
+      },
+      createdBy: userId,
+      createdAt,
+    });
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "api_intelligence.connector_repair_generated",
+      targetType: "connector_repair_proposal",
+      targetId: repairId,
+      metadata: {
+        impactId: parsed.impactId,
+        sourceProposalId: context.connector_proposal_id,
+        replacementProposalId,
+        replacementVersion,
+        connectorEnabled: false,
+      },
+    });
+    return {
+      repairId,
+      replacementProposalId,
+      replacementVersion,
+      status: "static_checks_passed" as const,
+      enabled: false as const,
+    };
+  });
+}
+
 function describeSnapshot(
   snapshot: ApiSnapshotRow,
   apiProductId: string,
@@ -391,4 +565,12 @@ function repairActions(input: {
   }
   actions.push("Relancer les tests sandbox avant toute approbation.");
   return actions;
+}
+
+function nextConnectorVersion(value: string) {
+  const semantic = /^(\d+)\.(\d+)\.(\d+)$/.exec(value);
+  if (semantic) {
+    return `${semantic[1]}.${semantic[2]}.${Number(semantic[3]) + 1}`;
+  }
+  return `${value.slice(0, 28)}-repair-1`;
 }

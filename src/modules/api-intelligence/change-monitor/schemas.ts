@@ -58,6 +58,10 @@ export const apiChangeDecisionSchema = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
+export const connectorRepairGenerationSchema = z.object({
+  impactId: z.string().min(1).max(160),
+});
+
 export type ApiChangeClassification = z.infer<
   typeof apiChangeClassificationSchema
 >;

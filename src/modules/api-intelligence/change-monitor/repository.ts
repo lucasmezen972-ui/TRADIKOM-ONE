@@ -37,6 +37,15 @@ export type ApiChangeImpactRow = {
   updated_at: string;
 };
 
+export type ConnectorRepairContextRow = ApiChangeImpactRow & {
+  api_product_id: string;
+  current_snapshot_id: string;
+  source_name: string;
+  source_version: string;
+  source_manifest: string;
+  software_id: string;
+};
+
 export async function findApiChangeEventBySnapshots(
   db: DbClient,
   previousSnapshotId: string,
@@ -211,6 +220,151 @@ export async function findApiChangeImpact(
     [tenantId, impactId],
   );
   return result.rows[0] ?? null;
+}
+
+export async function findConnectorRepairContext(
+  db: DbClient,
+  tenantId: string,
+  impactId: string,
+) {
+  const result = await db.query<ConnectorRepairContextRow>(
+    `select api_change_impacts.*,
+            api_change_events.api_product_id,
+            api_change_events.current_snapshot_id,
+            connector_proposals.name as source_name,
+            connector_proposals.version as source_version,
+            connector_proposals.manifest as source_manifest,
+            connector_proposals.software_id
+     from api_change_impacts
+     join api_change_events
+       on api_change_events.id = api_change_impacts.api_change_event_id
+     join connector_proposals
+       on connector_proposals.id = api_change_impacts.connector_proposal_id
+      and connector_proposals.tenant_id = api_change_impacts.tenant_id
+     where api_change_impacts.tenant_id = $1
+       and api_change_impacts.id = $2`,
+    [tenantId, impactId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function findConnectorRepairByImpact(
+  db: DbClient,
+  tenantId: string,
+  impactId: string,
+) {
+  const result = await db.query<{
+    id: string;
+    replacement_connector_proposal_id: string;
+  }>(
+    `select id, replacement_connector_proposal_id
+     from connector_repair_proposals
+     where tenant_id = $1 and api_change_impact_id = $2`,
+    [tenantId, impactId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listApprovedSnapshotOperations(
+  db: DbClient,
+  apiProductId: string,
+  snapshotId: string,
+) {
+  const result = await db.query<{
+    operation_key: string;
+    method: string;
+    path: string;
+    capability: "read" | "write";
+  }>(
+    `select api_operations.operation_key, api_operations.method,
+            api_operations.path, api_operations.capability
+     from api_operations
+     where api_operations.api_product_id = $1
+       and api_operations.source_snapshot_id = $2
+       and exists (
+         select 1 from api_claims
+         where api_claims.subject_type = 'api_operation'
+           and api_claims.subject_id = api_operations.id
+           and api_claims.source_snapshot_id = $2
+           and api_claims.approval_status = 'approved'
+       )
+     order by api_operations.path asc, api_operations.method asc`,
+    [apiProductId, snapshotId],
+  );
+  return result.rows;
+}
+
+export async function getSnapshotOperationApprovalCounts(
+  db: DbClient,
+  apiProductId: string,
+  snapshotId: string,
+) {
+  const result = await db.query<{ total: number; approved: number }>(
+    `select count(*)::int as total,
+            coalesce(sum(case when exists (
+              select 1 from api_claims
+              where api_claims.subject_type = 'api_operation'
+                and api_claims.subject_id = api_operations.id
+                and api_claims.source_snapshot_id = $2
+                and api_claims.approval_status = 'approved'
+            ) then 1 else 0 end), 0)::int as approved
+     from api_operations
+     where api_product_id = $1 and source_snapshot_id = $2`,
+    [apiProductId, snapshotId],
+  );
+  return result.rows[0] ?? { total: 0, approved: 0 };
+}
+
+export async function hasApprovedSnapshotMetadata(
+  db: DbClient,
+  apiProductId: string,
+  snapshotId: string,
+) {
+  const result = await db.query<{ approved: number }>(
+    `select case when exists (
+       select 1 from api_claims
+       where subject_type = 'api_product'
+         and subject_id = $1
+         and source_snapshot_id = $2
+         and approval_status = 'approved'
+     ) then 1 else 0 end as approved`,
+    [apiProductId, snapshotId],
+  );
+  return Boolean(result.rows[0]?.approved);
+}
+
+export async function insertConnectorRepairProposal(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    impactId: string;
+    sourceProposalId: string;
+    replacementProposalId: string;
+    sourceSnapshotId: string;
+    generationSummary: unknown;
+    createdBy: string;
+    createdAt: string;
+  },
+) {
+  await db.query(
+    `insert into connector_repair_proposals (
+       id, tenant_id, api_change_impact_id, source_connector_proposal_id,
+       replacement_connector_proposal_id, source_snapshot_id,
+       generation_summary, created_by, created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      input.id,
+      input.tenantId,
+      input.impactId,
+      input.sourceProposalId,
+      input.replacementProposalId,
+      input.sourceSnapshotId,
+      toJson(input.generationSummary),
+      input.createdBy,
+      input.createdAt,
+    ],
+  );
 }
 
 export async function decideApiChangeImpact(

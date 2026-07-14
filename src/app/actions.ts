@@ -836,6 +836,18 @@ export async function decideApiChangeRepairAction(formData: FormData) {
   revalidatePath("/aujourdhui");
 }
 
+export async function generateApiChangeRepairAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("api_intelligence.change_repair_generate", () =>
+    services.generateApprovedConnectorRepair(user.id, tenant.id, {
+      impactId: text(formData, "impactId"),
+    }),
+  );
+  revalidatePath("/intelligence-api");
+  revalidatePath("/aujourdhui");
+}
+
 export async function seedDemoAction() {
   if (!isPublicDemoEnabled()) {
     throw new Error("La démonstration publique est désactivée.");

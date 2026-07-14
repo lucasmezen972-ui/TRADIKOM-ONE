@@ -128,6 +128,11 @@ type ChangeImpactRow = {
   repair_proposal: string;
   contract_test_status: string;
   approval_status: string;
+  repair_id: string | null;
+  replacement_proposal_id: string | null;
+  replacement_version: string | null;
+  replacement_status: string | null;
+  replacement_contract_status: string | null;
   created_at: string;
 };
 
@@ -322,6 +327,18 @@ export async function getApiIntelligenceWorkspace(
             api_change_impacts.repair_proposal,
             api_change_impacts.contract_test_status,
             api_change_impacts.approval_status,
+            connector_repair_proposals.id as repair_id,
+            replacement_proposals.id as replacement_proposal_id,
+            replacement_proposals.version as replacement_version,
+            replacement_proposals.status as replacement_status,
+            (
+              select connector_contract_runs.status
+              from connector_contract_runs
+              where connector_contract_runs.tenant_id = api_change_impacts.tenant_id
+                and connector_contract_runs.connector_proposal_id = replacement_proposals.id
+              order by connector_contract_runs.created_at desc
+              limit 1
+            ) as replacement_contract_status,
             api_change_impacts.created_at
      from api_change_impacts
      join api_change_events
@@ -329,6 +346,12 @@ export async function getApiIntelligenceWorkspace(
      join connector_proposals
        on connector_proposals.id = api_change_impacts.connector_proposal_id
       and connector_proposals.tenant_id = api_change_impacts.tenant_id
+     left join connector_repair_proposals
+       on connector_repair_proposals.api_change_impact_id = api_change_impacts.id
+      and connector_repair_proposals.tenant_id = api_change_impacts.tenant_id
+     left join connector_proposals replacement_proposals
+       on replacement_proposals.id = connector_repair_proposals.replacement_connector_proposal_id
+      and replacement_proposals.tenant_id = connector_repair_proposals.tenant_id
      where api_change_impacts.tenant_id = $1
      order by api_change_impacts.created_at desc`,
     [tenantId],
@@ -454,6 +477,11 @@ export async function getApiIntelligenceWorkspace(
       repairProposal: safeJson<Record<string, unknown>>(row.repair_proposal, {}),
       contractTestStatus: row.contract_test_status,
       approvalStatus: row.approval_status,
+      repairId: row.repair_id ?? undefined,
+      replacementProposalId: row.replacement_proposal_id ?? undefined,
+      replacementVersion: row.replacement_version ?? undefined,
+      replacementStatus: row.replacement_status ?? undefined,
+      replacementContractStatus: row.replacement_contract_status ?? undefined,
       createdAt: row.created_at,
     })),
     claims,

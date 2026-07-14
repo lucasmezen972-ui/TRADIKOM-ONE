@@ -122,6 +122,7 @@ import {
   configureApiSourceRecheck,
   getApiIntelligenceWorkspace,
   getLatestCompatibilityCheck,
+  generateApprovedConnectorRepair,
   persistApiPreview,
   persistOpenApiPreview,
   persistPostmanPreview,
@@ -533,6 +534,11 @@ export function createServices(
         reason: string;
       },
     ) => decideApiChangeRepair(db, userId, tenantId, input),
+    generateApprovedConnectorRepair: (
+      userId: string,
+      tenantId: string,
+      input: { impactId: string },
+    ) => generateApprovedConnectorRepair(db, userId, tenantId, input),
     runCompatibilityCheck: (
       userId: string,
       tenantId: string,

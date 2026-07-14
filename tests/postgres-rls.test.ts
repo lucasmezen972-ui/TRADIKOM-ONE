@@ -183,6 +183,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
           id: string;
           tenant_id: string;
         }>("select id, tenant_id from api_change_impacts order by id");
+        const connectorRepairs = await client.query<{
+          id: string;
+          tenant_id: string;
+        }>("select id, tenant_id from connector_repair_proposals order by id");
 
         return {
           tenants: tenants.rows,
@@ -192,6 +196,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
           connectorSecrets: connectorSecrets.rows,
           connectorProposals: connectorProposals.rows,
           apiChangeImpacts: apiChangeImpacts.rows,
+          connectorRepairs: connectorRepairs.rows,
         };
       },
     );
@@ -203,9 +208,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
       connectorSecrets: [{ tenant_id: tenantA.id }],
       connectorProposals: [
         { id: apiIntelligence.proposalAId, tenant_id: tenantA.id },
+        { id: apiIntelligence.replacementAId, tenant_id: tenantA.id },
       ],
       apiChangeImpacts: [
         { id: apiIntelligence.impactAId, tenant_id: tenantA.id },
+      ],
+      connectorRepairs: [
+        { id: apiIntelligence.repairAId, tenant_id: tenantA.id },
       ],
     });
 
@@ -300,6 +309,23 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ),
     ).rejects.toThrow(
       /Cross-tenant relation|Related tenant row|Invalid API change impact relation/,
+    );
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `update connector_repair_proposals
+           set replacement_connector_proposal_id = $1
+           where tenant_id = $2 and id = $3`,
+          [
+            apiIntelligence.replacementBId,
+            tenantA.id,
+            apiIntelligence.repairAId,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(
+      /Cross-tenant relation|Related tenant row|Invalid connector repair relation/,
     );
 
     await expect(
@@ -427,12 +453,16 @@ async function insertApiIntelligenceTenantFixtures(
   const apiProductId = id("api");
   const proposalAId = id("proposal_a");
   const proposalBId = id("proposal_b");
+  const replacementAId = id("proposal_repair_a");
+  const replacementBId = id("proposal_repair_b");
   const sourceId = id("source");
   const previousSnapshotId = id("snapshot_previous");
   const currentSnapshotId = id("snapshot_current");
   const changeEventId = id("api_change");
   const impactAId = id("impact_a");
   const impactBId = id("impact_b");
+  const repairAId = id("repair_a");
+  const repairBId = id("repair_b");
   await db.query(
     `insert into software_directory_entries (
        id, canonical_name, aliases, vendor, official_domain, country,
@@ -508,6 +538,8 @@ async function insertApiIntelligenceTenantFixtures(
   for (const [proposalId, tenantId] of [
     [proposalAId, tenantAId],
     [proposalBId, tenantBId],
+    [replacementAId, tenantAId],
+    [replacementBId, tenantBId],
   ]) {
     await db.query(
       `insert into connector_proposals (
@@ -631,7 +663,40 @@ async function insertApiIntelligenceTenantFixtures(
       ],
     );
   }
-  return { proposalAId, proposalBId, changeEventId, impactAId, impactBId };
+  for (const [repairId, tenantId, impactId, sourceProposalId, replacementId] of [
+    [repairAId, tenantAId, impactAId, proposalAId, replacementAId],
+    [repairBId, tenantBId, impactBId, proposalBId, replacementBId],
+  ]) {
+    await db.query(
+      `insert into connector_repair_proposals (
+         id, tenant_id, api_change_impact_id, source_connector_proposal_id,
+         replacement_connector_proposal_id, source_snapshot_id,
+         generation_summary, created_by, created_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        repairId,
+        tenantId,
+        impactId,
+        sourceProposalId,
+        replacementId,
+        currentSnapshotId,
+        toJson({ generatorVersion: "connector-repair-1", enabled: false }),
+        ownerId,
+        now,
+      ],
+    );
+  }
+  return {
+    proposalAId,
+    proposalBId,
+    replacementAId,
+    replacementBId,
+    changeEventId,
+    impactAId,
+    impactBId,
+    repairAId,
+    repairBId,
+  };
 }
 
 async function createRestrictedRole(ownerPool: Pool) {

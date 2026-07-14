@@ -349,6 +349,103 @@ describe("Phase 3 API Intelligence vertical slice", () => {
         approval_status: "approved",
       },
     ]);
+    await expect(
+      services.generateApprovedConnectorRepair(admin.id, tenant.id, {
+        impactId,
+      }),
+    ).rejects.toMatchObject({ code: "repair_not_ready" });
+    await expect(
+      services.generateApprovedConnectorRepair(admin.id, otherTenant.id, {
+        impactId,
+      }),
+    ).rejects.toMatchObject({ code: "impact_not_found" });
+
+    const changedPreview = await services.previewOpenApiSnapshot(
+      admin.id,
+      tenant.id,
+      { snapshotId: changedSnapshot.id, apiProductId: api.apiProductId },
+    );
+    const changedImport = await services.persistOpenApiPreview(
+      admin.id,
+      tenant.id,
+      changedPreview,
+    );
+    for (const claimId of changedImport.claimIds) {
+      await services.decideApiClaim(admin.id, tenant.id, {
+        claimId,
+        status: "approved",
+        reason: "Nouvelle preuve officielle verifiee avant reparation.",
+      });
+    }
+    const repair = await services.generateApprovedConnectorRepair(
+      admin.id,
+      tenant.id,
+      { impactId },
+    );
+    expect(repair).toMatchObject({
+      replacementVersion: "0.1.1",
+      status: "static_checks_passed",
+      enabled: false,
+    });
+    await expect(
+      services.generateApprovedConnectorRepair(admin.id, tenant.id, {
+        impactId,
+      }),
+    ).rejects.toMatchObject({ code: "repair_already_generated" });
+
+    const replacement = await db.query<{
+      version: string;
+      status: string;
+      enabled: number;
+      manifest: string;
+    }>(
+      "select version, status, enabled, manifest from connector_proposals where tenant_id = $1 and id = $2",
+      [tenant.id, repair.replacementProposalId],
+    );
+    expect(replacement.rows[0]).toMatchObject({
+      version: "0.1.1",
+      status: "static_checks_passed",
+      enabled: 0,
+    });
+    expect(JSON.parse(replacement.rows[0]?.manifest ?? "{}").capabilities).toEqual([
+      expect.objectContaining({
+        operationKey: "createCustomer",
+        method: "POST",
+        path: "/customers",
+      }),
+    ]);
+    const repairContract = await services.runMockContractTests(
+      admin.id,
+      tenant.id,
+      repair.replacementProposalId,
+    );
+    expect(repairContract.status).toBe("passed");
+    const repairApproval = await services.submitConnectorForSandboxApproval(
+      admin.id,
+      tenant.id,
+      repair.replacementProposalId,
+    );
+    await services.decideConnectorSandboxApproval(admin.id, tenant.id, {
+      approvalId: repairApproval.approvalId,
+      decision: "approved",
+      reason: "Version reparee testee et approuvee pour le sandbox.",
+    });
+    const finalProposals = await db.query<{
+      id: string;
+      status: string;
+      enabled: number;
+    }>(
+      "select id, status, enabled from connector_proposals where tenant_id = $1 order by version asc",
+      [tenant.id],
+    );
+    expect(finalProposals.rows).toEqual([
+      { id: proposal.proposalId, status: "change_review_required", enabled: 0 },
+      {
+        id: repair.replacementProposalId,
+        status: "approved_for_sandbox",
+        enabled: 0,
+      },
+    ]);
     await expectAuditActions(db, tenant.id, [
       "api_intelligence.domain_approved",
       "api_intelligence.source_fetched",
@@ -362,6 +459,7 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       "api_intelligence.change_detected",
       "api_intelligence.connector_upgrade_blocked",
       "api_intelligence.repair_approved",
+      "api_intelligence.connector_repair_generated",
     ]);
   });
 
@@ -389,6 +487,11 @@ describe("Phase 3 API Intelligence vertical slice", () => {
         industries: [],
         categories: [],
         officialWebsite: "https://docs.vendor.test/",
+      }),
+    ).rejects.toBeInstanceOf(PlatformAdminError);
+    await expect(
+      services.generateApprovedConnectorRepair(owner.id, tenant.id, {
+        impactId: "impact_missing",
       }),
     ).rejects.toBeInstanceOf(PlatformAdminError);
   });

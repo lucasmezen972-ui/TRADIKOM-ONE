@@ -27,6 +27,7 @@ import {
   decideApiIntelligenceDomainAction,
   decideApiIntelligenceMappingAction,
   fetchApiIntelligenceSourceAction,
+  generateApiChangeRepairAction,
   generateApiConnectorProposalAction,
   importApiIntelligenceSnapshotAction,
   proposeApiIntelligenceMappingAction,
@@ -515,6 +516,11 @@ export default async function ApiIntelligencePage() {
                         <p className="mt-1 text-xs text-slate-500">
                           {statusLabel(impact.primaryClassification)} · Test {statusLabel(impact.contractTestStatus)} · {statusLabel(impact.approvalStatus)}
                         </p>
+                        {impact.replacementProposalId ? (
+                          <p className="mt-1 text-xs font-medium text-slate-700">
+                            Version réparée {impact.replacementVersion} · {statusLabel(impact.replacementStatus ?? "proposed")}
+                          </p>
+                        ) : null}
                       </div>
                       {impact.approvalStatus === "pending" ? (
                         <div className="flex flex-wrap gap-2">
@@ -539,6 +545,30 @@ export default async function ApiIntelligencePage() {
                             icon="x"
                           />
                         </div>
+                      ) : impact.approvalStatus === "approved" && !impact.replacementProposalId ? (
+                        <form action={generateApiChangeRepairAction}>
+                          <input name="impactId" type="hidden" value={impact.id} />
+                          <button className={secondaryButtonClass}>
+                            <RefreshCw size={15} aria-hidden />
+                            Générer la version réparée
+                          </button>
+                        </form>
+                      ) : impact.replacementProposalId && impact.replacementStatus === "static_checks_passed" ? (
+                        <form action={runApiConnectorContractAction}>
+                          <input name="proposalId" type="hidden" value={impact.replacementProposalId} />
+                          <button className={secondaryButtonClass}>
+                            <Play size={15} aria-hidden />
+                            Tester la réparation
+                          </button>
+                        </form>
+                      ) : impact.replacementProposalId && impact.replacementStatus === "contract_tests_passed" ? (
+                        <form action={submitApiConnectorApprovalAction}>
+                          <input name="proposalId" type="hidden" value={impact.replacementProposalId} />
+                          <button className={secondaryButtonClass}>
+                            <Send size={15} aria-hidden />
+                            Soumettre au sandbox
+                          </button>
+                        </form>
                       ) : null}
                     </div>
                   ))
