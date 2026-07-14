@@ -199,3 +199,24 @@ Runtime migrations `043`/`044` and SQL mirrors `0037`/`0038` add tenant-owned pr
 Head `2295c99aec1c408b5ae421fab4efdf69267ec872` passed complete GitHub Actions run `29354334456` in 6m35s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and thirteen Playwright scenarios.
 
 Current limitations are deliberate: AI employees are configuration and accountability profiles, not autonomous runtime agents. They cannot communicate externally, activate connectors, launch campaigns, publish content, move money or write to production systems.
+
+## Universal Connector Platform
+
+The tenth vertical slice turns approved Connector Copilot output into tenant-visible installation planning without adding a second connector engine or enabling real integrations.
+
+Implemented behavior:
+
+- The existing private Connect Store remains the only source of candidates. A connector must be approved for sandbox, disabled and not installed.
+- Every read and plan creation revalidates the approved API product claim, approved operation claims, tenant ontology mappings, generated manifest and latest mock contract result.
+- Manifest capabilities must still match the approved operation key, method, path and read/write direction exactly. Revoked or contradictory evidence blocks planning.
+- A deterministic sector comparison reports either documented alignment or an explicitly undocumented match; it never invents industry compatibility.
+- Authorized tenant managers can prepare an immutable, versioned sandbox-only plan. Repeated preparation of unchanged evidence is idempotent.
+- Plan evidence records only bounded identifiers, counts, versions and test timestamps. It stores no credentials, source URLs, payloads or secrets.
+- The French `Connexions` workspace shows evidence, sector fit, approved capabilities, blockers and the disabled plan version. It exposes no install, activation or production-connection control.
+- Plan creation is transactional and audited with explicit false flags for credentials, activation and external writes.
+
+Runtime migrations `045`/`046` and SQL mirrors `0039`/`0040` add installation plans, composite tenant relations, immutable supersession, tenant-leading indexes and PostgreSQL RLS. Tests cover eligibility, claim revocation, exact capability matching, idempotence, rollback, application authorization, cross-tenant reads/inserts/updates/deletes, no operational side effects and the complete browser path.
+
+Head `793e35cb5cc1269f6d81e160232cc6445b73fef7` passed complete GitHub Actions run `29357220616` in 7m56s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and thirteen Playwright scenarios.
+
+Current limitations are deliberate: plans are sandbox-only preparation records. They cannot collect credentials, install a connector, activate a connector, execute a remote read/write or start unrestricted discovery.

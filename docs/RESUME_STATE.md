@@ -50,6 +50,10 @@ Current Phase 4 checkpoint:
 - All employee permissions remain read/propose-only, every internal draft requires approval and external communication, production writes, financial transactions and connector activation are prohibited. The French `Équipe IA` workspace exposes no operational execution control.
 - Runtime migrations `043`/`044` and SQL mirrors `0037`/`0038` add composite tenant relations, current-version uniqueness, tenant-leading indexes and PostgreSQL RLS. Provisioning, versioning, rollback, authorization, cross-tenant and no-side-effect tests are included.
 - AI Employee head `2295c99aec1c408b5ae421fab4efdf69267ec872` passed complete GitHub Actions run `29354334456` in 6m35s, including thirteen Playwright scenarios.
+- Universal Connector Platform now derives tenant-visible compatibility and disabled installation plans exclusively from existing private Connect Store entries, approved API claims/operations, tenant mappings and passed mock contract tests.
+- Every plan is sandbox-only, immutable, versioned and idempotent. Revoked evidence or a manifest/operation mismatch blocks planning; industry alignment is reported only when documented.
+- Runtime migrations `045`/`046` and SQL mirrors `0039`/`0040` add composite tenant relations, current-plan uniqueness, tenant-leading indexes and PostgreSQL RLS. The French `Connexions` workspace exposes no installation, credentials or activation control.
+- Universal Connector Platform head `793e35cb5cc1269f6d81e160232cc6445b73fef7` passed complete GitHub Actions run `29357220616` in 7m56s, including thirteen Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -207,9 +211,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement the first bounded Universal Connector Platform slice by extending the existing API Intelligence and Connector Copilot models rather than creating a second connector engine.
-2. Add a tenant-scoped industry/capability compatibility view and disabled installation plans grounded only in approved API evidence and contract results.
-3. Keep every proposed connector disabled: no production activation, credentials, live writes, external send or unrestricted network discovery.
+1. Implement the first bounded private App Marketplace slice as a catalog over existing approved tenant artifacts, not as a public marketplace.
+2. Add versioned listings and installation previews for safe internal templates while preserving source provenance, permissions and approval requirements.
+3. Keep installation preview-only: no connector activation, production write, external send, public sharing, payment or one-click execution.
 
 Phase 3 completion history:
 
