@@ -100,3 +100,20 @@ Implemented behavior:
 The read path uses two bounded tenant queries and returns at most 50 proposals; generation produces at most two proposals per analysis. Tenant-leading indexes, PostgreSQL RLS and composite tenant/website/section foreign keys protect proposals, evidence and decisions.
 
 Focused tests cover evidence and deduplication, planning approval, public snapshot immutability, publication-count stability, rollback, stale-write protection, transactional failure rollback, tenant authorization, restricted-role PostgreSQL isolation, command-center routing and Playwright. The validation pass also found and fixed a demo-seed path that republished a pending draft when the demo was reopened. Final head `ab1c344b78ef074b6e5b2f0ad193c43ff7762118` passed complete GitHub Actions run `29341752287` in 6m55s, including eight Playwright scenarios.
+
+## Sales AI
+
+The fifth vertical slice adds explainable CRM prioritization without creating a predictive-data fiction or an outbound sales channel.
+
+Implemented behavior:
+
+- Active opportunities receive a deterministic follow-up score, indicative closing potential, confidence and low/medium/high priority.
+- Rules use only the tenant-scoped pipeline stage, recorded value, next action, recent CRM activity, open/overdue tasks and assignment state.
+- Six immutable evidence records explain every current assessment. A changed CRM signal creates a new version and supersedes the previous version transactionally.
+- Closing or losing an opportunity supersedes its current assessment. Repeated analysis of unchanged same-day evidence is deduplicated.
+- A unique current-assessment index and opportunity row locks serialize concurrent generation.
+- Owner, administrator and manager roles may generate; other tenant members receive a read-only view.
+- The French `Assistant commercial` workspace provides direct links back to existing opportunity records and contains no send, quote, price or discount control.
+- Audit metadata records counts, generation version and explicit false flags for external action, message, quotation and discount generation without storing customer content.
+
+Runtime migrations `035`/`036` and SQL mirrors `0029`/`0030` add tenant-owned assessments and evidence with composite opportunity relations, tenant-leading indexes and PostgreSQL RLS. Tests cover scoring, evidence, deduplication, versioning, closed opportunities, injected transactional rollback, application authorization, restricted-role cross-tenant read/insert/update/delete denial, the absence of operational side effects and Playwright. Head `6a9348048fb0cfbfc463f8d1869114672d5128eb` passed complete GitHub Actions run `29343934205` in 5m46s, including nine Playwright scenarios.

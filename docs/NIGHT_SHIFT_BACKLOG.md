@@ -69,5 +69,6 @@ Next unfinished work:
 2. Strategic Advisor is green at `4fcb9e2` in complete GitHub Actions run `29335663755`, with evidence, explainability, planning-only approval and no execution side effects.
 3. Autonomous Marketing is green at `1c2c8e3` in complete GitHub Actions run `29338101814`, with evidence, immutable revisions, approval and no launch/send/publish path.
 4. Website AI is green at `ab1c344` in complete GitHub Actions run `29341752287`; demo reopening cannot publish a pending draft.
-5. Continue with a bounded Sales AI scoring/advice slice without sending messages, quotations or discounts.
-6. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.
+5. Sales AI is green at `6a93480` in complete GitHub Actions run `29343934205`, with explainable CRM evidence and no message, quotation, pricing or discount path.
+6. Continue with a bounded Reputation AI inbox using manual/imported evidence and draft-only responses; keep external monitoring and publication disabled.
+7. Keep all external sends, connector activation, campaigns and production writes behind explicit approval and existing Phase 4 safety limits.

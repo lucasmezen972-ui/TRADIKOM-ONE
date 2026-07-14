@@ -28,6 +28,10 @@ Current Phase 4 checkpoint:
 - The French `Mon site` workspace shows rationale, gains, risks, proposed copy, proofs, approval and explicit draft-only application. Module, restricted-role PostgreSQL and Playwright coverage is included.
 - Initial Website AI runs exposed one over-broad unit assertion and then a real demo-seed publication regression. The seed now publishes only when no immutable public snapshot exists, so reopening the demo cannot publish a pending draft.
 - Final Website AI head `ab1c344b78ef074b6e5b2f0ad193c43ff7762118` passed complete GitHub Actions run `29341752287` in 6m55s: dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and eight Playwright scenarios.
+- Sales AI now produces versioned follow-up scores, indicative closing potential and next-action advice from six bounded CRM evidence signals. It sends no message and generates no quotation, price or discount.
+- Runtime migrations `035`/`036` and SQL mirrors `0029`/`0030` enforce tenant/opportunity relations, one current assessment, tenant-leading indexes and PostgreSQL RLS.
+- Module tests cover deterministic scoring, deduplication, changed-signal versions, closed opportunities, forced rollback and no operational side effects. Restricted-role PostgreSQL tests cover cross-tenant reads, inserts, updates, deletes and foreign relations; Playwright covers the French workspace.
+- Sales AI head `6a9348048fb0cfbfc463f8d1869114672d5128eb` passed complete GitHub Actions run `29343934205` in 5m46s, including nine Playwright scenarios.
 
 - Phase 2 PR #1 and Phase 3 PR #3 are merged into `main`.
 - Verified stabilization base: `c0edf7b5a76197008a38ac0d2da4e8b00e822577`; initial main run `29301275644` passed.
@@ -185,9 +189,9 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Implement a bounded Sales AI scoring and advice slice from tenant-scoped CRM signals.
-2. Keep scoring deterministic and evidence-backed; do not send messages, generate quotations or suggest discounts in this checkpoint.
-3. Validate tenant isolation, absence of operational side effects and the complete checkpoint through GitHub Actions.
+1. Implement a bounded Reputation AI inbox from manual/imported review evidence only.
+2. Keep sentiment explainable and response/improvement content in draft state; do not crawl external platforms, publish responses or claim fake-review detection without evidence.
+3. Validate tenant isolation, approval boundaries, absence of external side effects and the complete checkpoint through GitHub Actions.
 
 Phase 3 completion history:
 
