@@ -68,6 +68,9 @@ jobs:
           pnpm db:migrate
           pnpm db:verify
 
+      - name: Verify backup and restore
+        run: bash scripts/verify-backup-restore.sh
+
       - name: Lint
         run: pnpm lint
 
