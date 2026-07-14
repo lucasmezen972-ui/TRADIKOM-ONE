@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -58,7 +61,9 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Verify migrations
-        run: pnpm db:migrate
+        run: |
+          pnpm db:migrate
+          pnpm db:verify
 
       - name: Lint
         run: pnpm lint

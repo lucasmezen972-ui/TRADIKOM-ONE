@@ -74,10 +74,12 @@ async function createRuntimeDb() {
   return db;
 }
 
-export async function migrate(
-  db: DbClient,
-  options: { enableRls?: boolean } = {},
-) {
+export type MigrationOptions = {
+  enableRls?: boolean;
+  targetMigrationId?: string;
+};
+
+export async function migrate(db: DbClient, options: MigrationOptions = {}) {
   await db.query(`
     create table if not exists schema_migrations (
       id text primary key,
@@ -85,7 +87,18 @@ export async function migrate(
     );
   `);
 
-  for (const migration of getMigrations(options.enableRls ?? false)) {
+  const availableMigrations = getMigrations(options.enableRls ?? false);
+  const targetIndex = options.targetMigrationId
+    ? availableMigrations.findIndex(
+        (migration) => migration.id === options.targetMigrationId,
+      )
+    : availableMigrations.length - 1;
+
+  if (targetIndex < 0) {
+    throw new Error("Unknown database migration target.");
+  }
+
+  for (const migration of availableMigrations.slice(0, targetIndex + 1)) {
     const applied = await db.query<{ id: string }>(
       "select id from schema_migrations where id = $1",
       [migration.id],
@@ -104,6 +117,10 @@ export async function migrate(
       [migration.id, new Date().toISOString()],
     );
   }
+}
+
+export function getMigrationIds(enableRls = false) {
+  return getMigrations(enableRls).map((migration) => migration.id);
 }
 
 function getMigrations(enableRls: boolean) {
