@@ -12,6 +12,16 @@ import {
   type WebhookSignatureInput,
 } from "@/modules/connectors";
 import {
+  analyzeDomainConnection,
+  approveDnsChangePlan,
+  confirmDnsChangePlan,
+  getDomainConnectionWorkspace,
+  prepareDnsChangePlan,
+  simulateDnsChangePlan,
+  type AnalyzeDomainConnectionInput,
+  type PrepareDnsChangePlanInput,
+} from "@/modules/domain-connections";
+import {
   addContactNote,
   completeContactTask,
   contactMergeSchema,
@@ -581,6 +591,33 @@ export function createServices(
     ) => completeContactTask(db, userId, tenantId, contactId, { taskId }),
     getConnectors: (userId: string, tenantId: string) =>
       getConnectors(db, userId, tenantId),
+    getDomainConnectionWorkspace: (userId: string, tenantId: string) =>
+      getDomainConnectionWorkspace(db, userId, tenantId),
+    analyzeDomainConnection: (
+      userId: string,
+      tenantId: string,
+      input: AnalyzeDomainConnectionInput,
+    ) => analyzeDomainConnection(db, userId, tenantId, input),
+    prepareDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      input: PrepareDnsChangePlanInput,
+    ) => prepareDnsChangePlan(db, userId, tenantId, input),
+    approveDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) => approveDnsChangePlan(db, userId, tenantId, { planId }),
+    confirmDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) => confirmDnsChangePlan(db, userId, tenantId, { planId }),
+    simulateDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) => simulateDnsChangePlan(db, userId, tenantId, { planId }),
     importCsvContacts: (userId: string, tenantId: string, csvText: string) =>
       importCsvContacts(db, userId, tenantId, csvText),
     syncMockConnector: (userId: string, tenantId: string) =>

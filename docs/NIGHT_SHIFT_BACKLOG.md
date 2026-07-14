@@ -1,5 +1,14 @@
 # Night Shift Backlog
 
+Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green main `1de2e3c`:
+
+1. Validate the domain connection foundation through GitHub Actions.
+2. Add the French domain connection workspace and PostgreSQL restricted-role tests.
+3. Implement the mock OAuth provider, encrypted credentials and replay-safe callback flow.
+4. Install one controlled mock software connection and enforce read-only execution policy.
+5. Add connection health, safe disconnect, universal import/export and website domain binding.
+6. Complete the tenant-isolation and Playwright vertical slice before any real provider adapter.
+
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 
 Completed for the first Phase 3 checkpoint:

@@ -1,6 +1,18 @@
 # Resume State
 
-Branch: `codex/phase-4-autonomous-platform`
+Branch: `codex/phase-5-real-connectivity`
+
+Current Phase 5 checkpoint:
+
+- Phase 5 started from verified green `main` head `1de2e3c54edc91ceaf9a1fad27254fd4b4c60178`; GitHub Actions run `29367130647` passed the complete Phase 4 suite and PR #5 is merged.
+- The first bounded module lives under `src/modules/domain-connections/` with typed schemas, errors, repository functions, provider adapters and tenant-authorized services.
+- Mock DNS analysis is deterministic and network-free. Manual setup remains explicitly unverified when provider evidence is unavailable.
+- DNS snapshots and change plans preserve evidence, confidence, source and timestamps. Destructive changes, nameserver changes, MX changes, SPF replacement and DMARC weakening are blocked.
+- A plan requires tenant-admin approval, a second confirmation, current-snapshot revalidation and an audit event before simulation. Simulation never changes external DNS.
+- Runtime migrations `054`/`055` and SQL mirrors `0048`/`0049` add composite tenant relations, tenant-leading indexes and PostgreSQL RLS.
+- Focused tests cover the mock flow, double confirmation, no external effect, destructive-change blocks, application isolation and cross-tenant foreign relations.
+- Local TypeScript validation hung without diagnostics and was stopped after 30 seconds. GitHub Actions remains the authoritative validation environment.
+- Next unfinished task: make this checkpoint green in CI, add the French domain workspace and restricted-role PostgreSQL coverage, then implement the mock OAuth connection slice.
 
 Current Phase 4 checkpoint:
 
