@@ -87,11 +87,11 @@ export default async function ConnectionsPage() {
         {universalConnectors === null ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800">
             Les plans de connexion sont temporairement indisponibles. Aucun
-            connecteur n'a été activé.
+            connecteur n’a été activé.
           </div>
         ) : universalConnectors.candidates.length === 0 ? (
           <div className="rounded-md border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">
-            Aucun connecteur validé pour le sandbox n'est disponible pour cette
+            Aucun connecteur validé pour le sandbox n’est disponible pour cette
             organisation.
           </div>
         ) : (
