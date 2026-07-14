@@ -75,12 +75,12 @@ export const mockDnsProvider: DomainProviderAdapter = {
       record("TXT", "selector1._domainkey", "v=DKIM1; p=MOCK_PUBLIC_KEY", 3600),
       record("TXT", "_dmarc", "v=DMARC1; p=quarantine", 3600),
     ];
-    const evidence = [
-      evidence("provider", "Mock DNS Provider", 100, observedAt, "verified"),
-      evidence("registrar", "Registraire de test", 100, observedAt, "verified"),
-      evidence("hosting", "Hébergement de test", 100, observedAt, "verified"),
+    const analysisEvidence: DomainEvidence[] = [
+      createEvidence("provider", "Mock DNS Provider", 100, observedAt, "verified"),
+      createEvidence("registrar", "Registraire de test", 100, observedAt, "verified"),
+      createEvidence("hosting", "Hébergement de test", 100, observedAt, "verified"),
       ...records.map((item) =>
-        evidence(
+        createEvidence(
           `dns.${item.type}`,
           `${item.name}=${item.value}`,
           100,
@@ -97,7 +97,7 @@ export const mockDnsProvider: DomainProviderAdapter = {
       likelyHosting: "Hébergement de test",
       certificateStatus: "unavailable",
       records,
-      evidence,
+      evidence: analysisEvidence,
     };
   },
 };
@@ -223,7 +223,7 @@ function record(
   return { type, name, value, ttl, priority };
 }
 
-function evidence(
+function createEvidence(
   field: string,
   value: string,
   confidence: number,
