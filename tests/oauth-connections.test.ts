@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { hashToken, safeJson } from "../src/lib/security";
 import { createServices } from "../src/lib/services";
-import { createMockAuthorizationCode } from "../src/modules/oauth";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const appUrl = "https://app.example.test";
@@ -51,10 +50,30 @@ describe("plateforme OAuth mock", () => {
       authorization.state,
     );
 
+    const granted = await services.authorizeMockOAuthRequest(
+      owner.id,
+      tenant.id,
+      authorization,
+    );
+    const callback = callbackInput(granted.callbackUrl, authorization.redirectUri);
+    const authorizedState = await db.query<{
+      authorization_code_hash: string;
+      authorized_at: string;
+    }>(
+      "select authorization_code_hash, authorized_at from oauth_states where software_connection_id = $1",
+      [started.connectionId],
+    );
+    expect(authorizedState.rows[0]?.authorization_code_hash).toBe(
+      hashToken(callback.code),
+    );
+    expect(authorizedState.rows[0]?.authorization_code_hash).not.toBe(
+      callback.code,
+    );
+    expect(authorizedState.rows[0]?.authorized_at).toBeTruthy();
     const completed = await services.completeMockOAuthConnection(
       owner.id,
       tenant.id,
-      callbackInput(authorization),
+      callback,
     );
     expect(completed).toEqual({
       connectionId: started.connectionId,
@@ -136,27 +155,44 @@ describe("plateforme OAuth mock", () => {
 
     await expect(
       services.completeMockOAuthConnection(owner.id, tenant.id, {
-        ...callbackInput(authorization),
         state: "A".repeat(48),
+        code: "a".repeat(43),
+        redirectUri: authorization.redirectUri,
       }),
     ).rejects.toMatchObject({ code: "oauth_state_invalid" });
     await expect(
       services.completeMockOAuthConnection(owner.id, tenant.id, {
-        ...callbackInput(authorization),
+        state: authorization.state,
+        code: "a".repeat(43),
         redirectUri: "https://evil.example.test/callback",
       }),
     ).rejects.toMatchObject({ code: "oauth_redirect_mismatch" });
 
+    const granted = await services.authorizeMockOAuthRequest(
+      owner.id,
+      tenant.id,
+      authorization,
+    );
+    await expect(
+      services.authorizeMockOAuthRequest(owner.id, tenant.id, authorization),
+    ).rejects.toMatchObject({ code: "oauth_state_replayed" });
+    await expect(
+      services.completeMockOAuthConnection(owner.id, tenant.id, {
+        state: authorization.state,
+        code: "b".repeat(43),
+        redirectUri: authorization.redirectUri,
+      }),
+    ).rejects.toMatchObject({ code: "oauth_code_invalid" });
     await services.completeMockOAuthConnection(
       owner.id,
       tenant.id,
-      callbackInput(authorization),
+      callbackInput(granted.callbackUrl, authorization.redirectUri),
     );
     await expect(
       services.completeMockOAuthConnection(
         owner.id,
         tenant.id,
-        callbackInput(authorization),
+        callbackInput(granted.callbackUrl, authorization.redirectUri),
       ),
     ).rejects.toMatchObject({ code: "oauth_state_replayed" });
 
@@ -167,12 +203,23 @@ describe("plateforme OAuth mock", () => {
       [new Date(Date.now() - 1_000).toISOString(), expired.connectionId],
     );
     await expect(
-      services.completeMockOAuthConnection(
+      services.authorizeMockOAuthRequest(
         owner.id,
         tenant.id,
-        callbackInput(expiredAuthorization),
+        expiredAuthorization,
       ),
     ).rejects.toMatchObject({ code: "oauth_state_expired" });
+
+    const rejected = await services.startMockOAuthConnection(owner.id, tenant.id);
+    const rejectedAuthorization = parseAuthorization(rejected.authorizationUrl);
+    await services.disconnectSoftwareConnection(owner.id, tenant.id, rejected.connectionId);
+    await expect(
+      services.authorizeMockOAuthRequest(
+        owner.id,
+        tenant.id,
+        rejectedAuthorization,
+      ),
+    ).rejects.toMatchObject({ code: "oauth_state_replayed" });
   });
 
   it("isole les états et credentials entre tenants, verrouille le refresh et révoque", async () => {
@@ -200,16 +247,21 @@ describe("plateforme OAuth mock", () => {
     const started = await services.startMockOAuthConnection(ownerA.id, tenantA.id);
     const authorization = parseAuthorization(started.authorizationUrl);
     await expect(
-      services.completeMockOAuthConnection(
+      services.authorizeMockOAuthRequest(
         ownerB.id,
         tenantB.id,
-        callbackInput(authorization),
+        authorization,
       ),
     ).rejects.toMatchObject({ code: "oauth_state_invalid" });
+    const granted = await services.authorizeMockOAuthRequest(
+      ownerA.id,
+      tenantA.id,
+      authorization,
+    );
     await services.completeMockOAuthConnection(
       ownerA.id,
       tenantA.id,
-      callbackInput(authorization),
+      callbackInput(granted.callbackUrl, authorization.redirectUri),
     );
     await expect(
       services.getSoftwareConnectionWorkspace(ownerB.id, tenantA.id),
@@ -262,10 +314,16 @@ function parseAuthorization(value: string) {
   return { state, codeChallenge, redirectUri };
 }
 
-function callbackInput(input: ReturnType<typeof parseAuthorization>) {
+function callbackInput(callbackUrl: string, redirectUri: string) {
+  const callback = new URL(callbackUrl);
+  const state = callback.searchParams.get("state");
+  const code = callback.searchParams.get("code");
+  if (!state || !code) {
+    throw new Error("Retour OAuth mock incomplet.");
+  }
   return {
-    state: input.state,
-    redirectUri: input.redirectUri,
-    code: createMockAuthorizationCode(input),
+    state,
+    redirectUri,
+    code,
   };
 }

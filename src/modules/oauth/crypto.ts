@@ -1,8 +1,4 @@
-import {
-  createHash,
-  randomBytes,
-  timingSafeEqual,
-} from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   decryptConnectorSecret,
   encryptConnectorSecret,
@@ -28,27 +24,6 @@ export function getOAuthKeyVersion() {
 
 export function createPkceChallenge(verifier: string) {
   return createHash("sha256").update(verifier).digest("base64url");
-}
-
-export function createMockAuthorizationCode(input: {
-  state: string;
-  codeChallenge: string;
-  redirectUri: string;
-}) {
-  return createHash("sha256")
-    .update(`${input.state}.${input.codeChallenge}.${input.redirectUri}`)
-    .digest("hex");
-}
-
-export function verifyMockAuthorizationCode(
-  code: string,
-  input: { state: string; codeChallenge: string; redirectUri: string },
-) {
-  const expected = Buffer.from(createMockAuthorizationCode(input), "hex");
-  const actual = /^[a-f0-9]{64}$/.test(code)
-    ? Buffer.from(code, "hex")
-    : Buffer.alloc(0);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 function getOAuthEncryptionKey() {

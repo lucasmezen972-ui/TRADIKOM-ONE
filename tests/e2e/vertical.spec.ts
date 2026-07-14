@@ -71,6 +71,45 @@ test("a tenant administrator approves and simulates a DNS plan without applying 
   ).toHaveCount(0);
 });
 
+test("a tenant administrator connects and revokes the local OAuth provider without exposing tokens", async ({
+  page,
+}) => {
+  await openDemo(page);
+  await page.goto("/connexions/logiciels");
+  await expect(
+    page.getByRole("heading", { name: "Connexions logicielles" }),
+  ).toBeVisible();
+
+  const accountLabel = `Compte OAuth ${Date.now()}`;
+  const provider = page.locator("article").filter({ hasText: "Mock Business" }).first();
+  await provider.getByLabel("Libellé du compte").fill(accountLabel);
+  await provider.getByRole("button", { name: "Connecter avec OAuth" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Autoriser Mock Business" }),
+  ).toBeVisible();
+  await expect(page.getByText("Lire les contacts", { exact: true })).toBeVisible();
+  await expect(page.getByText("Lire le profil du compte", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Autoriser la connexion" }).click();
+
+  await expect(page).toHaveURL(/connexions\/logiciels\?oauth=connecte/);
+  await expect(page.getByText(/Aucun jeton n’a été exposé/)).toBeVisible();
+  const connection = page.locator("article").filter({ hasText: accountLabel });
+  await expect(connection.getByText("Connecté", { exact: true })).toBeVisible();
+  await expect(connection.getByText("Lecture des contacts")).toBeVisible();
+  await expect(connection.getByText("Lecture du profil")).toBeVisible();
+  await expect(page.getByText(/mock_access_|mock_refresh_/)).toHaveCount(0);
+
+  await connection.getByRole("button", { name: "Déconnecter" }).click();
+  const disconnected = page.locator("article").filter({ hasText: accountLabel });
+  await expect(
+    disconnected.getByText("Déconnecté", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    disconnected.getByRole("button", { name: "Rafraîchir l’accès" }),
+  ).toHaveCount(0);
+});
+
 test("the Business Brain versions and archives verified tenant memory", async ({
   page,
 }) => {

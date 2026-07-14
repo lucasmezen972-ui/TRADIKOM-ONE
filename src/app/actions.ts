@@ -1021,6 +1021,72 @@ export async function simulateDnsChangePlanAction(formData: FormData) {
   revalidatePath("/connexions/domaines");
 }
 
+export async function startMockOAuthConnectionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("oauth.connection_start", () =>
+    services.startMockOAuthConnection(user.id, tenant.id, {
+      accountLabel: text(formData, "accountLabel"),
+      scopes: ["contacts.read", "profile.read"],
+    }),
+  );
+  redirect(result.authorizationUrl);
+}
+
+export async function authorizeMockOAuthAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("oauth.authorization_grant", () =>
+    services.authorizeMockOAuthRequest(user.id, tenant.id, {
+      state: text(formData, "state"),
+      codeChallenge: text(formData, "codeChallenge"),
+      redirectUri: text(formData, "redirectUri"),
+    }),
+  );
+  redirect(result.callbackUrl);
+}
+
+export async function rejectMockOAuthAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("oauth.authorization_reject", () =>
+    services.disconnectSoftwareConnection(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+  redirect("/connexions/logiciels?oauth=refuse");
+}
+
+export async function refreshMockOAuthCredentialAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("oauth.credential_refresh", () =>
+    services.refreshMockOAuthCredential(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+}
+
+export async function disconnectSoftwareConnectionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("software_connection.disconnect", () =>
+    services.disconnectSoftwareConnection(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+  revalidatePath("/connexions");
+}
+
 export async function rotateWebhookSecretAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

@@ -271,6 +271,10 @@ function getMigrations(enableRls: boolean) {
           sql: phase5OAuthConnectionsRlsMigrationSql,
         }]
       : []),
+    {
+      id: "058_phase5_oauth_authorization_codes",
+      sql: phase5OAuthAuthorizationCodesMigrationSql,
+    },
   ];
 }
 
@@ -3583,4 +3587,15 @@ drop policy if exists tenant_isolation on oauth_credentials;
 create policy tenant_isolation on oauth_credentials
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5OAuthAuthorizationCodesMigrationSql = `
+alter table oauth_states
+  add column if not exists authorization_code_hash text;
+
+alter table oauth_states
+  add column if not exists authorized_at text;
+
+create index if not exists idx_oauth_states_tenant_authorized
+  on oauth_states (tenant_id, authorized_at, expires_at);
 `;

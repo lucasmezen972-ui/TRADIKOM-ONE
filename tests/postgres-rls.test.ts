@@ -5,7 +5,7 @@ import { pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
-import { id, nowIso, toJson } from "../src/lib/security";
+import { hashToken, id, nowIso, secureToken, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -2156,7 +2156,173 @@ describeIfPostgres("PostgreSQL RLS", () => {
     );
     expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
   });
+
+  it("isolates Phase 5 OAuth states, credentials and connections for a restricted role", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb, {
+      appUrl: "https://oauth-rls.example.test",
+    });
+    const ownerA = await services.registerUser({
+      name: "OAuth RLS A",
+      email: uniqueEmail("oauth-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "OAuth RLS B",
+      email: uniqueEmail("oauth-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `OAuth RLS A ${randomUUID()}`,
+      category: "Commerce",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `OAuth RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const connectionA = await connectMockOAuth(
+      services,
+      ownerA.id,
+      tenantA.id,
+    );
+    const connectionB = await connectMockOAuth(
+      services,
+      ownerB.id,
+      tenantB.id,
+    );
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect((await restrictedPool.query("select id from software_connections")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from oauth_states")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from oauth_credentials")).rows).toEqual([]);
+
+    const visible = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        connections: (
+          await client.query("select id from software_connections order by id")
+        ).rows,
+        states: (
+          await client.query("select software_connection_id from oauth_states order by id")
+        ).rows,
+        credentials: (
+          await client.query("select software_connection_id from oauth_credentials order by id")
+        ).rows,
+      }),
+    );
+    expect(visible.connections).toEqual([{ id: connectionA }]);
+    expect(visible.states).toEqual([{ software_connection_id: connectionA }]);
+    expect(visible.credentials).toEqual([{ software_connection_id: connectionA }]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into oauth_states (
+             id, tenant_id, software_connection_id, state_hash, code_challenge,
+             code_verifier_encrypted, redirect_uri, scopes, expires_at,
+             consumed_at, created_by, created_at
+           ) values ($1, $2, $3, $4, $5, $6, $7, '[]', $8, null, $9, $10)`,
+          [
+            id("oauth_state"),
+            tenantA.id,
+            connectionB,
+            hashToken(secureToken(32)),
+            "a".repeat(43),
+            "encrypted",
+            "https://oauth-rls.example.test/api/oauth/mock/callback",
+            new Date(Date.now() + 60_000).toISOString(),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into software_connections (
+             id, tenant_id, software_key, software_name, provider_key,
+             environment, status, account_label, scopes, created_by,
+             created_at, updated_at
+           ) values ($1, $2, 'mock_business', 'Mock Business', 'mock_oauth',
+             'mock', 'oauth_pending', 'Interdit', '[]', $3, $4, $4)`,
+          [id("software_connection"), tenantB.id, ownerB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update software_connections set status = 'unhealthy' where id = $1",
+            [connectionB],
+          )
+        ).rowCount,
+        deletedState: (
+          await client.query(
+            "delete from oauth_states where software_connection_id = $1",
+            [connectionB],
+          )
+        ).rowCount,
+        deletedCredential: (
+          await client.query(
+            "delete from oauth_credentials where software_connection_id = $1",
+            [connectionB],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deletedState: 0,
+      deletedCredential: 0,
+    });
+  });
 });
+
+async function connectMockOAuth(
+  services: ReturnType<typeof createServices>,
+  userId: string,
+  tenantId: string,
+) {
+  const started = await services.startMockOAuthConnection(userId, tenantId);
+  const authorizationUrl = new URL(started.authorizationUrl);
+  const state = authorizationUrl.searchParams.get("state");
+  const codeChallenge = authorizationUrl.searchParams.get("code_challenge");
+  const redirectUri = authorizationUrl.searchParams.get("redirect_uri");
+  if (!state || !codeChallenge || !redirectUri) {
+    throw new Error("Autorisation OAuth RLS incomplète.");
+  }
+  const granted = await services.authorizeMockOAuthRequest(userId, tenantId, {
+    state,
+    codeChallenge,
+    redirectUri,
+  });
+  const callbackUrl = new URL(granted.callbackUrl);
+  const code = callbackUrl.searchParams.get("code");
+  if (!code) throw new Error("Code OAuth RLS manquant.");
+  await services.completeMockOAuthConnection(userId, tenantId, {
+    state,
+    code,
+    redirectUri,
+  });
+  return started.connectionId;
+}
 
 function businessBrainFixture(label: string) {
   return {

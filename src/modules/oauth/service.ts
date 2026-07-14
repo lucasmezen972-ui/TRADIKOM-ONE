@@ -8,10 +8,10 @@ import {
   decryptOAuthSecret,
   encryptOAuthSecret,
   getOAuthKeyVersion,
-  verifyMockAuthorizationCode,
 } from "@/modules/oauth/crypto";
 import { OAuthError } from "@/modules/oauth/errors";
 import {
+  authorizeOAuthState,
   claimOAuthCredentialRefresh,
   completeOAuthCredentialRefresh,
   consumeOAuthState,
@@ -21,9 +21,11 @@ import {
   revokeActiveOAuthCredentials,
 } from "@/modules/oauth/repository";
 import {
+  mockOAuthAuthorizationRequestSchema,
   mockOAuthCallbackSchema,
   softwareConnectionReferenceSchema,
   startMockOAuthSchema,
+  type MockOAuthAuthorizationRequestInput,
   type MockOAuthCallbackInput,
   type StartMockOAuthInput,
 } from "@/modules/oauth/schemas";
@@ -96,7 +98,7 @@ export async function startMockOAuthConnection(
     });
   });
 
-  const authorizationUrl = new URL("/api/oauth/mock/authorize", appOrigin);
+  const authorizationUrl = new URL("/oauth/mock/autoriser", appOrigin);
   authorizationUrl.searchParams.set("state", state);
   authorizationUrl.searchParams.set("code_challenge", codeChallenge);
   authorizationUrl.searchParams.set("redirect_uri", redirectUri);
@@ -106,6 +108,88 @@ export async function startMockOAuthConnection(
     environment: "mock" as const,
     scopes: parsed.scopes,
   };
+}
+
+export async function inspectMockOAuthAuthorization(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: MockOAuthAuthorizationRequestInput,
+  options: { appUrl?: string } = {},
+) {
+  await assertTenantAccess(db, userId, tenantId, [...oauthAdminRoles]);
+  const parsed = mockOAuthAuthorizationRequestSchema.parse(input);
+  const state = await validateAuthorizationRequest(
+    db,
+    userId,
+    tenantId,
+    parsed,
+    options,
+  );
+  const connection = await findSoftwareConnection(
+    db,
+    tenantId,
+    state.software_connection_id,
+  );
+  if (!connection) throw invalidState();
+  return {
+    connectionId: state.software_connection_id,
+    softwareName: connection.software_name,
+    accountLabel: connection.account_label,
+    environment: connection.environment,
+    scopes: safeJson<string[]>(state.scopes, []),
+  };
+}
+
+export async function authorizeMockOAuthRequest(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: MockOAuthAuthorizationRequestInput,
+  options: { appUrl?: string } = {},
+) {
+  const parsed = mockOAuthAuthorizationRequestSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [...oauthAdminRoles]);
+    const state = await validateAuthorizationRequest(
+      transaction,
+      userId,
+      tenantId,
+      parsed,
+      options,
+    );
+    const code = secureToken(32);
+    const authorizedAt = nowIso();
+    const authorized = await authorizeOAuthState(transaction, {
+      tenantId,
+      stateId: state.id,
+      authorizationCodeHash: hashToken(code),
+      authorizedAt,
+    });
+    if (!authorized) {
+      throw new OAuthError(
+        "oauth_state_replayed",
+        "Cette autorisation OAuth a déjà été accordée.",
+      );
+    }
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "oauth.authorization_granted",
+      targetType: "software_connection",
+      targetId: state.software_connection_id,
+      metadata: {
+        providerKey: "mock_oauth",
+        environment: "mock",
+        scopes: safeJson<string[]>(state.scopes, []),
+        authorizationCodeStoredInAudit: false,
+      },
+    });
+    const callbackUrl = new URL(state.redirect_uri);
+    callbackUrl.searchParams.set("state", parsed.state);
+    callbackUrl.searchParams.set("code", code);
+    return { callbackUrl: callbackUrl.toString() };
+  });
 }
 
 export async function completeMockOAuthConnection(
@@ -161,11 +245,8 @@ export async function completeMockOAuthConnection(
       );
     }
     if (
-      !verifyMockAuthorizationCode(parsed.code, {
-        state: parsed.state,
-        codeChallenge: state.code_challenge,
-        redirectUri: state.redirect_uri,
-      })
+      !state.authorization_code_hash ||
+      hashToken(parsed.code) !== state.authorization_code_hash
     ) {
       throw new OAuthError(
         "oauth_code_invalid",
@@ -320,4 +401,51 @@ function invalidState() {
     "oauth_state_invalid",
     "L'autorisation OAuth est invalide.",
   );
+}
+
+async function validateAuthorizationRequest(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: MockOAuthAuthorizationRequestInput,
+  options: { appUrl?: string },
+) {
+  const expectedRedirectUri = new URL(
+    "/api/oauth/mock/callback",
+    resolveAppUrl(options.appUrl),
+  ).toString();
+  if (input.redirectUri !== expectedRedirectUri) {
+    throw new OAuthError(
+      "oauth_redirect_mismatch",
+      "L'adresse de retour OAuth n'est pas autorisée.",
+    );
+  }
+  const state = await findOAuthState(db, {
+    tenantId,
+    stateHash: hashToken(input.state),
+    userId,
+  });
+  if (!state) throw invalidState();
+  if (state.consumed_at || state.authorization_code_hash) {
+    throw new OAuthError(
+      "oauth_state_replayed",
+      "Cette autorisation OAuth a déjà été utilisée.",
+    );
+  }
+  if (new Date(state.expires_at).getTime() <= Date.now()) {
+    throw new OAuthError(
+      "oauth_state_expired",
+      "Cette autorisation OAuth a expiré.",
+    );
+  }
+  if (
+    state.redirect_uri !== input.redirectUri ||
+    state.code_challenge !== input.codeChallenge
+  ) {
+    throw new OAuthError(
+      "oauth_code_invalid",
+      "La preuve PKCE OAuth est invalide.",
+    );
+  }
+  return state;
 }

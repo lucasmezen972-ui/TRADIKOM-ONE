@@ -3,7 +3,10 @@ import type { DbClient } from "@/lib/db";
 import { nowIso, safeJson } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import { OAuthError } from "@/modules/oauth/errors";
-import { revokeActiveOAuthCredentials } from "@/modules/oauth/repository";
+import {
+  consumePendingOAuthStates,
+  revokeActiveOAuthCredentials,
+} from "@/modules/oauth/repository";
 import { softwareConnectionReferenceSchema } from "@/modules/oauth/schemas";
 import {
   findSoftwareConnection,
@@ -90,6 +93,11 @@ export async function disconnectSoftwareConnection(
       tenantId,
       connectionId: connection.id,
       now,
+    });
+    await consumePendingOAuthStates(transaction, {
+      tenantId,
+      connectionId: connection.id,
+      consumedAt: now,
     });
     await markSoftwareConnectionDisconnected(transaction, {
       tenantId,

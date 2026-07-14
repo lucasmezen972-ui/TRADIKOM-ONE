@@ -24,9 +24,11 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - état haché, anti-rejeu, expiration et redirect URI exacte;
 - credentials chiffrés et versionnés, rafraîchissement verrouillé et révocation;
 - catalogue logiciel limité à une fixture locale annoncée comme mock et lecture seule;
+- consentement français, code d'autorisation haché à usage unique et callback serveur sûr;
+- espace `/connexions/logiciels` avec scopes, expiration, statut et déconnexion;
 - stockage tenant-scoped, clés composées, RLS, audit et tests de sécurité ciblés.
 
-Les routes et l'interface OAuth, l'exécution de lecture seule, la santé, l'import/export et la déconnexion de bout en bout doivent être terminés avant toute intégration réelle.
+L'exécution de lecture seule, la santé, l'import/export et la liaison de domaine doivent être terminés avant toute intégration réelle.
 
 ## Frontière de sécurité
 

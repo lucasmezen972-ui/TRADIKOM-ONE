@@ -11,6 +11,8 @@ export type OAuthStateRow = {
   redirect_uri: string;
   scopes: string;
   expires_at: string;
+  authorization_code_hash: string | null;
+  authorized_at: string | null;
   consumed_at: string | null;
   created_by: string;
   created_at: string;
@@ -96,6 +98,43 @@ export async function consumeOAuthState(
      where tenant_id = $2 and id = $3 and consumed_at is null
      returning id`,
     [input.consumedAt, input.tenantId, input.stateId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function consumePendingOAuthStates(
+  db: DbClient,
+  input: { tenantId: string; connectionId: string; consumedAt: string },
+) {
+  await db.query(
+    `update oauth_states set consumed_at = $1
+     where tenant_id = $2 and software_connection_id = $3
+       and consumed_at is null`,
+    [input.consumedAt, input.tenantId, input.connectionId],
+  );
+}
+
+export async function authorizeOAuthState(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    stateId: string;
+    authorizationCodeHash: string;
+    authorizedAt: string;
+  },
+) {
+  const result = await db.query<{ id: string }>(
+    `update oauth_states
+     set authorization_code_hash = $1, authorized_at = $2
+     where tenant_id = $3 and id = $4 and consumed_at is null
+       and authorization_code_hash is null
+     returning id`,
+    [
+      input.authorizationCodeHash,
+      input.authorizedAt,
+      input.tenantId,
+      input.stateId,
+    ],
   );
   return result.rows[0] ?? null;
 }

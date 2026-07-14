@@ -13,7 +13,13 @@ export const startMockOAuthSchema = z.object({
 
 export const mockOAuthCallbackSchema = z.object({
   state: z.string().regex(/^[A-Za-z0-9_-]{40,160}$/),
-  code: z.string().regex(/^[a-f0-9]{64}$/),
+  code: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  redirectUri: z.string().url().max(500),
+});
+
+export const mockOAuthAuthorizationRequestSchema = z.object({
+  state: z.string().regex(/^[A-Za-z0-9_-]{40,160}$/),
+  codeChallenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
   redirectUri: z.string().url().max(500),
 });
 
@@ -23,3 +29,6 @@ export const softwareConnectionReferenceSchema = z.object({
 
 export type StartMockOAuthInput = z.input<typeof startMockOAuthSchema>;
 export type MockOAuthCallbackInput = z.input<typeof mockOAuthCallbackSchema>;
+export type MockOAuthAuthorizationRequestInput = z.input<
+  typeof mockOAuthAuthorizationRequestSchema
+>;

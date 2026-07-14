@@ -18,7 +18,9 @@ Current Phase 5 checkpoint:
 - Domain UI head `1b757315` passed complete GitHub Actions run `29375436090`, including clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and seventeen Playwright scenarios.
 - The mock OAuth core now implements Authorization Code + PKCE, hashed single-use state, exact APP_URL callback validation, encrypted/versioned access and refresh tokens, refresh locking, revocation, audit redaction and tenant-scoped persistence with composite relations and RLS.
 - The Software Connection read model currently exposes one truthful local mock provider with read-only scopes and explicit limitations; no network, production data or write capability is enabled.
-- Next unfinished task: validate the OAuth core through CI, then add the French software-connection UI and server-only mock authorization/callback routes.
+- OAuth core head `ae35688` passed complete GitHub Actions run `29376521177`, including clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+- The next checkpoint adds explicit French consent, a random one-time authorization code stored only as a hash, a no-store/correlated server callback, `/connexions/logiciels`, safe rejection/disconnect, restricted-role OAuth RLS coverage and a complete browser flow.
+- Next unfinished task: validate the OAuth UI/callback checkpoint through CI, then implement controlled read-only connector execution and health.
 
 Current Phase 4 checkpoint:
 

@@ -258,9 +258,12 @@ import {
 } from "@/modules/self-improvement";
 import { getEnterpriseObservability } from "@/modules/enterprise-observability";
 import {
+  authorizeMockOAuthRequest,
   completeMockOAuthConnection,
+  inspectMockOAuthAuthorization,
   refreshMockOAuthCredential,
   startMockOAuthConnection,
+  type MockOAuthAuthorizationRequestInput,
   type MockOAuthCallbackInput,
   type StartMockOAuthInput,
 } from "@/modules/oauth";
@@ -637,6 +640,22 @@ export function createServices(
       input: StartMockOAuthInput = {},
     ) =>
       startMockOAuthConnection(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    inspectMockOAuthAuthorization: (
+      userId: string,
+      tenantId: string,
+      input: MockOAuthAuthorizationRequestInput,
+    ) =>
+      inspectMockOAuthAuthorization(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    authorizeMockOAuthRequest: (
+      userId: string,
+      tenantId: string,
+      input: MockOAuthAuthorizationRequestInput,
+    ) =>
+      authorizeMockOAuthRequest(db, userId, tenantId, input, {
         appUrl: dependencies.appUrl,
       }),
     completeMockOAuthConnection: (
