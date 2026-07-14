@@ -197,3 +197,6 @@
 - Implemented Website AI proposals for verified hero/FAQ copy with source hashes, evidence, versioning, approval and explicit draft-only application.
 - Added stale-write protection, immutable public-site assertions, existing-version rollback, forced transactional rollback, command-center routing, tenant/RLS relation tests and a Playwright approval-to-draft scenario.
 - Runtime migrations `033`/`034` and SQL mirrors `0027`/`0028` add the bounded Website AI records. No service or UI path publishes an AI proposal automatically; CI validation is pending.
+- Website AI run `29339876803` exposed an over-broad risk-summary assertion; test fix `5ab2758` passed unit coverage before run `29340382859` exposed publication-history interference in Playwright.
+- The browser failure revealed that reopening the local demo republished any pending website draft. Head `ab1c344` now seeds a publication only when no public snapshot exists and adds direct regression coverage for publication count, public immutability and preserved draft status.
+- Complete GitHub Actions run `29341752287` passed at head `ab1c344` in 6m55s, including migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and eight Playwright scenarios. Website AI is green; Sales AI is next.
