@@ -57,7 +57,4 @@ Le head `3d0f7ca040d5fda99df94b75f9033fc42919e8be` a passe le run GitHub Actions
 
 ## Gate restant
 
-1. Faire passer la CI du checkpoint documentaire final.
-2. Mettre la PR #4 en revue et la fusionner uniquement si elle reste mergeable et verte.
-3. Verifier la CI de `main`.
-4. Creer `docs/PHASE_4_ENTRY_CHECK.md` seulement apres ce vert final.
+La PR #4 a ete fusionnee au SHA `83371cb5144f8c70b4fd90df8eb88079bf3658c2`. Le run `main` `29307027757` est vert. Le controle d'entree Phase 4 est cree dans `docs/PHASE_4_ENTRY_CHECK.md`; aucun travail Phase 4 n'est execute dans cette stabilisation.

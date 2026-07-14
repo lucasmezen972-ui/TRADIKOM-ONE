@@ -1,6 +1,6 @@
 # Night Shift Backlog
 
-Phase 2 and Phase 3 are merged. Phase 4 remains locked while PR #4 stabilizes the current product and supersedes obsolete PR #2.
+Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 implementation remains stopped until a separate authorized prompt starts from green `main`.
 
 Completed for the first Phase 3 checkpoint:
 
@@ -65,7 +65,5 @@ Improved operational observability completed and green at `2747368`:
 
 Next unfinished work:
 
-1. Pass the final documentation checkpoint CI and complete the PR #4 self-review.
-2. Mark PR #4 ready and merge only after every required check passes.
-3. Verify `main` after the stabilization merge.
-4. Commit the Phase 4 entry check only after the green stabilization merge.
+1. Confirm the `main` CI for the Phase 4 entry-check documentation commit.
+2. Do not start Phase 4 implementation as part of Phase 3.5 stabilization.

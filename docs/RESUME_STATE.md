@@ -1,6 +1,6 @@
 # Resume State
 
-Branch: `codex/phase-3-5-stabilization`
+Branch: `main`
 
 Current stabilization checkpoint:
 
@@ -13,7 +13,8 @@ Current stabilization checkpoint:
 - Production configuration rejects public demo, insecure cookies, test email, live integrations and invalid business timezones.
 - Connector Copilot revalidates mapping evidence and rejects unknown authentication or unsupported operation formats.
 - Head `3d0f7ca040d5fda99df94b75f9033fc42919e8be` passed complete GitHub Actions run `29306404397`: frozen install, dependency audit, clean/upgrade migrations, backup/restore, lint, typecheck, 44 files/143 tests, production build and Playwright E2E.
-- Phase 4 remains locked until PR #4 is merged, main CI is green, PR #2 is closed as superseded and `docs/PHASE_4_ENTRY_CHECK.md` is committed afterward.
+- PR #4 was squash-merged as `83371cb5144f8c70b4fd90df8eb88079bf3658c2`; `main` run `29307027757` passed the complete suite.
+- `docs/PHASE_4_ENTRY_CHECK.md` records the satisfied entry conditions. No Phase 4 implementation or branch was started by the stabilization work.
 
 Last completed checkpoint:
 
@@ -159,10 +160,8 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Pass the final documentation checkpoint CI and complete the PR #4 self-review.
-2. Mark PR #4 ready and merge only with every required check green.
-3. Verify `main` CI after the merge.
-4. Create the Phase 4 entry check only after the stabilization merge and green main.
+1. Confirm the `main` CI for the Phase 4 entry-check documentation commit.
+2. Keep Phase 4 implementation stopped until a separate authorized prompt starts it from green `main`.
 
 Phase 3 completion history:
 
