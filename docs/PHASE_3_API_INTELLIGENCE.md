@@ -84,11 +84,17 @@ ETag, Last-Modified, hash et redaction.
 - Les impacts tenant utilisent RLS, un index tenant et un trigger d'integrite vers la proposition concernee.
 - Les tests automatises utilisent des fixtures locales et aucun acces Internet.
 
+## Expansion des domaines approuves
+
+Un administrateur plateforme peut scanner les sitemaps XML d'un domaine exact deja approuve. Le point de depart provient des declarations `Sitemap` de `robots.txt`, ou de `/sitemap.xml` lorsqu'aucune declaration n'existe. Le scan refuse les redirections, sous-domaines, identifiants, fragments, ports non standards et parametres sensibles.
+
+Le traitement est borne a 512 Kio par document, cinq documents, une profondeur de deux et 100 candidats. Les URL sont canonicalisees et dedupliquees, puis classees comme documentation developpeur, OpenAPI, Postman, GraphQL, OAuth, changelog, partenaire ou statut. Chaque candidat reste `under_review`. Son acceptation auditee cree uniquement une source officielle rattachee au produit API choisi; elle ne declenche ni fetch, ni import, ni connecteur.
+
 ## Limites assumees
 
 - Ce checkpoint importe OpenAPI 3.0/3.1 en JSON/YAML, Postman Collection v2.1 en JSON, GraphQL fourni en SDL ou introspection JSON et les metadonnees OAuth officielles en JSON.
 - Un produit API conserve un seul format autoritatif pour ses operations: un remplacement OpenAPI/Postman est refuse tant que le modele multi-source n'existe pas.
-- L'ajout de source reste manuel et limite a une URL approuvee. Les relectures planifiees sont disponibles; le scan de sitemap et la detection de nouvelles pages restent a implementer.
+- L'ajout direct de source reste manuel. Le scan de sitemap propose des URL candidates sur le domaine exact approuve, mais toute creation de source exige une decision humaine et aucun contenu n'est importe automatiquement.
 - Les tests de contrat sont mock uniquement. Aucun appel sandbox externe ni ecriture reelle n'est execute.
 - L'approbation production, l'installation et l'activation de connecteur ne sont pas disponibles.
 - Les plans de reparation ne sont pas appliques automatiquement; la regeneration et les nouveaux tests sandbox restent explicites.
@@ -110,4 +116,6 @@ ETag, Last-Modified, hash et redaction.
 - Runs push `29293876882` et pull request `29293878753`: migrations PostgreSQL, lint, types, 40 fichiers/129 tests, build production et trois Playwright passes.
 - Le checkpoint OAuth est vert au head `df9198e7677af862f9abc6fbdbb25169566788ea`.
 - Runs push `29294952077` et pull request `29294954700`: migrations PostgreSQL, lint, types, 41 fichiers/132 tests, build production et trois Playwright passes.
+- Le checkpoint d'expansion des domaines approuves est vert au head `7eb283311e7ba40c9172d53703a5c8c2faac1310`.
+- Runs push `29298279269` et pull request `29298280928`: migrations PostgreSQL, lint, types, 42 fichiers/135 tests, build production et trois Playwright passes.
 - La PR #3 reste en brouillon pendant la suite de Phase 3.

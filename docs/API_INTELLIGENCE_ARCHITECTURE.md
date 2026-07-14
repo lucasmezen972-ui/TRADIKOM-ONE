@@ -19,6 +19,9 @@
 flowchart LR
   A["Domaine en attente"] --> B["Approbation plateforme"]
   B --> C["Fetch HTTPS borne"]
+  B --> S["Scan sitemap borne"]
+  S --> T["Candidats sous revue"]
+  T --> C
   C --> D["Snapshot et hash"]
   D --> E["Previsualisation deterministe"]
   E --> F["Operations, schemas et preuves"]
@@ -55,4 +58,4 @@ Un mapping tenant ne peut jamais etre promu automatiquement en connaissance glob
 
 ## Frontieres actuelles
 
-L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Les futurs scans de sitemap doivent reutiliser les memes sources, snapshots, preuves, changements et decisions d'approbation. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.
+L'architecture utilise PostgreSQL relationnel. Elle n'ajoute ni base graphe, ni crawler general, ni execution de code dynamique. Le scan de sitemap est une file de candidats bornee sur le domaine exact approuve: une decision humaine cree la source, puis le fetch et l'import restent des actions separees. Les relectures existantes restent strictement limitees aux URL officielles deja approuvees.

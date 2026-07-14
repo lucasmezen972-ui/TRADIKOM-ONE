@@ -11,7 +11,7 @@ Une source distante n'est accessible que lorsque:
 - `robots.txt` autorise le chemin;
 - la limite de frequence du domaine est disponible.
 
-La version actuelle accepte les specifications OpenAPI 3.0/3.1, collections Postman v2.1, schemas GraphQL fournis et metadonnees OAuth officielles ajoutes manuellement. Elle ne lance ni recherche generale, ni exploration recursive.
+La version actuelle accepte les specifications OpenAPI 3.0/3.1, collections Postman v2.1, schemas GraphQL fournis et metadonnees OAuth officielles. Une source peut etre ajoutee manuellement ou proposee par le scan borne d'un sitemap du domaine exact approuve. Le systeme ne lance ni recherche generale, ni exploration recursive du Web.
 
 ## Controles reseau
 
@@ -47,6 +47,15 @@ Chaque nouvelle observation HTTP 200 conserve un snapshot, meme si le hash du co
 - Un domaine suspendu, une source non officielle ou une autorisation revoquee desactive la planification avant toute requete.
 - Les echecs ne conservent qu'un code borne; aucun message reseau brut, contenu ou secret n'est stocke dans la planification.
 
+## Decouverte par sitemap
+
+- Le scan exige un administrateur plateforme, un tenant actif autorise et un domaine exact approuve.
+- Seules les declarations `Sitemap` de `robots.txt` ou `/sitemap.xml` sont lues, sans redirection.
+- Chaque document XML est limite a 512 Kio; un scan lit au plus cinq documents, a une profondeur maximale de deux, et conserve au plus 100 candidats.
+- Les sous-domaines, ports non standards, identifiants, fragments et parametres sensibles sont refuses; les parametres de suivi sont retires et les doublons canonicalises.
+- Une limite de six scans par heure s'applique par utilisateur et domaine.
+- Un candidat accepte cree seulement une source officielle sous revue. Son contenu n'est ni recupere ni importe automatiquement.
+
 ## Donnees non fiables
 
 Le contenu distant n'est jamais interprete comme une instruction. Aucun code, script, exemple, requete ou reference externe n'est execute. Les valeurs ressemblant a des credentials sont redigees avant stockage; les exemples et valeurs par defaut sont retires des schemas importes.
@@ -62,6 +71,7 @@ Pour OAuth, la source doit etre un document JSON officiel d'autorisation-server 
 - Authentification, paywall ou tableau de bord prive.
 - Domaine non approuve ou sous-domaine implicite.
 - Endpoint local, prive, metadata ou redirection.
+- Exploration de liens HTML, recherche generale, sous-domaine implicite ou import automatique d'un candidat sitemap.
 - Reference OpenAPI externe.
 - Remplacement croise OpenAPI/Postman d'un produit possedant deja des operations importees.
 - Introspection GraphQL en direct ou execution d'une operation GraphQL.

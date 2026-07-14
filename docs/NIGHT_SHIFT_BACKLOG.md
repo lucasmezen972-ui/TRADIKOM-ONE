@@ -39,7 +39,13 @@ Official OAuth metadata import completed and green at `df9198e`:
 2. HTTPS/private-target validation, secret and signed-metadata redaction, authoritative replay, transactional reviewed claims and coexistence with an operation contract.
 3. Deterministic change monitoring, tenant authorization, audited persistence, French administration controls and vertical regression coverage.
 
+Approved-domain expansion completed and green at `7eb2833`:
+
+1. Platform-admin sitemap discovery restricted to exact approved HTTPS domains, using `robots.txt` declarations or `/sitemap.xml` without redirects or subdomain traversal.
+2. XML parsing bounded to 512 KiB, five sitemap documents, depth two and 100 candidates, with canonicalization, deduplication, sensitive-query rejection and rate limiting.
+3. Every candidate remains under human review; acceptance creates only an official source record and never fetches, imports or activates a connector automatically.
+
 Next unfinished work:
 
-1. Begin P3 approved-domain expansion with bounded sitemap/canonical candidate discovery on explicitly approved domains.
+1. Begin P3 connector repair proposals from approved change evidence and explicit human decisions.
 2. Keep live writes, production connector approval and unrestricted crawling disabled.
