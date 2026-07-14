@@ -120,9 +120,22 @@ export async function listApprovedTenantMappings(
   apiProductId: string,
 ) {
   const result = await db.query<TenantMappingRow>(
-    `select * from api_tenant_mappings
-     where tenant_id = $1 and api_product_id = $2 and approval_status = 'approved'
-     order by source_entity asc`,
+    `select api_tenant_mappings.*
+     from api_tenant_mappings
+     join api_evidence
+       on api_evidence.id = api_tenant_mappings.evidence_id
+     join api_claims
+       on api_claims.id = api_evidence.claim_id
+      and api_claims.approval_status = 'approved'
+     join api_source_snapshots
+       on api_source_snapshots.id = api_evidence.source_snapshot_id
+     join api_sources
+       on api_sources.id = api_source_snapshots.source_id
+      and api_sources.api_product_id = api_tenant_mappings.api_product_id
+     where api_tenant_mappings.tenant_id = $1
+       and api_tenant_mappings.api_product_id = $2
+       and api_tenant_mappings.approval_status = 'approved'
+     order by api_tenant_mappings.source_entity asc`,
     [tenantId, apiProductId],
   );
   return result.rows;

@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { canonicalEntitySchema } from "@/modules/api-intelligence/ontology";
 
+export const connectorAuthenticationTypeSchema = z.enum([
+  "none",
+  "oauth2",
+  "http",
+  "apiKey",
+  "apikey",
+  "basic",
+  "bearer",
+]);
+
 export const connectorManifestSchema = z.object({
   manifestVersion: z.literal("1"),
   connectorKey: z.string().regex(/^[a-z0-9_]+$/),
@@ -8,12 +18,12 @@ export const connectorManifestSchema = z.object({
   version: z.string().min(1).max(40),
   enabled: z.literal(false),
   apiProductId: z.string().min(1),
-  authentication: z.object({ type: z.string().min(1) }),
+  authentication: z.object({ type: connectorAuthenticationTypeSchema }),
   capabilities: z.array(
     z.object({
       operationKey: z.string().min(1),
-      method: z.string().min(1),
-      path: z.string().min(1),
+      method: z.enum(["get", "post", "put", "patch", "delete", "head", "options"]),
+      path: z.string().startsWith("/").max(2_000),
       direction: z.enum(["read", "write"]),
       timeoutMs: z.number().int().min(100).max(30_000),
       idempotencyRequired: z.boolean(),

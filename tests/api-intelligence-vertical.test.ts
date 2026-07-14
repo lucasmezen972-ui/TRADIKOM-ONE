@@ -240,6 +240,37 @@ describe("Phase 3 API Intelligence vertical slice", () => {
       "#/paths/~1customers/post",
     ]);
 
+    await db.query(
+      `update api_claims set approval_status = 'rejected'
+       where id = (select claim_id from api_evidence where id = $1)`,
+      [customerEvidence],
+    );
+    await expect(
+      services.generateConnectorProposal(admin.id, tenant.id, {
+        compatibilityCheckId: compatibility.checkId,
+        name: "Preuves contradictoires",
+      }),
+    ).rejects.toMatchObject({ code: "compatibility_not_ready" });
+    await db.query(
+      `update api_claims set approval_status = 'approved'
+       where id = (select claim_id from api_evidence where id = $1)`,
+      [customerEvidence],
+    );
+    await db.query(
+      "update api_products set authentication_type = 'unknown' where id = $1",
+      [api.apiProductId],
+    );
+    await expect(
+      services.generateConnectorProposal(admin.id, tenant.id, {
+        compatibilityCheckId: compatibility.checkId,
+        name: "Authentification inconnue",
+      }),
+    ).rejects.toMatchObject({ code: "unsupported_authentication" });
+    await db.query(
+      "update api_products set authentication_type = 'oauth2' where id = $1",
+      [api.apiProductId],
+    );
+
     const proposal = await services.generateConnectorProposal(
       admin.id,
       tenant.id,
