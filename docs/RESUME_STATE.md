@@ -1,6 +1,6 @@
 # Resume State
 
-Branch: `main`
+Branch: `codex/phase-3-api-intelligence`
 
 Last completed checkpoint:
 
@@ -146,4 +146,37 @@ Phase 2 closure:
 
 Next unfinished task:
 
-1. Stop Phase 2 work. Rebase or recreate PR #2 from the new `main` and review it separately as a product/UI change before any merge.
+1. Perform the final Phase 3 security, migration, authorization, secret and complete-diff review.
+2. Update PR #3, run the closure CI, then mark it ready and merge only if every documented gate passes.
+3. Keep production connector activation, live writes and unrestricted crawling disabled.
+
+Phase 3 checkpoint in progress:
+
+- Phase 3 started from verified `main` SHA `05a7c7a099ad7ea458cb395cfdd9ccdf73a6f622`; run `29250246503` was green.
+- The first vertical slice now includes the Software Directory, approved-domain workflow, bounded source snapshots, safe OpenAPI JSON/YAML import, evidence-backed tenant mappings, explainable compatibility checks, disabled Connector Copilot proposals, mock contract tests, sandbox approval, private Connect Store, and a platform-admin interface.
+- PostgreSQL migrations `017`/`018` and SQL mirrors `0011`/`0012` add the Phase 3 models, tenant RLS and related-tenant integrity controls.
+- Local Node validation still hangs without diagnostics; `git diff --check` is used locally and GitHub Actions remains authoritative.
+- Draft PR #3 is open. Head `e971d1367527671670b2964bdfdc13cb45b2e780` passed both complete CI runs: push `29258483303` and pull request `29258489327`.
+- The API Change Monitor now compares snapshot content and HTTP validators, classifies contract/security/access changes, creates RLS-protected tenant impacts, runs static change contracts, blocks affected connectors, raises alerts, and requires an audited human decision on disabled repair plans.
+- Runtime migrations `019`/`020` and SQL mirrors `0013`/`0014` add change events, tenant impacts, RLS and proposal-tenant integrity.
+- API Change Monitor head `b0bd77fa1b6e64161abdcf7a78a031b1b1249d7a` passed complete push run `29264958738` and pull request run `29264962308`, including 111 tests, clean PostgreSQL migrations/RLS, production build and Playwright.
+- Approved official sources can now be rechecked on a platform-admin schedule. The shared worker processes at most three sequential source checks per batch, uses unique leases and stale-lease recovery, reuses ETag/Last-Modified, backs off transient failures, blocks unsafe or unauthorized schedules, and stores only bounded error codes.
+- Runtime migration `021` and SQL mirror `0015` add the global schedule state and explicit audit tenant context. The French administration surface exposes interval configuration and suspension without enabling broad crawling.
+- Scheduled recheck head `76a1487dc567f902bb478ac0f399224945c2b74c` passed complete push run `29267465626` and pull request run `29267468487`: clean PostgreSQL migration, lint, typecheck, 38 files/122 tests, production build and three Playwright scenarios.
+- Postman Collection v2.1 import now uses a bounded deterministic parser, never executes scripts or requests, removes variable/auth values and request/response bodies, persists only safe structural claims and evidence, and reuses the same compatibility and change-monitor paths as OpenAPI.
+- Postman import head `a1fcaf1800a766937e8f8fd600d539b9fb36b428` passed complete push run `29291951679` and pull request run `29291954167`: ordered PostgreSQL migrations, lint, typecheck, 38 test files/126 tests, production build and three Playwright scenarios.
+- OpenAPI and Postman operation imports are intentionally exclusive per API product until a future multi-source operation model exists; a cross-format replacement is rejected instead of deleting the current operation set.
+- Official GraphQL sources now accept bounded supplied SDL or supplied introspection JSON through the official `graphql` parser. No endpoint introspection or schema request is generated; descriptions, deprecation reasons and default values are omitted from persisted structural claims.
+- GraphQL import head `54b81993eed7a95b58a0ffdd37beec8e8e9079d9` passed complete push run `29293876882` and pull request run `29293878753`: ordered PostgreSQL migrations, lint, typecheck, 40 test files/129 tests, production build and three Playwright scenarios.
+- Official OAuth authorization-server metadata now augments an API product with bounded issuer, endpoint, grant, scope, client-authentication, PKCE and revocation facts without replacing its operation contract. Metadata is imported under review and no authorization or token request is sent.
+- OAuth import head `df9198e7677af862f9abc6fbdbb25169566788ea` passed complete push run `29294952077` and pull request run `29294954700`: ordered PostgreSQL migrations, lint, typecheck, 41 test files/132 tests, production build and three Playwright scenarios.
+- Approved-domain expansion now discovers candidate API resources from bounded sitemap XML only. It follows at most five sitemap documents to depth two, retains at most 100 exact-domain HTTPS candidates, rejects redirects, subdomains and sensitive query parameters, and requires a platform-admin decision for every candidate.
+- Candidate acceptance creates an official source under review without fetching or importing it. Runtime migration `022` and SQL mirror `0016` add persisted decisions; head `7eb283311e7ba40c9172d53703a5c8c2faac1310` passed complete push run `29298279269` and pull request run `29298280928`: ordered migrations, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
+- Approved breaking-change plans can now generate one separately versioned replacement connector from the current fully approved snapshot. The source connector remains blocked; the replacement remains disabled and must pass mock contracts and a fresh sandbox approval.
+- Runtime migrations `023`/`024`/`025` and SQL mirrors `0017`/`0018`/`0019` add tenant-isolated repair provenance and versioned operation imports. Historical evidence referenced by mappings is retained, while new claims receive snapshot-specific identities and remain under review.
+- Connector repair head `2bd088160a2a9fd8f062126012a254f914af8951` passed complete push run `29299530060` and pull request run `29299531581`: ordered migrations, PostgreSQL RLS, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
+- Approved tenant mappings can now be promoted into global structural knowledge only by a platform administrator and only while their official evidence remains approved. No tenant identifier, sample value or private rule is copied into the global record.
+- Reusing a global mapping in another tenant creates a deduplicated `pending` proposal and requires a separate approval. Runtime migration `026` and SQL mirror `0020` add bounded promotion metadata and structural uniqueness.
+- Reusable mapping head `4af425ae8240f487d83a8dc29c47b84a57cf7e10` passed complete push run `29300124894` and pull request run `29300127676`: ordered migrations, lint, typecheck, 42 test files/135 tests, production build and three Playwright scenarios.
+- API Intelligence operational health is now exposed through a bounded, read-only platform-admin service. It reports global source/recheck/change counts and tenant-scoped mapping, repair, sandbox, contract and audit counts without returning raw URLs, payloads, network errors or secrets.
+- Observability head `27473684413c32ea499ba577b7c77dffd0e8ba68` passed complete push run `29300616222` and pull request run `29300618426`: ordered migrations, lint, typecheck, 43 test files/137 tests, production build and three Playwright scenarios.

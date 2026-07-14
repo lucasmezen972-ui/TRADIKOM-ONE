@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/phase-2-production-foundation
+      - codex/phase-3-api-intelligence
   pull_request:
     branches:
       - main

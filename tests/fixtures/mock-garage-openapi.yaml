@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  title: Garage Cloud YAML API
+  version: "1.0"
+servers:
+  - url: https://api.garage-cloud.test/v1
+paths:
+  /appointments:
+    get:
+      operationId: listAppointments
+      summary: Lister les rendez-vous
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+components:
+  schemas:
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        startsAt:
+          type: string
+          format: date-time

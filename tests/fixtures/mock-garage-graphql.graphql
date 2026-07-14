@@ -1,0 +1,30 @@
+"Documentation sensible a ne pas persister."
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  contacts(limit: Int = 25): [Contact!]!
+  contact(id: ID!): Contact
+}
+
+type Mutation {
+  createContact(input: CreateContactInput!): Contact!
+  archiveContact(id: ID!): Boolean! @deprecated(reason: "Utiliser deleteContact")
+}
+
+type Contact {
+  id: ID!
+  name: String!
+  email: String
+  createdAt: DateTime!
+}
+
+input CreateContactInput {
+  name: String!
+  email: String
+  source: String = "internal-secret"
+}
+
+scalar DateTime

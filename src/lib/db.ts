@@ -132,6 +132,22 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "016_tenant_integrity", sql: tenantIntegrityMigrationSql }]
       : []),
+    { id: "017_phase3_api_intelligence", sql: phase3ApiIntelligenceMigrationSql },
+    ...(enableRls
+      ? [{ id: "018_phase3_api_intelligence_rls", sql: phase3ApiIntelligenceRlsMigrationSql }]
+      : []),
+    { id: "019_phase3_api_change_monitor", sql: phase3ApiChangeMonitorMigrationSql },
+    ...(enableRls
+      ? [{ id: "020_phase3_api_change_monitor_rls", sql: phase3ApiChangeMonitorRlsMigrationSql }]
+      : []),
+    { id: "021_phase3_api_source_rechecks", sql: phase3ApiSourceRechecksMigrationSql },
+    { id: "022_phase3_api_discovery_candidates", sql: phase3ApiDiscoveryCandidatesMigrationSql },
+    { id: "023_phase3_connector_repairs", sql: phase3ConnectorRepairsMigrationSql },
+    ...(enableRls
+      ? [{ id: "024_phase3_connector_repairs_rls", sql: phase3ConnectorRepairsRlsMigrationSql }]
+      : []),
+    { id: "025_phase3_versioned_api_imports", sql: phase3VersionedApiImportsMigrationSql },
+    { id: "026_phase3_reusable_mapping_intelligence", sql: phase3ReusableMappingIntelligenceMigrationSql },
   ];
 }
 
@@ -1130,4 +1146,654 @@ begin
   end loop;
 end
 $$;
+`;
+
+const phase3ApiIntelligenceMigrationSql = `
+alter table users add column if not exists platform_role text not null default 'user';
+
+create table if not exists software_directory_entries (
+  id text primary key,
+  canonical_name text not null,
+  aliases text not null,
+  vendor text not null,
+  official_domain text not null unique,
+  country text,
+  supported_regions text not null,
+  languages text not null,
+  industries text not null,
+  categories text not null,
+  official_website text not null,
+  developer_portal text,
+  support_page text,
+  partner_program_page text,
+  pricing_information_page text,
+  verification_status text not null,
+  confidence_score integer not null,
+  last_verified_at text,
+  evidence_count integer not null default 0,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists software_domains (
+  id text primary key,
+  software_id text not null references software_directory_entries(id) on delete cascade,
+  domain text not null unique,
+  approval_status text not null,
+  decision_reason text,
+  approved_by text references users(id),
+  approved_at text,
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists api_products (
+  id text primary key,
+  software_id text not null references software_directory_entries(id) on delete cascade,
+  name text not null,
+  api_style text not null,
+  version text not null,
+  base_url text,
+  documentation_url text not null,
+  openapi_url text,
+  postman_collection_url text,
+  graphql_schema_url text,
+  authentication_type text not null,
+  oauth_metadata text not null,
+  scopes text not null,
+  webhook_support integer not null default 0,
+  sandbox_support integer not null default 0,
+  partner_access_requirement integer not null default 0,
+  access_level text not null,
+  rate_limit_information text,
+  deprecation_status text not null,
+  terms_url text,
+  confidence_score integer not null,
+  last_verified_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (software_id, name, version)
+);
+
+create table if not exists api_sources (
+  id text primary key,
+  software_id text not null references software_directory_entries(id) on delete cascade,
+  api_product_id text references api_products(id) on delete set null,
+  canonical_url text not null unique,
+  source_type text not null,
+  source_classification text not null,
+  publisher_domain text not null,
+  created_by text not null references users(id),
+  created_at text not null
+);
+
+create table if not exists api_source_snapshots (
+  id text primary key,
+  source_id text not null references api_sources(id) on delete cascade,
+  retrieved_at text not null,
+  http_status integer not null,
+  etag text,
+  last_modified text,
+  content_hash text not null,
+  parser_version text not null,
+  robots_decision text not null,
+  access_policy_decision text not null,
+  content_type text not null,
+  content text not null,
+  safe_metadata text not null,
+  created_at text not null,
+  unique (source_id, content_hash)
+);
+
+create table if not exists api_schemas (
+  id text primary key,
+  api_product_id text not null references api_products(id) on delete cascade,
+  source_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  schema_name text not null,
+  schema_document text not null,
+  created_at text not null,
+  unique (api_product_id, source_snapshot_id, schema_name)
+);
+
+create table if not exists api_operations (
+  id text primary key,
+  api_product_id text not null references api_products(id) on delete cascade,
+  source_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  operation_key text not null,
+  method text not null,
+  path text not null,
+  summary text not null,
+  tags text not null,
+  capability text not null,
+  deprecated integer not null default 0,
+  request_schema_ref text,
+  response_schema_ref text,
+  security_requirements text not null,
+  created_at text not null,
+  unique (api_product_id, operation_key)
+);
+
+create table if not exists api_claims (
+  id text primary key,
+  source_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  subject_type text not null,
+  subject_id text not null,
+  claim_type text not null,
+  claim_value text not null,
+  confidence text not null,
+  approval_status text not null,
+  created_at text not null
+);
+
+create table if not exists api_evidence (
+  id text primary key,
+  claim_id text not null references api_claims(id) on delete cascade,
+  source_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  locator text not null,
+  excerpt_hash text not null,
+  created_at text not null
+);
+
+create table if not exists api_verification_decisions (
+  id text primary key,
+  claim_id text not null references api_claims(id) on delete cascade,
+  decision text not null,
+  reason text not null,
+  decided_by text not null references users(id),
+  created_at text not null
+);
+
+create table if not exists api_contradictions (
+  id text primary key,
+  claim_id text not null references api_claims(id) on delete cascade,
+  contradicting_claim_id text not null references api_claims(id) on delete cascade,
+  status text not null,
+  created_at text not null
+);
+
+create table if not exists api_global_mappings (
+  id text primary key,
+  api_product_id text not null references api_products(id) on delete cascade,
+  source_entity text not null,
+  canonical_entity text not null,
+  source_field text,
+  canonical_field text,
+  confidence integer not null,
+  evidence_id text not null references api_evidence(id),
+  approval_status text not null,
+  version integer not null,
+  created_by text not null references users(id),
+  approved_by text references users(id),
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists api_tenant_mappings (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  api_product_id text not null references api_products(id) on delete cascade,
+  source_entity text not null,
+  canonical_entity text not null,
+  source_field text,
+  canonical_field text,
+  confidence integer not null,
+  evidence_id text not null references api_evidence(id),
+  approval_status text not null,
+  version integer not null,
+  created_by text not null references users(id),
+  approved_by text references users(id),
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists api_compatibility_checks (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  software_id text not null references software_directory_entries(id) on delete cascade,
+  api_product_id text not null references api_products(id) on delete cascade,
+  desired_automation text not null,
+  outcome text not null,
+  result text not null,
+  created_by text not null references users(id),
+  created_at text not null
+);
+
+create table if not exists connector_proposals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  software_id text not null references software_directory_entries(id) on delete cascade,
+  api_product_id text not null references api_products(id) on delete cascade,
+  name text not null,
+  version text not null,
+  status text not null,
+  enabled integer not null default 0,
+  manifest text not null,
+  unresolved_questions text not null,
+  risk_assessment text not null,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null
+);
+
+create table if not exists connector_contract_runs (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  connector_proposal_id text not null references connector_proposals(id) on delete cascade,
+  connector_version text not null,
+  api_version text not null,
+  test_suite_version text not null,
+  environment text not null,
+  status text not null,
+  results text not null,
+  safe_logs text not null,
+  created_at text not null
+);
+
+create table if not exists connector_approval_requests (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  connector_proposal_id text not null references connector_proposals(id) on delete cascade,
+  requested_scope text not null,
+  status text not null,
+  submitted_by text not null references users(id),
+  decided_by text references users(id),
+  decision_reason text,
+  created_at text not null,
+  decided_at text
+);
+
+create table if not exists private_connect_store_entries (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  connector_proposal_id text not null references connector_proposals(id) on delete cascade,
+  verification_status text not null,
+  installation_status text not null,
+  last_tested_at text not null,
+  known_limitations text not null,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, connector_proposal_id)
+);
+
+create index if not exists idx_software_domains_status on software_domains(approval_status, domain);
+create index if not exists idx_api_sources_software on api_sources(software_id, publisher_domain);
+create index if not exists idx_api_snapshots_source on api_source_snapshots(source_id, retrieved_at desc);
+create index if not exists idx_api_operations_product on api_operations(api_product_id, capability, path);
+create index if not exists idx_api_schemas_product on api_schemas(api_product_id, schema_name);
+create index if not exists idx_api_claims_subject on api_claims(subject_type, subject_id, claim_type);
+create index if not exists idx_api_tenant_mappings_tenant on api_tenant_mappings(tenant_id, api_product_id);
+create index if not exists idx_api_compatibility_tenant on api_compatibility_checks(tenant_id, created_at desc);
+create index if not exists idx_connector_proposals_tenant on connector_proposals(tenant_id, status, updated_at desc);
+create index if not exists idx_connector_contract_runs_tenant on connector_contract_runs(tenant_id, connector_proposal_id, created_at desc);
+create index if not exists idx_connector_approval_requests_tenant on connector_approval_requests(tenant_id, status, created_at desc);
+create index if not exists idx_private_connect_store_tenant on private_connect_store_entries(tenant_id, updated_at desc);
+`;
+
+const phase3ApiIntelligenceRlsMigrationSql = `
+alter table api_tenant_mappings enable row level security;
+alter table api_compatibility_checks enable row level security;
+alter table connector_proposals enable row level security;
+alter table connector_contract_runs enable row level security;
+alter table connector_approval_requests enable row level security;
+alter table private_connect_store_entries enable row level security;
+
+drop policy if exists tenant_isolation on api_tenant_mappings;
+create policy tenant_isolation on api_tenant_mappings
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+drop policy if exists tenant_isolation on api_compatibility_checks;
+create policy tenant_isolation on api_compatibility_checks
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+drop policy if exists tenant_isolation on connector_proposals;
+create policy tenant_isolation on connector_proposals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+drop policy if exists tenant_isolation on connector_contract_runs;
+create policy tenant_isolation on connector_contract_runs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+drop policy if exists tenant_isolation on connector_approval_requests;
+create policy tenant_isolation on connector_approval_requests
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+drop policy if exists tenant_isolation on private_connect_store_entries;
+create policy tenant_isolation on private_connect_store_entries
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop trigger if exists connector_contract_runs_tenant_integrity on connector_contract_runs;
+create trigger connector_contract_runs_tenant_integrity
+  before insert or update of tenant_id, connector_proposal_id on connector_contract_runs
+  for each row execute function app_enforce_related_tenant('connector_proposals', 'connector_proposal_id');
+drop trigger if exists connector_approval_requests_tenant_integrity on connector_approval_requests;
+create trigger connector_approval_requests_tenant_integrity
+  before insert or update of tenant_id, connector_proposal_id on connector_approval_requests
+  for each row execute function app_enforce_related_tenant('connector_proposals', 'connector_proposal_id');
+drop trigger if exists private_connect_store_tenant_integrity on private_connect_store_entries;
+create trigger private_connect_store_tenant_integrity
+  before insert or update of tenant_id, connector_proposal_id on private_connect_store_entries
+  for each row execute function app_enforce_related_tenant('connector_proposals', 'connector_proposal_id');
+`;
+
+const phase3ApiChangeMonitorMigrationSql = `
+alter table api_source_snapshots
+  drop constraint if exists api_source_snapshots_source_id_content_hash_key;
+
+create table if not exists api_change_events (
+  id text primary key,
+  api_product_id text not null references api_products(id) on delete cascade,
+  source_id text not null references api_sources(id) on delete cascade,
+  previous_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  current_snapshot_id text not null references api_source_snapshots(id) on delete cascade,
+  primary_classification text not null,
+  classifications text not null,
+  summary text not null,
+  requires_approval integer not null default 0,
+  detected_at text not null,
+  created_at text not null,
+  unique (previous_snapshot_id, current_snapshot_id)
+);
+
+create table if not exists api_change_impacts (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  api_change_event_id text not null references api_change_events(id) on delete cascade,
+  connector_proposal_id text not null references connector_proposals(id) on delete cascade,
+  contract_run_id text references connector_contract_runs(id) on delete set null,
+  status text not null,
+  upgrade_blocked integer not null default 1,
+  repair_proposal text not null,
+  contract_test_status text not null,
+  contract_test_results text not null,
+  approval_status text not null,
+  decided_by text references users(id),
+  decision_reason text,
+  decided_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (api_change_event_id, connector_proposal_id)
+);
+
+create index if not exists idx_api_change_events_product
+  on api_change_events(api_product_id, detected_at desc);
+create index if not exists idx_api_change_impacts_tenant
+  on api_change_impacts(tenant_id, status, created_at desc);
+create index if not exists idx_api_change_impacts_proposal
+  on api_change_impacts(connector_proposal_id, created_at desc);
+`;
+
+const phase3ApiChangeMonitorRlsMigrationSql = `
+alter table api_change_impacts enable row level security;
+
+drop policy if exists tenant_isolation on api_change_impacts;
+create policy tenant_isolation on api_change_impacts
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop trigger if exists api_change_impacts_tenant_integrity on api_change_impacts;
+create trigger api_change_impacts_tenant_integrity
+  before insert or update of tenant_id, connector_proposal_id on api_change_impacts
+  for each row execute function app_enforce_related_tenant('connector_proposals', 'connector_proposal_id');
+
+
+create or replace function app_enforce_api_change_event_integrity()
+returns trigger language plpgsql as $$
+declare
+  source_product_id text;
+  previous_source_id text;
+  current_source_id text;
+begin
+  select api_product_id into source_product_id
+    from api_sources where id = new.source_id;
+  select source_id into previous_source_id
+    from api_source_snapshots where id = new.previous_snapshot_id;
+  select source_id into current_source_id
+    from api_source_snapshots where id = new.current_snapshot_id;
+
+  if source_product_id is null
+     or source_product_id <> new.api_product_id
+     or previous_source_id <> new.source_id
+     or current_source_id <> new.source_id then
+    raise exception 'Invalid API change event relation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists api_change_events_relation_integrity on api_change_events;
+create trigger api_change_events_relation_integrity
+  before insert or update of api_product_id, source_id, previous_snapshot_id, current_snapshot_id
+  on api_change_events
+  for each row execute function app_enforce_api_change_event_integrity();
+
+create or replace function app_enforce_api_change_impact_product()
+returns trigger language plpgsql as $$
+declare
+  event_product_id text;
+  proposal_product_id text;
+begin
+  select api_product_id into event_product_id
+    from api_change_events where id = new.api_change_event_id;
+  select api_product_id into proposal_product_id
+    from connector_proposals where id = new.connector_proposal_id;
+
+  if event_product_id is null
+     or proposal_product_id is null
+     or event_product_id <> proposal_product_id then
+    raise exception 'Invalid API change impact relation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists api_change_impacts_product_integrity on api_change_impacts;
+create trigger api_change_impacts_product_integrity
+  before insert or update of api_change_event_id, connector_proposal_id
+  on api_change_impacts
+  for each row execute function app_enforce_api_change_impact_product();
+
+`;
+
+const phase3ApiSourceRechecksMigrationSql = `
+create table if not exists api_source_recheck_schedules (
+  id text primary key,
+  source_id text not null unique references api_sources(id) on delete cascade,
+  context_tenant_id text not null references tenants(id) on delete cascade,
+  configured_by text not null references users(id),
+  enabled integer not null default 1 check (enabled in (0, 1)),
+  interval_seconds integer not null
+    check (interval_seconds between 900 and 2592000),
+  next_run_at text not null,
+  processing_started_at text,
+  lease_id text,
+  last_run_at text,
+  last_success_at text,
+  last_status text not null check (
+    last_status in (
+      'scheduled', 'processing', 'succeeded', 'retrying', 'blocked', 'disabled'
+    )
+  ),
+  consecutive_failures integer not null default 0
+    check (consecutive_failures >= 0),
+  last_error_code text check (
+    last_error_code is null or char_length(last_error_code) <= 80
+  ),
+  created_at text not null,
+  updated_at text not null,
+  check (
+    (processing_started_at is null and lease_id is null)
+    or (processing_started_at is not null and lease_id is not null)
+  )
+);
+
+create index if not exists idx_api_source_rechecks_due
+  on api_source_recheck_schedules(enabled, next_run_at);
+
+create index if not exists idx_api_source_rechecks_context
+  on api_source_recheck_schedules(context_tenant_id, updated_at desc);
+`;
+
+const phase3ApiDiscoveryCandidatesMigrationSql = `
+create unique index if not exists uq_software_domains_id_software
+  on software_domains(id, software_id);
+
+create table if not exists api_discovery_candidates (
+  id text primary key,
+  software_id text not null references software_directory_entries(id) on delete cascade,
+  domain_id text not null,
+  canonical_url text not null unique check (char_length(canonical_url) <= 2048),
+  source_type text not null check (char_length(source_type) <= 80),
+  confidence integer not null check (confidence between 0 and 100),
+  discovery_reason text not null check (char_length(discovery_reason) <= 240),
+  sitemap_url text not null check (char_length(sitemap_url) <= 2048),
+  parser_version text not null check (char_length(parser_version) <= 80),
+  status text not null check (status in ('under_review', 'accepted', 'rejected')),
+  api_source_id text references api_sources(id) on delete set null,
+  discovered_at text not null,
+  last_seen_at text not null,
+  decided_by text references users(id),
+  decided_at text,
+  decision_reason text check (
+    decision_reason is null or char_length(decision_reason) <= 500
+  ),
+  created_at text not null,
+  updated_at text not null,
+  foreign key (domain_id, software_id)
+    references software_domains(id, software_id) on delete cascade,
+  check (
+    (status = 'under_review' and decided_by is null and decided_at is null
+      and api_source_id is null)
+    or (status = 'accepted' and decided_by is not null and decided_at is not null
+      and api_source_id is not null)
+    or (status = 'rejected' and decided_by is not null and decided_at is not null
+      and api_source_id is null)
+  )
+);
+
+create index if not exists idx_api_discovery_candidates_review
+  on api_discovery_candidates(status, confidence desc, last_seen_at desc);
+
+create index if not exists idx_api_discovery_candidates_domain
+  on api_discovery_candidates(domain_id, last_seen_at desc);
+`;
+
+const phase3ConnectorRepairsMigrationSql = `
+create table if not exists connector_repair_proposals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  api_change_impact_id text not null unique
+    references api_change_impacts(id) on delete cascade,
+  source_connector_proposal_id text not null
+    references connector_proposals(id) on delete cascade,
+  replacement_connector_proposal_id text not null unique
+    references connector_proposals(id) on delete cascade,
+  source_snapshot_id text not null
+    references api_source_snapshots(id) on delete cascade,
+  generation_summary text not null,
+  created_by text not null references users(id),
+  created_at text not null,
+  check (source_connector_proposal_id <> replacement_connector_proposal_id)
+);
+
+create index if not exists idx_connector_repairs_tenant
+  on connector_repair_proposals(tenant_id, created_at desc);
+`;
+
+const phase3ConnectorRepairsRlsMigrationSql = `
+alter table connector_repair_proposals enable row level security;
+
+drop policy if exists tenant_isolation on connector_repair_proposals;
+create policy tenant_isolation on connector_repair_proposals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop trigger if exists connector_repairs_impact_tenant_integrity
+  on connector_repair_proposals;
+create trigger connector_repairs_impact_tenant_integrity
+  before insert or update of tenant_id, api_change_impact_id
+  on connector_repair_proposals
+  for each row execute function app_enforce_related_tenant(
+    'api_change_impacts', 'api_change_impact_id'
+  );
+
+drop trigger if exists connector_repairs_source_tenant_integrity
+  on connector_repair_proposals;
+create trigger connector_repairs_source_tenant_integrity
+  before insert or update of tenant_id, source_connector_proposal_id
+  on connector_repair_proposals
+  for each row execute function app_enforce_related_tenant(
+    'connector_proposals', 'source_connector_proposal_id'
+  );
+
+drop trigger if exists connector_repairs_replacement_tenant_integrity
+  on connector_repair_proposals;
+create trigger connector_repairs_replacement_tenant_integrity
+  before insert or update of tenant_id, replacement_connector_proposal_id
+  on connector_repair_proposals
+  for each row execute function app_enforce_related_tenant(
+    'connector_proposals', 'replacement_connector_proposal_id'
+  );
+
+create or replace function app_enforce_connector_repair_integrity()
+returns trigger language plpgsql as $$
+declare
+  expected_snapshot_id text;
+  impact_product_id text;
+  source_product_id text;
+  replacement_product_id text;
+begin
+  select api_change_events.current_snapshot_id,
+         api_change_events.api_product_id
+    into expected_snapshot_id, impact_product_id
+    from api_change_impacts
+    join api_change_events
+      on api_change_events.id = api_change_impacts.api_change_event_id
+   where api_change_impacts.id = new.api_change_impact_id;
+  select api_product_id into source_product_id
+    from connector_proposals where id = new.source_connector_proposal_id;
+  select api_product_id into replacement_product_id
+    from connector_proposals where id = new.replacement_connector_proposal_id;
+
+  if expected_snapshot_id is null
+     or expected_snapshot_id <> new.source_snapshot_id
+     or impact_product_id <> source_product_id
+     or impact_product_id <> replacement_product_id then
+    raise exception 'Invalid connector repair relation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists connector_repairs_relation_integrity
+  on connector_repair_proposals;
+create trigger connector_repairs_relation_integrity
+  before insert or update of api_change_impact_id,
+    source_connector_proposal_id, replacement_connector_proposal_id,
+    source_snapshot_id
+  on connector_repair_proposals
+  for each row execute function app_enforce_connector_repair_integrity();
+`;
+
+const phase3VersionedApiImportsMigrationSql = `
+alter table api_operations
+  drop constraint if exists api_operations_api_product_id_operation_key_key;
+
+create unique index if not exists uq_api_operations_product_snapshot_key
+  on api_operations(api_product_id, source_snapshot_id, operation_key);
+`;
+
+const phase3ReusableMappingIntelligenceMigrationSql = `
+alter table api_global_mappings
+  add column if not exists promotion_reason text;
+
+create unique index if not exists uq_api_global_mapping_shape
+  on api_global_mappings(
+    api_product_id,
+    source_entity,
+    canonical_entity,
+    coalesce(source_field, ''),
+    coalesce(canonical_field, '')
+  );
 `;
