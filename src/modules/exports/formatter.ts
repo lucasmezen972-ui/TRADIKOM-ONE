@@ -85,7 +85,7 @@ export function escapeSpreadsheetValue(value: unknown) {
   return /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
 }
 
-function normalizeValue(value: unknown) {
+function normalizeValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "boolean") return value ? "Oui" : "Non";
   if (Array.isArray(value)) return value.map(normalizeValue).join(", ");
