@@ -14,7 +14,7 @@ import {
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type {
   ConnectionMapEdge,
   ConnectionMapNode,
@@ -44,6 +44,8 @@ const directionLabels: Record<ConnectionMapEdge["direction"], string> = {
   internal: "Interne",
 };
 
+const subscribeToHydration = () => () => undefined;
+
 export function ConnectionMap({
   nodes,
   edges,
@@ -54,10 +56,12 @@ export function ConnectionMap({
   valueSummaries: ConnectionValueSummary[];
 }) {
   const [selectedId, setSelectedId] = useState("platform");
-  const [interactive, setInteractive] = useState(false);
+  const interactive = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const selected = nodes.find((node) => node.id === selectedId) ?? nodes[0];
-
-  useEffect(() => setInteractive(true), []);
 
   return (
     <section className="grid gap-5 border-y border-slate-200 py-6">
