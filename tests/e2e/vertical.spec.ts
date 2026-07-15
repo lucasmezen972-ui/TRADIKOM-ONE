@@ -11,8 +11,10 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
     .getByRole("link", { name: "Mon site" })
     .click();
   await expect(page.getByRole("heading", { name: /Site Garage/i })).toBeVisible();
+  await waitForHydration(page);
   await page.getByRole("link", { name: /Voir le site/i }).click();
   await expect(page).toHaveURL(/sites\/garage-caraibes-auto/);
+  await waitForHydration(page);
 
   await page.getByPlaceholder("Votre nom").fill("Lead Playwright");
   await page.getByPlaceholder("Email").fill("lead-playwright@example.com");
@@ -134,6 +136,7 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
 }) => {
   await openDemo(page);
   await page.goto("/connexions/logiciels");
+  await waitForHydration(page);
   await expect(
     page.getByRole("heading", { name: "Connexions logicielles" }),
   ).toBeVisible();
@@ -148,6 +151,7 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
   ).toBeVisible();
   await expect(page.getByText("Lire les contacts", { exact: true })).toBeVisible();
   await expect(page.getByText("Lire le profil du compte", { exact: true })).toBeVisible();
+  await waitForHydration(page);
   await page.getByRole("button", { name: "Autoriser la connexion" }).click();
 
   await expect(page).toHaveURL(/connexions\/logiciels\?oauth=connecte/);
@@ -1028,6 +1032,12 @@ test("operational health distinguishes measured incidents from unknown telemetry
 
 async function openDemo(page: Page) {
   await page.goto("/");
+  await waitForHydration(page);
   await page.getByRole("button", { name: /Ouvrir la d.mo/i }).click();
   await expect(page).toHaveURL(/aujourdhui/);
+  await waitForHydration(page);
+}
+
+async function waitForHydration(page: Page) {
+  await expect(page.locator('[data-app-hydrated="true"]')).toHaveCount(1);
 }
