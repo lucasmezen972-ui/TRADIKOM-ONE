@@ -6,7 +6,10 @@ import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 test("demo user can publish site lead into CRM", async ({ page }) => {
   await openDemo(page);
 
-  await page.getByRole("navigation").getByRole("link", { name: "Mon site" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "Mon site" })
+    .click();
   await expect(page.getByRole("heading", { name: /Site Garage/i })).toBeVisible();
   await page.getByRole("link", { name: /Voir le site/i }).click();
   await expect(page).toHaveURL(/sites\/garage-caraibes-auto/);
@@ -100,8 +103,32 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
   await expect(connection.getByText("Lecture du profil")).toBeVisible();
   await expect(page.getByText(/mock_access_|mock_refresh_/)).toHaveCount(0);
 
-  await connection.getByRole("button", { name: "Déconnecter" }).click();
-  const disconnected = page.locator("article").filter({ hasText: accountLabel });
+  await connection
+    .getByRole("button", { name: "Installer en mode désactivé" })
+    .click();
+  let activeConnection = page.locator("article").filter({ hasText: accountLabel }).first();
+  await expect(activeConnection.getByText("Installé, désactivé")).toBeVisible();
+  await activeConnection
+    .getByRole("button", { name: "Activer la lecture seule" })
+    .click();
+  activeConnection = page.locator("article").filter({ hasText: accountLabel }).first();
+  await expect(activeConnection.getByText("Lecture seule active")).toBeVisible();
+  await activeConnection
+    .getByRole("button", { name: "Synchroniser en lecture seule" })
+    .click();
+  activeConnection = page.locator("article").filter({ hasText: accountLabel }).first();
+  await expect(
+    activeConnection.getByText("3 clients, 2 rendez-vous et 1 devis simulés lus."),
+  ).toBeVisible();
+  const health = page.locator("article").filter({ hasText: accountLabel }).last();
+  await expect(health.getByText("Sain", { exact: true })).toBeVisible();
+  await expect(health.getByText("Aucune action requise")).toBeVisible();
+
+  await activeConnection.getByRole("button", { name: "Déconnecter" }).click();
+  const disconnected = page
+    .locator("article")
+    .filter({ hasText: accountLabel })
+    .first();
   await expect(
     disconnected.getByText("Déconnecté", { exact: true }),
   ).toBeVisible();

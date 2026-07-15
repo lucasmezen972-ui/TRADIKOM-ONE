@@ -1,5 +1,5 @@
 import type { DbClient } from "@/lib/db";
-import { syncMockConnectorJob } from "@/modules/connectors";
+import { executeMockConnectorOperation } from "@/modules/connector-execution";
 import {
   dispatchQueuedNotification,
   notificationDispatchRequestedEventType,
@@ -135,11 +135,28 @@ export async function processPendingDomainEvents(
       if (stringPayload(event.payload.connectorKey) !== "mock_business") {
         throw new Error("Unsupported connector sync request.");
       }
-
-      await syncMockConnectorJob(handlerDb, {
-        tenantId: event.tenantId,
-        actorId: event.actorId,
-      });
+      const installationId = stringPayload(event.payload.installationId);
+      if (!installationId) {
+        throw new Error("Connector installation is required.");
+      }
+      const execution = await executeMockConnectorOperation(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        {
+          installationId,
+          operation: "contacts.list",
+          capability: "read",
+          environment: "mock",
+          idempotencyKey: event.idempotencyKey,
+          correlationId: event.correlationId,
+        },
+      );
+      if (execution.status !== "succeeded") {
+        throw new Error(
+          `Connector execution ${execution.safeErrorClassification ?? "failed"}.`,
+        );
+      }
     },
     [leadCreatedEventType]: async ({ db: handlerDb, event }) => {
       await processLeadFollowUpWorkflowEvent(handlerDb, {

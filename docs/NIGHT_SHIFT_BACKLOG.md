@@ -5,10 +5,10 @@ Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green mai
 1. Domain connection foundation validated in complete run `29374174913`.
 2. French domain workspace and PostgreSQL restricted-role coverage validated in complete run `29375436090`.
 3. Mock OAuth core validated in complete run `29376521177` with encrypted credentials, refresh locking and replay-safe state.
-4. Validate the French consent/software UI, hashed authorization code, server callback, OAuth RLS and Playwright flow through CI.
-5. Install one controlled mock software connection and enforce read-only execution policy.
-6. Add connection health, universal import/export and website domain binding.
-7. Complete the tenant-isolation vertical slice before any real provider adapter.
+4. Validate scoped E2E fix `6a5b589`; `a3ae131` repaired the OAuth origin and run `29377818420` passed the OAuth flow before finding an unrelated ambiguous legacy selector.
+5. Validate controlled installed-disabled/read-only connector execution, policy, quota, idempotence, health, worker, RLS and expanded E2E through CI.
+6. Implement universal import/export and website domain binding.
+7. Complete the first vertical slice before any real provider adapter.
 
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 

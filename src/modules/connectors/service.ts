@@ -185,15 +185,6 @@ export async function importCsvContacts(
   });
 }
 
-export async function syncMockConnector(
-  db: DbClient,
-  userId: string,
-  tenantId: string,
-) {
-  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator", "manager"]);
-  await syncMockConnectorJob(db, { tenantId, actorId: userId });
-}
-
 export async function syncMockConnectorJob(
   db: DbClient,
   input: {

@@ -8,6 +8,7 @@ import {
   decryptOAuthSecret,
   encryptOAuthSecret,
   getOAuthKeyVersion,
+  verifyOAuthSecretHash,
 } from "@/modules/oauth/crypto";
 import { OAuthError } from "@/modules/oauth/errors";
 import {
@@ -246,7 +247,7 @@ export async function completeMockOAuthConnection(
     }
     if (
       !state.authorization_code_hash ||
-      hashToken(parsed.code) !== state.authorization_code_hash
+      !verifyOAuthSecretHash(parsed.code, state.authorization_code_hash)
     ) {
       throw new OAuthError(
         "oauth_code_invalid",

@@ -20,7 +20,10 @@ Current Phase 5 checkpoint:
 - The Software Connection read model currently exposes one truthful local mock provider with read-only scopes and explicit limitations; no network, production data or write capability is enabled.
 - OAuth core head `ae35688` passed complete GitHub Actions run `29376521177`, including clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
 - The next checkpoint adds explicit French consent, a random one-time authorization code stored only as a hash, a no-store/correlated server callback, `/connexions/logiciels`, safe rejection/disconnect, restricted-role OAuth RLS coverage and a complete browser flow.
-- Next unfinished task: validate the OAuth UI/callback checkpoint through CI, then implement controlled read-only connector execution and health.
+- OAuth UI run `29377188333` passed every gate except Playwright because CI used `APP_URL=127.0.0.1` while Playwright still used `localhost`, dropping the host-only session cookie during the OAuth redirect. Head `a3ae131` aligned Playwright with the configured application origin; run `29377818420` then passed the OAuth flow and exposed only an unrelated ambiguous legacy `Mon site` selector. Scoped test fix `6a5b589` is under CI validation.
+- Controlled connector execution now creates an installed-disabled mock connector, requires explicit read-only activation, enforces the common policy engine in UI and worker paths, reserves idempotency before quota/effect, records safe execution metadata and exposes tenant-scoped health.
+- Runtime migrations `059`/`060` and SQL mirrors `0053`/`0054` add installations, executions, health, composite tenant relations, tenant-leading indexes and RLS. Focused policy/idempotency/quota/isolation, restricted-role PostgreSQL and expanded Playwright coverage are included.
+- Next unfinished task: validate `6a5b589` and the connector execution checkpoint through CI, then implement safe import/export.
 
 Current Phase 4 checkpoint:
 

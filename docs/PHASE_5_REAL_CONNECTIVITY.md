@@ -28,7 +28,17 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - espace `/connexions/logiciels` avec scopes, expiration, statut et déconnexion;
 - stockage tenant-scoped, clés composées, RLS, audit et tests de sécurité ciblés.
 
-L'exécution de lecture seule, la santé, l'import/export et la liaison de domaine doivent être terminés avant toute intégration réelle.
+## Troisième checkpoint en cours
+
+- installation mock créée désactivée puis activée explicitement en lecture seule;
+- policy engine obligatoire pour l'interface et le worker;
+- contrôle tenant, environnement, opération, capacité, scopes, credential, versions, suspension, rupture API et quota;
+- exécutions réservées par clé d'idempotence avant le quota et l'effet;
+- résultats et erreurs bornés sans payload ni secret;
+- centre de santé français avec état, authentification, synchronisations, latence, quota, versions, dérive, rupture et action recommandée;
+- déconnexion qui révoque OAuth, invalide les demandes en attente et arrête l'installation.
+
+L'import/export et la liaison de domaine doivent être terminés avant toute intégration réelle.
 
 ## Frontière de sécurité
 

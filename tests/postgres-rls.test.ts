@@ -2293,6 +2293,175 @@ describeIfPostgres("PostgreSQL RLS", () => {
       deletedCredential: 0,
     });
   });
+
+  it("isolates Phase 5 connector installations, executions and health for a restricted role", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb, {
+      appUrl: "https://connector-rls.example.test",
+    });
+    const ownerA = await services.registerUser({
+      name: "Connector RLS A",
+      email: uniqueEmail("connector-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Connector RLS B",
+      email: uniqueEmail("connector-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Connector RLS A ${randomUUID()}`,
+      category: "Commerce",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Connector RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const connectionA = await connectMockOAuth(services, ownerA.id, tenantA.id);
+    const connectionB = await connectMockOAuth(services, ownerB.id, tenantB.id);
+    const installationA = await services.prepareMockConnectorInstallation(
+      ownerA.id,
+      tenantA.id,
+      connectionA,
+    );
+    const installationB = await services.prepareMockConnectorInstallation(
+      ownerB.id,
+      tenantB.id,
+      connectionB,
+    );
+    await services.enableMockConnectorReadOnly(
+      ownerA.id,
+      tenantA.id,
+      installationA.id,
+    );
+    await services.enableMockConnectorReadOnly(
+      ownerB.id,
+      tenantB.id,
+      installationB.id,
+    );
+    await services.executeMockConnectorOperation(ownerA.id, tenantA.id, {
+      installationId: installationA.id,
+      operation: "contacts.list",
+      capability: "read",
+      environment: "mock",
+      idempotencyKey: `rls-${randomUUID()}`,
+      correlationId: randomUUID(),
+    });
+    await services.executeMockConnectorOperation(ownerB.id, tenantB.id, {
+      installationId: installationB.id,
+      operation: "contacts.list",
+      capability: "read",
+      environment: "mock",
+      idempotencyKey: `rls-${randomUUID()}`,
+      correlationId: randomUUID(),
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect((await restrictedPool.query("select id from connector_installations")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from connector_executions")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from connector_health_records")).rows).toEqual([]);
+
+    const visible = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        installations: (
+          await client.query("select id from connector_installations order by id")
+        ).rows,
+        executions: (
+          await client.query("select connector_installation_id from connector_executions order by id")
+        ).rows,
+        health: (
+          await client.query("select connector_installation_id from connector_health_records order by id")
+        ).rows,
+      }),
+    );
+    expect(visible.installations).toEqual([{ id: installationA.id }]);
+    expect(visible.executions).toEqual([
+      { connector_installation_id: installationA.id },
+    ]);
+    expect(visible.health).toEqual([
+      { connector_installation_id: installationA.id },
+    ]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into connector_executions (
+             id, tenant_id, connector_installation_id, connector_version,
+             environment, operation, capability, idempotency_key,
+             correlation_id, started_at, status, retry_count, created_at
+           ) values ($1, $2, $3, '1.0.0', 'mock', 'contacts.list', 'read',
+             $4, $5, $6, 'running', 0, $6)`,
+          [
+            id("connector_execution"),
+            tenantA.id,
+            installationB.id,
+            `cross-${randomUUID()}`,
+            randomUUID(),
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into connector_installations (
+             id, tenant_id, software_connection_id, connector_key,
+             connector_version, api_version, environment, status,
+             approved_operations, required_scopes, rate_limit_limit,
+             rate_limit_remaining, rate_limit_reset_at, security_suspended,
+             breaking_change_blocked, created_by, created_at, updated_at
+           ) values ($1, $2, $3, 'mock_business', '1.0.0', 'mock-v1',
+             'mock', 'installed_disabled', '[]', '[]', 20, 20, $4, 0, 0,
+             $5, $4, $4)`,
+          [id("connector_installation"), tenantB.id, connectionB, nowIso(), ownerB.id],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update connector_installations set status = 'suspended' where id = $1",
+            [installationB.id],
+          )
+        ).rowCount,
+        deletedExecution: (
+          await client.query(
+            "delete from connector_executions where connector_installation_id = $1",
+            [installationB.id],
+          )
+        ).rowCount,
+        deletedHealth: (
+          await client.query(
+            "delete from connector_health_records where connector_installation_id = $1",
+            [installationB.id],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deletedExecution: 0,
+      deletedHealth: 0,
+    });
+  });
 });
 
 async function connectMockOAuth(

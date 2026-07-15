@@ -255,12 +255,20 @@ describe("workflow worker", () => {
   it("dispatches connector sync requests through a domain-specific handler", async () => {
     const { db } = await setup();
     await seedTenant(db, "tenant_connector_worker", "user_connector_worker");
-    await seedMockConnector(db, "tenant_connector_worker");
+    await seedMockConnector(
+      db,
+      "tenant_connector_worker",
+      "user_connector_worker",
+    );
     await insertDomainEvent(db, {
       id: "event_connector_sync",
       tenantId: "tenant_connector_worker",
+      actorId: "user_connector_worker",
       eventType: "connector.sync_requested",
-      payload: { connectorKey: "mock_business" },
+      payload: {
+        connectorKey: "mock_business",
+        installationId: "connector_installation_worker_mock",
+      },
       nextRunAt: "2026-07-11T10:00:00.000Z",
     });
 
@@ -707,7 +715,11 @@ async function seedTenant(db: DbClient, tenantId: string, userId: string) {
   );
 }
 
-async function seedMockConnector(db: DbClient, tenantId: string) {
+async function seedMockConnector(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+) {
   const now = "2026-07-11T09:00:00.000Z";
   await db.query(
     `insert into connectors (
@@ -730,6 +742,58 @@ async function seedMockConnector(db: DbClient, tenantId: string) {
       "{}",
       null,
       now,
+      now,
+    ],
+  );
+  await db.query(
+    `insert into software_connections (
+       id, tenant_id, software_key, software_name, provider_key, environment,
+       status, account_label, scopes, created_by, connected_at, created_at,
+       updated_at
+     ) values ($1, $2, 'mock_business', 'Mock Business', 'mock_oauth', 'mock',
+       'connected', 'Compte worker', $3, $4, $5, $5, $5)`,
+    [
+      "software_connection_worker_mock",
+      tenantId,
+      JSON.stringify(["contacts.read", "profile.read"]),
+      userId,
+      now,
+    ],
+  );
+  await db.query(
+    `insert into oauth_credentials (
+       id, tenant_id, software_connection_id, provider_key,
+       access_token_encrypted, refresh_token_encrypted, scopes, expires_at,
+       key_version, token_version, failed_authentication_count, created_at,
+       updated_at
+     ) values ($1, $2, $3, 'mock_oauth', 'encrypted-access',
+       'encrypted-refresh', $4, '2099-01-01T00:00:00.000Z', 'test-v1', 1, 0,
+       $5, $5)`,
+    [
+      "oauth_credential_worker_mock",
+      tenantId,
+      "software_connection_worker_mock",
+      JSON.stringify(["contacts.read", "profile.read"]),
+      now,
+    ],
+  );
+  await db.query(
+    `insert into connector_installations (
+       id, tenant_id, software_connection_id, connector_key,
+       connector_version, api_version, environment, status,
+       approved_operations, required_scopes, rate_limit_limit,
+       rate_limit_remaining, rate_limit_reset_at, security_suspended,
+       breaking_change_blocked, created_by, created_at, updated_at
+     ) values ($1, $2, $3, 'mock_business', '1.0.0', 'mock-v1', 'mock',
+       'read_only_enabled', $4, $5, 20, 20, '2099-01-01T00:00:00.000Z', 0,
+       0, $6, $7, $7)`,
+    [
+      "connector_installation_worker_mock",
+      tenantId,
+      "software_connection_worker_mock",
+      JSON.stringify(["contacts.list", "profile.read"]),
+      JSON.stringify(["contacts.read", "profile.read"]),
+      userId,
       now,
     ],
   );

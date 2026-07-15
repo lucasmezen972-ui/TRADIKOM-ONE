@@ -8,7 +8,6 @@ import {
   receiveWebhook,
   rotateWebhookEndpointSecret,
   setWebhookEndpointStatus,
-  syncMockConnector,
   type WebhookSignatureInput,
 } from "@/modules/connectors";
 import {
@@ -257,6 +256,13 @@ import {
   selfImprovementDecisionSchema,
 } from "@/modules/self-improvement";
 import { getEnterpriseObservability } from "@/modules/enterprise-observability";
+import {
+  enableMockConnectorReadOnly,
+  executeMockConnectorOperation,
+  getConnectorExecutionWorkspace,
+  prepareMockConnectorInstallation,
+  type ExecuteConnectorOperationInput,
+} from "@/modules/connector-execution";
 import {
   authorizeMockOAuthRequest,
   completeMockOAuthConnection,
@@ -676,10 +682,27 @@ export function createServices(
       tenantId: string,
       connectionId: string,
     ) => disconnectSoftwareConnection(db, userId, tenantId, { connectionId }),
+    getConnectorExecutionWorkspace: (userId: string, tenantId: string) =>
+      getConnectorExecutionWorkspace(db, userId, tenantId),
+    prepareMockConnectorInstallation: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) =>
+      prepareMockConnectorInstallation(db, userId, tenantId, { connectionId }),
+    enableMockConnectorReadOnly: (
+      userId: string,
+      tenantId: string,
+      installationId: string,
+    ) =>
+      enableMockConnectorReadOnly(db, userId, tenantId, { installationId }),
+    executeMockConnectorOperation: (
+      userId: string,
+      tenantId: string,
+      input: ExecuteConnectorOperationInput,
+    ) => executeMockConnectorOperation(db, userId, tenantId, input),
     importCsvContacts: (userId: string, tenantId: string, csvText: string) =>
       importCsvContacts(db, userId, tenantId, csvText),
-    syncMockConnector: (userId: string, tenantId: string) =>
-      syncMockConnector(db, userId, tenantId),
     getWebhookEndpointConfig: (userId: string, tenantId: string) =>
       getWebhookEndpointConfig(db, userId, tenantId),
     rotateWebhookEndpointSecret: (

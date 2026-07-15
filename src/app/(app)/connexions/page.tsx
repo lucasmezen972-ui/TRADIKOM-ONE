@@ -12,7 +12,6 @@ import {
   importCsvAction,
   prepareConnectorInstallationPlanAction,
   setWebhookEndpointStatusAction,
-  syncMockConnectorAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
@@ -78,13 +77,6 @@ export default async function ConnectionsPage() {
                 </span>
               ))}
             </div>
-            {connector.key === "mock_business" ? (
-              <form action={syncMockConnectorAction} className="mt-4">
-                <button className="rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white">
-                  Synchroniser
-                </button>
-              </form>
-            ) : null}
           </div>
         ))}
       </section>

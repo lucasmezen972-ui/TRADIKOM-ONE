@@ -1,10 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   clearSessionCookie,
   getSessionIdFromCookie,
+  id,
   setTenantCookie,
 } from "@/lib/security";
 import { getServices } from "@/lib/services";
@@ -960,16 +962,6 @@ export async function importCsvAction(formData: FormData) {
   revalidatePath("/contacts");
 }
 
-export async function syncMockConnectorAction() {
-  const { user, tenant } = await requireTenantContext();
-  const services = await getServices();
-  await safeServerAction("connector.mock_sync", () =>
-    services.syncMockConnector(user.id, tenant.id),
-  );
-  revalidatePath("/connexions");
-  revalidatePath("/aujourdhui");
-}
-
 export async function analyzeDomainConnectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
@@ -1085,6 +1077,52 @@ export async function disconnectSoftwareConnectionAction(formData: FormData) {
   );
   revalidatePath("/connexions/logiciels");
   revalidatePath("/connexions");
+}
+
+export async function prepareMockConnectorInstallationAction(
+  formData: FormData,
+) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector.installation_prepare", () =>
+    services.prepareMockConnectorInstallation(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+}
+
+export async function enableMockConnectorReadOnlyAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector.read_only_enable", () =>
+    services.enableMockConnectorReadOnly(
+      user.id,
+      tenant.id,
+      text(formData, "installationId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+}
+
+export async function executeMockConnectorReadOnlyAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector.read_only_execute", () =>
+    services.executeMockConnectorOperation(user.id, tenant.id, {
+      installationId: text(formData, "installationId"),
+      operation: "contacts.list",
+      capability: "read",
+      environment: "mock",
+      idempotencyKey: id("connector_sync"),
+      correlationId: randomUUID(),
+    }),
+  );
+  revalidatePath("/connexions/logiciels");
+  revalidatePath("/connexions");
+  revalidatePath("/aujourdhui");
 }
 
 export async function rotateWebhookSecretAction(formData: FormData) {

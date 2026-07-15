@@ -2,6 +2,7 @@ import { withTenantDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { nowIso, safeJson } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
+import { disconnectInstallationsForSoftwareConnection } from "@/modules/connector-execution/repository";
 import { OAuthError } from "@/modules/oauth/errors";
 import {
   consumePendingOAuthStates,
@@ -100,6 +101,11 @@ export async function disconnectSoftwareConnection(
       consumedAt: now,
     });
     await markSoftwareConnectionDisconnected(transaction, {
+      tenantId,
+      connectionId: connection.id,
+      now,
+    });
+    await disconnectInstallationsForSoftwareConnection(transaction, {
       tenantId,
       connectionId: connection.id,
       now,
