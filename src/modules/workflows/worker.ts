@@ -1,6 +1,10 @@
 import type { DbClient } from "@/lib/db";
 import { executeMockConnectorOperation } from "@/modules/connector-execution";
 import {
+  domainVerificationRequestedEventType,
+  processDomainVerificationJob,
+} from "@/modules/domain-connections";
+import {
   exportGenerationRequestedEventType,
   processUniversalExportJob,
 } from "@/modules/exports";
@@ -170,6 +174,16 @@ export async function processPendingDomainEvents(
         event.actorId,
         event.tenantId,
         exportId,
+      );
+    },
+    [domainVerificationRequestedEventType]: async ({ db: handlerDb, event }) => {
+      const jobId = stringPayload(event.payload.jobId);
+      if (!jobId) throw new Error("Domain verification job identifier is required.");
+      await processDomainVerificationJob(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        jobId,
       );
     },
     [leadCreatedEventType]: async ({ db: handlerDb, event }) => {

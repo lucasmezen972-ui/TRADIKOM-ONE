@@ -1123,6 +1123,34 @@ export async function simulateDnsChangePlanAction(formData: FormData) {
   revalidatePath("/connexions/domaines");
 }
 
+export async function requestWebsiteDomainBindingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.website_binding_request", () =>
+    services.requestWebsiteDomainBinding(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/domaines");
+  revalidatePath("/mon-site");
+}
+
+export async function disconnectWebsiteDomainBindingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.website_binding_disconnect", () =>
+    services.disconnectWebsiteDomainBinding(
+      user.id,
+      tenant.id,
+      text(formData, "bindingId"),
+    ),
+  );
+  revalidatePath("/connexions/domaines");
+  revalidatePath("/mon-site");
+}
+
 export async function startMockOAuthConnectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

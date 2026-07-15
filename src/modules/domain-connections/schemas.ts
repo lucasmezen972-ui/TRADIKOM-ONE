@@ -65,6 +65,14 @@ export const dnsPlanReferenceSchema = z.object({
   planId: z.string().trim().min(1).max(160),
 });
 
+export const websiteDomainBindingRequestSchema = z.object({
+  connectionId: z.string().trim().min(1).max(160),
+});
+
+export const websiteDomainBindingReferenceSchema = z.object({
+  bindingId: z.string().trim().min(1).max(160),
+});
+
 export type DomainProviderKey = z.infer<typeof domainProviderKeySchema>;
 export type DomainConnectionState = z.infer<
   typeof domainConnectionStateSchema

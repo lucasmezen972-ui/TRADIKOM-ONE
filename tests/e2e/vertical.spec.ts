@@ -26,10 +26,42 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
   await expect(page.getByText("lead-playwright@example.com")).toBeVisible();
 });
 
-test("a tenant administrator approves and simulates a DNS plan without applying it", async ({
+test("a tenant administrator binds a verified domain without publishing the draft", async ({
+  context,
   page,
 }) => {
   await openDemo(page);
+  const db = await getDb();
+  const services = createServices(db);
+  const demo = await db.query<{ tenant_id: string; user_id: string; slug: string }>(
+    `select tenants.id as tenant_id, memberships.user_id, tenants.slug
+       from tenants
+       join memberships on memberships.tenant_id = tenants.id
+      where tenants.slug = 'garage-caraibes-auto' and memberships.role = 'owner'
+      limit 1`,
+  );
+  const tenantId = demo.rows[0]?.tenant_id;
+  const userId = demo.rows[0]?.user_id;
+  const slug = demo.rows[0]?.slug;
+  if (!tenantId || !userId || !slug) {
+    throw new Error("Le site de démonstration est introuvable.");
+  }
+  const publicPage = await context.newPage();
+  await publicPage.goto(`/sites/${slug}`);
+  const liveTitle = await publicPage.getByRole("heading", { level: 1 }).innerText();
+  const website = await services.getWebsiteWorkspace(userId, tenantId);
+  const hero = website.sections.find((section) => section.type === "hero");
+  if (!hero) throw new Error("La section principale est introuvable.");
+  const draftTitle = `Brouillon domaine ${Date.now()}`;
+  await services.updateWebsiteSection(userId, tenantId, hero.id, {
+    title: draftTitle,
+    body: hero.body,
+    imageUrl: hero.imageUrl,
+    buttonLabel: hero.buttonLabel,
+    buttonHref: hero.buttonHref,
+    enabled: true,
+  });
+
   await page.goto("/connexions/domaines");
   await expect(
     page.getByRole("heading", { name: "Domaines", exact: true }),
@@ -69,8 +101,30 @@ test("a tenant administrator approves and simulates a DNS plan without applying 
   await expect(
     plan.getByText("Simulation terminée, aucune modification appliquée"),
   ).toBeVisible();
+  await plan
+    .getByRole("button", { name: "Vérifier et lier au site publié" })
+    .click();
   await expect(
-    page.getByRole("button", { name: /Appliquer|Modifier les DNS|Publier/i }),
+    page.getByText("Vérification de propagation en attente"),
+  ).toBeVisible();
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const summary = await processPendingDomainEvents(db, { limit: 100 });
+    if (summary.selected === 0) break;
+  }
+  await page.reload();
+  await expect(page.getByText("Domaine lié au site publié")).toBeVisible();
+  await expect(page.getByText("Certificat de test vérifié")).toBeVisible();
+  await publicPage.reload();
+  await expect(publicPage.getByRole("heading", { level: 1 })).toHaveText(liveTitle);
+  await expect(publicPage.getByText(draftTitle)).toHaveCount(0);
+  await page.getByRole("button", { name: "Déconnecter le domaine" }).click();
+  await expect(page.getByText("Liaison déconnectée")).toBeVisible();
+  await publicPage.reload();
+  await expect(publicPage.getByRole("heading", { level: 1 })).toHaveText(liveTitle);
+  await expect(
+    page.getByRole("button", {
+      name: /Appliquer|Modifier les DNS|Publier le brouillon/i,
+    }),
   ).toHaveCount(0);
 });
 

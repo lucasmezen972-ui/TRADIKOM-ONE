@@ -52,7 +52,15 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - neutralisation des formules, téléchargement authentifié sans cache et expiration après 24 heures;
 - annulation, maintenance de rétention, audit et isolation tenant.
 
-La liaison de domaine à un snapshot de site publié doit être terminée avant toute intégration réelle.
+## Cinquième checkpoint en cours
+
+- liaison tenant-scoped entre un domaine, un plan simulé et le site existant;
+- preuve explicite de la version publiée présente à la demande, sans publication du brouillon;
+- vérification de propagation mock par événement durable, idempotence et état de certificat;
+- déconnexion auditée sans suppression DNS ni modification du snapshot public;
+- relations tenant-composées, RLS, tests de prise de contrôle, isolation PostgreSQL et scénario navigateur draft/publication.
+
+La validation complète de ce checkpoint reste requise avant toute intégration réelle.
 
 ## Frontière de sécurité
 

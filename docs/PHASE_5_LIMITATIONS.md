@@ -11,9 +11,11 @@
 - imports limités à 5 Mo et 10 000 lignes;
 - exports limités à 10 Mo, 5 000 lignes et 366 jours;
 - fichiers d'export conservés dans un stockage borné tenant-owned et supprimés après 24 heures; aucun stockage objet externe;
-- aucune liaison domaine-site active;
+- liaison domaine-site limitée au fournisseur mock local et à une version déjà publiée;
 - aucune dépendance Internet dans les tests.
 
 Les résultats du fournisseur DNS mock prouvent le flux de contrôle, pas la disponibilité d'un fournisseur externe. Les instructions manuelles sont génériques tant que l'interface officielle du fournisseur n'est pas vérifiée.
+
+La liaison mock est limitée aux domaines réservés en `.test` et ne configure ni routage public, ni certificat externe, ni fournisseur DNS. Son état `available` signifie seulement que la fixture locale a vérifié la cible approuvée. Le brouillon du site reste séparé du snapshot public et une déconnexion ne retire aucun enregistrement réel.
 
 Le résultat d'exécution du connecteur mock prouve le policy engine, l'idempotence, le quota, la santé et la révocation. Il ne constitue ni un test sandbox officiel ni une preuve de compatibilité avec un fournisseur réel.

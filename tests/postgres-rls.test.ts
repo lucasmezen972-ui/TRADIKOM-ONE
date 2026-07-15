@@ -2158,6 +2158,42 @@ describeIfPostgres("PostgreSQL RLS", () => {
       domain: `b-${randomUUID()}.example.test`,
       providerKey: "mock_dns",
     });
+    await services.saveOnboarding(
+      ownerA.id,
+      tenantA.id,
+      defaultGarageOnboarding(),
+    );
+    await services.saveOnboarding(
+      ownerB.id,
+      tenantB.id,
+      defaultGarageOnboarding(),
+    );
+    await services.publishWebsite(ownerA.id, tenantA.id);
+    await services.publishWebsite(ownerB.id, tenantB.id);
+    const planA = await prepareSimulatedDomainPlan(
+      services,
+      ownerA.id,
+      tenantA.id,
+      domainA.connectionId,
+    );
+    const planB = await prepareSimulatedDomainPlan(
+      services,
+      ownerB.id,
+      tenantB.id,
+      domainB.connectionId,
+    );
+    const bindingA = await services.requestWebsiteDomainBinding(
+      ownerA.id,
+      tenantA.id,
+      domainA.connectionId,
+    );
+    const bindingB = await services.requestWebsiteDomainBinding(
+      ownerB.id,
+      tenantB.id,
+      domainB.connectionId,
+    );
+    expect(planA).toBeTruthy();
+    expect(planB).toBeTruthy();
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
@@ -2168,6 +2204,8 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect((await restrictedPool.query("select id from dns_snapshots")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from dns_change_plans")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from dns_change_approvals")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from website_domain_bindings")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from domain_verification_jobs")).rows).toEqual([]);
 
     const visible = await withTenantContext(
       restrictedPool,
@@ -2179,10 +2217,18 @@ describeIfPostgres("PostgreSQL RLS", () => {
         snapshots: (
           await client.query("select id from dns_snapshots order by id")
         ).rows,
+        bindings: (
+          await client.query("select id from website_domain_bindings order by id")
+        ).rows,
+        verificationJobs: (
+          await client.query("select id from domain_verification_jobs order by id")
+        ).rows,
       }),
     );
     expect(visible.connections).toEqual([{ id: domainA.connectionId }]);
     expect(visible.snapshots).toEqual([{ id: domainA.snapshotId }]);
+    expect(visible.bindings).toEqual([{ id: bindingA.bindingId }]);
+    expect(visible.verificationJobs).toEqual([{ id: bindingA.jobId! }]);
 
     await expect(
       withTenantContext(restrictedPool, tenantA.id, (client) =>
@@ -2229,9 +2275,25 @@ describeIfPostgres("PostgreSQL RLS", () => {
             domainB.snapshotId,
           ])
         ).rowCount,
+        updatedBinding: (
+          await client.query(
+            "update website_domain_bindings set status = 'failed' where id = $1",
+            [bindingB.bindingId],
+          )
+        ).rowCount,
+        deletedJob: (
+          await client.query("delete from domain_verification_jobs where id = $1", [
+            bindingB.jobId!,
+          ])
+        ).rowCount,
       }),
     );
-    expect(hiddenWrites).toEqual({ updated: 0, deleted: 0 });
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deleted: 0,
+      updatedBinding: 0,
+      deletedJob: 0,
+    });
   });
 
   it("isolates Phase 5 OAuth states, credentials and connections for a restricted role", async () => {
@@ -2568,6 +2630,21 @@ async function connectMockOAuth(
     redirectUri,
   });
   return started.connectionId;
+}
+
+async function prepareSimulatedDomainPlan(
+  services: ReturnType<typeof createServices>,
+  userId: string,
+  tenantId: string,
+  connectionId: string,
+) {
+  const plan = await services.prepareDnsChangePlan(userId, tenantId, {
+    connectionId,
+  });
+  await services.approveDnsChangePlan(userId, tenantId, plan.planId);
+  await services.confirmDnsChangePlan(userId, tenantId, plan.planId);
+  await services.simulateDnsChangePlan(userId, tenantId, plan.planId);
+  return plan.planId;
 }
 
 function businessBrainFixture(label: string) {

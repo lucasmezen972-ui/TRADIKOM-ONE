@@ -29,9 +29,13 @@ Current Phase 5 checkpoint:
 - Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
 - Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer` and is pending CI revalidation.
 - Run `29380218779` then passed every gate through production build and 18/19 Playwright scenarios. The sole browser failure identified optional contact mappings prefilled for absent CSV columns; those optional defaults are now empty without weakening server validation.
+- Import correction `c49c2e8` passed complete GitHub Actions run `29380786047`, including migrations, dependency audit, PostgreSQL/RLS tests, production build and the mapped CSV Playwright flow.
 - Universal export now queues a durable generation event for allowlisted fields across eight tenant entities, enforces a 366-day/5 000-row/10-Mo bound, writes CSV/JSON/XLSX with spreadsheet-formula neutralization and exposes only authenticated, no-store, 24-hour downloads.
 - Runtime migrations `063`/`064` and SQL mirrors `0057`/`0058` add tenant-owned export jobs, RLS and tenant-leading indexes. Cancellation and scheduled maintenance delete file content; tests cover idempotent worker generation, expiry, cancellation, field rejection, tenant isolation and the browser download flow.
-- Next unfinished task: validate import/export together through CI, then implement website domain binding without draft auto-publication.
+- Export run `29381236378` found one missing explicit return type in the recursive value normalizer. Fix `8c424f9` passed complete GitHub Actions run `29381701151` with no runtime-policy change.
+- Website-domain binding now persists the domain, simulated plan and published version present at request time, then queues an idempotent mock propagation verification. Verification updates certificate/binding state without publishing the draft or changing external DNS; disconnect preserves both the public snapshot and DNS state.
+- Runtime migrations `065`/`066` and SQL mirrors `0059`/`0060` add tenant-owned bindings and verification jobs with composite relations, tenant-leading indexes and RLS. Unit, restricted-role PostgreSQL and Playwright coverage include target-takeover rejection, cross-tenant denial and draft/public immutability.
+- Next unfinished task: validate export and website-domain binding through CI, then add propagation/token-refresh worker scheduling and the bounded connection map.
 
 Current Phase 4 checkpoint:
 

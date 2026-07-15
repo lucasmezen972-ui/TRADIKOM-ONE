@@ -33,6 +33,16 @@ export type DomainProviderAdapter = {
   label: string;
   capabilities: DomainProviderCapabilities;
   analyze: (domain: string, observedAt: string) => Promise<DomainAnalysis>;
+  validatePropagation: (input: {
+    domain: string;
+    changes: DnsChange[];
+    observedAt: string;
+  }) => Promise<{
+    verified: boolean;
+    certificateStatus: "available" | "unavailable" | "unknown";
+    evidence: DomainEvidence[];
+    safeErrorCode: string | null;
+  }>;
 };
 
 const mockCapabilities: DomainProviderCapabilities = {
@@ -64,6 +74,12 @@ export const mockDnsProvider: DomainProviderAdapter = {
   label: "Fournisseur DNS de test",
   capabilities: mockCapabilities,
   async analyze(domain, observedAt) {
+    if (!domain.endsWith(".test")) {
+      throw new DomainConnectionError(
+        "mock_domain_required",
+        "Le fournisseur DNS de test accepte uniquement les domaines réservés en .test.",
+      );
+    }
     const records: DnsRecord[] = [
       record("NS", "@", "ns1.mock-dns.invalid", 3600),
       record("NS", "@", "ns2.mock-dns.invalid", 3600),
@@ -100,6 +116,32 @@ export const mockDnsProvider: DomainProviderAdapter = {
       evidence: analysisEvidence,
     };
   },
+  async validatePropagation({ domain, changes, observedAt }) {
+    const expectedTarget = "sites.mock.tradikom.invalid";
+    const verified = changes.some(
+      (change) =>
+        change.action === "create" &&
+        change.record.type === "CNAME" &&
+        change.record.name === "www" &&
+        change.record.value === expectedTarget,
+    );
+    return {
+      verified,
+      certificateStatus: verified ? "available" : "unavailable",
+      evidence: [
+        createEvidence(
+          "propagation",
+          verified
+            ? `www.${domain}=${expectedTarget}`
+            : `www.${domain}=valeur_non_conforme`,
+          verified ? 100 : 0,
+          observedAt,
+          verified ? "verified" : "inferred",
+        ),
+      ],
+      safeErrorCode: verified ? null : "mock_dns_target_mismatch",
+    };
+  },
 };
 
 export const manualSetupProvider: DomainProviderAdapter = {
@@ -124,6 +166,23 @@ export const manualSetupProvider: DomainProviderAdapter = {
           status: "inferred",
         },
       ],
+    };
+  },
+  async validatePropagation({ domain, observedAt }) {
+    return {
+      verified: false,
+      certificateStatus: "unknown",
+      evidence: [
+        {
+          field: "propagation",
+          value: `Validation manuelle requise pour ${domain}`,
+          confidence: 0,
+          source: "verification_manuelle",
+          observedAt,
+          status: "inferred",
+        },
+      ],
+      safeErrorCode: "manual_verification_required",
     };
   },
 };

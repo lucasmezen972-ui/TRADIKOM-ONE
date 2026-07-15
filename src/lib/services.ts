@@ -14,8 +14,11 @@ import {
   analyzeDomainConnection,
   approveDnsChangePlan,
   confirmDnsChangePlan,
+  disconnectWebsiteDomainBinding,
   getDomainConnectionWorkspace,
   prepareDnsChangePlan,
+  processDomainVerificationJob,
+  requestWebsiteDomainBinding,
   simulateDnsChangePlan,
   type AnalyzeDomainConnectionInput,
   type PrepareDnsChangePlanInput,
@@ -653,6 +656,21 @@ export function createServices(
       tenantId: string,
       planId: string,
     ) => simulateDnsChangePlan(db, userId, tenantId, { planId }),
+    requestWebsiteDomainBinding: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) => requestWebsiteDomainBinding(db, userId, tenantId, { connectionId }),
+    processDomainVerificationJob: (
+      actorId: string,
+      tenantId: string,
+      jobId: string,
+    ) => processDomainVerificationJob(db, actorId, tenantId, jobId),
+    disconnectWebsiteDomainBinding: (
+      userId: string,
+      tenantId: string,
+      bindingId: string,
+    ) => disconnectWebsiteDomainBinding(db, userId, tenantId, { bindingId }),
     getSoftwareConnectionWorkspace: (userId: string, tenantId: string) =>
       getSoftwareConnectionWorkspace(db, userId, tenantId),
     startMockOAuthConnection: (

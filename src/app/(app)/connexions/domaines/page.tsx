@@ -4,17 +4,21 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Globe2,
+  Link2,
   Play,
   Search,
   Server,
   ShieldCheck,
   TriangleAlert,
+  Unlink,
 } from "lucide-react";
 import {
   analyzeDomainConnectionAction,
   approveDnsChangePlanAction,
   confirmDnsChangePlanAction,
+  disconnectWebsiteDomainBindingAction,
   prepareDnsChangePlanAction,
+  requestWebsiteDomainBindingAction,
   simulateDnsChangePlanAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -23,12 +27,18 @@ import { requireTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 const stateLabels: Record<string, string> = {
+  discovered: "Découvert",
+  analysis_pending: "Analyse en attente",
   analyzed: "Analysé",
   manual_setup_required: "Configuration manuelle",
+  provider_connection_available: "Connexion fournisseur disponible",
   awaiting_approval: "Approbation requise",
   change_plan_ready: "Plan simulé",
+  applying: "Application en cours",
+  propagation_pending: "Propagation en attente",
   verified: "Vérifié",
   failed: "Échec",
+  rollback_required: "Retour arrière requis",
   disconnected: "Déconnecté",
 };
 
@@ -243,6 +253,9 @@ export default async function DomainConnectionsPage() {
                   const connection = workspace.connections.find(
                     (item) => item.id === plan.connectionId,
                   );
+                  const binding = workspace.bindings.find(
+                    (item) => item.connectionId === plan.connectionId,
+                  );
                   return (
                     <article
                       key={plan.id}
@@ -285,6 +298,9 @@ export default async function DomainConnectionsPage() {
                           </ol>
                         </div>
                       </div>
+                      <p className="mt-4 border-y border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
+                        Le site public actuel reste actif pendant la vérification. Un brouillon en cours ne remplace jamais la version publiée.
+                      </p>
 
                       {workspace.canManage ? (
                         <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
@@ -311,10 +327,59 @@ export default async function DomainConnectionsPage() {
                             />
                           ) : null}
                           {plan.status === "simulated" ? (
-                            <p className="inline-flex items-center gap-2 text-sm font-semibold text-[#075e57]">
-                              <CheckCircle2 size={17} aria-hidden />
-                              Simulation terminée, aucune modification appliquée
-                            </p>
+                            <div className="grid w-full gap-3">
+                              <p className="inline-flex items-center gap-2 text-sm font-semibold text-[#075e57]">
+                                <CheckCircle2 size={17} aria-hidden />
+                                Simulation terminée, aucune modification appliquée
+                              </p>
+                              {!binding || ["failed", "disconnected"].includes(binding.status) ? (
+                                <form action={requestWebsiteDomainBindingAction}>
+                                  <input
+                                    type="hidden"
+                                    name="connectionId"
+                                    value={plan.connectionId}
+                                  />
+                                  <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                                    <Link2 size={16} aria-hidden />
+                                    Vérifier et lier au site publié
+                                  </button>
+                                </form>
+                              ) : null}
+                              {binding?.status === "pending_verification" ? (
+                                <p className="text-sm font-semibold text-amber-800">
+                                  Vérification de propagation en attente. Le brouillon reste hors ligne.
+                                </p>
+                              ) : null}
+                              {binding?.status === "bound" ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-teal-200 bg-teal-50 px-3 py-3">
+                                  <div>
+                                    <p className="text-sm font-bold text-[#075e57]">
+                                      Domaine lié au site publié
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-600">
+                                      Certificat de test vérifié. Les brouillons ne sont jamais publiés automatiquement.
+                                    </p>
+                                  </div>
+                                  <form action={disconnectWebsiteDomainBindingAction}>
+                                    <input type="hidden" name="bindingId" value={binding.id} />
+                                    <button className="inline-flex min-h-10 items-center gap-2 rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-50">
+                                      <Unlink size={16} aria-hidden />
+                                      Déconnecter le domaine
+                                    </button>
+                                  </form>
+                                </div>
+                              ) : null}
+                              {binding?.status === "failed" ? (
+                                <p className="text-sm text-red-800">
+                                  La propagation n’a pas été vérifiée. Aucun site ni enregistrement DNS n’a été modifié.
+                                </p>
+                              ) : null}
+                              {binding?.status === "disconnected" ? (
+                                <p className="text-sm text-slate-600">
+                                  Liaison déconnectée. Retirez manuellement uniquement l’enregistrement ajouté pour revenir à l’état précédent.
+                                </p>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                       ) : null}
