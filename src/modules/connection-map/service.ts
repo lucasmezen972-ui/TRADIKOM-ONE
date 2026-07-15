@@ -170,7 +170,7 @@ export async function getConnectionMap(
     nodes.push({
       id: nodeId,
       kind: "software",
-      label: connection.softwareName,
+      label: `${connection.softwareName} · ${connection.accountLabel}`,
       detail: `${connection.accountLabel} · ${connection.scopes.length} autorisation(s) minimale(s).`,
       status,
       environment: connection.environment,

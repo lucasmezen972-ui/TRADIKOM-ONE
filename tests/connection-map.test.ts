@@ -102,7 +102,7 @@ describe("carte bornée des connexions", () => {
         }),
         expect.objectContaining({
           kind: "software",
-          label: "Mock Business",
+          label: expect.stringContaining("Mock Business"),
           status: "active",
         }),
         expect.objectContaining({
