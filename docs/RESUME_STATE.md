@@ -27,7 +27,7 @@ Current Phase 5 checkpoint:
 - Universal import now accepts bounded CSV, JSON and XLSX, rejects formula/depth/size hazards, requires explicit mapping and a persisted dry run, detects tenant duplicates, commits transactionally in resumable batches and supports audited rollback for contacts, companies, products and opportunities.
 - Runtime migrations `061`/`062` and SQL mirrors `0055`/`0056` add the tenant-owned product model and durable import metadata/indexes while preserving the existing import RLS policies. The French `/connexions/donnees` workspace exposes preview, report, commit and rollback controls.
 - Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
-- Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer` and is pending CI revalidation.
+- Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer`; later complete runs validated the correction.
 - Run `29380218779` then passed every gate through production build and 18/19 Playwright scenarios. The sole browser failure identified optional contact mappings prefilled for absent CSV columns; those optional defaults are now empty without weakening server validation.
 - Import correction `c49c2e8` passed complete GitHub Actions run `29380786047`, including migrations, dependency audit, PostgreSQL/RLS tests, production build and the mapped CSV Playwright flow.
 - Universal export now queues a durable generation event for allowlisted fields across eight tenant entities, enforces a 366-day/5 000-row/10-Mo bound, writes CSV/JSON/XLSX with spreadsheet-formula neutralization and exposes only authenticated, no-store, 24-hour downloads.
@@ -40,7 +40,7 @@ Current Phase 5 checkpoint:
 - OAuth refresh head `6f79fa1` passed complete GitHub Actions run `29382920239`, including migrations, dependency audit, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright.
 - The connection map composes existing domain, website, email-provider, software, connector-health, workflow and permission-aware approval services into at most 31 tenant-scoped nodes, selectable details, explicit data directions and an accessible text alternative. It stores no graph copy and exposes no credential or payload.
 - Business-value summaries expose only setup effort, proven operations and qualitative risk reduction. Financial and time gains remain unavailable until volumes, durations and costs are measured.
-- Next unfinished task: validate the connection map and complete first vertical slice through CI, then select at most one safe real provider adapter.
+- Next unfinished task: validate the optimized connection-map and security closure checkpoint through complete CI, update PR #6, then merge the first Phase 5 vertical slice only if every gate remains green. Real provider work remains a separate Phase 5 follow-up and Phase 6 stays locked.
 
 Current Phase 4 checkpoint:
 

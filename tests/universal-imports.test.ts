@@ -2,7 +2,10 @@ import ExcelJS from "exceljs";
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
-import { parseImportFile } from "../src/modules/imports";
+import {
+  importFileSizeLimit,
+  parseImportFile,
+} from "../src/modules/imports";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -143,7 +146,23 @@ describe("imports universels contrôlés", () => {
     expect(Number(opportunities.rows[0]?.value_cents)).toBe(250_000);
   });
 
-  it("refuse les formules XLSX, les JSON trop profonds et l'accès inter-tenant", async () => {
+  it("refuse taille, CSV malformé, formules, JSON profond et accès inter-tenant", async () => {
+    await expect(
+      parseImportFile({
+        buffer: Buffer.alloc(importFileSizeLimit + 1, "a"),
+        format: "csv",
+        contentType: "text/csv",
+      }),
+    ).rejects.toMatchObject({ code: "file_too_large" });
+
+    await expect(
+      parseImportFile({
+        buffer: Buffer.from('nom,email\n"Valeur non terminée,test@example.com'),
+        format: "csv",
+        contentType: "text/csv",
+      }),
+    ).rejects.toMatchObject({ code: "malformed_csv" });
+
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Contacts");
     sheet.addRow(["nom", "email"]);

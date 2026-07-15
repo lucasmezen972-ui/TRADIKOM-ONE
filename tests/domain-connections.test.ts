@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { safeJson } from "../src/lib/security";
 import { createServices } from "../src/lib/services";
+import { normalizeDomain } from "../src/modules/domain-connections";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 
@@ -10,6 +11,20 @@ afterEach(async () => {
 });
 
 describe("connexions de domaine", () => {
+  it("rejette les cibles privées, locales et les URL avec identité intégrée", () => {
+    for (const unsafe of [
+      "localhost",
+      "http://127.0.0.1/admin",
+      "http://169.254.169.254/latest/meta-data",
+      "http://[::1]/admin",
+      "https://utilisateur@public.example.test",
+    ]) {
+      expect(() => normalizeDomain(unsafe)).toThrow(
+        "Le nom de domaine n'est pas valide.",
+      );
+    }
+  });
+
   it("analyse, fait approuver et simule un plan mock sans effet DNS externe", async () => {
     const db = await createMemoryDb();
     opened.push(db);

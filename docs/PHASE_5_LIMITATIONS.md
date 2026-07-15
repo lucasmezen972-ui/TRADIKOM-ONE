@@ -15,6 +15,9 @@
 - carte de connexion limitée à 31 nœuds observés; aucun moteur de graphe général;
 - estimations de valeur qualitatives seulement; aucun gain financier ou temporel sans mesure validée;
 - aucune dépendance Internet dans les tests.
+- aucun adaptateur fournisseur réel n'est retenu dans ce premier lot: l'activation attend une documentation officielle, un environnement sandbox contrôlé et des credentials dédiés compatibles avec une CI déterministe;
+- aucune saisie ou rotation de clé API fournisseur dans ce premier lot; l'interface OAuth mock ne doit pas être confondue avec une connexion par secret réel;
+- aucun déploiement de lecture seule en production; ce passage fera l'objet d'un lot séparé avec approbation explicite.
 
 Les résultats du fournisseur DNS mock prouvent le flux de contrôle, pas la disponibilité d'un fournisseur externe. Les instructions manuelles sont génériques tant que l'interface officielle du fournisseur n'est pas vérifiée.
 

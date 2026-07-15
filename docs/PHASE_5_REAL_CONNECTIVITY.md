@@ -76,7 +76,7 @@ Le checkpoint domaine et liaison est vert dans le run `29382435553`. Le refresh 
 
 ## Revue de la première tranche verticale
 
-Le parcours mock couvre maintenant l'analyse et la simulation DNS, la liaison au snapshot public, OAuth avec PKCE, l'installation désactivée, l'activation explicite en lecture seule, la synchronisation, la santé, l'import mappé, l'export expirant, la carte et la déconnexion. Les tests PostgreSQL vérifient les relations tenant-composées et RLS; Playwright utilise aussi une seconde session et une seconde organisation pour vérifier l'absence de fuite du libellé de connexion. Aucun appel Internet, effet DNS externe, publication de brouillon ou écriture fournisseur n'est réalisé.
+Le parcours mock couvre maintenant l'analyse et la simulation DNS, la liaison au snapshot public, OAuth avec PKCE, l'installation désactivée, l'activation explicite en lecture seule, la synchronisation, la santé, l'import mappé, l'export expirant, la carte et la déconnexion. Les tests PostgreSQL vérifient les relations tenant-composées et RLS; Playwright utilise aussi une seconde session et une seconde organisation pour vérifier l'absence de fuite du libellé de connexion. Les tests de fermeture vérifient aussi les limites de fichier, les CSV malformés et le refus des cibles locales, privées ou contenant une identité URL. Aucun appel Internet, effet DNS externe, publication de brouillon ou écriture fournisseur n'est réalisé.
 
 ## Frontière de sécurité
 

@@ -10,8 +10,9 @@ Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green mai
 6. Universal import/export is green at `8c424f9` in complete run `29381701151`; run `29381236378` had found and isolated one recursive return-type annotation before that fix.
 7. Website domain binding and its contract fix are green at `2ff2986` in complete run `29382435553`, including durable mock propagation, published-snapshot safety, disconnect, RLS and Playwright coverage.
 8. Bounded automatic mock OAuth refresh scheduling is green at `6f79fa1` in complete run `29382920239`, including migrations, audit, lint, typecheck, worker tests, production build and Playwright.
-9. Bounded connection map and qualitative business-value summary are implemented locally from existing services and await checkpoint validation.
-10. The first vertical-slice review and browser tenant-isolation proof are included in the connection-map checkpoint; validate them before any real provider adapter.
+9. Bounded connection map and qualitative business-value summary are pushed at `ae428d1`; the closure checkpoint consolidates its PGlite fixture while preserving tenant-isolation assertions.
+10. The first vertical-slice review and browser tenant-isolation proof are complete and await final closure CI.
+11. Final security tests now cover oversized imports, malformed CSV and local/private/user-info domain rejection. Real provider and API-key connections remain deferred until a CI-safe official sandbox exists.
 
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 

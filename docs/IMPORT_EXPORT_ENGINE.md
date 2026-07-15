@@ -1,6 +1,6 @@
 # Moteurs d'import et d'export
 
-Statut: import et export universels implémentés, validation CI en cours.
+Statut: import et export universels validés dans les runs complets `29380786047` et `29381701151`.
 
 ## Import universel
 

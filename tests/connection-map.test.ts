@@ -137,41 +137,25 @@ describe("carte bornée des connexions", () => {
     expect(JSON.stringify(map)).not.toMatch(
       /mock_access_|mock_refresh_|access_token|refresh_token|password_hash/i,
     );
-  });
 
-  it("n'expose jamais les nœuds d'un autre tenant", async () => {
-    const db = await createMemoryDb();
-    opened.push(db);
-    const services = createServices(db, { appUrl });
-    const ownerA = await services.registerUser({
-      name: "Carte A",
-      email: "connection-map-a@example.com",
-      password: "Password!1",
-    });
-    const ownerB = await services.registerUser({
+    const isolatedOwner = await services.registerUser({
       name: "Carte B",
       email: "connection-map-b@example.com",
       password: "Password!1",
     });
-    const tenantA = await services.createTenant(ownerA.id, {
-      name: "Carte A",
-      category: "Services",
-    });
-    const tenantB = await services.createTenant(ownerB.id, {
+    const isolatedTenant = await services.createTenant(isolatedOwner.id, {
       name: "Carte B",
       category: "Services",
     });
-    await services.analyzeDomainConnection(ownerA.id, tenantA.id, {
-      domain: "secret-a.example.test",
-      providerKey: "mock_dns",
-    });
-
-    const mapB = await services.getConnectionMap(ownerB.id, tenantB.id);
-    expect(mapB.nodes.some((node) => node.label === "secret-a.example.test")).toBe(
-      false,
+    const isolatedMap = await services.getConnectionMap(
+      isolatedOwner.id,
+      isolatedTenant.id,
     );
+    expect(
+      isolatedMap.nodes.some((node) => node.label === "carte.example.test"),
+    ).toBe(false);
     await expect(
-      services.getConnectionMap(ownerB.id, tenantA.id),
+      services.getConnectionMap(isolatedOwner.id, tenant.id),
     ).rejects.toThrow("Acces refuse");
   });
 });

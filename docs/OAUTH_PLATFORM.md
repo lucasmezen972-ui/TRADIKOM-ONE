@@ -1,6 +1,6 @@
 # Plateforme OAuth
 
-Statut: socle mock, interface, consentement et callback validés; rafraîchissement durable planifié en cours de validation.
+Statut: socle mock, interface, consentement, callback et rafraîchissement durable validés. Le checkpoint de rafraîchissement est vert dans le run `29382920239`.
 
 Le fournisseur mock CI utilise Authorization Code avec PKCE S256, un état unique stocké uniquement sous forme hachée, une expiration de dix minutes, une consommation atomique anti-rejeu et une redirect URI exacte dérivée de `APP_URL`.
 

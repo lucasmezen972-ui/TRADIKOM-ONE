@@ -1,6 +1,6 @@
 # Sécurité d'exécution des connecteurs
 
-Statut: première exécution mock en lecture seule implémentée, validation CI en attente.
+Statut: première exécution mock en lecture seule validée par les runs complets Phase 5, notamment `29380786047` et `29382920239`.
 
 Le policy engine vérifie avant chaque opération le tenant, l'installation, son statut, la version du connecteur, la version API, l'environnement, l'opération approuvée, la capacité lecture/écriture, les scopes, l'expiration des credentials, les quotas, les suspensions de sécurité, les ruptures API et les approbations ouvertes.
 
