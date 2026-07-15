@@ -1,15 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: appUrl,
     trace: "on-first-retry",
   },
   webServer: {
     command: "pnpm dev",
-    url: "http://localhost:3000",
+    url: appUrl,
     reuseExistingServer: true,
     timeout: 120_000,
   },
