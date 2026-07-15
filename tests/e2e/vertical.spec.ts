@@ -6,7 +6,7 @@ import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 test("demo user can publish site lead into CRM", async ({ page }) => {
   await openDemo(page);
 
-  await page.getByRole("link", { name: "Mon site" }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Mon site" }).click();
   await expect(page.getByRole("heading", { name: /Site Garage/i })).toBeVisible();
   await page.getByRole("link", { name: /Voir le site/i }).click();
   await expect(page).toHaveURL(/sites\/garage-caraibes-auto/);
