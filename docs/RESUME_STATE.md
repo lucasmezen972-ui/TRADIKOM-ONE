@@ -28,6 +28,7 @@ Current Phase 5 checkpoint:
 - Runtime migrations `061`/`062` and SQL mirrors `0055`/`0056` add the tenant-owned product model and durable import metadata/indexes while preserving the existing import RLS policies. The French `/connexions/donnees` workspace exposes preview, report, commit and rollback controls.
 - Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
 - Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer` and is pending CI revalidation.
+- Run `29380218779` then passed every gate through production build and 18/19 Playwright scenarios. The sole browser failure identified optional contact mappings prefilled for absent CSV columns; those optional defaults are now empty without weakening server validation.
 - Next unfinished task: make the connector/import checkpoint green, then implement universal export.
 
 Current Phase 4 checkpoint:

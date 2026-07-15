@@ -11,8 +11,8 @@ const configurations = {
       ["name", "Nom", "nom"],
       ["email", "E-mail", "email"],
       ["phone", "Téléphone", "telephone"],
-      ["status", "Statut", "statut"],
-      ["tags", "Étiquettes", "etiquettes"],
+      ["status", "Statut", ""],
+      ["tags", "Étiquettes", ""],
     ],
   },
   companies: {
