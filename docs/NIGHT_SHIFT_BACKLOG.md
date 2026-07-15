@@ -9,7 +9,8 @@ Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green mai
 5. Import correction `c49c2e8` passed complete run `29380786047`, including the mapped CSV browser path.
 6. Universal import/export is green at `8c424f9` in complete run `29381701151`; run `29381236378` had found and isolated one recursive return-type annotation before that fix.
 7. Website domain binding with durable mock propagation verification, published-snapshot safety, disconnect, RLS and Playwright coverage is implemented locally and awaits its checkpoint push.
-8. Complete the first vertical slice before any real provider adapter.
+8. Bounded automatic mock OAuth refresh scheduling is implemented locally on the durable event worker and awaits checkpoint validation.
+9. Add the bounded connection map and business-value summary, then complete the first vertical slice before any real provider adapter.
 
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 

@@ -59,6 +59,9 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - vérification de propagation mock par événement durable, idempotence et état de certificat;
 - déconnexion auditée sans suppression DNS ni modification du snapshot public;
 - relations tenant-composées, RLS, tests de prise de contrôle, isolation PostgreSQL et scénario navigateur draft/publication.
+- planification bornée des credentials OAuth mock proches de l'expiration dans la file durable commune;
+- événement de refresh sans secret, clé d'idempotence par échéance, corrélation et rejet des demandes obsolètes;
+- verrou atomique, rotation chiffrée et reprise gérées par le worker existant.
 
 La validation complète de ce checkpoint reste requise avant toute intégration réelle.
 

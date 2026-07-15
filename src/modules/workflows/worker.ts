@@ -5,6 +5,10 @@ import {
   processDomainVerificationJob,
 } from "@/modules/domain-connections";
 import {
+  oauthRefreshRequestedEventType,
+  processScheduledMockOAuthRefresh,
+} from "@/modules/oauth";
+import {
   exportGenerationRequestedEventType,
   processUniversalExportJob,
 } from "@/modules/exports";
@@ -184,6 +188,25 @@ export async function processPendingDomainEvents(
         event.actorId,
         event.tenantId,
         jobId,
+      );
+    },
+    [oauthRefreshRequestedEventType]: async ({ db: handlerDb, event }) => {
+      const connectionId = stringPayload(event.payload.connectionId);
+      const credentialId = stringPayload(event.payload.credentialId);
+      const expectedExpiresAt = stringPayload(event.payload.expectedExpiresAt);
+      if (!connectionId || !credentialId || !expectedExpiresAt) {
+        throw new Error("OAuth refresh event payload is incomplete.");
+      }
+      await processScheduledMockOAuthRefresh(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        {
+          connectionId,
+          credentialId,
+          expectedExpiresAt,
+          correlationId: event.correlationId,
+        },
       );
     },
     [leadCreatedEventType]: async ({ db: handlerDb, event }) => {

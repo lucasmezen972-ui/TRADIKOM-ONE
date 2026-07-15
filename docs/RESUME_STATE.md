@@ -35,7 +35,8 @@ Current Phase 5 checkpoint:
 - Export run `29381236378` found one missing explicit return type in the recursive value normalizer. Fix `8c424f9` passed complete GitHub Actions run `29381701151` with no runtime-policy change.
 - Website-domain binding now persists the domain, simulated plan and published version present at request time, then queues an idempotent mock propagation verification. Verification updates certificate/binding state without publishing the draft or changing external DNS; disconnect preserves both the public snapshot and DNS state.
 - Runtime migrations `065`/`066` and SQL mirrors `0059`/`0060` add tenant-owned bindings and verification jobs with composite relations, tenant-leading indexes and RLS. Unit, restricted-role PostgreSQL and Playwright coverage include target-takeover rejection, cross-tenant denial and draft/public immutability.
-- Next unfinished task: validate export and website-domain binding through CI, then add propagation/token-refresh worker scheduling and the bounded connection map.
+- Expiring mock OAuth credentials are now selected in bounded batches by maintenance and queued in the durable event worker without token content. Idempotency is tied to the credential expiry, stale events are ignored and the existing atomic refresh lease rotates encrypted credentials safely.
+- Next unfinished task: validate website-domain binding and OAuth refresh through CI, then add the bounded connection map and explainable business-value summary.
 
 Current Phase 4 checkpoint:
 

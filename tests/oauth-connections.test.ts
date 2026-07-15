@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { hashToken, safeJson } from "../src/lib/security";
 import { createServices } from "../src/lib/services";
+import { enqueueDueMockOAuthRefreshes } from "../src/modules/oauth";
+import { processPendingDomainEvents } from "../src/modules/workflows/worker";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const appUrl = "https://app.example.test";
@@ -300,6 +302,82 @@ describe("plateforme OAuth mock", () => {
     await expect(
       services.refreshMockOAuthCredential(ownerA.id, tenantA.id, started.connectionId),
     ).rejects.toMatchObject({ code: "oauth_credential_revoked" });
+  });
+
+  it("planifie un refresh durable, idempotent et sans jeton dans l'événement", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db, { appUrl });
+    const owner = await services.registerUser({
+      name: "OAuth Scheduler",
+      email: "oauth-scheduler@example.com",
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(owner.id, {
+      name: "OAuth Scheduler",
+      category: "Services",
+    });
+    const started = await services.startMockOAuthConnection(owner.id, tenant.id);
+    const authorization = parseAuthorization(started.authorizationUrl);
+    const granted = await services.authorizeMockOAuthRequest(
+      owner.id,
+      tenant.id,
+      authorization,
+    );
+    await services.completeMockOAuthConnection(
+      owner.id,
+      tenant.id,
+      callbackInput(granted.callbackUrl, authorization.redirectUri),
+    );
+    const now = new Date();
+    const expectedExpiresAt = new Date(now.getTime() + 5 * 60_000).toISOString();
+    await db.query(
+      `update oauth_credentials
+          set expires_at = $1, last_refreshed_at = null,
+              refresh_lease_id = null, refresh_lease_expires_at = null
+        where tenant_id = $2 and software_connection_id = $3`,
+      [expectedExpiresAt, tenant.id, started.connectionId],
+    );
+
+    await expect(
+      enqueueDueMockOAuthRefreshes(db, { now, limit: 10 }),
+    ).resolves.toEqual({ selected: 1, queued: 1 });
+    await expect(
+      enqueueDueMockOAuthRefreshes(db, { now, limit: 10 }),
+    ).resolves.toEqual({ selected: 1, queued: 0 });
+    const event = await db.query<{ payload: string; status: string }>(
+      `select payload, status from domain_events
+        where tenant_id = $1 and event_type = 'oauth.credential_refresh_requested'`,
+      [tenant.id],
+    );
+    expect(event.rows[0]?.status).toBe("pending");
+    expect(event.rows[0]?.payload).toContain(expectedExpiresAt);
+    expect(event.rows[0]?.payload).not.toMatch(
+      /mock_access_|mock_refresh_|access_token|refresh_token|encrypted/i,
+    );
+
+    await processPendingDomainEvents(db, { limit: 100, now });
+    const credential = await db.query<{
+      token_version: number;
+      expires_at: string;
+      refresh_lease_id: string | null;
+    }>(
+      `select token_version, expires_at, refresh_lease_id
+         from oauth_credentials
+        where tenant_id = $1 and software_connection_id = $2`,
+      [tenant.id, started.connectionId],
+    );
+    expect(credential.rows[0]?.token_version).toBe(2);
+    expect(new Date(credential.rows[0]?.expires_at ?? 0).getTime()).toBeGreaterThan(
+      new Date(expectedExpiresAt).getTime(),
+    );
+    expect(credential.rows[0]?.refresh_lease_id).toBeNull();
+    const completed = await db.query<{ status: string; last_error: string | null }>(
+      `select status, last_error from domain_events
+        where tenant_id = $1 and event_type = 'oauth.credential_refresh_requested'`,
+      [tenant.id],
+    );
+    expect(completed.rows[0]).toEqual({ status: "succeeded", last_error: null });
   });
 });
 

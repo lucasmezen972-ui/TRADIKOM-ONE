@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { enqueueDueMockOAuthRefreshes } from "@/modules/oauth";
 import { createDatabaseRateLimiter } from "@/modules/rate-limit";
 
 export const maintenanceRetentionDays = {
@@ -30,6 +31,7 @@ export type MaintenanceSummary = {
   connectorContractRuns: number;
   connectorProposals: number;
   expiredExports: number;
+  oauthRefreshEvents: number;
 };
 
 export async function runMaintenance(
@@ -124,6 +126,12 @@ export async function runMaintenance(
       batchSize,
     ),
     expiredExports: await expireExportFiles(db, nowIso, batchSize),
+    oauthRefreshEvents: (
+      await enqueueDueMockOAuthRefreshes(db, {
+        now,
+        limit: batchSize,
+      })
+    ).queued,
   };
 }
 

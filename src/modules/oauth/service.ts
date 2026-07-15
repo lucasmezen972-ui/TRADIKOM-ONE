@@ -1,6 +1,13 @@
 import { withTenantDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
-import { hashToken, id, nowIso, safeJson, secureToken } from "@/lib/security";
+import {
+  correlationId,
+  hashToken,
+  id,
+  nowIso,
+  safeJson,
+  secureToken,
+} from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import { resolveAppUrl } from "@/modules/email";
 import {
@@ -16,9 +23,11 @@ import {
   claimOAuthCredentialRefresh,
   completeOAuthCredentialRefresh,
   consumeOAuthState,
+  findActiveOAuthCredential,
   findOAuthState,
   insertOAuthCredential,
   insertOAuthState,
+  listDueOAuthCredentials,
   revokeActiveOAuthCredentials,
 } from "@/modules/oauth/repository";
 import {
@@ -36,8 +45,10 @@ import {
   markSoftwareConnectionConnected,
 } from "@/modules/software-connections/repository";
 import { assertTenantAccess } from "@/modules/tenants";
+import { enqueueDomainEvent } from "@/modules/workflows/engine";
 
 const oauthAdminRoles = ["owner", "administrator"] as const;
+export const oauthRefreshRequestedEventType = "oauth.credential_refresh_requested";
 
 export async function startMockOAuthConnection(
   db: DbClient,
@@ -319,6 +330,7 @@ export async function refreshMockOAuthCredential(
   userId: string,
   tenantId: string,
   input: { connectionId: string },
+  options: { correlationId?: string } = {},
 ) {
   const parsed = softwareConnectionReferenceSchema.parse(input);
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
@@ -391,10 +403,87 @@ export async function refreshMockOAuthCredential(
         tokenReturnedToBrowser: false,
         tokenStoredInAudit: false,
         keyVersion: getOAuthKeyVersion(),
+        correlationId: options.correlationId ?? null,
       },
     });
     return { connectionId: connection.id, status: "connected" as const };
   });
+}
+
+export async function enqueueDueMockOAuthRefreshes(
+  db: DbClient,
+  options: { now?: Date; limit?: number; refreshWindowMs?: number } = {},
+) {
+  const now = options.now ?? new Date();
+  const limit = Math.min(100, Math.max(1, options.limit ?? 25));
+  const refreshWindowMs = Math.min(
+    60 * 60 * 1_000,
+    Math.max(60_000, options.refreshWindowMs ?? 15 * 60 * 1_000),
+  );
+  const credentials = await listDueOAuthCredentials(db, {
+    expiresBefore: new Date(now.getTime() + refreshWindowMs).toISOString(),
+    now: now.toISOString(),
+    limit,
+  });
+  let queued = 0;
+  for (const credential of credentials) {
+    const requestCorrelationId = correlationId();
+    const inserted = await withTenantDbTransaction(
+      db,
+      credential.tenant_id,
+      credential.actor_id,
+      (transaction) =>
+        enqueueDomainEvent(transaction, {
+          id: id("event"),
+          tenantId: credential.tenant_id,
+          actorId: credential.actor_id,
+          type: oauthRefreshRequestedEventType,
+          payload: {
+            connectionId: credential.software_connection_id,
+            credentialId: credential.id,
+            expectedExpiresAt: credential.expires_at,
+          },
+          idempotencyKey: `oauth-refresh:${credential.id}:${credential.expires_at}`,
+          correlationId: requestCorrelationId,
+          nextRunAt: now.toISOString(),
+        }),
+    );
+    if (inserted) queued += 1;
+  }
+  return { selected: credentials.length, queued };
+}
+
+export async function processScheduledMockOAuthRefresh(
+  db: DbClient,
+  actorId: string,
+  tenantId: string,
+  input: {
+    connectionId: string;
+    credentialId: string;
+    expectedExpiresAt: string;
+    correlationId: string;
+  },
+) {
+  const credential = await findActiveOAuthCredential(
+    db,
+    tenantId,
+    input.connectionId,
+  );
+  if (
+    !credential ||
+    credential.id !== input.credentialId ||
+    credential.expires_at !== input.expectedExpiresAt
+  ) {
+    return { status: "stale" as const, refreshed: false };
+  }
+  await refreshMockOAuthCredential(
+    db,
+    actorId,
+    tenantId,
+    { connectionId: input.connectionId },
+    { correlationId: input.correlationId },
+  );
+  return { status: "refreshed" as const, refreshed: true };
 }
 
 function invalidState() {

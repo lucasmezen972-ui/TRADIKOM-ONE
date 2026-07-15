@@ -39,6 +39,10 @@ export type OAuthCredentialRow = {
   updated_at: string;
 };
 
+export type DueOAuthCredentialRow = OAuthCredentialRow & {
+  actor_id: string;
+};
+
 export async function insertOAuthState(
   db: DbClient,
   input: {
@@ -188,6 +192,44 @@ export async function revokeActiveOAuthCredentials(
      where tenant_id = $2 and software_connection_id = $3 and revoked_at is null`,
     [input.now, input.tenantId, input.connectionId],
   );
+}
+
+export async function findActiveOAuthCredential(
+  db: DbClient,
+  tenantId: string,
+  connectionId: string,
+) {
+  const result = await db.query<OAuthCredentialRow>(
+    `select * from oauth_credentials
+      where tenant_id = $1 and software_connection_id = $2
+        and revoked_at is null
+      order by created_at desc, id desc limit 1`,
+    [tenantId, connectionId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listDueOAuthCredentials(
+  db: DbClient,
+  input: { expiresBefore: string; now: string; limit: number },
+) {
+  const result = await db.query<DueOAuthCredentialRow>(
+    `select credential.*, connection.created_by as actor_id
+       from oauth_credentials credential
+       join software_connections connection
+         on connection.tenant_id = credential.tenant_id
+        and connection.id = credential.software_connection_id
+      where credential.revoked_at is null
+        and credential.provider_key = 'mock_oauth'
+        and credential.expires_at <= $1
+        and (credential.refresh_lease_expires_at is null
+          or credential.refresh_lease_expires_at < $2)
+        and connection.status not in ('disconnected', 'revoked')
+      order by credential.expires_at, credential.id
+      limit $3`,
+    [input.expiresBefore, input.now, input.limit],
+  );
+  return result.rows;
 }
 
 export async function claimOAuthCredentialRefresh(

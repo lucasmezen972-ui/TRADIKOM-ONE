@@ -199,6 +199,7 @@ describe("scheduled maintenance", () => {
       connectorContractRuns: 1,
       connectorProposals: 1,
       expiredExports: 1,
+      oauthRefreshEvents: 0,
     });
     expect(await count(db, "audit_logs")).toBe(auditBefore + 1);
     const delivery = await db.query<{ idempotency_key: string | null }>(
