@@ -27,6 +27,7 @@ Current Phase 5 checkpoint:
 - Universal import now accepts bounded CSV, JSON and XLSX, rejects formula/depth/size hazards, requires explicit mapping and a persisted dry run, detects tenant duplicates, commits transactionally in resumable batches and supports audited rollback for contacts, companies, products and opportunities.
 - Runtime migrations `061`/`062` and SQL mirrors `0055`/`0056` add the tenant-owned product model and durable import metadata/indexes while preserving the existing import RLS policies. The French `/connexions/donnees` workspace exposes preview, report, commit and rollback controls.
 - Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
+- Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer` and is pending CI revalidation.
 - Next unfinished task: make the connector/import checkpoint green, then implement universal export.
 
 Current Phase 4 checkpoint:

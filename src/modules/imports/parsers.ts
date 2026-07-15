@@ -139,7 +139,7 @@ async function parseXlsx(
 ): Promise<ParsedImportFile> {
   const workbook = new ExcelJS.Workbook();
   try {
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(Uint8Array.from(buffer).buffer);
   } catch {
     throw new ImportError(
       "malformed_xlsx",
