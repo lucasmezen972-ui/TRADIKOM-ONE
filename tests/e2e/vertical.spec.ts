@@ -137,7 +137,7 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
   ).toHaveCount(0);
 });
 
-test("a tenant previews, commits and rolls back a mapped CSV import", async ({
+test("a tenant controls a mapped import and an expiring export", async ({
   page,
 }) => {
   const db = await getDb();
@@ -166,7 +166,7 @@ test("a tenant previews, commits and rolls back a mapped CSV import", async ({
 
   await page.goto("/connexions/donnees");
   await expect(
-    page.getByRole("heading", { name: "Imports de données" }),
+    page.getByRole("heading", { name: "Imports et exports" }),
   ).toBeVisible();
   const contactEmail = `contact-import-${suffix}@example.com`;
   await page.getByLabel("Fichier").setInputFiles({
@@ -184,7 +184,21 @@ test("a tenant previews, commits and rolls back a mapped CSV import", async ({
 
   await page.goto("/contacts");
   await expect(page.getByText(contactEmail)).toBeVisible();
+
   await page.goto("/connexions/donnees");
+  await page.getByRole("button", { name: "Préparer l’export" }).click();
+  await expect(page).toHaveURL(/connexions\/donnees\?export=/);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const summary = await processPendingDomainEvents(db, { limit: 100 });
+    if (summary.selected === 0) break;
+  }
+  await page.reload();
+  await expect(page.getByText("Fichier disponible").first()).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Télécharger le fichier" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^tradikom-contacts-.*\.csv$/);
+
   const importCard = page.locator("a").filter({ hasText: "contacts-e2e.csv" }).first();
   await importCard.click();
   await page

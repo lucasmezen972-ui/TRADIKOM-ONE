@@ -90,6 +90,27 @@ describeIfPostgres("PostgreSQL RLS", () => {
         `RLS-B-${randomUUID()}`,
       ],
     );
+    const exportAId = id("export");
+    const exportBId = id("export");
+    await ownerDb.query(
+      `insert into export_jobs (
+         id, tenant_id, entity_type, format, status, selected_fields,
+         date_from, date_to, expires_at, created_by, created_at, updated_at
+       ) values
+         ($1, $2, 'contacts', 'csv', 'queued', '["name"]', $3, $4, $5, $6, $3, $3),
+         ($7, $8, 'contacts', 'csv', 'queued', '["name"]', $3, $4, $5, $9, $3, $3)`,
+      [
+        exportAId,
+        tenantA.id,
+        nowIso(),
+        "2026-12-31T23:59:59.999Z",
+        "2027-01-01T00:00:00.000Z",
+        ownerA.id,
+        exportBId,
+        tenantB.id,
+        ownerB.id,
+      ],
+    );
     const apiIntelligence = await insertApiIntelligenceTenantFixtures(
       ownerDb,
       tenantA.id,
@@ -171,6 +192,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(noConnectorPlans.rows).toEqual([]);
     expect((await restrictedPool.query("select id from products")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from imports")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from export_jobs")).rows).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -200,6 +222,12 @@ describeIfPostgres("PostgreSQL RLS", () => {
       async (client) => client.query<{ id: string }>("select id from products"),
     );
     expect(tenantAProducts.rows).toEqual([{ id: productAId }]);
+    const tenantAExports = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => client.query<{ id: string }>("select id from export_jobs"),
+    );
+    expect(tenantAExports.rows).toEqual([{ id: exportAId }]);
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
         client.query(

@@ -47,8 +47,12 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - finalisation transactionnelle par lots, reprise, rapport d'erreur et retour arrière;
 - interface française `/connexions/donnees`, rôles, audit et tests ciblés;
 - correction de cohérence: une déconnexion logicielle remet aussi le résumé historique du connecteur en état non configuré.
+- export CSV, JSON et XLSX par événement durable et worker idempotent;
+- champs allowlistés, périodes de 366 jours, 5 000 lignes et 10 Mo maximum;
+- neutralisation des formules, téléchargement authentifié sans cache et expiration après 24 heures;
+- annulation, maintenance de rétention, audit et isolation tenant.
 
-L'export universel et la liaison de domaine doivent être terminés avant toute intégration réelle.
+La liaison de domaine à un snapshot de site publié doit être terminée avant toute intégration réelle.
 
 ## Frontière de sécurité
 

@@ -1,6 +1,6 @@
 # Moteurs d'import et d'export
 
-Statut: import universel implémenté, export universel à terminer.
+Statut: import et export universels implémentés, validation CI en cours.
 
 ## Import universel
 
@@ -22,4 +22,15 @@ L'ancien import CSV direct reste temporairement disponible comme façade de comp
 
 ## Export universel
 
-Prochain checkpoint: génération asynchrone CSV, JSON et XLSX, sélection de champs autorisés, plages bornées, neutralisation des formules, téléchargement authentifié à expiration, annulation, rétention et audit tenant-scoped.
+- Formats générés: CSV, JSON et XLSX.
+- Entités: contacts, entreprises, opportunités, tâches, activités, produits, automatisations et santé des connecteurs.
+- Les champs sont choisis dans une liste autorisée par entité; identifiants internes, credentials et payloads ne sont pas exportables.
+- La période est obligatoire et limitée à 366 jours.
+- Chaque tâche est limitée à 5 000 lignes et chaque fichier à 10 Mo.
+- Les valeurs pouvant être exécutées comme formules sont neutralisées dans CSV et XLSX.
+- La demande crée un événement durable; le worker génère le fichier de manière idempotente et transactionnelle.
+- Le fichier est stocké en base64 dans la ligne tenant-owned, sans URL publique ni stockage partagé.
+- Le téléchargement exige une session, le tenant courant et un rôle autorisé. Il utilise `private, no-store`, `nosniff` et un identifiant de corrélation.
+- Les fichiers expirent après 24 heures; l'accès et la maintenance suppriment le contenu expiré.
+- Une annulation supprime immédiatement le contenu généré et empêche toute reprise du job.
+- Demande, succès, échec sûr, téléchargement, expiration et annulation sont audités sans contenu de fichier.

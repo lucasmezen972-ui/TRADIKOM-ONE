@@ -6,8 +6,8 @@ Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green mai
 2. French domain workspace and PostgreSQL restricted-role coverage validated in complete run `29375436090`.
 3. Mock OAuth core validated in complete run `29376521177` with encrypted credentials, refresh locking and replay-safe state.
 4. Scoped selector fix `6a5b589` passed its target path; connector run `29378574054` passed every gate through production build and exposed one shared-demo disconnect summary not reset before the command-center E2E.
-5. Validate the disconnect-summary fix together with controlled connector execution and the universal import checkpoint through CI.
-6. Complete universal export, then website domain binding.
+5. Run `29380218779` passed every gate through build and 18/19 browser scenarios; optional import mappings are fixed at `c49c2e8` and under CI revalidation.
+6. Validate universal export, then implement website domain binding.
 7. Complete the first vertical slice before any real provider adapter.
 
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.

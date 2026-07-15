@@ -29,6 +29,7 @@ export type MaintenanceSummary = {
   apiSourceSnapshots: number;
   connectorContractRuns: number;
   connectorProposals: number;
+  expiredExports: number;
 };
 
 export async function runMaintenance(
@@ -122,7 +123,29 @@ export async function runMaintenance(
       before(now, maintenanceRetentionDays.supersededConnectorProposals),
       batchSize,
     ),
+    expiredExports: await expireExportFiles(db, nowIso, batchSize),
   };
+}
+
+async function expireExportFiles(
+  db: DbClient,
+  nowIso: string,
+  limit: number,
+) {
+  const result = await db.query<{ id: string }>(
+    `update export_jobs
+        set status = 'expired', safe_content = null, content_encoding = null,
+            updated_at = $1
+      where id in (
+        select id from export_jobs
+        where status = 'completed' and expires_at <= $1
+        order by expires_at, id
+        limit $2
+      )
+      returning id`,
+    [nowIso, limit],
+  );
+  return result.rows.length;
 }
 
 async function deleteBounded(

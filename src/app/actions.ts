@@ -1030,6 +1030,48 @@ export async function rollbackUniversalImportAction(formData: FormData) {
   revalidatePath("/opportunites");
 }
 
+export async function createUniversalExportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const dateFrom = text(formData, "dateFrom");
+  const dateTo = text(formData, "dateTo");
+  const result = await safeServerAction("export.create", () =>
+    services.createUniversalExport(user.id, tenant.id, {
+      entityType: text(formData, "entityType") as
+        | "contacts"
+        | "companies"
+        | "opportunities"
+        | "tasks"
+        | "activities"
+        | "products"
+        | "workflows"
+        | "connector_health",
+      format: text(formData, "format") as "csv" | "xlsx" | "json",
+      selectedFields: formData
+        .getAll("selectedFields")
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean),
+      dateFrom: `${dateFrom}T00:00:00.000Z`,
+      dateTo: `${dateTo}T23:59:59.999Z`,
+    }),
+  );
+  redirect(`/connexions/donnees?export=${encodeURIComponent(result.id)}`);
+}
+
+export async function cancelUniversalExportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("export.cancel", () =>
+    services.cancelUniversalExport(
+      user.id,
+      tenant.id,
+      text(formData, "exportId"),
+    ),
+  );
+  revalidatePath("/connexions/donnees");
+}
+
 export async function analyzeDomainConnectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

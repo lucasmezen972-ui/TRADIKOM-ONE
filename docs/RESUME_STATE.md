@@ -29,7 +29,9 @@ Current Phase 5 checkpoint:
 - Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
 - Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer` and is pending CI revalidation.
 - Run `29380218779` then passed every gate through production build and 18/19 Playwright scenarios. The sole browser failure identified optional contact mappings prefilled for absent CSV columns; those optional defaults are now empty without weakening server validation.
-- Next unfinished task: make the connector/import checkpoint green, then implement universal export.
+- Universal export now queues a durable generation event for allowlisted fields across eight tenant entities, enforces a 366-day/5 000-row/10-Mo bound, writes CSV/JSON/XLSX with spreadsheet-formula neutralization and exposes only authenticated, no-store, 24-hour downloads.
+- Runtime migrations `063`/`064` and SQL mirrors `0057`/`0058` add tenant-owned export jobs, RLS and tenant-leading indexes. Cancellation and scheduled maintenance delete file content; tests cover idempotent worker generation, expiry, cancellation, field rejection, tenant isolation and the browser download flow.
+- Next unfinished task: validate import/export together through CI, then implement website domain binding without draft auto-publication.
 
 Current Phase 4 checkpoint:
 

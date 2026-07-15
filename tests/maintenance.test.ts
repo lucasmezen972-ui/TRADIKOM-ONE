@@ -167,6 +167,19 @@ describe("scheduled maintenance", () => {
       [tenant.id, user.id, old],
     );
     await seedPhase3RetentionFixtures(db, tenant.id, user.id);
+    await db.query(
+      `insert into export_jobs (
+         id, tenant_id, entity_type, format, status, selected_fields,
+         date_from, date_to, row_count, safe_content, content_encoding,
+         content_type, file_name, expires_at, created_by, created_at,
+         updated_at, completed_at
+       ) values (
+         'export_expired_old', $1, 'contacts', 'csv', 'completed', '["name"]',
+         $2, $2, 1, 'Y29udGVudA==', 'base64', 'text/csv', 'expired.csv',
+         $2, $3, $2, $2, $2
+       )`,
+      [tenant.id, old, user.id],
+    );
 
     const summary = await runMaintenance(db, { now, batchSize: 50 });
 
@@ -185,6 +198,7 @@ describe("scheduled maintenance", () => {
       apiSourceSnapshots: 1,
       connectorContractRuns: 1,
       connectorProposals: 1,
+      expiredExports: 1,
     });
     expect(await count(db, "audit_logs")).toBe(auditBefore + 1);
     const delivery = await db.query<{ idempotency_key: string | null }>(
@@ -201,6 +215,13 @@ describe("scheduled maintenance", () => {
     expect(await exists(db, "connector_contract_runs", "contract_run_old")).toBe(false);
     expect(await exists(db, "connector_contract_runs", "contract_run_current")).toBe(true);
     expect(await exists(db, "connector_proposals", "proposal_superseded_old")).toBe(false);
+    const expiredExport = await db.query<{
+      status: string;
+      safe_content: string | null;
+    }>("select status, safe_content from export_jobs where id = $1", [
+      "export_expired_old",
+    ]);
+    expect(expiredExport.rows[0]).toEqual({ status: "expired", safe_content: null });
   });
 
   it("honors the configured batch bound", async () => {

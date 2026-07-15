@@ -295,6 +295,16 @@ function getMigrations(enableRls: boolean) {
           sql: phase5UniversalImportsRlsMigrationSql,
         }]
       : []),
+    {
+      id: "063_phase5_universal_exports",
+      sql: phase5UniversalExportsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "064_phase5_universal_exports_rls",
+          sql: phase5UniversalExportsRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -3799,6 +3809,55 @@ alter table products enable row level security;
 
 drop policy if exists tenant_isolation on products;
 create policy tenant_isolation on products
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5UniversalExportsMigrationSql = `
+create table if not exists export_jobs (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  entity_type text not null,
+  format text not null,
+  status text not null,
+  selected_fields text not null,
+  date_from text not null,
+  date_to text not null,
+  row_count integer not null default 0,
+  safe_content text,
+  content_encoding text,
+  content_type text,
+  file_name text,
+  safe_error_code text,
+  expires_at text not null,
+  downloaded_at text,
+  cancelled_at text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  completed_at text,
+  unique (tenant_id, id),
+  check (entity_type in (
+    'contacts', 'companies', 'opportunities', 'tasks', 'activities',
+    'products', 'workflows', 'connector_health'
+  )),
+  check (format in ('csv', 'xlsx', 'json')),
+  check (status in ('queued', 'processing', 'completed', 'failed', 'cancelled', 'expired')),
+  check (row_count >= 0),
+  check (content_encoding is null or content_encoding = 'base64')
+);
+
+create index if not exists idx_export_jobs_tenant_status
+  on export_jobs (tenant_id, status, created_at desc);
+create index if not exists idx_export_jobs_tenant_expiry
+  on export_jobs (tenant_id, expires_at);
+`;
+
+const phase5UniversalExportsRlsMigrationSql = `
+alter table export_jobs enable row level security;
+
+drop policy if exists tenant_isolation on export_jobs;
+create policy tenant_isolation on export_jobs
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;

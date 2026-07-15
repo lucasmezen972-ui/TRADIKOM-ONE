@@ -284,6 +284,14 @@ import {
   rollbackUniversalImport,
   type ImportPreviewInput,
 } from "@/modules/imports";
+import {
+  cancelUniversalExport,
+  createUniversalExport,
+  getExportWorkspace,
+  getUniversalExportDownload,
+  processUniversalExportJob,
+  type CreateExportInput,
+} from "@/modules/exports";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -727,6 +735,28 @@ export function createServices(
       tenantId: string,
       importId: string,
     ) => rollbackUniversalImport(db, userId, tenantId, { importId }),
+    getExportWorkspace: (userId: string, tenantId: string) =>
+      getExportWorkspace(db, userId, tenantId),
+    createUniversalExport: (
+      userId: string,
+      tenantId: string,
+      input: CreateExportInput,
+    ) => createUniversalExport(db, userId, tenantId, input),
+    processUniversalExportJob: (
+      actorId: string,
+      tenantId: string,
+      exportId: string,
+    ) => processUniversalExportJob(db, actorId, tenantId, exportId),
+    cancelUniversalExport: (
+      userId: string,
+      tenantId: string,
+      exportId: string,
+    ) => cancelUniversalExport(db, userId, tenantId, { exportId }),
+    getUniversalExportDownload: (
+      userId: string,
+      tenantId: string,
+      exportId: string,
+    ) => getUniversalExportDownload(db, userId, tenantId, { exportId }),
     getWebhookEndpointConfig: (userId: string, tenantId: string) =>
       getWebhookEndpointConfig(db, userId, tenantId),
     rotateWebhookEndpointSecret: (

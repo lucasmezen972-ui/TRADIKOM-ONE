@@ -8,7 +8,9 @@
 - une seule installation mock en lecture seule, sans réseau ni donnée client;
 - aucune lecture production;
 - aucune écriture production;
-- aucun moteur universel XLSX/JSON;
+- imports limités à 5 Mo et 10 000 lignes;
+- exports limités à 10 Mo, 5 000 lignes et 366 jours;
+- fichiers d'export conservés dans un stockage borné tenant-owned et supprimés après 24 heures; aucun stockage objet externe;
 - aucune liaison domaine-site active;
 - aucune dépendance Internet dans les tests.
 

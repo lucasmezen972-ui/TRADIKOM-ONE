@@ -1,6 +1,10 @@
 import type { DbClient } from "@/lib/db";
 import { executeMockConnectorOperation } from "@/modules/connector-execution";
 import {
+  exportGenerationRequestedEventType,
+  processUniversalExportJob,
+} from "@/modules/exports";
+import {
   dispatchQueuedNotification,
   notificationDispatchRequestedEventType,
 } from "@/modules/notifications";
@@ -157,6 +161,16 @@ export async function processPendingDomainEvents(
           `Connector execution ${execution.safeErrorClassification ?? "failed"}.`,
         );
       }
+    },
+    [exportGenerationRequestedEventType]: async ({ db: handlerDb, event }) => {
+      const exportId = stringPayload(event.payload.exportId);
+      if (!exportId) throw new Error("Export identifier is required.");
+      await processUniversalExportJob(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        exportId,
+      );
     },
     [leadCreatedEventType]: async ({ db: handlerDb, event }) => {
       await processLeadFollowUpWorkflowEvent(handlerDb, {
