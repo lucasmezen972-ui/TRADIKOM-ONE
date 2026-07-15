@@ -57,15 +57,19 @@ export async function getConnectionMap(
   tenantId: string,
   options: { emailProviderName?: string } = {},
 ) {
-  const [domains, software, connectors, website, workflows, approvals] =
-    await Promise.all([
-      getDomainConnectionWorkspace(db, userId, tenantId),
-      getSoftwareConnectionWorkspace(db, userId, tenantId),
-      getConnectorExecutionWorkspace(db, userId, tenantId),
-      getWebsiteWorkspace(db, userId, tenantId),
-      getWorkflowQueueOverview(db, userId, tenantId),
-      getPendingApprovalOverview(db, userId, tenantId),
-    ]);
+  // A DbClient may represent a single embedded connection. Keep these bounded
+  // reads ordered so the composition layer works identically with PGlite and
+  // pooled PostgreSQL clients.
+  const domains = await getDomainConnectionWorkspace(db, userId, tenantId);
+  const software = await getSoftwareConnectionWorkspace(db, userId, tenantId);
+  const connectors = await getConnectorExecutionWorkspace(
+    db,
+    userId,
+    tenantId,
+  );
+  const website = await getWebsiteWorkspace(db, userId, tenantId);
+  const workflows = await getWorkflowQueueOverview(db, userId, tenantId);
+  const approvals = await getPendingApprovalOverview(db, userId, tenantId);
   const visibleSoftware = software.connections.slice(0, 8);
   const visibleSoftwareIds = new Set(visibleSoftware.map((item) => item.id));
   const visibleInstallations = connectors.installations

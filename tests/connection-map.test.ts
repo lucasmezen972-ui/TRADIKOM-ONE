@@ -3,7 +3,7 @@ import { createMemoryDb } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { correlationId } from "../src/lib/security";
 import { createServices } from "../src/lib/services";
-import { processPendingDomainEvents } from "../src/modules/workflows/worker";
+import { processDomainVerificationJob } from "../src/modules/domain-connections";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const appUrl = "https://map.example.test";
@@ -42,7 +42,7 @@ describe("carte bornée des connexions", () => {
     await services.approveDnsChangePlan(owner.id, tenant.id, plan.planId);
     await services.confirmDnsChangePlan(owner.id, tenant.id, plan.planId);
     await services.simulateDnsChangePlan(owner.id, tenant.id, plan.planId);
-    await services.requestWebsiteDomainBinding(
+    const binding = await services.requestWebsiteDomainBinding(
       owner.id,
       tenant.id,
       domain.connectionId,
@@ -70,10 +70,12 @@ describe("carte bornée des connexions", () => {
       idempotencyKey: "connection-map-sync",
       correlationId: correlationId(),
     });
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const summary = await processPendingDomainEvents(db, { limit: 100 });
-      if (summary.selected === 0) break;
-    }
+    await processDomainVerificationJob(
+      db,
+      owner.id,
+      tenant.id,
+      binding.jobId,
+    );
 
     const map = await services.getConnectionMap(owner.id, tenant.id);
     expect(map.nodes.length).toBeLessThanOrEqual(map.limits.nodeLimit);
