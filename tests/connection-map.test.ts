@@ -70,6 +70,7 @@ describe("carte bornée des connexions", () => {
       idempotencyKey: "connection-map-sync",
       correlationId: correlationId(),
     });
+    if (!binding.jobId) throw new Error("Vérification de domaine manquante.");
     await processDomainVerificationJob(
       db,
       owner.id,
