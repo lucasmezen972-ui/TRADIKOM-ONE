@@ -14,7 +14,7 @@ import {
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ConnectionMapEdge,
   ConnectionMapNode,
@@ -54,7 +54,10 @@ export function ConnectionMap({
   valueSummaries: ConnectionValueSummary[];
 }) {
   const [selectedId, setSelectedId] = useState("platform");
+  const [interactive, setInteractive] = useState(false);
   const selected = nodes.find((node) => node.id === selectedId) ?? nodes[0];
+
+  useEffect(() => setInteractive(true), []);
 
   return (
     <section className="grid gap-5 border-y border-slate-200 py-6">
@@ -81,9 +84,10 @@ export function ConnectionMap({
             <button
               key={node.id}
               type="button"
+              disabled={!interactive}
               aria-pressed={selected?.id === node.id}
               onClick={() => setSelectedId(node.id)}
-              className={`grid min-h-24 grid-cols-[36px_minmax(0,1fr)] items-start gap-3 rounded-lg border p-3 text-left transition ${
+              className={`grid min-h-24 grid-cols-[36px_minmax(0,1fr)] items-start gap-3 rounded-lg border p-3 text-left transition disabled:cursor-wait ${
                 selected?.id === node.id
                   ? "border-[#0f766e] bg-[#f0fdfa]"
                   : "border-slate-200 bg-white hover:border-slate-400"

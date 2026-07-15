@@ -207,7 +207,9 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
     map.getByRole("button", { name: /Approbations/ }),
   ).toBeVisible();
   await expect(softwareNode).toContainText(accountLabel);
+  await expect(softwareNode).toBeEnabled();
   await softwareNode.click();
+  await expect(softwareNode).toHaveAttribute("aria-pressed", "true");
   await expect(
     page.locator("aside").filter({ hasText: accountLabel }),
   ).toBeVisible();
