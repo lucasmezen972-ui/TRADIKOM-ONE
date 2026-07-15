@@ -206,8 +206,11 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
   await expect(
     map.getByRole("button", { name: /Approbations/ }),
   ).toBeVisible();
+  await expect(softwareNode).toContainText(accountLabel);
   await softwareNode.click();
-  await expect(page.getByText(accountLabel)).toBeVisible();
+  await expect(
+    page.locator("aside").filter({ hasText: accountLabel }),
+  ).toBeVisible();
   await expect(page.getByText("Version textuelle accessible")).toBeVisible();
 
   const db = await getDb();
@@ -370,7 +373,10 @@ test("the strategic advisor explains and approves a proposal without execution",
   page,
 }) => {
   await openDemo(page);
-  await page.getByRole("link", { name: "Conseiller" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "Conseiller" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Conseiller stratégique" }),
   ).toBeVisible();
