@@ -129,6 +129,7 @@ test("a tenant administrator binds a verified domain without publishing the draf
 });
 
 test("a tenant administrator connects and revokes the local OAuth provider without exposing tokens", async ({
+  browser,
   page,
 }) => {
   await openDemo(page);
@@ -189,6 +190,54 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
   await expect(
     disconnected.getByRole("button", { name: "Rafraîchir l’accès" }),
   ).toHaveCount(0);
+
+  await page.goto("/connexions");
+  await expect(
+    page.getByRole("heading", { name: "Carte des connexions" }),
+  ).toBeVisible();
+  const map = page.getByRole("group", {
+    name: "Éléments de la carte des connexions",
+  });
+  const softwareNode = map.getByRole("button", { name: /Mock Business/ }).first();
+  await expect(softwareNode).toContainText("Déconnecté");
+  await expect(
+    map.getByRole("button", { name: /E-mail applicatif/ }),
+  ).toBeVisible();
+  await expect(
+    map.getByRole("button", { name: /Approbations/ }),
+  ).toBeVisible();
+  await softwareNode.click();
+  await expect(page.getByText(accountLabel)).toBeVisible();
+  await expect(page.getByText("Version textuelle accessible")).toBeVisible();
+
+  const db = await getDb();
+  const services = createServices(db);
+  const isolatedEmail = `isolated-connection-${Date.now()}@example.com`;
+  const isolatedPassword = "IsolatedConnection!2026";
+  const isolatedUser = await services.registerUser({
+    name: "Organisation connexion isolée",
+    email: isolatedEmail,
+    password: isolatedPassword,
+  });
+  await services.createTenant(isolatedUser.id, {
+    name: "Organisation connexion vide",
+    category: "Services",
+  });
+  const isolatedContext = await browser.newContext();
+  const isolatedPage = await isolatedContext.newPage();
+  await isolatedPage.goto("/");
+  const loginForm = isolatedPage.locator("form").filter({
+    has: isolatedPage.getByRole("button", { name: "Se connecter" }),
+  });
+  await loginForm.getByPlaceholder("Email professionnel").fill(isolatedEmail);
+  await loginForm.getByPlaceholder("Mot de passe").fill(isolatedPassword);
+  await loginForm.getByRole("button", { name: "Se connecter" }).click();
+  await isolatedPage.goto("/connexions");
+  await expect(
+    isolatedPage.getByRole("heading", { name: "Carte des connexions" }),
+  ).toBeVisible();
+  await expect(isolatedPage.getByText(accountLabel)).toHaveCount(0);
+  await isolatedContext.close();
 });
 
 test("a tenant controls a mapped import and an expiring export", async ({

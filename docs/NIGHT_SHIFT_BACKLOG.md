@@ -8,9 +8,10 @@ Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green mai
 4. Scoped selector fix `6a5b589` passed its target path; connector run `29378574054` passed every gate through production build and exposed one shared-demo disconnect summary not reset before the command-center E2E.
 5. Import correction `c49c2e8` passed complete run `29380786047`, including the mapped CSV browser path.
 6. Universal import/export is green at `8c424f9` in complete run `29381701151`; run `29381236378` had found and isolated one recursive return-type annotation before that fix.
-7. Website domain binding with durable mock propagation verification, published-snapshot safety, disconnect, RLS and Playwright coverage is implemented locally and awaits its checkpoint push.
-8. Bounded automatic mock OAuth refresh scheduling is implemented locally on the durable event worker and awaits checkpoint validation.
-9. Add the bounded connection map and business-value summary, then complete the first vertical slice before any real provider adapter.
+7. Website domain binding and its contract fix are green at `2ff2986` in complete run `29382435553`, including durable mock propagation, published-snapshot safety, disconnect, RLS and Playwright coverage.
+8. Bounded automatic mock OAuth refresh scheduling is green at `6f79fa1` in complete run `29382920239`, including migrations, audit, lint, typecheck, worker tests, production build and Playwright.
+9. Bounded connection map and qualitative business-value summary are implemented locally from existing services and await checkpoint validation.
+10. The first vertical-slice review and browser tenant-isolation proof are included in the connection-map checkpoint; validate them before any real provider adapter.
 
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 

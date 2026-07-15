@@ -12,6 +12,8 @@
 - exports limités à 10 Mo, 5 000 lignes et 366 jours;
 - fichiers d'export conservés dans un stockage borné tenant-owned et supprimés après 24 heures; aucun stockage objet externe;
 - liaison domaine-site limitée au fournisseur mock local et à une version déjà publiée;
+- carte de connexion limitée à 31 nœuds observés; aucun moteur de graphe général;
+- estimations de valeur qualitatives seulement; aucun gain financier ou temporel sans mesure validée;
 - aucune dépendance Internet dans les tests.
 
 Les résultats du fournisseur DNS mock prouvent le flux de contrôle, pas la disponibilité d'un fournisseur externe. Les instructions manuelles sont génériques tant que l'interface officielle du fournisseur n'est pas vérifiée.

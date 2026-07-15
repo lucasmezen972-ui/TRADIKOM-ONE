@@ -266,6 +266,7 @@ import {
   prepareMockConnectorInstallation,
   type ExecuteConnectorOperationInput,
 } from "@/modules/connector-execution";
+import { getConnectionMap } from "@/modules/connection-map";
 import {
   authorizeMockOAuthRequest,
   completeMockOAuthConnection,
@@ -717,6 +718,10 @@ export function createServices(
     ) => disconnectSoftwareConnection(db, userId, tenantId, { connectionId }),
     getConnectorExecutionWorkspace: (userId: string, tenantId: string) =>
       getConnectorExecutionWorkspace(db, userId, tenantId),
+    getConnectionMap: (userId: string, tenantId: string) =>
+      getConnectionMap(db, userId, tenantId, {
+        emailProviderName: authDelivery.emailProvider.name,
+      }),
     prepareMockConnectorInstallation: (
       userId: string,
       tenantId: string,

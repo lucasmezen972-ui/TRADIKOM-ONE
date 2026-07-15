@@ -16,6 +16,7 @@ import {
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
+import { ConnectionMap } from "./connection-map";
 import { WebhookSecretRotationForm } from "./webhook-secret-rotation-form";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +24,13 @@ export const dynamic = "force-dynamic";
 export default async function ConnectionsPage() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const [connectors, webhook, universalConnectors] = await Promise.all([
+  const [connectors, webhook, universalConnectors, connectionMap] = await Promise.all([
     services.getConnectors(user.id, tenant.id),
     services.getWebhookEndpointConfig(user.id, tenant.id),
     services
       .getUniversalConnectorWorkspace(user.id, tenant.id)
       .catch(() => null),
+    services.getConnectionMap(user.id, tenant.id).catch(() => null),
   ]);
 
   return (
@@ -62,6 +64,18 @@ export default async function ConnectionsPage() {
           </Link>
         </div>
       </header>
+
+      {connectionMap ? (
+        <ConnectionMap
+          nodes={connectionMap.nodes}
+          edges={connectionMap.edges}
+          valueSummaries={connectionMap.valueSummaries}
+        />
+      ) : (
+        <section className="border-y border-red-200 bg-red-50 px-4 py-5 text-sm text-red-800">
+          La carte des connexions est temporairement indisponible. Aucun flux externe n’a été modifié.
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {connectors.map((connector) => (

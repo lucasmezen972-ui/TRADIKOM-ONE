@@ -35,8 +35,12 @@ Current Phase 5 checkpoint:
 - Export run `29381236378` found one missing explicit return type in the recursive value normalizer. Fix `8c424f9` passed complete GitHub Actions run `29381701151` with no runtime-policy change.
 - Website-domain binding now persists the domain, simulated plan and published version present at request time, then queues an idempotent mock propagation verification. Verification updates certificate/binding state without publishing the draft or changing external DNS; disconnect preserves both the public snapshot and DNS state.
 - Runtime migrations `065`/`066` and SQL mirrors `0059`/`0060` add tenant-owned bindings and verification jobs with composite relations, tenant-leading indexes and RLS. Unit, restricted-role PostgreSQL and Playwright coverage include target-takeover rejection, cross-tenant denial and draft/public immutability.
+- Website-domain binding contract fix `2ff2986` passed complete GitHub Actions run `29382435553`: migrations, dependency audit, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright.
 - Expiring mock OAuth credentials are now selected in bounded batches by maintenance and queued in the durable event worker without token content. Idempotency is tied to the credential expiry, stale events are ignored and the existing atomic refresh lease rotates encrypted credentials safely.
-- Next unfinished task: validate website-domain binding and OAuth refresh through CI, then add the bounded connection map and explainable business-value summary.
+- OAuth refresh head `6f79fa1` passed complete GitHub Actions run `29382920239`, including migrations, dependency audit, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright.
+- The connection map composes existing domain, website, email-provider, software, connector-health, workflow and permission-aware approval services into at most 31 tenant-scoped nodes, selectable details, explicit data directions and an accessible text alternative. It stores no graph copy and exposes no credential or payload.
+- Business-value summaries expose only setup effort, proven operations and qualitative risk reduction. Financial and time gains remain unavailable until volumes, durations and costs are measured.
+- Next unfinished task: validate the connection map and complete first vertical slice through CI, then select at most one safe real provider adapter.
 
 Current Phase 4 checkpoint:
 

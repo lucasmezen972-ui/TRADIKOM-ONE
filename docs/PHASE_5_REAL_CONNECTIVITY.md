@@ -63,7 +63,20 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - événement de refresh sans secret, clé d'idempotence par échéance, corrélation et rejet des demandes obsolètes;
 - verrou atomique, rotation chiffrée et reprise gérées par le worker existant.
 
-La validation complète de ce checkpoint reste requise avant toute intégration réelle.
+Le checkpoint domaine et liaison est vert dans le run `29382435553`. Le refresh OAuth durable est vert dans le run `29382920239`.
+
+## Sixième checkpoint en cours
+
+- carte bornée composée des services domaine, site, e-mail, logiciels, installations, santé connecteur, file workflow et approbations permission-aware;
+- nœuds sélectionnables, flux entrants/sortants/internes, environnements et états français;
+- alternative textuelle accessible et liens directs vers les espaces propriétaires;
+- synthèse de valeur qualitative avec effort, tâches potentiellement réduites, automatisations prouvées et réduction de risque;
+- gain financier et gain de temps laissés indisponibles sans volumes, durées et coûts validés;
+- aucune copie de credential, payload ou donnée client dans le modèle de carte.
+
+## Revue de la première tranche verticale
+
+Le parcours mock couvre maintenant l'analyse et la simulation DNS, la liaison au snapshot public, OAuth avec PKCE, l'installation désactivée, l'activation explicite en lecture seule, la synchronisation, la santé, l'import mappé, l'export expirant, la carte et la déconnexion. Les tests PostgreSQL vérifient les relations tenant-composées et RLS; Playwright utilise aussi une seconde session et une seconde organisation pour vérifier l'absence de fuite du libellé de connexion. Aucun appel Internet, effet DNS externe, publication de brouillon ou écriture fournisseur n'est réalisé.
 
 ## Frontière de sécurité
 
