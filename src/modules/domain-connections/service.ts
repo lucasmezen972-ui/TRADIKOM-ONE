@@ -358,7 +358,7 @@ export async function requestWebsiteDomainBinding(
     }
     assertPlanNotExpired(plan.expires_at);
     const website = await findWebsite(transaction, tenantId);
-    if (!website?.current_published_version_id) {
+    if (!website?.currentPublishedVersionId) {
       throw new DomainConnectionError(
         "website_not_published",
         "Publiez d'abord une version du site avant de lier ce domaine.",
@@ -384,7 +384,7 @@ export async function requestWebsiteDomainBinding(
       websiteId: website.id,
       connectionId: connection.id,
       planId: plan.id,
-      publishedVersionId: website.current_published_version_id,
+      publishedVersionId: website.currentPublishedVersionId,
       actorId: userId,
       now,
     });
