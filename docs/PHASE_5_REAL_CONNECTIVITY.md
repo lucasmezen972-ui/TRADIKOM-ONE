@@ -38,7 +38,17 @@ Permettre à une organisation de préparer et superviser ses connexions externes
 - centre de santé français avec état, authentification, synchronisations, latence, quota, versions, dérive, rupture et action recommandée;
 - déconnexion qui révoque OAuth, invalide les demandes en attente et arrête l'installation.
 
-L'import/export et la liaison de domaine doivent être terminés avant toute intégration réelle.
+## Quatrième checkpoint en cours
+
+- import universel CSV, JSON et XLSX avec mapping explicite;
+- fichier brut non conservé, aperçu normalisé et validation à blanc obligatoire;
+- limites de taille, lignes, colonnes, cellules et profondeur JSON;
+- rejet des formules de tableur, dédoublonnage tenant-scoped et références contrôlées;
+- finalisation transactionnelle par lots, reprise, rapport d'erreur et retour arrière;
+- interface française `/connexions/donnees`, rôles, audit et tests ciblés;
+- correction de cohérence: une déconnexion logicielle remet aussi le résumé historique du connecteur en état non configuré.
+
+L'export universel et la liaison de domaine doivent être terminés avant toute intégration réelle.
 
 ## Frontière de sécurité
 

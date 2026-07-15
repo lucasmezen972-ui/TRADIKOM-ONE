@@ -277,6 +277,13 @@ import {
   disconnectSoftwareConnection,
   getSoftwareConnectionWorkspace,
 } from "@/modules/software-connections";
+import {
+  commitUniversalImportBatch,
+  getImportWorkspace,
+  previewUniversalImport,
+  rollbackUniversalImport,
+  type ImportPreviewInput,
+} from "@/modules/imports";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -703,6 +710,23 @@ export function createServices(
     ) => executeMockConnectorOperation(db, userId, tenantId, input),
     importCsvContacts: (userId: string, tenantId: string, csvText: string) =>
       importCsvContacts(db, userId, tenantId, csvText),
+    getImportWorkspace: (userId: string, tenantId: string) =>
+      getImportWorkspace(db, userId, tenantId),
+    previewUniversalImport: (
+      userId: string,
+      tenantId: string,
+      input: ImportPreviewInput & { buffer: Buffer },
+    ) => previewUniversalImport(db, userId, tenantId, input),
+    commitUniversalImportBatch: (
+      userId: string,
+      tenantId: string,
+      input: { importId: string; batchSize?: number },
+    ) => commitUniversalImportBatch(db, userId, tenantId, input),
+    rollbackUniversalImport: (
+      userId: string,
+      tenantId: string,
+      importId: string,
+    ) => rollbackUniversalImport(db, userId, tenantId, { importId }),
     getWebhookEndpointConfig: (userId: string, tenantId: string) =>
       getWebhookEndpointConfig(db, userId, tenantId),
     rotateWebhookEndpointSecret: (

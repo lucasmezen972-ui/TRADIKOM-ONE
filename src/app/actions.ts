@@ -962,6 +962,74 @@ export async function importCsvAction(formData: FormData) {
   revalidatePath("/contacts");
 }
 
+export async function previewUniversalImportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Sélectionnez un fichier à importer.");
+  }
+  const entityType = text(formData, "entityType") as
+    | "contacts"
+    | "companies"
+    | "products"
+    | "opportunities";
+  const mappingTargets = {
+    contacts: ["name", "email", "phone", "status", "tags"],
+    companies: ["name", "domain"],
+    products: ["name", "sku", "price"],
+    opportunities: ["contact_email", "stage_name", "value"],
+  }[entityType] ?? [];
+  const mapping = Object.fromEntries(
+    mappingTargets.flatMap((target) => {
+      const source = text(formData, `mapping_${target}`).trim();
+      return source ? [[target, source]] : [];
+    }),
+  );
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const result = await safeServerAction("import.preview", () =>
+    services.previewUniversalImport(user.id, tenant.id, {
+      entityType,
+      format: text(formData, "format") as "csv" | "xlsx" | "json",
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+      mapping,
+      sheetName: text(formData, "sheetName") || undefined,
+      buffer,
+    }),
+  );
+  redirect(`/connexions/donnees?import=${encodeURIComponent(result.id)}`);
+}
+
+export async function commitUniversalImportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("import.commit", () =>
+    services.commitUniversalImportBatch(user.id, tenant.id, {
+      importId: text(formData, "importId"),
+      batchSize: 200,
+    }),
+  );
+  revalidatePath("/connexions/donnees");
+  revalidatePath("/contacts");
+  revalidatePath("/opportunites");
+}
+
+export async function rollbackUniversalImportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("import.rollback", () =>
+    services.rollbackUniversalImport(
+      user.id,
+      tenant.id,
+      text(formData, "importId"),
+    ),
+  );
+  revalidatePath("/connexions/donnees");
+  revalidatePath("/contacts");
+  revalidatePath("/opportunites");
+}
+
 export async function analyzeDomainConnectionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

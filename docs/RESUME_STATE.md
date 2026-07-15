@@ -23,7 +23,11 @@ Current Phase 5 checkpoint:
 - OAuth UI run `29377188333` passed every gate except Playwright because CI used `APP_URL=127.0.0.1` while Playwright still used `localhost`, dropping the host-only session cookie during the OAuth redirect. Head `a3ae131` aligned Playwright with the configured application origin; run `29377818420` then passed the OAuth flow and exposed only an unrelated ambiguous legacy `Mon site` selector. Scoped test fix `6a5b589` is under CI validation.
 - Controlled connector execution now creates an installed-disabled mock connector, requires explicit read-only activation, enforces the common policy engine in UI and worker paths, reserves idempotency before quota/effect, records safe execution metadata and exposes tenant-scoped health.
 - Runtime migrations `059`/`060` and SQL mirrors `0053`/`0054` add installations, executions, health, composite tenant relations, tenant-leading indexes and RLS. Focused policy/idempotency/quota/isolation, restricted-role PostgreSQL and expanded Playwright coverage are included.
-- Next unfinished task: validate `6a5b589` and the connector execution checkpoint through CI, then implement safe import/export.
+- Connector run `29378574054` passed migrations, dependency audit, backup/restore, lint, typecheck, all unit/integration/PostgreSQL/RLS tests and production build. Its sole failure was a command-center E2E expecting the disconnected mock connector summary after an earlier sync. Disconnect now resets that bounded summary and has a direct regression assertion.
+- Universal import now accepts bounded CSV, JSON and XLSX, rejects formula/depth/size hazards, requires explicit mapping and a persisted dry run, detects tenant duplicates, commits transactionally in resumable batches and supports audited rollback for contacts, companies, products and opportunities.
+- Runtime migrations `061`/`062` and SQL mirrors `0055`/`0056` add the tenant-owned product model and durable import metadata/indexes while preserving the existing import RLS policies. The French `/connexions/donnees` workspace exposes preview, report, commit and rollback controls.
+- Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
+- Next unfinished task: make the connector/import checkpoint green, then implement universal export.
 
 Current Phase 4 checkpoint:
 

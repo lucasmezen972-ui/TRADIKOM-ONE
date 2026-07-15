@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ClipboardList,
+  Database,
   Globe2,
   Link2,
   LockKeyhole,
@@ -51,6 +52,13 @@ export default async function ConnectionsPage() {
           >
             <Link2 size={17} aria-hidden />
             Connecter un logiciel
+          </Link>
+          <Link
+            href="/connexions/donnees"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            <Database size={17} aria-hidden />
+            Importer des données
           </Link>
         </div>
       </header>

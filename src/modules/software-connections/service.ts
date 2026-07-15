@@ -13,6 +13,7 @@ import {
   findSoftwareConnection,
   listSoftwareConnections,
   markSoftwareConnectionDisconnected,
+  resetConnectorSummaryAfterDisconnect,
 } from "@/modules/software-connections/repository";
 import { assertTenantAccess } from "@/modules/tenants";
 
@@ -108,6 +109,11 @@ export async function disconnectSoftwareConnection(
     await disconnectInstallationsForSoftwareConnection(transaction, {
       tenantId,
       connectionId: connection.id,
+      now,
+    });
+    await resetConnectorSummaryAfterDisconnect(transaction, {
+      tenantId,
+      connectorKey: connection.software_key,
       now,
     });
     await recordAuditLog(transaction, {

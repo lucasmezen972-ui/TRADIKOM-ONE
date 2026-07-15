@@ -64,6 +64,32 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ownerB.id,
       "bravo@example.com",
     );
+    const importA = await services.previewUniversalImport(ownerA.id, tenantA.id, {
+      entityType: "products",
+      format: "json",
+      fileName: "rls-products.json",
+      contentType: "application/json",
+      mapping: { name: "nom", sku: "reference", price: "prix" },
+      buffer: Buffer.from(
+        JSON.stringify([{ nom: "Produit RLS", reference: "RLS-A", prix: "10" }]),
+      ),
+    });
+    const productAId = id("product");
+    const productBId = id("product");
+    await ownerDb.query(
+      `insert into products (id, tenant_id, name, sku, price_cents, active, created_at, updated_at)
+       values ($1, $2, 'Produit A', $3, 1000, 1, $4, $4),
+              ($5, $6, 'Produit B', $7, 2000, 1, $4, $4)`,
+      [
+        productAId,
+        tenantA.id,
+        `RLS-A-${randomUUID()}`,
+        nowIso(),
+        productBId,
+        tenantB.id,
+        `RLS-B-${randomUUID()}`,
+      ],
+    );
     const apiIntelligence = await insertApiIntelligenceTenantFixtures(
       ownerDb,
       tenantA.id,
@@ -143,6 +169,8 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "select id from connector_installation_plans order by id",
     );
     expect(noConnectorPlans.rows).toEqual([]);
+    expect((await restrictedPool.query("select id from products")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from imports")).rows).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -160,6 +188,27 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(tenantARows.rows.map((row) => row.email)).toEqual([
       "alpha@example.com",
     ]);
+    const tenantAImports = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => client.query<{ id: string }>("select id from imports"),
+    );
+    expect(tenantAImports.rows).toEqual([{ id: importA.id }]);
+    const tenantAProducts = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => client.query<{ id: string }>("select id from products"),
+    );
+    expect(tenantAProducts.rows).toEqual([{ id: productAId }]);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into products (id, tenant_id, name, sku, price_cents, active, created_at, updated_at)
+           values ($1, $2, 'Interdit', $3, 0, 1, $4, $4)`,
+          [id("product"), tenantB.id, `RLS-X-${randomUUID()}`, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
 
     const criticalTenantRows = await withTenantContext(
       restrictedPool,

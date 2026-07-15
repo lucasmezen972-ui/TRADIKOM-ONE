@@ -119,3 +119,16 @@ export async function markSoftwareConnectionDisconnected(
     [input.now, input.tenantId, input.connectionId],
   );
 }
+
+export async function resetConnectorSummaryAfterDisconnect(
+  db: DbClient,
+  input: { tenantId: string; connectorKey: string; now: string },
+) {
+  await db.query(
+    `update connectors
+        set status = 'Configuration requise', health = 'inactive',
+            last_sync_at = null, updated_at = $1
+      where tenant_id = $2 and connector_key = $3`,
+    [input.now, input.tenantId, input.connectorKey],
+  );
+}

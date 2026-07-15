@@ -137,6 +137,64 @@ test("a tenant administrator connects and revokes the local OAuth provider witho
   ).toHaveCount(0);
 });
 
+test("a tenant previews, commits and rolls back a mapped CSV import", async ({
+  page,
+}) => {
+  const db = await getDb();
+  const services = createServices(db);
+  const suffix = Date.now();
+  const email = `import-e2e-${suffix}@example.com`;
+  const password = "ImportE2E!2026";
+  const user = await services.registerUser({
+    name: "Responsable import",
+    email,
+    password,
+  });
+  await services.createTenant(user.id, {
+    name: `Organisation import ${suffix}`,
+    category: "Commerce",
+  });
+
+  await page.goto("/");
+  const loginForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Se connecter" }),
+  });
+  await loginForm.getByPlaceholder("Email professionnel").fill(email);
+  await loginForm.getByPlaceholder("Mot de passe").fill(password);
+  await loginForm.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page).toHaveURL(/aujourdhui/);
+
+  await page.goto("/connexions/donnees");
+  await expect(
+    page.getByRole("heading", { name: "Imports de données" }),
+  ).toBeVisible();
+  const contactEmail = `contact-import-${suffix}@example.com`;
+  await page.getByLabel("Fichier").setInputFiles({
+    name: "contacts-e2e.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      `nom,email,telephone\nContact importé,${contactEmail},+596696000099`,
+    ),
+  });
+  await page.getByRole("button", { name: "Valider l’aperçu" }).click();
+  await expect(page).toHaveURL(/connexions\/donnees\?import=/);
+  await expect(page.getByText("Aperçu validé").first()).toBeVisible();
+  await page.getByRole("button", { name: "Finaliser l’import" }).click();
+  await expect(page.getByText("Import terminé").first()).toBeVisible();
+
+  await page.goto("/contacts");
+  await expect(page.getByText(contactEmail)).toBeVisible();
+  await page.goto("/connexions/donnees");
+  const importCard = page.locator("a").filter({ hasText: "contacts-e2e.csv" }).first();
+  await importCard.click();
+  await page
+    .getByRole("button", { name: "Annuler les données importées" })
+    .click();
+  await expect(page.getByText("Import annulé").first()).toBeVisible();
+  await page.goto("/contacts");
+  await expect(page.getByText(contactEmail)).toHaveCount(0);
+});
+
 test("the Business Brain versions and archives verified tenant memory", async ({
   page,
 }) => {

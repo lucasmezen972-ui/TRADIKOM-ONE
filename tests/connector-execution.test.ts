@@ -309,6 +309,20 @@ describe("exécution contrôlée des connecteurs", () => {
         authenticationState: "revoked",
       }),
     });
+    const connectorSummary = await db.query<{
+      status: string;
+      health: string;
+      last_sync_at: string | null;
+    }>(
+      `select status, health, last_sync_at from connectors
+        where tenant_id = $1 and connector_key = 'mock_business'`,
+      [tenantA.id],
+    );
+    expect(connectorSummary.rows[0]).toEqual({
+      status: "Configuration requise",
+      health: "inactive",
+      last_sync_at: null,
+    });
     await expect(
       services.executeMockConnectorOperation(
         ownerA.id,
