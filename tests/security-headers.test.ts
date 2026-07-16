@@ -18,24 +18,28 @@ describe("secure response headers", () => {
     expect(headers["Content-Security-Policy"]).not.toContain("'unsafe-eval'");
   });
 
-  it("adds HSTS only for production responses", () => {
-    const production = Object.fromEntries(
-      getGlobalSecurityHeaders("production").map((header) => [
-        header.key,
-        header.value,
-      ]),
+  it("adds HSTS only for production HTTPS responses", () => {
+    const productionHttps = Object.fromEntries(
+      getGlobalSecurityHeaders("production", "https://app.example.com").map(
+        (header) => [header.key, header.value],
+      ),
     );
-    const development = Object.fromEntries(
-      getGlobalSecurityHeaders("development").map((header) => [
-        header.key,
-        header.value,
-      ]),
+    const productionHttp = Object.fromEntries(
+      getGlobalSecurityHeaders("production", "http://127.0.0.1:3000").map(
+        (header) => [header.key, header.value],
+      ),
+    );
+    const developmentHttps = Object.fromEntries(
+      getGlobalSecurityHeaders("development", "https://app.example.com").map(
+        (header) => [header.key, header.value],
+      ),
     );
 
-    expect(production["Strict-Transport-Security"]).toBe(
+    expect(productionHttps["Strict-Transport-Security"]).toBe(
       "max-age=31536000; includeSubDomains",
     );
-    expect(development["Strict-Transport-Security"]).toBeUndefined();
+    expect(productionHttp["Strict-Transport-Security"]).toBeUndefined();
+    expect(developmentHttps["Strict-Transport-Security"]).toBeUndefined();
   });
 
   it("prevents auth, token, and webhook responses from being cached", async () => {
