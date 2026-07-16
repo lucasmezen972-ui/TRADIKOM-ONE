@@ -1,25 +1,30 @@
 import { NextResponse } from "next/server";
 import { getServices } from "@/lib/services";
-import { requireTenantContext } from "@/lib/session";
 import { resolveAppUrl } from "@/modules/email";
+import { OAuthError } from "@/modules/oauth/errors";
 import { resolveCorrelationId } from "@/modules/request-context";
 
 export async function GET(request: Request) {
-  const { user, tenant } = await requireTenantContext();
   const appOrigin = resolveAppUrl();
   const redirectUri = new URL("/api/oauth/mock/callback", appOrigin).toString();
   const requestUrl = new URL(request.url);
-  const state = requestUrl.searchParams.get("state") ?? "";
-  const code = requestUrl.searchParams.get("code") ?? "";
   const correlationId = resolveCorrelationId(
     request.headers.get("x-correlation-id"),
   );
 
   try {
+    const tenantId = callbackContext(
+      requestUrl.searchParams.get("tenant_id"),
+      "tenant_",
+    );
+    const actorId = callbackContext(
+      requestUrl.searchParams.get("actor_id"),
+      "user_",
+    );
     const services = await getServices();
-    await services.completeMockOAuthConnection(user.id, tenant.id, {
-      state,
-      code,
+    await services.completeMockOAuthConnection(actorId, tenantId, {
+      state: requestUrl.searchParams.get("state") ?? "",
+      code: requestUrl.searchParams.get("code") ?? "",
       redirectUri,
     });
     return redirectWithContext(
@@ -27,13 +32,30 @@ export async function GET(request: Request) {
       appOrigin,
       correlationId,
     );
-  } catch {
+  } catch (error) {
+    const errorCode =
+      error instanceof OAuthError ? error.code : "oauth_callback_failed";
     return redirectWithContext(
-      "/connexions/logiciels?oauth=erreur",
+      `/connexions/logiciels?oauth=erreur&code=${encodeURIComponent(errorCode)}`,
       appOrigin,
       correlationId,
     );
   }
+}
+
+function callbackContext(value: string | null, prefix: "tenant_" | "user_") {
+  if (
+    !value ||
+    value.length > 96 ||
+    !value.startsWith(prefix) ||
+    !/^[a-z0-9_]+$/.test(value)
+  ) {
+    throw new OAuthError(
+      "oauth_state_invalid",
+      "Le contexte de retour OAuth est invalide.",
+    );
+  }
+  return value;
 }
 
 function redirectWithContext(path: string, appOrigin: string, correlationId: string) {
