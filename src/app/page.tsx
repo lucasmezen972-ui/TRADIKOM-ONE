@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Building2, KeyRound, Sparkles } from "lucide-react";
 import { getCurrentSession } from "@/lib/session";
-import { loginAction, registerAction, seedDemoAction } from "@/app/actions";
+import { registerAction, seedDemoAction } from "@/app/actions";
 import { isPublicDemoEnabled } from "@/modules/demo";
 
 export const dynamic = "force-dynamic";
 
 type HomeProps = {
-  searchParams: Promise<{ motdepasse?: string }>;
+  searchParams: Promise<{ motdepasse?: string; connexion?: string }>;
 };
 
 export default async function Home({ searchParams }: HomeProps) {
@@ -101,7 +101,12 @@ export default async function Home({ searchParams }: HomeProps) {
                 Votre mot de passe a été mis à jour.
               </p>
             ) : null}
-            <form action={loginAction} className="mt-4 grid gap-3">
+            {params.connexion === "erreur" ? (
+              <p className="mt-3 rounded-md border border-red-300/30 bg-red-300/10 px-4 py-3 text-sm text-red-50">
+                Connexion impossible. Vérifiez vos identifiants.
+              </p>
+            ) : null}
+            <form action="/api/auth/login" method="post" className="mt-4 grid gap-3">
               <input
                 required
                 type="email"
