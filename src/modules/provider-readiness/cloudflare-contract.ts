@@ -1,6 +1,5 @@
 const CLOUDFLARE_API_ORIGIN = "https://api.cloudflare.com";
 const CLOUDFLARE_API_PREFIX = "/client/v4";
-const maxTokenLength = 4096;
 const maxResultItems = 50;
 const maxDnsContentLength = 4096;
 
@@ -17,6 +16,8 @@ export const cloudflareReadOnlyContract = {
     writes: false,
     dnsChanges: false,
     automaticActivation: false,
+    credentialMaterialization: false,
+    networkTransport: false,
   },
   operations: [
     {
@@ -57,6 +58,7 @@ export type CloudflareRequestPlan = {
     perPage: number | null;
     zoneIdPresent: boolean;
     credentialIncluded: false;
+    transportEnabled: false;
   };
 };
 
@@ -104,14 +106,22 @@ export function createCloudflareRequestPlan(input: {
     throw new Error("Unsupported Cloudflare read-only operation.");
   }
 
-  const url = new URL(`${CLOUDFLARE_API_PREFIX}${operation.path}`, CLOUDFLARE_API_ORIGIN);
+  const url = new URL(
+    `${CLOUDFLARE_API_PREFIX}${operation.path}`,
+    CLOUDFLARE_API_ORIGIN,
+  );
   let page: number | null = null;
   let perPage: number | null = null;
   let zoneIdPresent = false;
 
   if (input.operation === "zones.list") {
     page = boundedInteger(input.page ?? 1, 1, 10, "page");
-    perPage = boundedInteger(input.perPage ?? maxResultItems, 1, maxResultItems, "perPage");
+    perPage = boundedInteger(
+      input.perPage ?? maxResultItems,
+      1,
+      maxResultItems,
+      "perPage",
+    );
     url.searchParams.set("page", String(page));
     url.searchParams.set("per_page", String(perPage));
     if (input.zoneName) {
@@ -123,7 +133,12 @@ export function createCloudflareRequestPlan(input: {
     const zoneId = normalizeCloudflareIdentifier(input.zoneId, "zoneId");
     url.pathname = url.pathname.replace("{zone_id}", zoneId);
     page = boundedInteger(input.page ?? 1, 1, 10, "page");
-    perPage = boundedInteger(input.perPage ?? maxResultItems, 1, maxResultItems, "perPage");
+    perPage = boundedInteger(
+      input.perPage ?? maxResultItems,
+      1,
+      maxResultItems,
+      "perPage",
+    );
     url.searchParams.set("page", String(page));
     url.searchParams.set("per_page", String(perPage));
     zoneIdPresent = true;
@@ -144,29 +159,9 @@ export function createCloudflareRequestPlan(input: {
       perPage,
       zoneIdPresent,
       credentialIncluded: false,
+      transportEnabled: false,
     },
   };
-}
-
-export function materializeCloudflareRequest(
-  plan: CloudflareRequestPlan,
-  apiToken: string,
-) {
-  const token = normalizeApiToken(apiToken);
-  const url = new URL(plan.url);
-  assertCloudflareUrl(url);
-  if (plan.method !== "GET") {
-    throw new Error("Cloudflare provider readiness permits GET requests only.");
-  }
-
-  return new Request(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
 }
 
 export function parseCloudflareTokenVerification(value: unknown) {
@@ -215,9 +210,12 @@ export function parseCloudflareDnsRecords(
   }
   return result.map((item) => {
     if (!isRecord(item)) throw invalidResponse();
-    const ttl = typeof item.ttl === "number" && Number.isInteger(item.ttl) && item.ttl >= 1
-      ? item.ttl
-      : null;
+    const ttl =
+      typeof item.ttl === "number" &&
+      Number.isInteger(item.ttl) &&
+      item.ttl >= 1
+        ? item.ttl
+        : null;
     return {
       id: requiredIdentifier(item.id, "record id"),
       type: requiredString(item.type, 16).toUpperCase(),
@@ -233,7 +231,10 @@ export function classifyCloudflareFailure(input: {
   status?: number;
   kind?: "network" | "timeout" | "invalid_response" | "request_rejected";
 }): CloudflareSafeError {
-  const status = Number.isInteger(input.status) ? input.status! : null;
+  const status =
+    typeof input.status === "number" && Number.isInteger(input.status)
+      ? input.status
+      : null;
   if (status === 401) return safeError("authentication_required", false, status);
   if (status === 403) return safeError("permission_denied", false, status);
   if (status === 404) return safeError("not_found", false, status);
@@ -257,19 +258,10 @@ function parseEnvelope(value: unknown) {
   return value.result;
 }
 
-function normalizeApiToken(value: string) {
-  const token = value.trim();
-  if (
-    token.length < 20 ||
-    token.length > maxTokenLength ||
-    /[\u0000-\u001f\u007f\s]/.test(token)
-  ) {
-    throw new Error("Cloudflare API token is invalid.");
-  }
-  return token;
-}
-
-function normalizeCloudflareIdentifier(value: string | undefined, label: string) {
+function normalizeCloudflareIdentifier(
+  value: string | undefined,
+  label: string,
+) {
   if (!value || !/^[a-f0-9]{32}$/i.test(value)) {
     throw new Error(`Cloudflare ${label} is invalid.`);
   }
@@ -298,7 +290,12 @@ function normalizeDomainFilter(value: string) {
   return domain;
 }
 
-function boundedInteger(value: number, minimum: number, maximum: number, label: string) {
+function boundedInteger(
+  value: number,
+  minimum: number,
+  maximum: number,
+  label: string,
+) {
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
     throw new Error(`Cloudflare ${label} is outside the allowed range.`);
   }
