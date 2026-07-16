@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
-import {
-  authorizeMockOAuthAction,
-  rejectMockOAuthAction,
-} from "@/app/actions";
+import { rejectMockOAuthAction } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
+import { authorizeMockOAuthCallbackAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +107,7 @@ export default async function MockOAuthConsentPage({
       </section>
 
       <div className="flex flex-wrap gap-3">
-        <form action={authorizeMockOAuthAction}>
+        <form action={authorizeMockOAuthCallbackAction}>
           <input type="hidden" name="state" value={request.state} />
           <input
             type="hidden"
