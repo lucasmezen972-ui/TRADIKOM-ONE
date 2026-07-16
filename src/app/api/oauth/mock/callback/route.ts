@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { setSessionCookie, setTenantCookie } from "@/lib/security";
 import { getServices } from "@/lib/services";
 import { resolveAppUrl } from "@/modules/email";
 import { OAuthError } from "@/modules/oauth/errors";
@@ -27,6 +28,15 @@ export async function GET(request: Request) {
       code: requestUrl.searchParams.get("code") ?? "",
       redirectUri,
     });
+
+    // The authorization response is a top-level redirect. Re-issue the
+    // application session only after the one-time state, code and PKCE checks
+    // succeeded so the protected return page remains authenticated even when
+    // the browser omits the original cookie on the callback request.
+    const session = await services.createSession(actorId);
+    await setSessionCookie(session.sessionToken, session.expiresAt);
+    await setTenantCookie(tenantId);
+
     return redirectWithContext(
       "/connexions/logiciels?oauth=connecte",
       appOrigin,
