@@ -1,18 +1,17 @@
 # Night Shift Backlog
 
-Phase 5 in progress on `codex/phase-5-real-connectivity` from verified green main `1de2e3c`:
+Phase 5 first vertical slice is merged in PR #6 at `7ac09bf` after complete green closure run `29513872220`.
 
-1. Domain connection foundation validated in complete run `29374174913`.
-2. French domain workspace and PostgreSQL restricted-role coverage validated in complete run `29375436090`.
-3. Mock OAuth core validated in complete run `29376521177` with encrypted credentials, refresh locking and replay-safe state.
-4. Scoped selector fix `6a5b589` passed its target path; connector run `29378574054` passed every gate through production build and exposed one shared-demo disconnect summary not reset before the command-center E2E.
-5. Import correction `c49c2e8` passed complete run `29380786047`, including the mapped CSV browser path.
-6. Universal import/export is green at `8c424f9` in complete run `29381701151`; run `29381236378` had found and isolated one recursive return-type annotation before that fix.
-7. Website domain binding and its contract fix are green at `2ff2986` in complete run `29382435553`, including durable mock propagation, published-snapshot safety, disconnect, RLS and Playwright coverage.
-8. Bounded automatic mock OAuth refresh scheduling is green at `6f79fa1` in complete run `29382920239`, including migrations, audit, lint, typecheck, worker tests, production build and Playwright.
-9. Bounded connection map and qualitative business-value summary are pushed at `ae428d1`; the closure checkpoint consolidates its PGlite fixture while preserving tenant-isolation assertions.
-10. The first vertical-slice review and browser tenant-isolation proof are complete and await final closure CI.
-11. Final security tests now cover oversized imports, malformed CSV and local/private/user-info domain rejection. Real provider and API-key connections remain deferred until a CI-safe official sandbox exists.
+Current follow-up on `codex/phase-5-provider-readiness`:
+
+1. Preserve the merged mock slice as the verified safety baseline.
+2. Add direct regression coverage for configured-origin checks and relative `303` form redirects.
+3. Define the real-provider readiness gate before storing any provider credential.
+4. Evaluate candidates only from official documentation and a controlled sandbox, test account or developer environment.
+5. Add a tenant-scoped encrypted credential lifecycle before any live adapter: create, rotate, revoke, audit and never redisplay.
+6. Retain read-only capability, explicit activation, policy evaluation, idempotence, quotas and emergency stop for the first provider.
+7. Keep DNS writes, provider writes, external sends, payments and automatic activation unavailable.
+8. Phase 6 remains locked until one real-provider slice is isolated, tested and stable.
 
 Phase 2, Phase 3 and stabilization PR #4 are merged and green. Obsolete PR #2 is closed without merge. Phase 4 started from verified green `main` head `49c78d1` on `codex/phase-4-autonomous-platform`.
 
