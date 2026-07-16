@@ -43,22 +43,41 @@ Sources officielles examinées dans `cloudflare/cloudflare-typescript`:
 - `GET /zones/{zone_id}/dns_records` liste les enregistrements DNS;
 - le SDK expose aussi de nombreuses écritures, mais elles sont volontairement absentes du contrat TRADIKOM ONE.
 
-Le module `src/modules/provider-readiness/cloudflare-contract.ts` autorise seulement ces trois opérations `GET`. Il fixe l'origine à `https://api.cloudflare.com`, borne chaque page à 50 éléments, limite les dix premières pages, impose une réponse de 512 Kio maximum au futur transport et ne place aucun credential dans le plan sérialisable.
+Le module `src/modules/provider-readiness/cloudflare-contract.ts` autorise seulement ces trois opérations `GET`. Il fixe l'origine à `https://api.cloudflare.com`, borne chaque page à 50 éléments, limite les dix premières pages, définit une réponse maximale de 512 Kio pour le futur transport et ne place aucun credential dans le plan sérialisable.
 
 Le contrat réduit les réponses à des champs explicitement revus. Les libellés de compte, propriétaires, commentaires, tags, erreurs brutes et autres données non nécessaires ne sont pas conservés. Les erreurs deviennent uniquement des classifications sûres et bornées.
+
+Le checkpoint reste strictement contractuel: aucune matérialisation de credential et aucun transport réseau ne sont disponibles dans le module.
+
+## Fondation du cycle de vie des credentials
+
+Le module `src/modules/provider-readiness/credential-lifecycle.ts` fournit maintenant la logique de domaine préalable au futur stockage:
+
+- environnement limité à `test`;
+- capacités limitées aux trois lectures revues;
+- secret chiffré en AES-256-GCM avec la primitive existante;
+- empreinte HMAC tenant-scoped pour détecter un même secret sans le réafficher;
+- version de clé et version de credential explicites;
+- rotation qui crée une nouvelle version et marque l'ancienne comme remplacée;
+- révocation idempotente;
+- vue applicative construite champ par champ sans ciphertext ni empreinte;
+- comparaison d'empreintes en temps constant;
+- aucune fonction de déchiffrement ou de transport exportée.
+
+Cette fondation est testée en mémoire mais n'est pas encore persistée. Elle ne constitue donc pas encore un coffre tenant-scoped complet. La migration, les relations composées, la RLS, l'audit transactionnel et l'interface restent obligatoires avant toute saisie réelle.
 
 ## Modèle de credentials attendu
 
 - secret chiffré côté serveur uniquement;
 - version et identifiant de clé de chiffrement;
 - empreinte non réversible pour détecter les doublons;
-- libellé, environnement, scopes et date d'expiration sans secret;
+- libellé, environnement, capacités et date d'expiration sans secret;
 - rotation atomique;
 - révocation et suppression logique auditée;
 - aucune valeur sensible dans les journaux, erreurs, événements, cartes ou réponses navigateur;
 - aucune réaffichage du secret après la saisie initiale.
 
-Ce modèle n'est pas encore branché à Cloudflare. Aucun jeton Cloudflare n'est stocké dans ce checkpoint.
+Aucun jeton Cloudflare n'est stocké dans ce checkpoint.
 
 ## Limites du premier lot réel
 
@@ -76,8 +95,9 @@ Ce modèle n'est pas encore branché à Cloudflare. Aucun jeton Cloudflare n'est
 
 - la première tranche mock a été fusionnée par la PR #6 après deux runs complets verts, dont `29513872220` sur le head de clôture;
 - les protections de soumission HTML native ont passé le run complet `29515810971` dans ce lot suivant;
-- le contrat Cloudflare est testé sans réseau: origine fixe, méthodes `GET`, pagination bornée, absence de credential dans les résumés, réduction des réponses et classifications d'erreur sûres.
+- le contrat Cloudflare est testé sans réseau: origine fixe, méthodes `GET`, pagination bornée, absence de credential dans les résumés, réduction des réponses et classifications d'erreur sûres;
+- le cycle de vie des credentials couvre création chiffrée, détection d'égalité, rotation, remplacement, révocation, redaction et refus des capacités d'écriture.
 
 ## Prochaine décision technique
 
-Ajouter le cycle de vie tenant-scoped des credentials avant tout transport réel: chiffrement, version, empreinte, rotation, révocation, audit et absence totale de réaffichage. Ensuite seulement, préparer un préflight Cloudflare manuel avec un compte de test dédié. Aucun appel réseau réel ne sera activé tant que ces garanties et l'isolation PostgreSQL ne seront pas vertes.
+Persister le cycle de vie dans un stockage tenant-scoped avec migrations, relations composées, index tenant-leading, PostgreSQL RLS, transactions et audit sans secret. Ensuite seulement, préparer un préflight Cloudflare manuel avec un compte de test dédié. Aucun appel réseau réel ne sera activé tant que ces garanties ne seront pas vertes.
