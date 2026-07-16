@@ -1,16 +1,14 @@
-import { NextResponse } from "next/server";
 import {
   secureCookieEnabled,
   sessionCookieName,
   tenantCookieName,
 } from "@/lib/security";
+import { isTrustedFormOrigin, redirectFormPost } from "@/lib/form-post";
 import { getServices } from "@/lib/services";
 
 export async function POST(request: Request) {
-  const requestUrl = new URL(request.url);
-  const origin = request.headers.get("origin");
-  if (origin !== requestUrl.origin) {
-    return NextResponse.redirect(new URL("/?connexion=erreur", requestUrl), 303);
+  if (!isTrustedFormOrigin(request)) {
+    return redirectFormPost("/?connexion=erreur");
   }
 
   try {
@@ -22,9 +20,8 @@ export async function POST(request: Request) {
     });
     const session = await services.createSession(user.id);
     const context = await services.getTenantContext(user.id);
-    const response = NextResponse.redirect(
-      new URL(context ? "/aujourdhui" : "/creer-organisation", requestUrl),
-      303,
+    const response = redirectFormPost(
+      context ? "/aujourdhui" : "/creer-organisation",
     );
     response.cookies.set(sessionCookieName, session.sessionToken, {
       httpOnly: true,
@@ -41,10 +38,9 @@ export async function POST(request: Request) {
         path: "/",
       });
     }
-    response.headers.set("Cache-Control", "no-store");
     return response;
   } catch {
-    return NextResponse.redirect(new URL("/?connexion=erreur", requestUrl), 303);
+    return redirectFormPost("/?connexion=erreur");
   }
 }
 
