@@ -3,13 +3,12 @@ import {
   classifyCloudflareFailure,
   cloudflareReadOnlyContract,
   createCloudflareRequestPlan,
-  materializeCloudflareRequest,
   parseCloudflareDnsRecords,
   parseCloudflareTokenVerification,
   parseCloudflareZones,
 } from "../src/modules/provider-readiness";
 
-const token = "cloudflare_test_token_abcdefghijklmnopqrstuvwxyz";
+const excludedCredentialMarker = "credential-should-not-appear";
 const zoneId = "023e105f4ecef8ad9ca31a8372d0c353";
 
 describe("Cloudflare provider readiness", () => {
@@ -22,6 +21,8 @@ describe("Cloudflare provider readiness", () => {
       writes: false,
       dnsChanges: false,
       automaticActivation: false,
+      credentialMaterialization: false,
+      networkTransport: false,
     });
     expect(cloudflareReadOnlyContract.operations).toHaveLength(3);
     expect(
@@ -34,7 +35,7 @@ describe("Cloudflare provider readiness", () => {
     ).toEqual(["token.verify", "zones.list", "dns.records.list"]);
   });
 
-  it("builds fixed-origin bounded request plans without credentials", () => {
+  it("builds fixed-origin bounded request plans without credentials or transport", () => {
     const zones = createCloudflareRequestPlan({
       operation: "zones.list",
       zoneName: "Example.COM.",
@@ -49,12 +50,24 @@ describe("Cloudflare provider readiness", () => {
         page: 2,
         perPage: 25,
         credentialIncluded: false,
+        transportEnabled: false,
       },
     });
     expect(zones.url).toBe(
       "https://api.cloudflare.com/client/v4/zones?page=2&per_page=25&name=example.com",
     );
-    expect(JSON.stringify(zones)).not.toContain(token);
+    expect(JSON.stringify(zones)).not.toContain(excludedCredentialMarker);
+
+    const tokenVerification = createCloudflareRequestPlan({
+      operation: "token.verify",
+    });
+    expect(tokenVerification.url).toBe(
+      "https://api.cloudflare.com/client/v4/user/tokens/verify",
+    );
+    expect(tokenVerification.safeSummary).toMatchObject({
+      credentialIncluded: false,
+      transportEnabled: false,
+    });
 
     const records = createCloudflareRequestPlan({
       operation: "dns.records.list",
@@ -84,22 +97,6 @@ describe("Cloudflare provider readiness", () => {
     ).toThrow("Cloudflare zoneId is invalid.");
   });
 
-  it("materializes a no-store bearer request while keeping the plan secret-free", () => {
-    const plan = createCloudflareRequestPlan({ operation: "token.verify" });
-    const request = materializeCloudflareRequest(plan, token);
-
-    expect(request.method).toBe("GET");
-    expect(request.url).toBe(
-      "https://api.cloudflare.com/client/v4/user/tokens/verify",
-    );
-    expect(request.headers.get("authorization")).toBe(`Bearer ${token}`);
-    expect(request.cache).toBe("no-store");
-    expect(JSON.stringify(plan.safeSummary)).not.toContain(token);
-    expect(() => materializeCloudflareRequest(plan, "short token")).toThrow(
-      "Cloudflare API token is invalid.",
-    );
-  });
-
   it("reduces token verification to bounded non-secret metadata", () => {
     expect(
       parseCloudflareTokenVerification({
@@ -120,7 +117,7 @@ describe("Cloudflare provider readiness", () => {
     expect(() =>
       parseCloudflareTokenVerification({
         success: false,
-        errors: [{ message: token }],
+        errors: [{ message: excludedCredentialMarker }],
       }),
     ).toThrow("Cloudflare response is invalid.");
   });
@@ -134,7 +131,10 @@ describe("Cloudflare provider readiness", () => {
           name: "Example.COM",
           status: "active",
           type: "full",
-          account: { id: "8a7806b7e0b447c4a98b6e7a95f7f0aa", name: "Secret account label" },
+          account: {
+            id: "8a7806b7e0b447c4a98b6e7a95f7f0aa",
+            name: "Secret account label",
+          },
           owner: { email: "owner@example.com" },
         },
       ],
