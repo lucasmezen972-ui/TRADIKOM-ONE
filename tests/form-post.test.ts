@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
 import { isTrustedFormOrigin, redirectFormPost } from "../src/lib/form-post";
 
 const originalAppUrl = process.env.APP_URL;
