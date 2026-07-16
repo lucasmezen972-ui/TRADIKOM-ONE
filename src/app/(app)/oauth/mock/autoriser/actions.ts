@@ -8,7 +8,7 @@ import { requireTenantContext } from "@/lib/session";
 export async function authorizeMockOAuthCallbackAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const result = await safeServerAction("oauth.authorization_grant", () =>
+  const granted = await safeServerAction("oauth.authorization_grant", () =>
     services.authorizeMockOAuthRequest(user.id, tenant.id, {
       state: text(formData, "state"),
       codeChallenge: text(formData, "codeChallenge"),
@@ -16,10 +16,16 @@ export async function authorizeMockOAuthCallbackAction(formData: FormData) {
     }),
   );
 
-  const callbackUrl = new URL(result.callbackUrl);
-  callbackUrl.searchParams.set("tenant_id", tenant.id);
-  callbackUrl.searchParams.set("actor_id", user.id);
-  redirect(callbackUrl.toString());
+  const callbackUrl = new URL(granted.callbackUrl);
+  await safeServerAction("oauth.connection_complete", () =>
+    services.completeMockOAuthConnection(user.id, tenant.id, {
+      state: callbackUrl.searchParams.get("state") ?? "",
+      code: callbackUrl.searchParams.get("code") ?? "",
+      redirectUri: `${callbackUrl.origin}${callbackUrl.pathname}`,
+    }),
+  );
+
+  redirect("/connexions/logiciels?oauth=connecte");
 }
 
 function text(formData: FormData, key: string) {
