@@ -118,9 +118,18 @@ export async function setTenantCookie(tenantId: string) {
 export function secureCookieEnabled(
   environment: Record<string, string | undefined> = process.env,
 ) {
-  return (
-    environment.NODE_ENV === "production" || environment.COOKIE_SECURE === "true"
-  );
+  if (environment.COOKIE_SECURE === "true") return true;
+  if (environment.COOKIE_SECURE === "false") return false;
+
+  if (environment.APP_URL) {
+    try {
+      return new URL(environment.APP_URL).protocol === "https:";
+    } catch {
+      return environment.NODE_ENV === "production";
+    }
+  }
+
+  return environment.NODE_ENV === "production";
 }
 
 export async function getTenantIdFromCookie() {
