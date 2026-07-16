@@ -20,7 +20,7 @@ export default defineConfig({
     video: isCi ? "retain-on-failure" : "off",
   },
   webServer: {
-    command: isCi ? "pnpm exec next dev --webpack" : "pnpm dev",
+    command: isCi ? "pnpm exec next start" : "pnpm dev",
     url: appUrl,
     reuseExistingServer: !isCi,
     timeout: 120_000,
