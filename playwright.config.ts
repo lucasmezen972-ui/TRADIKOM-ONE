@@ -5,6 +5,7 @@ const isCi = process.env.CI === "true";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.ts",
   timeout: 60_000,
   reporter: isCi
     ? [
@@ -19,7 +20,7 @@ export default defineConfig({
     video: isCi ? "retain-on-failure" : "off",
   },
   webServer: {
-    command: isCi ? "pnpm start" : "pnpm dev",
+    command: "pnpm dev",
     url: appUrl,
     reuseExistingServer: !isCi,
     timeout: 120_000,
