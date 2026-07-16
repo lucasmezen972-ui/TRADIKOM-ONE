@@ -1,28 +1,24 @@
-import { NextResponse } from "next/server";
+import { isTrustedFormOrigin, redirectFormPost } from "@/lib/form-post";
 import { getTenantIdFromCookie } from "@/lib/security";
 import { getServices } from "@/lib/services";
 import { getCurrentSession } from "@/lib/session";
 
 export async function POST(request: Request) {
-  const requestUrl = new URL(request.url);
-  if (request.headers.get("origin") !== requestUrl.origin) {
-    return NextResponse.redirect(
-      new URL("/bibliotheque-automatisations?erreur=origine", requestUrl),
-      303,
-    );
+  if (!isTrustedFormOrigin(request)) {
+    return redirectFormPost("/bibliotheque-automatisations?erreur=origine");
   }
 
   const services = await getServices();
   const session = await getCurrentSession();
   if (!session) {
-    return NextResponse.redirect(new URL("/", requestUrl), 303);
+    return redirectFormPost("/");
   }
   const context = await services.getTenantContext(
     session.user.id,
     await getTenantIdFromCookie(),
   );
   if (!context) {
-    return NextResponse.redirect(new URL("/creer-organisation", requestUrl), 303);
+    return redirectFormPost("/creer-organisation");
   }
 
   try {
@@ -32,15 +28,9 @@ export async function POST(request: Request) {
       context.tenant.id,
       { listingId: text(formData, "listingId") },
     );
-    return NextResponse.redirect(
-      new URL("/bibliotheque-automatisations?paquet=prepare", requestUrl),
-      303,
-    );
+    return redirectFormPost("/bibliotheque-automatisations?paquet=prepare");
   } catch {
-    return NextResponse.redirect(
-      new URL("/bibliotheque-automatisations?erreur=paquet", requestUrl),
-      303,
-    );
+    return redirectFormPost("/bibliotheque-automatisations?erreur=paquet");
   }
 }
 
