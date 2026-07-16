@@ -72,7 +72,11 @@ jobs:
         run: bash scripts/verify-backup-restore.sh
 
       - name: Lint
-        run: pnpm lint
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p test-results
+          pnpm lint 2>&1 | tee test-results/lint.log
 
       - name: Typecheck
         run: pnpm typecheck
@@ -90,11 +94,11 @@ jobs:
           E2E_ALLOW_PUBLIC_DEMO: "true"
           COOKIE_SECURE: "false"
 
-      - name: Upload Playwright failure diagnostics
+      - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-failure-${{ github.run_attempt }}
+          name: ci-failure-${{ github.run_attempt }}
           path: |
             playwright-report
             test-results
