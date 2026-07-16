@@ -6,6 +6,11 @@ const isCi = process.env.CI === "true";
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
+  // The browser scenarios deliberately exercise one persistent demo tenant and
+  // verify cross-feature state transitions. Running files concurrently lets one
+  // scenario revoke, refresh or replace state while another is asserting it.
+  // Serialize the suite instead of weakening assertions or hiding failures.
+  workers: isCi ? 1 : undefined,
   reporter: isCi
     ? [
         ["line"],
