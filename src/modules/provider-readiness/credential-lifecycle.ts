@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { encryptConnectorSecret } from "@/modules/connectors/security";
 
 const allowedCapabilities = new Set([
@@ -144,9 +144,20 @@ export function revokeProviderCredential(
 export function toProviderCredentialView(
   record: ProviderCredentialRecord,
 ): ProviderCredentialView {
-  const { encryptedSecret: _encryptedSecret, secretFingerprint: _fingerprint, ...safe } = record;
   return {
-    ...safe,
+    id: record.id,
+    tenantId: record.tenantId,
+    providerKey: record.providerKey,
+    label: record.label,
+    environment: record.environment,
+    capabilities: [...record.capabilities],
+    keyVersion: record.keyVersion,
+    version: record.version,
+    status: record.status,
+    supersedesId: record.supersedesId,
+    createdAt: record.createdAt,
+    rotatedAt: record.rotatedAt,
+    revokedAt: record.revokedAt,
     credentialPresent: true,
     credentialRedisplayAllowed: false,
   };
@@ -157,13 +168,19 @@ export function sameProviderCredentialSecret(
   candidateSecret: string,
   encryptionKey: string,
 ) {
-  const candidate = fingerprintSecret({
-    tenantId: record.tenantId,
-    providerKey: record.providerKey,
-    secret: normalizeSecret(candidateSecret),
-    encryptionKey: normalizeEncryptionKey(encryptionKey),
-  });
-  return candidate === record.secretFingerprint;
+  const candidate = Buffer.from(
+    fingerprintSecret({
+      tenantId: record.tenantId,
+      providerKey: record.providerKey,
+      secret: normalizeSecret(candidateSecret),
+      encryptionKey: normalizeEncryptionKey(encryptionKey),
+    }),
+    "hex",
+  );
+  const expected = /^[a-f0-9]{64}$/.test(record.secretFingerprint)
+    ? Buffer.from(record.secretFingerprint, "hex")
+    : Buffer.alloc(0);
+  return expected.length === candidate.length && timingSafeEqual(candidate, expected);
 }
 
 function fingerprintSecret(input: {
@@ -198,7 +215,10 @@ function normalizeSecret(value: string) {
   if (
     secret.length < 20 ||
     secret.length > 4096 ||
-    Array.from(secret).some((character) => character.charCodeAt(0) <= 32)
+    Array.from(secret).some((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 32 || code === 127;
+    })
   ) {
     throw new Error("Provider credential secret is invalid.");
   }
@@ -209,7 +229,7 @@ function normalizeEncryptionKey(value: string) {
   if (value.length < 32 || value.length > 4096) {
     throw new Error("Provider credential encryption key is invalid.");
   }
-  return value;
+  return value.slice(0, 32);
 }
 
 function normalizeCredentialId(value?: string) {
