@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { isPublicDemoEnabled } from "@/modules/demo/availability";
 import { PlatformAdminError } from "@/modules/platform-admin/errors";
 import {
   findPlatformRole,
@@ -29,8 +30,12 @@ export async function assertPlatformAdmin(
 export async function grantPlatformAdminForLocalSetup(
   db: DbClient,
   userId: string,
+  environment: Record<string, string | undefined> = process.env,
 ) {
-  if (process.env.NODE_ENV === "production") {
+  if (
+    environment.NODE_ENV === "production" &&
+    !isPublicDemoEnabled(environment)
+  ) {
     throw new PlatformAdminError(
       "platform_role_invalid",
       "Attribution de role plateforme indisponible.",
