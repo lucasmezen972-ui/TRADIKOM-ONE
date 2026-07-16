@@ -118,7 +118,9 @@ async function completeOAuthWarmup(page: Page, accountLabel: string) {
 }
 
 async function waitForHydration(page: Page) {
-  await page.locator('[data-app-hydrated="true"]').waitFor({ timeout: 60_000 });
+  await page
+    .locator('[data-app-hydrated="true"]')
+    .waitFor({ state: "attached", timeout: 60_000 });
 }
 
 async function persistDiagnostic(fileName: string, error: unknown) {
