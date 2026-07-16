@@ -13,7 +13,7 @@ afterEach(async () => {
 });
 
 describe("demo module", () => {
-  it("requires an explicit local flag and always rejects production", () => {
+  it("requires an explicit local flag and only permits production in isolated loopback CI E2E", () => {
     expect(
       isPublicDemoEnabled({
         NODE_ENV: "development",
@@ -30,6 +30,24 @@ describe("demo module", () => {
       isPublicDemoEnabled({
         NODE_ENV: "production",
         FEATURE_PUBLIC_DEMO: "true",
+      }),
+    ).toBe(false);
+    expect(
+      isPublicDemoEnabled({
+        NODE_ENV: "production",
+        APP_URL: "http://127.0.0.1:3000",
+        FEATURE_PUBLIC_DEMO: "true",
+        E2E_ALLOW_PUBLIC_DEMO: "true",
+        CI: "true",
+      }),
+    ).toBe(true);
+    expect(
+      isPublicDemoEnabled({
+        NODE_ENV: "production",
+        APP_URL: "https://app.tradikom.example",
+        FEATURE_PUBLIC_DEMO: "true",
+        E2E_ALLOW_PUBLIC_DEMO: "true",
+        CI: "true",
       }),
     ).toBe(false);
   });
