@@ -22,7 +22,9 @@
   "dependencies": {
     "@electric-sql/pglite": "0.5.4",
     "csv-parse": "7.0.1",
+    "csv-stringify": "6.8.1",
     "drizzle-orm": "0.45.2",
+    "exceljs": "4.4.0",
     "fast-xml-parser": "5.10.0",
     "graphql": "17.0.2",
     "lucide-react": "1.24.0",

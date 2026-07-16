@@ -1,5 +1,17 @@
 import type { DbClient } from "@/lib/db";
-import { syncMockConnectorJob } from "@/modules/connectors";
+import { executeMockConnectorOperation } from "@/modules/connector-execution";
+import {
+  domainVerificationRequestedEventType,
+  processDomainVerificationJob,
+} from "@/modules/domain-connections";
+import {
+  oauthRefreshRequestedEventType,
+  processScheduledMockOAuthRefresh,
+} from "@/modules/oauth";
+import {
+  exportGenerationRequestedEventType,
+  processUniversalExportJob,
+} from "@/modules/exports";
 import {
   dispatchQueuedNotification,
   notificationDispatchRequestedEventType,
@@ -135,11 +147,67 @@ export async function processPendingDomainEvents(
       if (stringPayload(event.payload.connectorKey) !== "mock_business") {
         throw new Error("Unsupported connector sync request.");
       }
-
-      await syncMockConnectorJob(handlerDb, {
-        tenantId: event.tenantId,
-        actorId: event.actorId,
-      });
+      const installationId = stringPayload(event.payload.installationId);
+      if (!installationId) {
+        throw new Error("Connector installation is required.");
+      }
+      const execution = await executeMockConnectorOperation(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        {
+          installationId,
+          operation: "contacts.list",
+          capability: "read",
+          environment: "mock",
+          idempotencyKey: event.idempotencyKey,
+          correlationId: event.correlationId,
+        },
+      );
+      if (execution.status !== "succeeded") {
+        throw new Error(
+          `Connector execution ${execution.safeErrorClassification ?? "failed"}.`,
+        );
+      }
+    },
+    [exportGenerationRequestedEventType]: async ({ db: handlerDb, event }) => {
+      const exportId = stringPayload(event.payload.exportId);
+      if (!exportId) throw new Error("Export identifier is required.");
+      await processUniversalExportJob(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        exportId,
+      );
+    },
+    [domainVerificationRequestedEventType]: async ({ db: handlerDb, event }) => {
+      const jobId = stringPayload(event.payload.jobId);
+      if (!jobId) throw new Error("Domain verification job identifier is required.");
+      await processDomainVerificationJob(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        jobId,
+      );
+    },
+    [oauthRefreshRequestedEventType]: async ({ db: handlerDb, event }) => {
+      const connectionId = stringPayload(event.payload.connectionId);
+      const credentialId = stringPayload(event.payload.credentialId);
+      const expectedExpiresAt = stringPayload(event.payload.expectedExpiresAt);
+      if (!connectionId || !credentialId || !expectedExpiresAt) {
+        throw new Error("OAuth refresh event payload is incomplete.");
+      }
+      await processScheduledMockOAuthRefresh(
+        handlerDb,
+        event.actorId,
+        event.tenantId,
+        {
+          connectionId,
+          credentialId,
+          expectedExpiresAt,
+          correlationId: event.correlationId,
+        },
+      );
     },
     [leadCreatedEventType]: async ({ db: handlerDb, event }) => {
       await processLeadFollowUpWorkflowEvent(handlerDb, {

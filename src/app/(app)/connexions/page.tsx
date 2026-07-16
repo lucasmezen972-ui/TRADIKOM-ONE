@@ -1,5 +1,9 @@
+import Link from "next/link";
 import {
   ClipboardList,
+  Database,
+  Globe2,
+  Link2,
   LockKeyhole,
   Power,
   RotateCcw,
@@ -9,10 +13,10 @@ import {
   importCsvAction,
   prepareConnectorInstallationPlanAction,
   setWebhookEndpointStatusAction,
-  syncMockConnectorAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
+import { ConnectionMap } from "./connection-map";
 import { WebhookSecretRotationForm } from "./webhook-secret-rotation-form";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +24,13 @@ export const dynamic = "force-dynamic";
 export default async function ConnectionsPage() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const [connectors, webhook, universalConnectors] = await Promise.all([
+  const [connectors, webhook, universalConnectors, connectionMap] = await Promise.all([
     services.getConnectors(user.id, tenant.id),
     services.getWebhookEndpointConfig(user.id, tenant.id),
     services
       .getUniversalConnectorWorkspace(user.id, tenant.id)
       .catch(() => null),
+    services.getConnectionMap(user.id, tenant.id).catch(() => null),
   ]);
 
   return (
@@ -35,7 +40,42 @@ export default async function ConnectionsPage() {
           Connect Store
         </p>
         <h1 className="mt-1 text-4xl font-bold">Connexions</h1>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/connexions/domaines"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            <Globe2 size={17} aria-hidden />
+            Gérer les domaines
+          </Link>
+          <Link
+            href="/connexions/logiciels"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            <Link2 size={17} aria-hidden />
+            Connecter un logiciel
+          </Link>
+          <Link
+            href="/connexions/donnees"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            <Database size={17} aria-hidden />
+            Importer des données
+          </Link>
+        </div>
       </header>
+
+      {connectionMap ? (
+        <ConnectionMap
+          nodes={connectionMap.nodes}
+          edges={connectionMap.edges}
+          valueSummaries={connectionMap.valueSummaries}
+        />
+      ) : (
+        <section className="border-y border-red-200 bg-red-50 px-4 py-5 text-sm text-red-800">
+          La carte des connexions est temporairement indisponible. Aucun flux externe n’a été modifié.
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {connectors.map((connector) => (
@@ -59,13 +99,6 @@ export default async function ConnectionsPage() {
                 </span>
               ))}
             </div>
-            {connector.key === "mock_business" ? (
-              <form action={syncMockConnectorAction} className="mt-4">
-                <button className="rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white">
-                  Synchroniser
-                </button>
-              </form>
-            ) : null}
           </div>
         ))}
       </section>

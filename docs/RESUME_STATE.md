@@ -1,6 +1,46 @@
 # Resume State
 
-Branch: `codex/phase-4-autonomous-platform`
+Branch: `codex/phase-5-real-connectivity`
+
+Current Phase 5 checkpoint:
+
+- Phase 5 started from verified green `main` head `1de2e3c54edc91ceaf9a1fad27254fd4b4c60178`; GitHub Actions run `29367130647` passed the complete Phase 4 suite and PR #5 is merged.
+- The first bounded module lives under `src/modules/domain-connections/` with typed schemas, errors, repository functions, provider adapters and tenant-authorized services.
+- Mock DNS analysis is deterministic and network-free. Manual setup remains explicitly unverified when provider evidence is unavailable.
+- DNS snapshots and change plans preserve evidence, confidence, source and timestamps. Destructive changes, nameserver changes, MX changes, SPF replacement and DMARC weakening are blocked.
+- A plan requires tenant-admin approval, a second confirmation, current-snapshot revalidation and an audit event before simulation. Simulation never changes external DNS.
+- Runtime migrations `054`/`055` and SQL mirrors `0048`/`0049` add composite tenant relations, tenant-leading indexes and PostgreSQL RLS.
+- Focused tests cover the mock flow, double confirmation, no external effect, destructive-change blocks, application isolation and cross-tenant foreign relations.
+- Local TypeScript validation hung without diagnostics and was stopped after 30 seconds. GitHub Actions remains the authoritative validation environment.
+- Initial type fix `6c47c68` passed complete GitHub Actions run `29374174913`: migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL tests, production build and sixteen Playwright scenarios.
+- The French `/connexions/domaines` workspace exposes domain analysis, evidence, current records, non-destructive plans, approval, second confirmation, manual guidance and no-effect simulation with explicit empty and safe error states.
+- Restricted-role PostgreSQL coverage now checks Phase 5 no-context reads, tenant reads, cross-tenant inserts, composite relations, updates and deletes. Playwright covers the complete mock DNS control flow and asserts that no apply/publish control exists.
+- Domain UI head `1b757315` passed complete GitHub Actions run `29375436090`, including clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and seventeen Playwright scenarios.
+- The mock OAuth core now implements Authorization Code + PKCE, hashed single-use state, exact APP_URL callback validation, encrypted/versioned access and refresh tokens, refresh locking, revocation, audit redaction and tenant-scoped persistence with composite relations and RLS.
+- The Software Connection read model currently exposes one truthful local mock provider with read-only scopes and explicit limitations; no network, production data or write capability is enabled.
+- OAuth core head `ae35688` passed complete GitHub Actions run `29376521177`, including clean/upgrade migrations, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright E2E.
+- The next checkpoint adds explicit French consent, a random one-time authorization code stored only as a hash, a no-store/correlated server callback, `/connexions/logiciels`, safe rejection/disconnect, restricted-role OAuth RLS coverage and a complete browser flow.
+- OAuth UI run `29377188333` passed every gate except Playwright because CI used `APP_URL=127.0.0.1` while Playwright still used `localhost`, dropping the host-only session cookie during the OAuth redirect. Head `a3ae131` aligned Playwright with the configured application origin; run `29377818420` then passed the OAuth flow and exposed only an unrelated ambiguous legacy `Mon site` selector. Scoped test fix `6a5b589` is under CI validation.
+- Controlled connector execution now creates an installed-disabled mock connector, requires explicit read-only activation, enforces the common policy engine in UI and worker paths, reserves idempotency before quota/effect, records safe execution metadata and exposes tenant-scoped health.
+- Runtime migrations `059`/`060` and SQL mirrors `0053`/`0054` add installations, executions, health, composite tenant relations, tenant-leading indexes and RLS. Focused policy/idempotency/quota/isolation, restricted-role PostgreSQL and expanded Playwright coverage are included.
+- Connector run `29378574054` passed migrations, dependency audit, backup/restore, lint, typecheck, all unit/integration/PostgreSQL/RLS tests and production build. Its sole failure was a command-center E2E expecting the disconnected mock connector summary after an earlier sync. Disconnect now resets that bounded summary and has a direct regression assertion.
+- Universal import now accepts bounded CSV, JSON and XLSX, rejects formula/depth/size hazards, requires explicit mapping and a persisted dry run, detects tenant duplicates, commits transactionally in resumable batches and supports audited rollback for contacts, companies, products and opportunities.
+- Runtime migrations `061`/`062` and SQL mirrors `0055`/`0056` add the tenant-owned product model and durable import metadata/indexes while preserving the existing import RLS policies. The French `/connexions/donnees` workspace exposes preview, report, commit and rollback controls.
+- Local typecheck and focused Vitest produced no diagnostics before the 30-second bound and were stopped. GitHub Actions will validate this checkpoint authoritatively.
+- Import run `29380105843` passed install, dependency audit, migrations, backup/restore and lint before finding one Node 20/ExcelJS buffer type mismatch. The XLSX adapter now uses an exact copied `ArrayBuffer`; later complete runs validated the correction.
+- Run `29380218779` then passed every gate through production build and 18/19 Playwright scenarios. The sole browser failure identified optional contact mappings prefilled for absent CSV columns; those optional defaults are now empty without weakening server validation.
+- Import correction `c49c2e8` passed complete GitHub Actions run `29380786047`, including migrations, dependency audit, PostgreSQL/RLS tests, production build and the mapped CSV Playwright flow.
+- Universal export now queues a durable generation event for allowlisted fields across eight tenant entities, enforces a 366-day/5 000-row/10-Mo bound, writes CSV/JSON/XLSX with spreadsheet-formula neutralization and exposes only authenticated, no-store, 24-hour downloads.
+- Runtime migrations `063`/`064` and SQL mirrors `0057`/`0058` add tenant-owned export jobs, RLS and tenant-leading indexes. Cancellation and scheduled maintenance delete file content; tests cover idempotent worker generation, expiry, cancellation, field rejection, tenant isolation and the browser download flow.
+- Export run `29381236378` found one missing explicit return type in the recursive value normalizer. Fix `8c424f9` passed complete GitHub Actions run `29381701151` with no runtime-policy change.
+- Website-domain binding now persists the domain, simulated plan and published version present at request time, then queues an idempotent mock propagation verification. Verification updates certificate/binding state without publishing the draft or changing external DNS; disconnect preserves both the public snapshot and DNS state.
+- Runtime migrations `065`/`066` and SQL mirrors `0059`/`0060` add tenant-owned bindings and verification jobs with composite relations, tenant-leading indexes and RLS. Unit, restricted-role PostgreSQL and Playwright coverage include target-takeover rejection, cross-tenant denial and draft/public immutability.
+- Website-domain binding contract fix `2ff2986` passed complete GitHub Actions run `29382435553`: migrations, dependency audit, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright.
+- Expiring mock OAuth credentials are now selected in bounded batches by maintenance and queued in the durable event worker without token content. Idempotency is tied to the credential expiry, stale events are ignored and the existing atomic refresh lease rotates encrypted credentials safely.
+- OAuth refresh head `6f79fa1` passed complete GitHub Actions run `29382920239`, including migrations, dependency audit, backup/restore, lint, typecheck, unit/integration/PostgreSQL/RLS tests, production build and Playwright.
+- The connection map composes existing domain, website, email-provider, software, connector-health, workflow and permission-aware approval services into at most 31 tenant-scoped nodes, selectable details, explicit data directions and an accessible text alternative. It stores no graph copy and exposes no credential or payload.
+- Business-value summaries expose only setup effort, proven operations and qualitative risk reduction. Financial and time gains remain unavailable until volumes, durations and costs are measured.
+- Next unfinished task: validate the optimized connection-map and security closure checkpoint through complete CI, update PR #6, then merge the first Phase 5 vertical slice only if every gate remains green. Real provider work remains a separate Phase 5 follow-up and Phase 6 stays locked.
 
 Current Phase 4 checkpoint:
 

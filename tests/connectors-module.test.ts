@@ -11,7 +11,7 @@ import {
   receiveWebhook,
   rotateWebhookEndpointSecret,
   setWebhookEndpointStatus,
-  syncMockConnector,
+  syncMockConnectorJob,
 } from "../src/modules/connectors";
 import { getCrm } from "../src/modules/crm";
 
@@ -52,7 +52,10 @@ describe("connectors module", () => {
     );
     expect(report.imported).toBe(1);
 
-    await syncMockConnector(db, demo.user.id, demo.tenant.id);
+    await syncMockConnectorJob(db, {
+      tenantId: demo.tenant.id,
+      actorId: demo.user.id,
+    });
     const connectors = await getConnectors(db, demo.user.id, demo.tenant.id);
     expect(
       connectors.find((connector) => connector.key === "mock_business")?.health,

@@ -5,7 +5,7 @@ import { pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
-import { id, nowIso, toJson } from "../src/lib/security";
+import { hashToken, id, nowIso, secureToken, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -63,6 +63,53 @@ describeIfPostgres("PostgreSQL RLS", () => {
       tenantB.id,
       ownerB.id,
       "bravo@example.com",
+    );
+    const importA = await services.previewUniversalImport(ownerA.id, tenantA.id, {
+      entityType: "products",
+      format: "json",
+      fileName: "rls-products.json",
+      contentType: "application/json",
+      mapping: { name: "nom", sku: "reference", price: "prix" },
+      buffer: Buffer.from(
+        JSON.stringify([{ nom: "Produit RLS", reference: "RLS-A", prix: "10" }]),
+      ),
+    });
+    const productAId = id("product");
+    const productBId = id("product");
+    await ownerDb.query(
+      `insert into products (id, tenant_id, name, sku, price_cents, active, created_at, updated_at)
+       values ($1, $2, 'Produit A', $3, 1000, 1, $4, $4),
+              ($5, $6, 'Produit B', $7, 2000, 1, $4, $4)`,
+      [
+        productAId,
+        tenantA.id,
+        `RLS-A-${randomUUID()}`,
+        nowIso(),
+        productBId,
+        tenantB.id,
+        `RLS-B-${randomUUID()}`,
+      ],
+    );
+    const exportAId = id("export");
+    const exportBId = id("export");
+    await ownerDb.query(
+      `insert into export_jobs (
+         id, tenant_id, entity_type, format, status, selected_fields,
+         date_from, date_to, expires_at, created_by, created_at, updated_at
+       ) values
+         ($1, $2, 'contacts', 'csv', 'queued', '["name"]', $3, $4, $5, $6, $3, $3),
+         ($7, $8, 'contacts', 'csv', 'queued', '["name"]', $3, $4, $5, $9, $3, $3)`,
+      [
+        exportAId,
+        tenantA.id,
+        nowIso(),
+        "2026-12-31T23:59:59.999Z",
+        "2027-01-01T00:00:00.000Z",
+        ownerA.id,
+        exportBId,
+        tenantB.id,
+        ownerB.id,
+      ],
     );
     const apiIntelligence = await insertApiIntelligenceTenantFixtures(
       ownerDb,
@@ -143,6 +190,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       "select id from connector_installation_plans order by id",
     );
     expect(noConnectorPlans.rows).toEqual([]);
+    expect((await restrictedPool.query("select id from products")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from imports")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from export_jobs")).rows).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -160,6 +210,33 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(tenantARows.rows.map((row) => row.email)).toEqual([
       "alpha@example.com",
     ]);
+    const tenantAImports = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => client.query<{ id: string }>("select id from imports"),
+    );
+    expect(tenantAImports.rows).toEqual([{ id: importA.id }]);
+    const tenantAProducts = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => client.query<{ id: string }>("select id from products"),
+    );
+    expect(tenantAProducts.rows).toEqual([{ id: productAId }]);
+    const tenantAExports = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => client.query<{ id: string }>("select id from export_jobs"),
+    );
+    expect(tenantAExports.rows).toEqual([{ id: exportAId }]);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into products (id, tenant_id, name, sku, price_cents, active, created_at, updated_at)
+           values ($1, $2, 'Interdit', $3, 0, 1, $4, $4)`,
+          [id("product"), tenantB.id, `RLS-X-${randomUUID()}`, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
 
     const criticalTenantRows = await withTenantContext(
       restrictedPool,
@@ -2045,7 +2122,530 @@ describeIfPostgres("PostgreSQL RLS", () => {
       deletedDecision: 0,
     });
   });
+
+  it("isolates Phase 5 domain records and composite relations for a restricted role", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb);
+    const ownerA = await services.registerUser({
+      name: "Domain RLS A",
+      email: uniqueEmail("domain-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Domain RLS B",
+      email: uniqueEmail("domain-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Domain RLS A ${randomUUID()}`,
+      category: "Commerce",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Domain RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const domainA = await services.analyzeDomainConnection(ownerA.id, tenantA.id, {
+      domain: `a-${randomUUID()}.example.test`,
+      providerKey: "mock_dns",
+    });
+    const domainB = await services.analyzeDomainConnection(ownerB.id, tenantB.id, {
+      domain: `b-${randomUUID()}.example.test`,
+      providerKey: "mock_dns",
+    });
+    await services.saveOnboarding(
+      ownerA.id,
+      tenantA.id,
+      defaultGarageOnboarding(),
+    );
+    await services.saveOnboarding(
+      ownerB.id,
+      tenantB.id,
+      defaultGarageOnboarding(),
+    );
+    await services.publishWebsite(ownerA.id, tenantA.id);
+    await services.publishWebsite(ownerB.id, tenantB.id);
+    const planA = await prepareSimulatedDomainPlan(
+      services,
+      ownerA.id,
+      tenantA.id,
+      domainA.connectionId,
+    );
+    const planB = await prepareSimulatedDomainPlan(
+      services,
+      ownerB.id,
+      tenantB.id,
+      domainB.connectionId,
+    );
+    const bindingA = await services.requestWebsiteDomainBinding(
+      ownerA.id,
+      tenantA.id,
+      domainA.connectionId,
+    );
+    const bindingB = await services.requestWebsiteDomainBinding(
+      ownerB.id,
+      tenantB.id,
+      domainB.connectionId,
+    );
+    expect(planA).toBeTruthy();
+    expect(planB).toBeTruthy();
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect((await restrictedPool.query("select id from domain_connections")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from dns_snapshots")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from dns_change_plans")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from dns_change_approvals")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from website_domain_bindings")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from domain_verification_jobs")).rows).toEqual([]);
+
+    const visible = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        connections: (
+          await client.query("select id from domain_connections order by id")
+        ).rows,
+        snapshots: (
+          await client.query("select id from dns_snapshots order by id")
+        ).rows,
+        bindings: (
+          await client.query("select id from website_domain_bindings order by id")
+        ).rows,
+        verificationJobs: (
+          await client.query("select id from domain_verification_jobs order by id")
+        ).rows,
+      }),
+    );
+    expect(visible.connections).toEqual([{ id: domainA.connectionId }]);
+    expect(visible.snapshots).toEqual([{ id: domainA.snapshotId }]);
+    expect(visible.bindings).toEqual([{ id: bindingA.bindingId }]);
+    expect(visible.verificationJobs).toEqual([{ id: bindingA.jobId! }]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into dns_snapshots (
+             id, tenant_id, domain_connection_id, records, evidence, captured_at
+           ) values ($1, $2, $3, '[]', '[]', $4)`,
+          [id("dns_snapshot"), tenantA.id, domainB.connectionId, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into domain_connections (
+             id, tenant_id, normalized_domain, provider_key, provider_label,
+             state, certificate_status, evidence, created_by, created_at, updated_at
+           ) values ($1, $2, $3, 'manual', 'Configuration manuelle',
+             'manual_setup_required', 'unknown', '[]', $4, $5, $5)`,
+          [
+            id("domain"),
+            tenantB.id,
+            `cross-${randomUUID()}.example.test`,
+            ownerB.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update domain_connections set state = 'failed' where id = $1",
+            [domainB.connectionId],
+          )
+        ).rowCount,
+        deleted: (
+          await client.query("delete from dns_snapshots where id = $1", [
+            domainB.snapshotId,
+          ])
+        ).rowCount,
+        updatedBinding: (
+          await client.query(
+            "update website_domain_bindings set status = 'failed' where id = $1",
+            [bindingB.bindingId],
+          )
+        ).rowCount,
+        deletedJob: (
+          await client.query("delete from domain_verification_jobs where id = $1", [
+            bindingB.jobId!,
+          ])
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deleted: 0,
+      updatedBinding: 0,
+      deletedJob: 0,
+    });
+  });
+
+  it("isolates Phase 5 OAuth states, credentials and connections for a restricted role", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb, {
+      appUrl: "https://oauth-rls.example.test",
+    });
+    const ownerA = await services.registerUser({
+      name: "OAuth RLS A",
+      email: uniqueEmail("oauth-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "OAuth RLS B",
+      email: uniqueEmail("oauth-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `OAuth RLS A ${randomUUID()}`,
+      category: "Commerce",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `OAuth RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const connectionA = await connectMockOAuth(
+      services,
+      ownerA.id,
+      tenantA.id,
+    );
+    const connectionB = await connectMockOAuth(
+      services,
+      ownerB.id,
+      tenantB.id,
+    );
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect((await restrictedPool.query("select id from software_connections")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from oauth_states")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from oauth_credentials")).rows).toEqual([]);
+
+    const visible = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        connections: (
+          await client.query("select id from software_connections order by id")
+        ).rows,
+        states: (
+          await client.query("select software_connection_id from oauth_states order by id")
+        ).rows,
+        credentials: (
+          await client.query("select software_connection_id from oauth_credentials order by id")
+        ).rows,
+      }),
+    );
+    expect(visible.connections).toEqual([{ id: connectionA }]);
+    expect(visible.states).toEqual([{ software_connection_id: connectionA }]);
+    expect(visible.credentials).toEqual([{ software_connection_id: connectionA }]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into oauth_states (
+             id, tenant_id, software_connection_id, state_hash, code_challenge,
+             code_verifier_encrypted, redirect_uri, scopes, expires_at,
+             consumed_at, created_by, created_at
+           ) values ($1, $2, $3, $4, $5, $6, $7, '[]', $8, null, $9, $10)`,
+          [
+            id("oauth_state"),
+            tenantA.id,
+            connectionB,
+            hashToken(secureToken(32)),
+            "a".repeat(43),
+            "encrypted",
+            "https://oauth-rls.example.test/api/oauth/mock/callback",
+            new Date(Date.now() + 60_000).toISOString(),
+            ownerA.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into software_connections (
+             id, tenant_id, software_key, software_name, provider_key,
+             environment, status, account_label, scopes, created_by,
+             created_at, updated_at
+           ) values ($1, $2, 'mock_business', 'Mock Business', 'mock_oauth',
+             'mock', 'oauth_pending', 'Interdit', '[]', $3, $4, $4)`,
+          [id("software_connection"), tenantB.id, ownerB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update software_connections set status = 'unhealthy' where id = $1",
+            [connectionB],
+          )
+        ).rowCount,
+        deletedState: (
+          await client.query(
+            "delete from oauth_states where software_connection_id = $1",
+            [connectionB],
+          )
+        ).rowCount,
+        deletedCredential: (
+          await client.query(
+            "delete from oauth_credentials where software_connection_id = $1",
+            [connectionB],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deletedState: 0,
+      deletedCredential: 0,
+    });
+  });
+
+  it("isolates Phase 5 connector installations, executions and health for a restricted role", async () => {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required for this test.");
+    }
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const services = createServices(ownerDb, {
+      appUrl: "https://connector-rls.example.test",
+    });
+    const ownerA = await services.registerUser({
+      name: "Connector RLS A",
+      email: uniqueEmail("connector-rls-a"),
+      password: "Password!1",
+    });
+    const ownerB = await services.registerUser({
+      name: "Connector RLS B",
+      email: uniqueEmail("connector-rls-b"),
+      password: "Password!1",
+    });
+    const tenantA = await services.createTenant(ownerA.id, {
+      name: `Connector RLS A ${randomUUID()}`,
+      category: "Commerce",
+    });
+    const tenantB = await services.createTenant(ownerB.id, {
+      name: `Connector RLS B ${randomUUID()}`,
+      category: "Services",
+    });
+    const connectionA = await connectMockOAuth(services, ownerA.id, tenantA.id);
+    const connectionB = await connectMockOAuth(services, ownerB.id, tenantB.id);
+    const installationA = await services.prepareMockConnectorInstallation(
+      ownerA.id,
+      tenantA.id,
+      connectionA,
+    );
+    const installationB = await services.prepareMockConnectorInstallation(
+      ownerB.id,
+      tenantB.id,
+      connectionB,
+    );
+    await services.enableMockConnectorReadOnly(
+      ownerA.id,
+      tenantA.id,
+      installationA.id,
+    );
+    await services.enableMockConnectorReadOnly(
+      ownerB.id,
+      tenantB.id,
+      installationB.id,
+    );
+    await services.executeMockConnectorOperation(ownerA.id, tenantA.id, {
+      installationId: installationA.id,
+      operation: "contacts.list",
+      capability: "read",
+      environment: "mock",
+      idempotencyKey: `rls-${randomUUID()}`,
+      correlationId: randomUUID(),
+    });
+    await services.executeMockConnectorOperation(ownerB.id, tenantB.id, {
+      installationId: installationB.id,
+      operation: "contacts.list",
+      capability: "read",
+      environment: "mock",
+      idempotencyKey: `rls-${randomUUID()}`,
+      correlationId: randomUUID(),
+    });
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+
+    expect((await restrictedPool.query("select id from connector_installations")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from connector_executions")).rows).toEqual([]);
+    expect((await restrictedPool.query("select id from connector_health_records")).rows).toEqual([]);
+
+    const visible = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        installations: (
+          await client.query("select id from connector_installations order by id")
+        ).rows,
+        executions: (
+          await client.query("select connector_installation_id from connector_executions order by id")
+        ).rows,
+        health: (
+          await client.query("select connector_installation_id from connector_health_records order by id")
+        ).rows,
+      }),
+    );
+    expect(visible.installations).toEqual([{ id: installationA.id }]);
+    expect(visible.executions).toEqual([
+      { connector_installation_id: installationA.id },
+    ]);
+    expect(visible.health).toEqual([
+      { connector_installation_id: installationA.id },
+    ]);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into connector_executions (
+             id, tenant_id, connector_installation_id, connector_version,
+             environment, operation, capability, idempotency_key,
+             correlation_id, started_at, status, retry_count, created_at
+           ) values ($1, $2, $3, '1.0.0', 'mock', 'contacts.list', 'read',
+             $4, $5, $6, 'running', 0, $6)`,
+          [
+            id("connector_execution"),
+            tenantA.id,
+            installationB.id,
+            `cross-${randomUUID()}`,
+            randomUUID(),
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, (client) =>
+        client.query(
+          `insert into connector_installations (
+             id, tenant_id, software_connection_id, connector_key,
+             connector_version, api_version, environment, status,
+             approved_operations, required_scopes, rate_limit_limit,
+             rate_limit_remaining, rate_limit_reset_at, security_suspended,
+             breaking_change_blocked, created_by, created_at, updated_at
+           ) values ($1, $2, $3, 'mock_business', '1.0.0', 'mock-v1',
+             'mock', 'installed_disabled', '[]', '[]', 20, 20, $4, 0, 0,
+             $5, $4, $4)`,
+          [id("connector_installation"), tenantB.id, connectionB, nowIso(), ownerB.id],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+
+    const hiddenWrites = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        updated: (
+          await client.query(
+            "update connector_installations set status = 'suspended' where id = $1",
+            [installationB.id],
+          )
+        ).rowCount,
+        deletedExecution: (
+          await client.query(
+            "delete from connector_executions where connector_installation_id = $1",
+            [installationB.id],
+          )
+        ).rowCount,
+        deletedHealth: (
+          await client.query(
+            "delete from connector_health_records where connector_installation_id = $1",
+            [installationB.id],
+          )
+        ).rowCount,
+      }),
+    );
+    expect(hiddenWrites).toEqual({
+      updated: 0,
+      deletedExecution: 0,
+      deletedHealth: 0,
+    });
+  });
 });
+
+async function connectMockOAuth(
+  services: ReturnType<typeof createServices>,
+  userId: string,
+  tenantId: string,
+) {
+  const started = await services.startMockOAuthConnection(userId, tenantId);
+  const authorizationUrl = new URL(started.authorizationUrl);
+  const state = authorizationUrl.searchParams.get("state");
+  const codeChallenge = authorizationUrl.searchParams.get("code_challenge");
+  const redirectUri = authorizationUrl.searchParams.get("redirect_uri");
+  if (!state || !codeChallenge || !redirectUri) {
+    throw new Error("Autorisation OAuth RLS incomplète.");
+  }
+  const granted = await services.authorizeMockOAuthRequest(userId, tenantId, {
+    state,
+    codeChallenge,
+    redirectUri,
+  });
+  const callbackUrl = new URL(granted.callbackUrl);
+  const code = callbackUrl.searchParams.get("code");
+  if (!code) throw new Error("Code OAuth RLS manquant.");
+  await services.completeMockOAuthConnection(userId, tenantId, {
+    state,
+    code,
+    redirectUri,
+  });
+  return started.connectionId;
+}
+
+async function prepareSimulatedDomainPlan(
+  services: ReturnType<typeof createServices>,
+  userId: string,
+  tenantId: string,
+  connectionId: string,
+) {
+  const plan = await services.prepareDnsChangePlan(userId, tenantId, {
+    connectionId,
+  });
+  await services.approveDnsChangePlan(userId, tenantId, plan.planId);
+  await services.confirmDnsChangePlan(userId, tenantId, plan.planId);
+  await services.simulateDnsChangePlan(userId, tenantId, plan.planId);
+  return plan.planId;
+}
 
 function businessBrainFixture(label: string) {
   return {

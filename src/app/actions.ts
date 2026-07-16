@@ -1,10 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   clearSessionCookie,
   getSessionIdFromCookie,
+  id,
   setTenantCookie,
 } from "@/lib/security";
 import { getServices } from "@/lib/services";
@@ -960,12 +962,303 @@ export async function importCsvAction(formData: FormData) {
   revalidatePath("/contacts");
 }
 
-export async function syncMockConnectorAction() {
+export async function previewUniversalImportAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await safeServerAction("connector.mock_sync", () =>
-    services.syncMockConnector(user.id, tenant.id),
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Sélectionnez un fichier à importer.");
+  }
+  const entityType = text(formData, "entityType") as
+    | "contacts"
+    | "companies"
+    | "products"
+    | "opportunities";
+  const mappingTargets = {
+    contacts: ["name", "email", "phone", "status", "tags"],
+    companies: ["name", "domain"],
+    products: ["name", "sku", "price"],
+    opportunities: ["contact_email", "stage_name", "value"],
+  }[entityType] ?? [];
+  const mapping = Object.fromEntries(
+    mappingTargets.flatMap((target) => {
+      const source = text(formData, `mapping_${target}`).trim();
+      return source ? [[target, source]] : [];
+    }),
   );
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const result = await safeServerAction("import.preview", () =>
+    services.previewUniversalImport(user.id, tenant.id, {
+      entityType,
+      format: text(formData, "format") as "csv" | "xlsx" | "json",
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+      mapping,
+      sheetName: text(formData, "sheetName") || undefined,
+      buffer,
+    }),
+  );
+  redirect(`/connexions/donnees?import=${encodeURIComponent(result.id)}`);
+}
+
+export async function commitUniversalImportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("import.commit", () =>
+    services.commitUniversalImportBatch(user.id, tenant.id, {
+      importId: text(formData, "importId"),
+      batchSize: 200,
+    }),
+  );
+  revalidatePath("/connexions/donnees");
+  revalidatePath("/contacts");
+  revalidatePath("/opportunites");
+}
+
+export async function rollbackUniversalImportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("import.rollback", () =>
+    services.rollbackUniversalImport(
+      user.id,
+      tenant.id,
+      text(formData, "importId"),
+    ),
+  );
+  revalidatePath("/connexions/donnees");
+  revalidatePath("/contacts");
+  revalidatePath("/opportunites");
+}
+
+export async function createUniversalExportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const dateFrom = text(formData, "dateFrom");
+  const dateTo = text(formData, "dateTo");
+  const result = await safeServerAction("export.create", () =>
+    services.createUniversalExport(user.id, tenant.id, {
+      entityType: text(formData, "entityType") as
+        | "contacts"
+        | "companies"
+        | "opportunities"
+        | "tasks"
+        | "activities"
+        | "products"
+        | "workflows"
+        | "connector_health",
+      format: text(formData, "format") as "csv" | "xlsx" | "json",
+      selectedFields: formData
+        .getAll("selectedFields")
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean),
+      dateFrom: `${dateFrom}T00:00:00.000Z`,
+      dateTo: `${dateTo}T23:59:59.999Z`,
+    }),
+  );
+  redirect(`/connexions/donnees?export=${encodeURIComponent(result.id)}`);
+}
+
+export async function cancelUniversalExportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("export.cancel", () =>
+    services.cancelUniversalExport(
+      user.id,
+      tenant.id,
+      text(formData, "exportId"),
+    ),
+  );
+  revalidatePath("/connexions/donnees");
+}
+
+export async function analyzeDomainConnectionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.analyze", () =>
+    services.analyzeDomainConnection(user.id, tenant.id, {
+      domain: text(formData, "domain"),
+      providerKey: text(formData, "providerKey") as "mock_dns" | "manual",
+    }),
+  );
+  revalidatePath("/connexions/domaines");
+  revalidatePath("/connexions");
+}
+
+export async function prepareDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_prepare", () =>
+    services.prepareDnsChangePlan(user.id, tenant.id, {
+      connectionId: text(formData, "connectionId"),
+    }),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function approveDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_approve", () =>
+    services.approveDnsChangePlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function confirmDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_confirm", () =>
+    services.confirmDnsChangePlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function simulateDnsChangePlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.dns_plan_simulate", () =>
+    services.simulateDnsChangePlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/connexions/domaines");
+}
+
+export async function requestWebsiteDomainBindingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.website_binding_request", () =>
+    services.requestWebsiteDomainBinding(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/domaines");
+  revalidatePath("/mon-site");
+}
+
+export async function disconnectWebsiteDomainBindingAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("domain_connection.website_binding_disconnect", () =>
+    services.disconnectWebsiteDomainBinding(
+      user.id,
+      tenant.id,
+      text(formData, "bindingId"),
+    ),
+  );
+  revalidatePath("/connexions/domaines");
+  revalidatePath("/mon-site");
+}
+
+export async function startMockOAuthConnectionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("oauth.connection_start", () =>
+    services.startMockOAuthConnection(user.id, tenant.id, {
+      accountLabel: text(formData, "accountLabel"),
+      scopes: ["contacts.read", "profile.read"],
+    }),
+  );
+  redirect(result.authorizationUrl);
+}
+
+export async function authorizeMockOAuthAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const result = await safeServerAction("oauth.authorization_grant", () =>
+    services.authorizeMockOAuthRequest(user.id, tenant.id, {
+      state: text(formData, "state"),
+      codeChallenge: text(formData, "codeChallenge"),
+      redirectUri: text(formData, "redirectUri"),
+    }),
+  );
+  redirect(result.callbackUrl);
+}
+
+export async function rejectMockOAuthAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("oauth.authorization_reject", () =>
+    services.disconnectSoftwareConnection(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+  redirect("/connexions/logiciels?oauth=refuse");
+}
+
+export async function refreshMockOAuthCredentialAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("oauth.credential_refresh", () =>
+    services.refreshMockOAuthCredential(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+}
+
+export async function disconnectSoftwareConnectionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("software_connection.disconnect", () =>
+    services.disconnectSoftwareConnection(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+  revalidatePath("/connexions");
+}
+
+export async function prepareMockConnectorInstallationAction(
+  formData: FormData,
+) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector.installation_prepare", () =>
+    services.prepareMockConnectorInstallation(
+      user.id,
+      tenant.id,
+      text(formData, "connectionId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+}
+
+export async function enableMockConnectorReadOnlyAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector.read_only_enable", () =>
+    services.enableMockConnectorReadOnly(
+      user.id,
+      tenant.id,
+      text(formData, "installationId"),
+    ),
+  );
+  revalidatePath("/connexions/logiciels");
+}
+
+export async function executeMockConnectorReadOnlyAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("connector.read_only_execute", () =>
+    services.executeMockConnectorOperation(user.id, tenant.id, {
+      installationId: text(formData, "installationId"),
+      operation: "contacts.list",
+      capability: "read",
+      environment: "mock",
+      idempotencyKey: id("connector_sync"),
+      correlationId: randomUUID(),
+    }),
+  );
+  revalidatePath("/connexions/logiciels");
   revalidatePath("/connexions");
   revalidatePath("/aujourdhui");
 }

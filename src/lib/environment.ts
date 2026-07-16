@@ -32,10 +32,13 @@ const environmentSchema = z
       .refine(isValidTimeZone)
       .optional(),
     CONNECTOR_ENCRYPTION_KEY: z.string().min(32).optional(),
+    CONNECTOR_ENCRYPTION_KEY_VERSION: z.string().trim().min(1).max(80).optional(),
     EMAIL_PROVIDER: z.enum(["console", "test"]).optional(),
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_MODEL: z.string().min(1).optional(),
     FEATURE_PUBLIC_DEMO: booleanString.optional(),
+    E2E_ALLOW_PUBLIC_DEMO: booleanString.optional(),
+    CI: booleanString.optional(),
     FEATURE_AUTH_LINK_PREVIEW: booleanString.optional(),
     FEATURE_LIVE_INTEGRATIONS: booleanString.optional(),
     FEATURE_AI_GENERATION: booleanString.optional(),
@@ -115,7 +118,22 @@ const environmentSchema = z
       });
     }
 
-    if (environment.FEATURE_PUBLIC_DEMO === "true") {
+    const isolatedE2eDemo = isIsolatedLoopbackE2eDemo(environment);
+    if (
+      environment.E2E_ALLOW_PUBLIC_DEMO === "true" &&
+      !isolatedE2eDemo
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["E2E_ALLOW_PUBLIC_DEMO"],
+        message: "The E2E demo override requires CI and a loopback APP_URL.",
+      });
+    }
+
+    if (
+      environment.FEATURE_PUBLIC_DEMO === "true" &&
+      !isolatedE2eDemo
+    ) {
       context.addIssue({
         code: "custom",
         path: ["FEATURE_PUBLIC_DEMO"],
@@ -123,7 +141,7 @@ const environmentSchema = z
       });
     }
 
-    if (environment.COOKIE_SECURE === "false") {
+    if (environment.COOKIE_SECURE === "false" && !isolatedE2eDemo) {
       context.addIssue({
         code: "custom",
         path: ["COOKIE_SECURE"],
@@ -187,6 +205,23 @@ function isSecurePublicUrl(value: string) {
     url.hostname === "127.0.0.1" ||
     url.hostname === "::1"
   );
+}
+
+function isIsolatedLoopbackE2eDemo(environment: {
+  APP_URL?: string;
+  CI?: "true" | "false";
+  E2E_ALLOW_PUBLIC_DEMO?: "true" | "false";
+}) {
+  if (
+    environment.CI !== "true" ||
+    environment.E2E_ALLOW_PUBLIC_DEMO !== "true" ||
+    !environment.APP_URL
+  ) {
+    return false;
+  }
+
+  const hostname = new URL(environment.APP_URL).hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
 function isValidTimeZone(value: string) {

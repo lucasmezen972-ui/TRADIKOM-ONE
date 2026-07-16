@@ -8,9 +8,21 @@ import {
   receiveWebhook,
   rotateWebhookEndpointSecret,
   setWebhookEndpointStatus,
-  syncMockConnector,
   type WebhookSignatureInput,
 } from "@/modules/connectors";
+import {
+  analyzeDomainConnection,
+  approveDnsChangePlan,
+  confirmDnsChangePlan,
+  disconnectWebsiteDomainBinding,
+  getDomainConnectionWorkspace,
+  prepareDnsChangePlan,
+  processDomainVerificationJob,
+  requestWebsiteDomainBinding,
+  simulateDnsChangePlan,
+  type AnalyzeDomainConnectionInput,
+  type PrepareDnsChangePlanInput,
+} from "@/modules/domain-connections";
 import {
   addContactNote,
   completeContactTask,
@@ -247,6 +259,43 @@ import {
   selfImprovementDecisionSchema,
 } from "@/modules/self-improvement";
 import { getEnterpriseObservability } from "@/modules/enterprise-observability";
+import {
+  enableMockConnectorReadOnly,
+  executeMockConnectorOperation,
+  getConnectorExecutionWorkspace,
+  prepareMockConnectorInstallation,
+  type ExecuteConnectorOperationInput,
+} from "@/modules/connector-execution";
+import { getConnectionMap } from "@/modules/connection-map";
+import {
+  authorizeMockOAuthRequest,
+  completeMockOAuthConnection,
+  inspectMockOAuthAuthorization,
+  refreshMockOAuthCredential,
+  startMockOAuthConnection,
+  type MockOAuthAuthorizationRequestInput,
+  type MockOAuthCallbackInput,
+  type StartMockOAuthInput,
+} from "@/modules/oauth";
+import {
+  disconnectSoftwareConnection,
+  getSoftwareConnectionWorkspace,
+} from "@/modules/software-connections";
+import {
+  commitUniversalImportBatch,
+  getImportWorkspace,
+  previewUniversalImport,
+  rollbackUniversalImport,
+  type ImportPreviewInput,
+} from "@/modules/imports";
+import {
+  cancelUniversalExport,
+  createUniversalExport,
+  getExportWorkspace,
+  getUniversalExportDownload,
+  processUniversalExportJob,
+  type CreateExportInput,
+} from "@/modules/exports";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -581,10 +630,156 @@ export function createServices(
     ) => completeContactTask(db, userId, tenantId, contactId, { taskId }),
     getConnectors: (userId: string, tenantId: string) =>
       getConnectors(db, userId, tenantId),
+    getDomainConnectionWorkspace: (userId: string, tenantId: string) =>
+      getDomainConnectionWorkspace(db, userId, tenantId),
+    analyzeDomainConnection: (
+      userId: string,
+      tenantId: string,
+      input: AnalyzeDomainConnectionInput,
+    ) => analyzeDomainConnection(db, userId, tenantId, input),
+    prepareDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      input: PrepareDnsChangePlanInput,
+    ) => prepareDnsChangePlan(db, userId, tenantId, input),
+    approveDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) => approveDnsChangePlan(db, userId, tenantId, { planId }),
+    confirmDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) => confirmDnsChangePlan(db, userId, tenantId, { planId }),
+    simulateDnsChangePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) => simulateDnsChangePlan(db, userId, tenantId, { planId }),
+    requestWebsiteDomainBinding: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) => requestWebsiteDomainBinding(db, userId, tenantId, { connectionId }),
+    processDomainVerificationJob: (
+      actorId: string,
+      tenantId: string,
+      jobId: string,
+    ) => processDomainVerificationJob(db, actorId, tenantId, jobId),
+    disconnectWebsiteDomainBinding: (
+      userId: string,
+      tenantId: string,
+      bindingId: string,
+    ) => disconnectWebsiteDomainBinding(db, userId, tenantId, { bindingId }),
+    getSoftwareConnectionWorkspace: (userId: string, tenantId: string) =>
+      getSoftwareConnectionWorkspace(db, userId, tenantId),
+    startMockOAuthConnection: (
+      userId: string,
+      tenantId: string,
+      input: StartMockOAuthInput = {},
+    ) =>
+      startMockOAuthConnection(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    inspectMockOAuthAuthorization: (
+      userId: string,
+      tenantId: string,
+      input: MockOAuthAuthorizationRequestInput,
+    ) =>
+      inspectMockOAuthAuthorization(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    authorizeMockOAuthRequest: (
+      userId: string,
+      tenantId: string,
+      input: MockOAuthAuthorizationRequestInput,
+    ) =>
+      authorizeMockOAuthRequest(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    completeMockOAuthConnection: (
+      userId: string,
+      tenantId: string,
+      input: MockOAuthCallbackInput,
+    ) =>
+      completeMockOAuthConnection(db, userId, tenantId, input, {
+        appUrl: dependencies.appUrl,
+      }),
+    refreshMockOAuthCredential: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) => refreshMockOAuthCredential(db, userId, tenantId, { connectionId }),
+    disconnectSoftwareConnection: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) => disconnectSoftwareConnection(db, userId, tenantId, { connectionId }),
+    getConnectorExecutionWorkspace: (userId: string, tenantId: string) =>
+      getConnectorExecutionWorkspace(db, userId, tenantId),
+    getConnectionMap: (userId: string, tenantId: string) =>
+      getConnectionMap(db, userId, tenantId, {
+        emailProviderName: authDelivery.emailProvider.name,
+      }),
+    prepareMockConnectorInstallation: (
+      userId: string,
+      tenantId: string,
+      connectionId: string,
+    ) =>
+      prepareMockConnectorInstallation(db, userId, tenantId, { connectionId }),
+    enableMockConnectorReadOnly: (
+      userId: string,
+      tenantId: string,
+      installationId: string,
+    ) =>
+      enableMockConnectorReadOnly(db, userId, tenantId, { installationId }),
+    executeMockConnectorOperation: (
+      userId: string,
+      tenantId: string,
+      input: ExecuteConnectorOperationInput,
+    ) => executeMockConnectorOperation(db, userId, tenantId, input),
     importCsvContacts: (userId: string, tenantId: string, csvText: string) =>
       importCsvContacts(db, userId, tenantId, csvText),
-    syncMockConnector: (userId: string, tenantId: string) =>
-      syncMockConnector(db, userId, tenantId),
+    getImportWorkspace: (userId: string, tenantId: string) =>
+      getImportWorkspace(db, userId, tenantId),
+    previewUniversalImport: (
+      userId: string,
+      tenantId: string,
+      input: ImportPreviewInput & { buffer: Buffer },
+    ) => previewUniversalImport(db, userId, tenantId, input),
+    commitUniversalImportBatch: (
+      userId: string,
+      tenantId: string,
+      input: { importId: string; batchSize?: number },
+    ) => commitUniversalImportBatch(db, userId, tenantId, input),
+    rollbackUniversalImport: (
+      userId: string,
+      tenantId: string,
+      importId: string,
+    ) => rollbackUniversalImport(db, userId, tenantId, { importId }),
+    getExportWorkspace: (userId: string, tenantId: string) =>
+      getExportWorkspace(db, userId, tenantId),
+    createUniversalExport: (
+      userId: string,
+      tenantId: string,
+      input: CreateExportInput,
+    ) => createUniversalExport(db, userId, tenantId, input),
+    processUniversalExportJob: (
+      actorId: string,
+      tenantId: string,
+      exportId: string,
+    ) => processUniversalExportJob(db, actorId, tenantId, exportId),
+    cancelUniversalExport: (
+      userId: string,
+      tenantId: string,
+      exportId: string,
+    ) => cancelUniversalExport(db, userId, tenantId, { exportId }),
+    getUniversalExportDownload: (
+      userId: string,
+      tenantId: string,
+      exportId: string,
+    ) => getUniversalExportDownload(db, userId, tenantId, { exportId }),
     getWebhookEndpointConfig: (userId: string, tenantId: string) =>
       getWebhookEndpointConfig(db, userId, tenantId),
     rotateWebhookEndpointSecret: (

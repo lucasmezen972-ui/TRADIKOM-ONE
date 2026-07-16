@@ -94,6 +94,40 @@ describe("environment validation", () => {
     ).toThrowError(/COOKIE_SECURE, FEATURE_PUBLIC_DEMO/);
   });
 
+  it("permits the production demo and loopback cookies only for explicit CI E2E", () => {
+    expect(
+      validateEnvironment({
+        ...productionEnvironment,
+        APP_URL: "http://127.0.0.1:3000",
+        FEATURE_PUBLIC_DEMO: "true",
+        E2E_ALLOW_PUBLIC_DEMO: "true",
+        COOKIE_SECURE: "false",
+        CI: "true",
+      }),
+    ).toBeDefined();
+
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        FEATURE_PUBLIC_DEMO: "true",
+        E2E_ALLOW_PUBLIC_DEMO: "true",
+        COOKIE_SECURE: "false",
+        CI: "true",
+      }),
+    ).toThrowError(/COOKIE_SECURE, E2E_ALLOW_PUBLIC_DEMO, FEATURE_PUBLIC_DEMO/);
+
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        APP_URL: "http://127.0.0.1:3000",
+        FEATURE_PUBLIC_DEMO: "true",
+        E2E_ALLOW_PUBLIC_DEMO: "true",
+        COOKIE_SECURE: "false",
+        CI: "false",
+      }),
+    ).toThrowError(/COOKIE_SECURE, E2E_ALLOW_PUBLIC_DEMO, FEATURE_PUBLIC_DEMO/);
+  });
+
   it("validates the business timezone", () => {
     expect(
       validateEnvironment({

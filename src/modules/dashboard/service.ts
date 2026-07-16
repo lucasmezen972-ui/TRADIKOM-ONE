@@ -156,6 +156,34 @@ export async function getDashboardData(
   } satisfies DashboardData;
 }
 
+export async function getPendingApprovalOverview(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  limit = 20,
+) {
+  const role = await findMembershipRole(db, userId, tenantId);
+  if (!role) {
+    throw new DashboardError(
+      "dashboard_access_denied",
+      "Accès refusé pour cette organisation.",
+    );
+  }
+  const canApprove = approvalRoles.includes(role);
+  const items = await listPendingApprovalActions(
+    db,
+    tenantId,
+    canApprove,
+    Math.max(1, Math.min(limit, 20)),
+  );
+
+  return {
+    canApprove,
+    visibleCount: items.length,
+    items,
+  };
+}
+
 const approvalRoles: Role[] = ["owner", "administrator", "manager"];
 
 function mapWorkflowFailures(runs: WorkflowRun[], limit: number) {

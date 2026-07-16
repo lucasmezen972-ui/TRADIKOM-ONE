@@ -251,6 +251,70 @@ function getMigrations(enableRls: boolean) {
       id: "053_phase4_enterprise_observability_indexes",
       sql: phase4EnterpriseObservabilityIndexesMigrationSql,
     },
+    {
+      id: "054_phase5_domain_connections",
+      sql: phase5DomainConnectionsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "055_phase5_domain_connections_rls",
+          sql: phase5DomainConnectionsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "056_phase5_oauth_connections",
+      sql: phase5OAuthConnectionsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "057_phase5_oauth_connections_rls",
+          sql: phase5OAuthConnectionsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "058_phase5_oauth_authorization_codes",
+      sql: phase5OAuthAuthorizationCodesMigrationSql,
+    },
+    {
+      id: "059_phase5_connector_execution",
+      sql: phase5ConnectorExecutionMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "060_phase5_connector_execution_rls",
+          sql: phase5ConnectorExecutionRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "061_phase5_universal_imports",
+      sql: phase5UniversalImportsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "062_phase5_universal_imports_rls",
+          sql: phase5UniversalImportsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "063_phase5_universal_exports",
+      sql: phase5UniversalExportsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "064_phase5_universal_exports_rls",
+          sql: phase5UniversalExportsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "065_phase5_website_domain_bindings",
+      sql: phase5WebsiteDomainBindingsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "066_phase5_website_domain_bindings_rls",
+          sql: phase5WebsiteDomainBindingsRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -3342,4 +3406,551 @@ create index if not exists idx_api_change_impacts_tenant_blocked
 
 create index if not exists idx_api_source_rechecks_context_status
   on api_source_recheck_schedules(context_tenant_id, last_status, next_run_at);
+`;
+
+const phase5DomainConnectionsMigrationSql = `
+create table if not exists domain_connections (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  normalized_domain text not null,
+  provider_key text not null,
+  provider_label text not null,
+  state text not null,
+  likely_registrar text,
+  likely_hosting text,
+  certificate_status text not null,
+  evidence text not null,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, normalized_domain),
+  check (provider_key in ('mock_dns', 'manual')),
+  check (state in (
+    'discovered', 'analysis_pending', 'analyzed', 'manual_setup_required',
+    'provider_connection_available', 'change_plan_ready', 'awaiting_approval',
+    'applying', 'propagation_pending', 'verified', 'failed',
+    'rollback_required', 'disconnected'
+  )),
+  check (certificate_status in ('available', 'unavailable', 'unknown'))
+);
+
+create table if not exists dns_snapshots (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  domain_connection_id text not null,
+  records text not null,
+  evidence text not null,
+  captured_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, domain_connection_id)
+    references domain_connections(tenant_id, id) on delete cascade
+);
+
+create table if not exists dns_change_plans (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  domain_connection_id text not null,
+  dns_snapshot_id text not null,
+  provider_key text not null,
+  status text not null,
+  proposed_changes text not null,
+  impact_analysis text not null,
+  rollback_snapshot text not null,
+  verification_checks text not null,
+  expires_at text not null,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, domain_connection_id)
+    references domain_connections(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, dns_snapshot_id)
+    references dns_snapshots(tenant_id, id) on delete restrict,
+  check (provider_key in ('mock_dns', 'manual')),
+  check (status in (
+    'awaiting_approval', 'awaiting_second_confirmation',
+    'approved_for_simulation', 'simulated', 'expired', 'rejected'
+  ))
+);
+
+create table if not exists dns_change_approvals (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  dns_change_plan_id text not null,
+  approval_type text not null,
+  decision text not null,
+  actor_id text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, dns_change_plan_id, approval_type),
+  foreign key (tenant_id, dns_change_plan_id)
+    references dns_change_plans(tenant_id, id) on delete cascade,
+  check (approval_type in ('primary', 'second_confirmation')),
+  check (decision in ('approved', 'rejected'))
+);
+
+create index if not exists idx_domain_connections_tenant_updated
+  on domain_connections (tenant_id, updated_at desc);
+create index if not exists idx_dns_snapshots_tenant_connection
+  on dns_snapshots (tenant_id, domain_connection_id, captured_at desc);
+create index if not exists idx_dns_change_plans_tenant_status
+  on dns_change_plans (tenant_id, status, created_at desc);
+create index if not exists idx_dns_change_approvals_tenant_plan
+  on dns_change_approvals (tenant_id, dns_change_plan_id, created_at desc);
+`;
+
+const phase5DomainConnectionsRlsMigrationSql = `
+alter table domain_connections enable row level security;
+alter table dns_snapshots enable row level security;
+alter table dns_change_plans enable row level security;
+alter table dns_change_approvals enable row level security;
+
+drop policy if exists tenant_isolation on domain_connections;
+create policy tenant_isolation on domain_connections
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on dns_snapshots;
+create policy tenant_isolation on dns_snapshots
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on dns_change_plans;
+create policy tenant_isolation on dns_change_plans
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on dns_change_approvals;
+create policy tenant_isolation on dns_change_approvals
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5OAuthConnectionsMigrationSql = `
+create table if not exists software_connections (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  software_directory_id text references software_directory_entries(id) on delete restrict,
+  software_key text not null,
+  software_name text not null,
+  provider_key text not null,
+  environment text not null,
+  status text not null,
+  account_label text not null,
+  scopes text not null,
+  created_by text not null references users(id),
+  connected_at text,
+  disconnected_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  check (environment in ('mock', 'sandbox', 'production')),
+  check (status in (
+    'oauth_pending', 'connected', 'authentication_expired', 'unhealthy',
+    'disconnected', 'revoked'
+  ))
+);
+
+create table if not exists oauth_states (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  software_connection_id text not null,
+  state_hash text not null unique,
+  code_challenge text not null,
+  code_verifier_encrypted text not null,
+  redirect_uri text not null,
+  scopes text not null,
+  expires_at text not null,
+  consumed_at text,
+  created_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, software_connection_id)
+    references software_connections(tenant_id, id) on delete cascade
+);
+
+create table if not exists oauth_credentials (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  software_connection_id text not null,
+  provider_key text not null,
+  access_token_encrypted text not null,
+  refresh_token_encrypted text not null,
+  scopes text not null,
+  expires_at text not null,
+  revoked_at text,
+  key_version text not null,
+  token_version integer not null default 1,
+  refresh_lease_id text,
+  refresh_lease_expires_at text,
+  last_refreshed_at text,
+  last_used_at text,
+  failed_authentication_count integer not null default 0,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, software_connection_id, token_version),
+  foreign key (tenant_id, software_connection_id)
+    references software_connections(tenant_id, id) on delete cascade,
+  check (token_version > 0),
+  check (failed_authentication_count >= 0)
+);
+
+create unique index if not exists idx_oauth_credentials_one_active
+  on oauth_credentials (tenant_id, software_connection_id)
+  where revoked_at is null;
+create index if not exists idx_software_connections_tenant_status
+  on software_connections (tenant_id, status, updated_at desc);
+create index if not exists idx_oauth_states_tenant_connection
+  on oauth_states (tenant_id, software_connection_id, expires_at desc);
+create index if not exists idx_oauth_credentials_tenant_connection
+  on oauth_credentials (tenant_id, software_connection_id, updated_at desc);
+`;
+
+const phase5OAuthConnectionsRlsMigrationSql = `
+alter table software_connections enable row level security;
+alter table oauth_states enable row level security;
+alter table oauth_credentials enable row level security;
+
+drop policy if exists tenant_isolation on software_connections;
+create policy tenant_isolation on software_connections
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on oauth_states;
+create policy tenant_isolation on oauth_states
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on oauth_credentials;
+create policy tenant_isolation on oauth_credentials
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5OAuthAuthorizationCodesMigrationSql = `
+alter table oauth_states
+  add column if not exists authorization_code_hash text;
+
+alter table oauth_states
+  add column if not exists authorized_at text;
+
+create index if not exists idx_oauth_states_tenant_authorized
+  on oauth_states (tenant_id, authorized_at, expires_at);
+`;
+
+const phase5ConnectorExecutionMigrationSql = `
+create table if not exists connector_installations (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  software_connection_id text not null,
+  connector_key text not null,
+  connector_version text not null,
+  api_version text not null,
+  environment text not null,
+  status text not null,
+  approved_operations text not null,
+  required_scopes text not null,
+  rate_limit_limit integer not null default 20,
+  rate_limit_remaining integer not null default 20,
+  rate_limit_reset_at text not null,
+  security_suspended integer not null default 0,
+  breaking_change_blocked integer not null default 0,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, software_connection_id, connector_key),
+  foreign key (tenant_id, software_connection_id)
+    references software_connections(tenant_id, id) on delete cascade,
+  check (environment in ('mock', 'sandbox', 'production')),
+  check (status in (
+    'proposed', 'sandbox_approved', 'installed_disabled',
+    'read_only_enabled', 'write_approval_required', 'write_enabled',
+    'suspended', 'authentication_expired', 'unhealthy', 'disconnected',
+    'revoked'
+  )),
+  check (rate_limit_limit > 0),
+  check (rate_limit_remaining >= 0),
+  check (security_suspended in (0, 1)),
+  check (breaking_change_blocked in (0, 1))
+);
+
+create table if not exists connector_executions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  connector_installation_id text not null,
+  connector_version text not null,
+  environment text not null,
+  operation text not null,
+  capability text not null,
+  idempotency_key text not null,
+  correlation_id text not null,
+  started_at text not null,
+  completed_at text,
+  status text not null,
+  safe_result_summary text,
+  safe_error_classification text,
+  retry_count integer not null default 0,
+  rate_limit_remaining integer,
+  rate_limit_reset_at text,
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, connector_installation_id, idempotency_key),
+  foreign key (tenant_id, connector_installation_id)
+    references connector_installations(tenant_id, id) on delete cascade,
+  check (environment in ('mock', 'sandbox', 'production')),
+  check (capability in ('read', 'write')),
+  check (status in ('running', 'succeeded', 'failed', 'denied', 'cancelled')),
+  check (retry_count >= 0),
+  check (rate_limit_remaining is null or rate_limit_remaining >= 0)
+);
+
+create table if not exists connector_health_records (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  connector_installation_id text not null,
+  health_state text not null,
+  authentication_state text not null,
+  last_successful_sync_at text,
+  last_failed_sync_at text,
+  latency_ms integer,
+  rate_limit_remaining integer,
+  rate_limit_reset_at text,
+  api_version text not null,
+  connector_version text not null,
+  webhook_state text not null,
+  schema_drift_state text not null,
+  breaking_change_state text not null,
+  retry_backlog integer not null default 0,
+  recommended_action text not null,
+  observed_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, connector_installation_id),
+  foreign key (tenant_id, connector_installation_id)
+    references connector_installations(tenant_id, id) on delete cascade,
+  check (health_state in (
+    'healthy', 'degraded', 'action_required', 'authentication_required',
+    'rate_limited', 'schema_changed', 'suspended', 'disconnected', 'unknown'
+  )),
+  check (authentication_state in ('valid', 'expired', 'revoked', 'unknown')),
+  check (latency_ms is null or latency_ms >= 0),
+  check (rate_limit_remaining is null or rate_limit_remaining >= 0),
+  check (retry_backlog >= 0)
+);
+
+create index if not exists idx_connector_installations_tenant_status
+  on connector_installations (tenant_id, status, updated_at desc);
+create index if not exists idx_connector_executions_tenant_installation
+  on connector_executions (tenant_id, connector_installation_id, created_at desc);
+create index if not exists idx_connector_health_tenant_state
+  on connector_health_records (tenant_id, health_state, observed_at desc);
+`;
+
+const phase5ConnectorExecutionRlsMigrationSql = `
+alter table connector_installations enable row level security;
+alter table connector_executions enable row level security;
+alter table connector_health_records enable row level security;
+
+drop policy if exists tenant_isolation on connector_installations;
+create policy tenant_isolation on connector_installations
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on connector_executions;
+create policy tenant_isolation on connector_executions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on connector_health_records;
+create policy tenant_isolation on connector_health_records
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5UniversalImportsMigrationSql = `
+create table if not exists products (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  name text not null,
+  sku text not null,
+  price_cents integer not null default 0,
+  active integer not null default 1,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, sku),
+  check (price_cents >= 0),
+  check (active in (0, 1))
+);
+
+alter table imports add column if not exists entity_type text not null default 'contacts';
+alter table imports add column if not exists format text not null default 'csv';
+alter table imports add column if not exists file_name text not null default 'import.csv';
+alter table imports add column if not exists content_type text not null default 'text/csv';
+alter table imports add column if not exists file_size_bytes integer not null default 0;
+alter table imports add column if not exists mapping text not null default '{}';
+alter table imports add column if not exists headers text not null default '[]';
+alter table imports add column if not exists total_rows integer not null default 0;
+alter table imports add column if not exists processed_rows integer not null default 0;
+alter table imports add column if not exists created_by text references users(id);
+alter table imports add column if not exists validated_at text;
+alter table imports add column if not exists completed_at text;
+alter table imports add column if not exists rolled_back_at text;
+alter table imports add column if not exists cancelled_at text;
+alter table imports add column if not exists updated_at text;
+
+alter table import_rows add column if not exists target_id text;
+alter table import_rows add column if not exists created_at text;
+
+create unique index if not exists uq_imports_tenant_id_id
+  on imports (tenant_id, id);
+create index if not exists idx_imports_tenant_status
+  on imports (tenant_id, status, created_at desc);
+create index if not exists idx_import_rows_tenant_import_status
+  on import_rows (tenant_id, import_id, status, row_number);
+create index if not exists idx_products_tenant_updated
+  on products (tenant_id, updated_at desc);
+`;
+
+const phase5UniversalImportsRlsMigrationSql = `
+alter table products enable row level security;
+
+drop policy if exists tenant_isolation on products;
+create policy tenant_isolation on products
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5UniversalExportsMigrationSql = `
+create table if not exists export_jobs (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  entity_type text not null,
+  format text not null,
+  status text not null,
+  selected_fields text not null,
+  date_from text not null,
+  date_to text not null,
+  row_count integer not null default 0,
+  safe_content text,
+  content_encoding text,
+  content_type text,
+  file_name text,
+  safe_error_code text,
+  expires_at text not null,
+  downloaded_at text,
+  cancelled_at text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  completed_at text,
+  unique (tenant_id, id),
+  check (entity_type in (
+    'contacts', 'companies', 'opportunities', 'tasks', 'activities',
+    'products', 'workflows', 'connector_health'
+  )),
+  check (format in ('csv', 'xlsx', 'json')),
+  check (status in ('queued', 'processing', 'completed', 'failed', 'cancelled', 'expired')),
+  check (row_count >= 0),
+  check (content_encoding is null or content_encoding = 'base64')
+);
+
+create index if not exists idx_export_jobs_tenant_status
+  on export_jobs (tenant_id, status, created_at desc);
+create index if not exists idx_export_jobs_tenant_expiry
+  on export_jobs (tenant_id, expires_at);
+`;
+
+const phase5UniversalExportsRlsMigrationSql = `
+alter table export_jobs enable row level security;
+
+drop policy if exists tenant_isolation on export_jobs;
+create policy tenant_isolation on export_jobs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const phase5WebsiteDomainBindingsMigrationSql = `
+create unique index if not exists idx_websites_tenant_id_unique
+  on websites (tenant_id, id);
+create unique index if not exists idx_website_versions_tenant_id_unique
+  on website_versions (tenant_id, id);
+
+create table if not exists website_domain_bindings (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  website_id text not null,
+  domain_connection_id text not null,
+  dns_change_plan_id text not null,
+  published_version_id_at_request text not null,
+  status text not null,
+  certificate_status text not null,
+  safe_error_code text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  verified_at text,
+  disconnected_at text,
+  unique (tenant_id, id),
+  unique (tenant_id, domain_connection_id),
+  foreign key (tenant_id, website_id)
+    references websites(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, domain_connection_id)
+    references domain_connections(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, dns_change_plan_id)
+    references dns_change_plans(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, published_version_id_at_request)
+    references website_versions(tenant_id, id) on delete restrict,
+  check (status in (
+    'pending_verification', 'verified', 'bound', 'failed', 'disconnected'
+  )),
+  check (certificate_status in ('pending', 'available', 'unavailable', 'unknown'))
+);
+
+create table if not exists domain_verification_jobs (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  website_domain_binding_id text not null,
+  status text not null,
+  attempts integer not null default 0,
+  max_attempts integer not null default 3,
+  next_run_at text not null,
+  lease_expires_at text,
+  correlation_id text not null,
+  safe_error_code text,
+  created_by text not null references users(id),
+  created_at text not null,
+  updated_at text not null,
+  completed_at text,
+  unique (tenant_id, id),
+  foreign key (tenant_id, website_domain_binding_id)
+    references website_domain_bindings(tenant_id, id) on delete cascade,
+  check (status in ('queued', 'processing', 'verified', 'failed', 'cancelled')),
+  check (attempts >= 0 and attempts <= max_attempts),
+  check (max_attempts between 1 and 10)
+);
+
+create index if not exists idx_website_domain_bindings_tenant_status
+  on website_domain_bindings (tenant_id, status, updated_at desc);
+create index if not exists idx_website_domain_bindings_tenant_website
+  on website_domain_bindings (tenant_id, website_id, updated_at desc);
+create index if not exists idx_domain_verification_jobs_tenant_schedule
+  on domain_verification_jobs (tenant_id, status, next_run_at);
+`;
+
+const phase5WebsiteDomainBindingsRlsMigrationSql = `
+alter table website_domain_bindings enable row level security;
+alter table domain_verification_jobs enable row level security;
+
+drop policy if exists tenant_isolation on website_domain_bindings;
+create policy tenant_isolation on website_domain_bindings
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on domain_verification_jobs;
+create policy tenant_isolation on domain_verification_jobs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;

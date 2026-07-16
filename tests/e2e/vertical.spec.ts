@@ -6,10 +6,15 @@ import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 test("demo user can publish site lead into CRM", async ({ page }) => {
   await openDemo(page);
 
-  await page.getByRole("link", { name: "Mon site" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "Mon site" })
+    .click();
   await expect(page.getByRole("heading", { name: /Site Garage/i })).toBeVisible();
+  await waitForHydration(page);
   await page.getByRole("link", { name: /Voir le site/i }).click();
   await expect(page).toHaveURL(/sites\/garage-caraibes-auto/);
+  await waitForHydration(page);
 
   await page.getByPlaceholder("Votre nom").fill("Lead Playwright");
   await page.getByPlaceholder("Email").fill("lead-playwright@example.com");
@@ -21,6 +26,299 @@ test("demo user can publish site lead into CRM", async ({ page }) => {
 
   await page.goto("/contacts");
   await expect(page.getByText("lead-playwright@example.com")).toBeVisible();
+});
+
+test("a tenant administrator binds a verified domain without publishing the draft", async ({
+  context,
+  page,
+}) => {
+  await openDemo(page);
+  const db = await getDb();
+  const services = createServices(db);
+  const demo = await db.query<{ tenant_id: string; user_id: string; slug: string }>(
+    `select tenants.id as tenant_id, memberships.user_id, tenants.slug
+       from tenants
+       join memberships on memberships.tenant_id = tenants.id
+      where tenants.slug = 'garage-caraibes-auto' and memberships.role = 'owner'
+      limit 1`,
+  );
+  const tenantId = demo.rows[0]?.tenant_id;
+  const userId = demo.rows[0]?.user_id;
+  const slug = demo.rows[0]?.slug;
+  if (!tenantId || !userId || !slug) {
+    throw new Error("Le site de démonstration est introuvable.");
+  }
+  const publicPage = await context.newPage();
+  await publicPage.goto(`/sites/${slug}`);
+  const liveTitle = await publicPage.getByRole("heading", { level: 1 }).innerText();
+  const website = await services.getWebsiteWorkspace(userId, tenantId);
+  const hero = website.sections.find((section) => section.type === "hero");
+  if (!hero) throw new Error("La section principale est introuvable.");
+  const draftTitle = `Brouillon domaine ${Date.now()}`;
+  await services.updateWebsiteSection(userId, tenantId, hero.id, {
+    title: draftTitle,
+    body: hero.body,
+    imageUrl: hero.imageUrl,
+    buttonLabel: hero.buttonLabel,
+    buttonHref: hero.buttonHref,
+    enabled: true,
+  });
+
+  await page.goto("/connexions/domaines");
+  await expect(
+    page.getByRole("heading", { name: "Domaines", exact: true }),
+  ).toBeVisible();
+  const domain = `atelier-${Date.now()}.example.test`;
+  await page.getByLabel("Nom de domaine").fill(domain);
+  await page.getByLabel("Méthode").selectOption("mock_dns");
+  await page.getByRole("button", { name: "Analyser le domaine" }).click();
+
+  const connection = page.locator("article").filter({ hasText: domain }).first();
+  await expect(connection.getByText("Analysé", { exact: true })).toBeVisible();
+  await expect(connection.getByText("Registraire de test")).toBeVisible();
+  await expect(connection.getByText("MX", { exact: true })).toBeVisible();
+  await connection.getByRole("button", { name: "Préparer le plan DNS" }).click();
+
+  let plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Première approbation requise",
+  });
+  await expect(plan.getByText("Aucun effet externe")).toBeVisible();
+  await plan.getByRole("button", { name: "Approuver le plan" }).click();
+
+  plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Deuxième confirmation requise",
+  });
+  await plan
+    .getByRole("button", { name: "Confirmer une seconde fois" })
+    .click();
+
+  plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Prêt à simuler",
+  });
+  await plan.getByRole("button", { name: "Simuler le changement" }).click();
+
+  plan = page.locator("article").filter({ hasText: domain }).filter({
+    hasText: "Simulation réussie",
+  });
+  await expect(
+    plan.getByText("Simulation terminée, aucune modification appliquée"),
+  ).toBeVisible();
+  await plan
+    .getByRole("button", { name: "Vérifier et lier au site publié" })
+    .click();
+  await expect(
+    page.getByText("Vérification de propagation en attente"),
+  ).toBeVisible();
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const summary = await processPendingDomainEvents(db, { limit: 100 });
+    if (summary.selected === 0) break;
+  }
+  await page.reload();
+  await expect(page.getByText("Domaine lié au site publié")).toBeVisible();
+  await expect(page.getByText("Certificat de test vérifié")).toBeVisible();
+  await publicPage.reload();
+  await expect(publicPage.getByRole("heading", { level: 1 })).toHaveText(liveTitle);
+  await expect(publicPage.getByText(draftTitle)).toHaveCount(0);
+  await page.getByRole("button", { name: "Déconnecter le domaine" }).click();
+  await expect(page.getByText("Liaison déconnectée")).toBeVisible();
+  await publicPage.reload();
+  await expect(publicPage.getByRole("heading", { level: 1 })).toHaveText(liveTitle);
+  await expect(
+    page.getByRole("button", {
+      name: /Appliquer|Modifier les DNS|Publier le brouillon/i,
+    }),
+  ).toHaveCount(0);
+});
+
+test("a tenant administrator connects and revokes the local OAuth provider without exposing tokens", async ({
+  browser,
+  page,
+}) => {
+  await openDemo(page);
+  await page.goto("/connexions/logiciels");
+  await waitForHydration(page);
+  await expect(
+    page.getByRole("heading", { name: "Connexions logicielles" }),
+  ).toBeVisible();
+
+  const accountLabel = `Compte OAuth ${Date.now()}`;
+  const provider = page.locator("article").filter({ hasText: "Mock Business" }).first();
+  await provider.getByLabel("Libellé du compte").fill(accountLabel);
+  await provider.getByRole("button", { name: "Connecter avec OAuth" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Autoriser Mock Business" }),
+  ).toBeVisible();
+  await expect(page.getByText("Lire les contacts", { exact: true })).toBeVisible();
+  await expect(page.getByText("Lire le profil du compte", { exact: true })).toBeVisible();
+  await waitForHydration(page);
+  await page.getByRole("button", { name: "Autoriser la connexion" }).click();
+
+  await expect(page).toHaveURL(/connexions\/logiciels\?oauth=connecte/);
+  await expect(page.getByText(/Aucun jeton n’a été exposé/)).toBeVisible();
+  const connection = page.locator("article").filter({ hasText: accountLabel });
+  await expect(connection.getByText("Connecté", { exact: true })).toBeVisible();
+  await expect(connection.getByText("Lecture des contacts")).toBeVisible();
+  await expect(connection.getByText("Lecture du profil")).toBeVisible();
+  await expect(page.getByText(/mock_access_|mock_refresh_/)).toHaveCount(0);
+
+  await connection
+    .getByRole("button", { name: "Installer en mode désactivé" })
+    .click();
+  let activeConnection = page.locator("article").filter({ hasText: accountLabel }).first();
+  await expect(activeConnection.getByText("Installé, désactivé")).toBeVisible();
+  await activeConnection
+    .getByRole("button", { name: "Activer la lecture seule" })
+    .click();
+  activeConnection = page.locator("article").filter({ hasText: accountLabel }).first();
+  await expect(activeConnection.getByText("Lecture seule active")).toBeVisible();
+  await activeConnection
+    .getByRole("button", { name: "Synchroniser en lecture seule" })
+    .click();
+  activeConnection = page.locator("article").filter({ hasText: accountLabel }).first();
+  await expect(
+    activeConnection.getByText("3 clients, 2 rendez-vous et 1 devis simulés lus."),
+  ).toBeVisible();
+  const health = page.locator("article").filter({ hasText: accountLabel }).last();
+  await expect(health.getByText("Sain", { exact: true })).toBeVisible();
+  await expect(health.getByText("Aucune action requise")).toBeVisible();
+
+  await activeConnection.getByRole("button", { name: "Déconnecter" }).click();
+  const disconnected = page
+    .locator("article")
+    .filter({ hasText: accountLabel })
+    .first();
+  await expect(
+    disconnected.getByText("Déconnecté", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    disconnected.getByRole("button", { name: "Rafraîchir l’accès" }),
+  ).toHaveCount(0);
+
+  await page.goto("/connexions");
+  await expect(
+    page.getByRole("heading", { name: "Carte des connexions" }),
+  ).toBeVisible();
+  const map = page.getByRole("group", {
+    name: "Éléments de la carte des connexions",
+  });
+  const softwareNode = map.getByRole("button", { name: /Mock Business/ }).first();
+  await expect(softwareNode).toContainText("Déconnecté");
+  await expect(
+    map.getByRole("button", { name: /E-mail applicatif/ }),
+  ).toBeVisible();
+  await expect(
+    map.getByRole("button", { name: /Approbations/ }),
+  ).toBeVisible();
+  await expect(softwareNode).toContainText(accountLabel);
+  await expect(softwareNode).toBeEnabled();
+  await softwareNode.click();
+  await expect(softwareNode).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.locator("aside").filter({ hasText: accountLabel }),
+  ).toBeVisible();
+  await expect(page.getByText("Version textuelle accessible")).toBeVisible();
+
+  const db = await getDb();
+  const services = createServices(db);
+  const isolatedEmail = `isolated-connection-${Date.now()}@example.com`;
+  const isolatedPassword = "IsolatedConnection!2026";
+  const isolatedUser = await services.registerUser({
+    name: "Organisation connexion isolée",
+    email: isolatedEmail,
+    password: isolatedPassword,
+  });
+  await services.createTenant(isolatedUser.id, {
+    name: "Organisation connexion vide",
+    category: "Services",
+  });
+  const isolatedContext = await browser.newContext();
+  const isolatedPage = await isolatedContext.newPage();
+  await isolatedPage.goto("/");
+  const loginForm = isolatedPage.locator("form").filter({
+    has: isolatedPage.getByRole("button", { name: "Se connecter" }),
+  });
+  await loginForm.getByPlaceholder("Email professionnel").fill(isolatedEmail);
+  await loginForm.getByPlaceholder("Mot de passe").fill(isolatedPassword);
+  await loginForm.getByRole("button", { name: "Se connecter" }).click();
+  await isolatedPage.goto("/connexions");
+  await expect(
+    isolatedPage.getByRole("heading", { name: "Carte des connexions" }),
+  ).toBeVisible();
+  await expect(isolatedPage.getByText(accountLabel)).toHaveCount(0);
+  await isolatedContext.close();
+});
+
+test("a tenant controls a mapped import and an expiring export", async ({
+  page,
+}) => {
+  const db = await getDb();
+  const services = createServices(db);
+  const suffix = Date.now();
+  const email = `import-e2e-${suffix}@example.com`;
+  const password = "ImportE2E!2026";
+  const user = await services.registerUser({
+    name: "Responsable import",
+    email,
+    password,
+  });
+  await services.createTenant(user.id, {
+    name: `Organisation import ${suffix}`,
+    category: "Commerce",
+  });
+
+  await page.goto("/");
+  const loginForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Se connecter" }),
+  });
+  await loginForm.getByPlaceholder("Email professionnel").fill(email);
+  await loginForm.getByPlaceholder("Mot de passe").fill(password);
+  await loginForm.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page).toHaveURL(/aujourdhui/);
+
+  await page.goto("/connexions/donnees");
+  await expect(
+    page.getByRole("heading", { name: "Imports et exports" }),
+  ).toBeVisible();
+  const contactEmail = `contact-import-${suffix}@example.com`;
+  await page.getByLabel("Fichier").setInputFiles({
+    name: "contacts-e2e.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      `nom,email,telephone\nContact importé,${contactEmail},+596696000099`,
+    ),
+  });
+  await page.getByRole("button", { name: "Valider l’aperçu" }).click();
+  await expect(page).toHaveURL(/connexions\/donnees\?import=/);
+  await expect(page.getByText("Aperçu validé").first()).toBeVisible();
+  await page.getByRole("button", { name: "Finaliser l’import" }).click();
+  await expect(page.getByText("Import terminé").first()).toBeVisible();
+
+  await page.goto("/contacts");
+  await expect(page.getByText(contactEmail)).toBeVisible();
+
+  await page.goto("/connexions/donnees");
+  await page.getByRole("button", { name: "Préparer l’export" }).click();
+  await expect(page).toHaveURL(/connexions\/donnees\?export=/);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const summary = await processPendingDomainEvents(db, { limit: 100 });
+    if (summary.selected === 0) break;
+  }
+  await page.reload();
+  await expect(page.getByText("Fichier disponible").first()).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Télécharger le fichier" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^tradikom-contacts-.*\.csv$/);
+
+  const importCard = page.locator("a").filter({ hasText: "contacts-e2e.csv" }).first();
+  await importCard.click();
+  await page
+    .getByRole("button", { name: "Annuler les données importées" })
+    .click();
+  await expect(page.getByText("Import annulé").first()).toBeVisible();
+  await page.goto("/contacts");
+  await expect(page.getByText(contactEmail)).toHaveCount(0);
 });
 
 test("the Business Brain versions and archives verified tenant memory", async ({
@@ -81,7 +379,10 @@ test("the strategic advisor explains and approves a proposal without execution",
   page,
 }) => {
   await openDemo(page);
-  await page.getByRole("link", { name: "Conseiller" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "Conseiller" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Conseiller stratégique" }),
   ).toBeVisible();
@@ -731,6 +1032,12 @@ test("operational health distinguishes measured incidents from unknown telemetry
 
 async function openDemo(page: Page) {
   await page.goto("/");
+  await waitForHydration(page);
   await page.getByRole("button", { name: /Ouvrir la d.mo/i }).click();
   await expect(page).toHaveURL(/aujourdhui/);
+  await waitForHydration(page);
+}
+
+async function waitForHydration(page: Page) {
+  await expect(page.locator('[data-app-hydrated="true"]')).toHaveCount(1);
 }
