@@ -2,6 +2,7 @@ const CLOUDFLARE_API_ORIGIN = "https://api.cloudflare.com";
 const CLOUDFLARE_API_PREFIX = "/client/v4";
 const maxResultItems = 50;
 const maxDnsContentLength = 4096;
+const maxResponseBytes = 512 * 1024;
 
 export const cloudflareReadOnlyContract = {
   providerKey: "cloudflare",
@@ -50,7 +51,7 @@ export type CloudflareRequestPlan = {
   method: "GET";
   url: string;
   timeoutMs: 10_000;
-  maxResponseBytes: 512 * 1024;
+  maxResponseBytes: typeof maxResponseBytes;
   safeSummary: {
     operation: CloudflareReadOnlyOperation;
     origin: typeof CLOUDFLARE_API_ORIGIN;
@@ -151,7 +152,7 @@ export function createCloudflareRequestPlan(input: {
     method: "GET",
     url: url.toString(),
     timeoutMs: 10_000,
-    maxResponseBytes: 512 * 1024,
+    maxResponseBytes,
     safeSummary: {
       operation: input.operation,
       origin: CLOUDFLARE_API_ORIGIN,
