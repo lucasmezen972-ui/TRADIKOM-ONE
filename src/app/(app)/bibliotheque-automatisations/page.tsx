@@ -8,10 +8,6 @@ import {
 } from "lucide-react";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
-import {
-  createPrivateAutomationPackageAndRedirectAction,
-  previewPrivateAutomationPackageAndRedirectAction,
-} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +59,7 @@ export default async function AutomationMarketplacePage() {
                       Paquet préparé
                     </span>
                   ) : workspace.canManage ? (
-                    <form action={createPrivateAutomationPackageAndRedirectAction}>
+                    <form action="/api/automation-marketplace/packages" method="post">
                       <input type="hidden" name="listingId" value={source.listingId} />
                       <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white">
                         <PackagePlus size={16} aria-hidden />
@@ -134,7 +130,7 @@ export default async function AutomationMarketplacePage() {
                         </p>
                       </div>
                     ) : workspace.canManage ? (
-                      <form action={previewPrivateAutomationPackageAndRedirectAction}>
+                      <form action="/api/automation-marketplace/previews" method="post">
                         <input type="hidden" name="packageId" value={automationPackage.id} />
                         <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white">
                           <ShieldCheck size={16} aria-hidden />
