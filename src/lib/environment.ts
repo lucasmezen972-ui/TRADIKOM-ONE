@@ -141,7 +141,7 @@ const environmentSchema = z
       });
     }
 
-    if (environment.COOKIE_SECURE === "false") {
+    if (environment.COOKIE_SECURE === "false" && !isolatedE2eDemo) {
       context.addIssue({
         code: "custom",
         path: ["COOKIE_SECURE"],
