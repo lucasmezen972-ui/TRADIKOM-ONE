@@ -12,7 +12,16 @@ const noStoreRoutes = [
 
 export function getGlobalSecurityHeaders(
   nodeEnvironment = process.env.NODE_ENV,
+  appUrl = process.env.APP_URL,
 ) {
+  const isHttpsOrigin = (() => {
+    try {
+      return appUrl ? new URL(appUrl).protocol === "https:" : false;
+    } catch {
+      return false;
+    }
+  })();
+
   return [
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -26,7 +35,7 @@ export function getGlobalSecurityHeaders(
       value:
         `default-src 'self'; script-src 'self' 'unsafe-inline'${nodeEnvironment === "development" ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://images.unsplash.com; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`,
     },
-    ...(nodeEnvironment === "production"
+    ...(nodeEnvironment === "production" && isHttpsOrigin
       ? [
           {
             key: "Strict-Transport-Security",
