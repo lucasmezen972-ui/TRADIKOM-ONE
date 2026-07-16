@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { setSessionCookie, setTenantCookie } from "@/lib/security";
+import {
+  secureCookieEnabled,
+  sessionCookieName,
+  tenantCookieName,
+} from "@/lib/security";
 import { getServices } from "@/lib/services";
 import { resolveAppUrl } from "@/modules/email";
 import { OAuthError } from "@/modules/oauth/errors";
@@ -31,17 +35,29 @@ export async function GET(request: Request) {
 
     // The authorization response is a top-level redirect. Re-issue the
     // application session only after the one-time state, code and PKCE checks
-    // succeeded so the protected return page remains authenticated even when
-    // the browser omits the original cookie on the callback request.
+    // succeeded. The cookies must be attached to this exact redirect response;
+    // mutating the ambient cookie store can lose them when returning a custom
+    // NextResponse from a route handler.
     const session = await services.createSession(actorId);
-    await setSessionCookie(session.sessionToken, session.expiresAt);
-    await setTenantCookie(tenantId);
-
-    return redirectWithContext(
+    const response = redirectWithContext(
       "/connexions/logiciels?oauth=connecte",
       appOrigin,
       correlationId,
     );
+    response.cookies.set(sessionCookieName, session.sessionToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: secureCookieEnabled(),
+      path: "/",
+      expires: new Date(session.expiresAt),
+    });
+    response.cookies.set(tenantCookieName, tenantId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: secureCookieEnabled(),
+      path: "/",
+    });
+    return response;
   } catch (error) {
     const errorCode =
       error instanceof OAuthError ? error.code : "oauth_callback_failed";
