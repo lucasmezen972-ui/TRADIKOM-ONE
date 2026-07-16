@@ -58,7 +58,7 @@ export async function seedDemo(
         email: parsed.email,
         password: parsed.password,
       });
-  await grantPlatformAdminForLocalSetup(db, user.id);
+  await grantPlatformAdminForLocalSetup(db, user.id, options.environment);
   const tenants = await getUserTenants(db, user.id);
   const tenant =
     tenants[0]?.tenant ??
