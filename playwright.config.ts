@@ -5,7 +5,6 @@ const isCi = process.env.CI === "true";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  globalSetup: "./tests/e2e/global-setup.ts",
   timeout: 60_000,
   reporter: isCi
     ? [
