@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, type FullConfig, type Page } from "@playwright/test";
-import { getDb } from "../../src/lib/db";
 
 const warmupPaths = [
   "/",
@@ -22,8 +21,6 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error("Playwright baseURL is required for E2E route warmup");
   }
 
-  const warmupAccountLabel = `E2E route warmup ${Date.now()}`;
-  let setupError: unknown;
   try {
     for (const path of warmupPaths) {
       const url = new URL(path, baseURL);
@@ -41,24 +38,12 @@ export default async function globalSetup(config: FullConfig) {
     try {
       await openDemoWithRetry(page);
       await openRouteWithRetry(page, "/mon-site", /Site Garage/i);
-      await completeOAuthWarmup(page, warmupAccountLabel);
     } finally {
       await browser.close();
     }
   } catch (error) {
-    setupError = error;
     await persistDiagnostic("global-setup-error.txt", error);
     throw error;
-  } finally {
-    try {
-      const db = await getDb();
-      await db.query("delete from software_connections where account_label = $1", [
-        warmupAccountLabel,
-      ]);
-    } catch (cleanupError) {
-      await persistDiagnostic("global-setup-cleanup-error.txt", cleanupError);
-      if (!setupError) throw cleanupError;
-    }
   }
 }
 
@@ -83,33 +68,6 @@ async function openRouteWithRetry(page: Page, path: string, heading: RegExp) {
     await waitForHydration(page);
     try {
       await page.getByRole("heading", { name: heading }).waitFor({ timeout: 60_000 });
-      return;
-    } catch (error) {
-      if (attempt === 2) throw error;
-    }
-  }
-}
-
-async function completeOAuthWarmup(page: Page, accountLabel: string) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.goto("/connexions/logiciels", { waitUntil: "domcontentloaded" });
-    await waitForHydration(page);
-    await page
-      .getByRole("heading", { name: "Connexions logicielles" })
-      .waitFor({ timeout: 60_000 });
-
-    const provider = page.locator("article").filter({ hasText: "Mock Business" }).first();
-    await provider.getByLabel("Libellé du compte").fill(accountLabel);
-    await provider.getByRole("button", { name: "Connecter avec OAuth" }).click();
-    try {
-      await page
-        .getByRole("heading", { name: "Autoriser Mock Business" })
-        .waitFor({ timeout: 60_000 });
-      await waitForHydration(page);
-      await page.getByRole("button", { name: "Autoriser la connexion" }).click();
-      await page.waitForURL(/connexions\/logiciels\?oauth=connecte/, {
-        timeout: 60_000,
-      });
       return;
     } catch (error) {
       if (attempt === 2) throw error;
