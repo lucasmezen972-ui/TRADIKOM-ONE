@@ -12,7 +12,6 @@ import { previewPrivateMarketplaceInstallationAction } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
 import type { MarketplaceCategory } from "@/modules/app-marketplace";
-import { refreshPrivateAppMarketplaceAndRedirectAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +38,7 @@ export default async function PrivateMarketplacePage() {
           <h1 className="mt-1 text-4xl font-bold">Catalogue privé</h1>
         </div>
         {workspace.canManage ? (
-          <form action={refreshPrivateAppMarketplaceAndRedirectAction}>
+          <form action="/api/private-marketplace/refresh" method="post">
             <button className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[#08111f] px-5 py-3 font-semibold text-white">
               <RefreshCw size={18} aria-hidden />
               Actualiser le catalogue
