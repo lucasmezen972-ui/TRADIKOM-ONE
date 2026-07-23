@@ -1,0 +1,61 @@
+name: Deploy Supabase migrations
+
+# Applique le schéma TRADIKOM ONE (migrations auto-assemblées par src/lib/db.ts,
+# enableRls: true) sur la base Supabase, via le rôle PROPRIÉTAIRE de migration.
+# Déclenchement manuel uniquement. L'app utilise ensuite un rôle applicatif
+# NON-propriétaire distinct au runtime (voir docs/DEPLOYMENT.md).
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Tape MIGRATE pour confirmer l'exécution sur Supabase"
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply schema migrations to Supabase
+    if: ${{ github.event.inputs.confirm == 'MIGRATE' }}
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_MIGRATION_DATABASE_URL }}
+      DATABASE_POOL_MAX: "3"
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Guard against missing secret
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::Secret SUPABASE_MIGRATION_DATABASE_URL manquant."
+            exit 1
+          fi
+
+      - name: Apply migrations (schema_migrations, enableRls=true)
+        run: pnpm db:migrate
+
+      - name: Verify migrations
+        run: pnpm db:verify
