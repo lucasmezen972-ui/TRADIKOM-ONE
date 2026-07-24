@@ -4,6 +4,11 @@ name: Deploy Supabase migrations
 # enableRls: true) sur la base Supabase, via le rôle PROPRIÉTAIRE de migration.
 # Déclenchement manuel uniquement. L'app utilise ensuite un rôle applicatif
 # NON-propriétaire distinct au runtime (voir docs/DEPLOYMENT.md).
+#
+# NB: pas d'étape `db:verify` ici — verify-migrations.ts crée une base temporaire
+# (CREATE DATABASE), impossible sur une base managée Supabase. L'intégrité des
+# migrations est validée par la CI (ci.yml, Postgres éphémère) et l'état réel se
+# vérifie côté Supabase (schema_migrations / advisors).
 
 on:
   workflow_dispatch:
@@ -56,6 +61,3 @@ jobs:
 
       - name: Apply migrations (schema_migrations, enableRls=true)
         run: pnpm db:migrate
-
-      - name: Verify migrations
-        run: pnpm db:verify
