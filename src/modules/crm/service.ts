@@ -1,4 +1,5 @@
 import { withTenantDbTransaction } from "@/db/tenant-context";
+import { getBusinessDayPeriod } from "@/lib/business-day";
 import type { DbClient } from "@/lib/db";
 import { id, nowIso, toJson } from "@/lib/security";
 import type { Contact, Role } from "@/lib/types";
@@ -38,6 +39,7 @@ import {
 } from "@/modules/crm/repository";
 import {
   completeTaskSchema,
+  crmQuerySchema,
   contactMergeSchema,
   contactConsentSchema,
   contactNoteSchema,
@@ -54,6 +56,7 @@ import {
   type ContactNoteInput,
   type ContactTaskInput,
   type ContactUpdateInput,
+  type CrmQueryInput,
   type OpportunityFiltersInput,
   type OpportunityUpdateInput,
 } from "@/modules/crm/schemas";
@@ -98,8 +101,14 @@ type DuplicateCandidate = {
   actionHref: string;
 };
 
-export async function getCrm(db: DbClient, userId: string, tenantId: string) {
+export async function getCrm(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: CrmQueryInput = {},
+) {
   await assertTenantAccess(db, userId, tenantId);
+  const parsed = crmQuerySchema.parse(input);
   const [contacts, leads, tasks, activities] = await Promise.all([
     listContacts(db, tenantId),
     listLeads(db, tenantId),
@@ -107,10 +116,28 @@ export async function getCrm(db: DbClient, userId: string, tenantId: string) {
     listActivities(db, tenantId, 20),
   ]);
 
+  const nowIsoValue = parsed.now.toISOString();
+  const period = getBusinessDayPeriod(parsed.now, parsed.timeZone);
+  const filteredLeads =
+    parsed.view === "nouveaux-leads"
+      ? leads.filter(
+          (lead) =>
+            lead.createdAt >= period.dayStartedAt &&
+            lead.createdAt < period.dayEndsAt,
+        )
+      : leads;
+  const filteredTasks =
+    parsed.view === "taches-en-retard"
+      ? tasks.filter(
+          (task) => task.status === "open" && task.dueAt < nowIsoValue,
+        )
+      : tasks;
+
   return {
+    view: parsed.view,
     contacts,
-    leads,
-    tasks,
+    leads: filteredLeads,
+    tasks: filteredTasks,
     activities,
   };
 }
@@ -629,6 +656,9 @@ export async function getOpportunities(
   const filters = {
     search: parsed.search?.trim() || undefined,
     stageId: parsed.stageId?.trim() || undefined,
+    followUpDueBefore: parsed.followUpDue
+      ? getBusinessDayPeriod(parsed.now, parsed.timeZone).dayEndsAt
+      : undefined,
   };
   const [stages, opportunities] = await Promise.all([
     listPipelineStages(db, tenantId),

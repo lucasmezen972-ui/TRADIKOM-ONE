@@ -158,7 +158,9 @@ export async function listOverdueTaskActions(
     title: row.title,
     explanation: "Cette tâche a dépassé son échéance.",
     actionLabel: row.contact_id ? "Ouvrir le contact" : "Voir les contacts",
-    actionHref: row.contact_id ? `/contacts/${row.contact_id}` : "/contacts",
+    actionHref: row.contact_id
+      ? `/contacts/${row.contact_id}`
+      : "/contacts?vue=taches-en-retard",
     severity: "critical" as const,
   }));
 }

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isValidTimeZone } from "@/lib/business-day";
+
 export const publicLeadSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -57,6 +59,27 @@ export const opportunityLookupSchema = z.object({
 export const opportunityFiltersSchema = z.object({
   search: z.string().optional(),
   stageId: z.string().optional(),
+  followUpDue: z.boolean().default(false),
+  now: z.date().default(() => new Date()),
+  timeZone: z
+    .string()
+    .min(1)
+    .max(100)
+    .default("America/Martinique")
+    .refine(isValidTimeZone, "Fuseau horaire invalide."),
+});
+
+export const crmViews = ["tous", "nouveaux-leads", "taches-en-retard"] as const;
+
+export const crmQuerySchema = z.object({
+  view: z.enum(crmViews).default("tous"),
+  now: z.date().default(() => new Date()),
+  timeZone: z
+    .string()
+    .min(1)
+    .max(100)
+    .default("America/Martinique")
+    .refine(isValidTimeZone, "Fuseau horaire invalide."),
 });
 
 export const opportunityUpdateSchema = z.object({
@@ -104,5 +127,7 @@ export type ContactNoteInput = z.input<typeof contactNoteSchema>;
 export type ContactTaskInput = z.input<typeof contactTaskSchema>;
 export type CompleteTaskInput = z.input<typeof completeTaskSchema>;
 export type OpportunityFiltersInput = z.input<typeof opportunityFiltersSchema>;
+export type CrmQueryInput = z.input<typeof crmQuerySchema>;
+export type CrmView = (typeof crmViews)[number];
 export type OpportunityUpdateInput = z.input<typeof opportunityUpdateSchema>;
 export type ContactMergeInput = z.input<typeof contactMergeSchema>;

@@ -5,13 +5,14 @@ import { requireTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 type OpportunitiesPageProps = {
-  searchParams: Promise<{ q?: string; stageId?: string }>;
+  searchParams: Promise<{ q?: string; stageId?: string; filtre?: string }>;
 };
 
 export default async function OpportunitiesPage({
   searchParams,
 }: OpportunitiesPageProps) {
   const params = await searchParams;
+  const followUpDue = params.filtre === "relance";
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
   const [dashboard, pipeline] = await Promise.all([
@@ -19,6 +20,7 @@ export default async function OpportunitiesPage({
     services.getOpportunities(user.id, tenant.id, {
       search: params.q,
       stageId: params.stageId,
+      followUpDue,
     }),
   ]);
 
@@ -38,6 +40,19 @@ export default async function OpportunitiesPage({
           </div>
         ))}
       </section>
+      {followUpDue ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#0b8f84] bg-[#0b8f84]/5 px-4 py-3">
+          <span className="rounded-full bg-[#0b8f84] px-3 py-1 text-sm font-semibold text-white">
+            Filtre actif : opportunités à relancer (échéance aujourd&apos;hui ou dépassée)
+          </span>
+          <Link
+            href="/opportunites"
+            className="text-sm font-semibold text-[#0b8f84] underline-offset-4 hover:underline"
+          >
+            Retirer le filtre
+          </Link>
+        </div>
+      ) : null}
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -47,6 +62,9 @@ export default async function OpportunitiesPage({
             </p>
           </div>
           <form className="grid w-full gap-3 md:w-auto md:grid-cols-[16rem_14rem_auto]">
+            {followUpDue ? (
+              <input type="hidden" name="filtre" value="relance" />
+            ) : null}
             <input
               name="q"
               defaultValue={params.q ?? ""}
@@ -70,6 +88,20 @@ export default async function OpportunitiesPage({
             </button>
           </form>
         </div>
+        {pipeline.opportunities.length === 0 ? (
+          <div className="mt-5 rounded-md border border-dashed border-slate-300 px-4 py-5">
+            <p className="font-semibold text-slate-700">
+              {followUpDue
+                ? "Aucune opportunité à relancer. Toutes les relances sont à jour."
+                : "Aucune opportunité ne correspond à ces critères."}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              {followUpDue
+                ? "Planifiez une prochaine action sur vos opportunités ouvertes pour ne perdre aucune vente."
+                : "Modifiez la recherche ou le filtre d'étape, ou créez une opportunité depuis la fiche d'un contact."}
+            </p>
+          </div>
+        ) : (
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="text-slate-500">
@@ -106,6 +138,7 @@ export default async function OpportunitiesPage({
             </tbody>
           </table>
         </div>
+        )}
       </section>
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -695,7 +695,7 @@ export async function findPipelineStageById(
 export async function listOpportunities(
   db: DbClient,
   tenantId: string,
-  filters: { search?: string; stageId?: string },
+  filters: { search?: string; stageId?: string; followUpDueBefore?: string },
 ) {
   const params: unknown[] = [tenantId];
   const where = ["opportunities.tenant_id = $1"];
@@ -709,6 +709,15 @@ export async function listOpportunities(
     params.push(`%${filters.search.toLowerCase()}%`);
     where.push(
       `(lower(contacts.name) like $${params.length} or lower(contacts.email) like $${params.length})`,
+    );
+  }
+
+  if (filters.followUpDueBefore) {
+    params.push(filters.followUpDueBefore);
+    where.push(
+      `opportunities.next_follow_up_at is not null
+       and opportunities.next_follow_up_at < $${params.length}
+       and lower(pipeline_stages.name) not in ('gagne', 'gagné', 'perdu', 'won', 'lost')`,
     );
   }
 

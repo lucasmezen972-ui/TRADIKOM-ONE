@@ -40,6 +40,7 @@ import {
   getOpportunities,
   getOpportunityDetail,
   mergeContacts,
+  crmQuerySchema,
   opportunityFiltersSchema,
   opportunityUpdateSchema,
   submitPublicLead as submitPublicLeadDomain,
@@ -565,7 +566,11 @@ export function createServices(
       tenantId: string,
       alertId: string,
     ) => dismissOpportunityRadarAlert(db, userId, tenantId, { alertId }),
-    getCrm: (userId: string, tenantId: string) => getCrm(db, userId, tenantId),
+    getCrm: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof crmQuerySchema> = {},
+    ) => getCrm(db, userId, tenantId, input),
     getOpportunities: (
       userId: string,
       tenantId: string,

@@ -28,21 +28,21 @@ export default async function TodayPage() {
       label: "Nouveaux leads",
       value: dashboard.metrics.newLeads,
       detail: "Reçus aujourd'hui",
-      href: "/contacts",
+      href: "/contacts?vue=nouveaux-leads",
       icon: Target,
     },
     {
       label: "Tâches en retard",
       value: dashboard.metrics.overdueTasks,
       detail: "Actions échues",
-      href: "/contacts",
+      href: "/contacts?vue=taches-en-retard",
       icon: Clock3,
     },
     {
       label: "Opportunités à relancer",
       value: dashboard.metrics.opportunitiesNeedingFollowUp,
       detail: "Échéance aujourd'hui ou dépassée",
-      href: "/opportunites",
+      href: "/opportunites?filtre=relance",
       icon: ClipboardCheck,
     },
     {
@@ -53,7 +53,7 @@ export default async function TodayPage() {
         dashboard.metrics.connectorIssues +
         dashboard.metrics.apiSourceFailures,
       detail: "Workflows, connecteurs et sources",
-      href: "/automatisations",
+      href: "/automatisations?filtre=echecs",
       icon: AlertTriangle,
     },
   ];
