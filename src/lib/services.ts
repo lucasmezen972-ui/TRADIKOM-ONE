@@ -296,6 +296,10 @@ import {
   processUniversalExportJob,
   type CreateExportInput,
 } from "@/modules/exports";
+import {
+  deleteAccount,
+  deleteAccountSchema,
+} from "@/modules/account-deletion";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -333,6 +337,8 @@ export function createServices(
     createSession: (userId: string) => createSession(db, userId),
     getSessionUser: (sessionId?: string) => getSessionUser(db, sessionId),
     revokeSession: (sessionToken?: string) => revokeSession(db, sessionToken),
+    deleteAccount: (userId: string, input: z.input<typeof deleteAccountSchema>) =>
+      deleteAccount(db, userId, input),
     createTenant: (userId: string, input: z.input<typeof orgSchema>) =>
       createTenantDomain(db, userId, input, {
         createDefaults: createDefaultTenantResources,

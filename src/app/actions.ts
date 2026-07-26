@@ -11,6 +11,7 @@ import {
 } from "@/lib/security";
 import { getServices } from "@/lib/services";
 import { safeServerAction } from "@/lib/public-action";
+import { PublicActionError } from "@/modules/request-context";
 import {
   getCurrentSession,
   requireTenantContext,
@@ -95,6 +96,30 @@ export async function logoutAction() {
   await services.revokeSession(await getSessionIdFromCookie());
   await clearSessionCookie();
   redirect("/");
+}
+
+export async function deleteAccountAction(formData: FormData) {
+  const user = await requireUser();
+  const services = await getServices();
+
+  try {
+    await safeServerAction("account.delete", () =>
+      services.deleteAccount(user.id, {
+        password: text(formData, "password"),
+        confirmation: text(formData, "confirmation"),
+      }),
+    );
+  } catch (error) {
+    if (error instanceof PublicActionError) {
+      redirect(
+        `/parametres?suppressionCompte=erreur&messageSuppression=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  await clearSessionCookie();
+  redirect("/?compte=supprime");
 }
 
 export async function createOrganizationAction(formData: FormData) {

@@ -315,6 +315,7 @@ function getMigrations(enableRls: boolean) {
           sql: phase5WebsiteDomainBindingsRlsMigrationSql,
         }]
       : []),
+    { id: "067_account_deletion", sql: accountDeletionMigrationSql },
   ];
 }
 
@@ -3953,4 +3954,8 @@ drop policy if exists tenant_isolation on domain_verification_jobs;
 create policy tenant_isolation on domain_verification_jobs
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const accountDeletionMigrationSql = `
+alter table users add column if not exists deleted_at text;
 `;

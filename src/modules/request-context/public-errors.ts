@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { AccountDeletionError } from "@/modules/account-deletion";
 import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
@@ -30,6 +31,9 @@ export function toPublicError(error: unknown): PublicError {
   }
 
   if (error instanceof AuthError) return mapAuthError(error);
+  if (error instanceof AccountDeletionError) {
+    return mapAccountDeletionError(error);
+  }
   if (error instanceof TenantError) return mapTenantError(error);
   if (error instanceof ConnectorError) return mapConnectorError(error);
   if (error instanceof CrmError) return mapCrmError(error);
@@ -69,6 +73,34 @@ function mapAuthError(error: AuthError): PublicError {
         error.code,
         "auth",
         "Lien de réinitialisation invalide ou expiré.",
+        400,
+      );
+  }
+}
+
+function mapAccountDeletionError(error: AccountDeletionError): PublicError {
+  switch (error.code) {
+    case "invalid_password":
+      return publicError(
+        error.code,
+        "account_deletion",
+        "Mot de passe incorrect. La suppression du compte a été refusée.",
+        401,
+      );
+    case "sole_owner_conflict":
+      return publicError(error.code, "account_deletion", error.message, 409);
+    case "account_not_found":
+      return publicError(
+        error.code,
+        "account_deletion",
+        "Compte introuvable ou déjà supprimé.",
+        404,
+      );
+    default:
+      return publicError(
+        error.code,
+        "account_deletion",
+        "La suppression du compte est impossible pour le moment.",
         400,
       );
   }

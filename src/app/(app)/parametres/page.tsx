@@ -1,5 +1,6 @@
 import {
   createInvitationAction,
+  deleteAccountAction,
   resendInvitationAction,
   updateMemberRoleAction,
 } from "@/app/actions";
@@ -21,6 +22,8 @@ type SettingsPageProps = {
     invitationEnvoyee?: string;
     inviteEmail?: string;
     lien?: string;
+    suppressionCompte?: string;
+    messageSuppression?: string;
   }>;
 };
 
@@ -187,6 +190,59 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </div>
           </div>
         ) : null}
+      </section>
+      <section className="rounded-lg border border-red-200 bg-white p-5 shadow-sm">
+        <h2 className="text-xl font-bold text-red-700">Supprimer mon compte</h2>
+        <p className="mt-1 max-w-3xl text-sm text-slate-600">
+          Cette action est définitive : vos sessions seront révoquées, vos
+          accès aux organisations retirés et vos données personnelles (nom,
+          email, mot de passe) anonymisées, conformément au RGPD. Si vous êtes
+          le seul propriétaire d&apos;une organisation, transférez d&apos;abord
+          la propriété ou supprimez cette organisation.
+        </p>
+        {params.suppressionCompte === "erreur" ? (
+          <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            {params.messageSuppression ??
+              "La suppression du compte a été refusée."}
+          </p>
+        ) : null}
+        <form
+          action={deleteAccountAction}
+          className="mt-4 grid max-w-xl gap-3 rounded-md border border-red-100 p-4"
+        >
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Mot de passe actuel
+            <input
+              required
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              placeholder="Votre mot de passe"
+              className="rounded-md border border-slate-200 px-4 py-3 font-normal"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Confirmation
+            <input
+              required
+              type="text"
+              name="confirmation"
+              placeholder="Saisissez SUPPRIMER"
+              className="rounded-md border border-slate-200 px-4 py-3 font-normal"
+            />
+            <span className="text-xs font-normal text-slate-500">
+              Saisissez « SUPPRIMER » en majuscules pour confirmer.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input required type="checkbox" name="consentement" className="mt-1" />
+            Je comprends que la suppression de mon compte est définitive et
+            irréversible.
+          </label>
+          <button className="rounded-md bg-red-700 px-5 py-3 font-semibold text-white">
+            Supprimer définitivement mon compte
+          </button>
+        </form>
       </section>
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <h2 className="text-xl font-bold">Audit log</h2>

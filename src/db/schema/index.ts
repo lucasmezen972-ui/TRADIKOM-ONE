@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   platformRole: text("platform_role").notNull().default("user"),
   createdAt: text("created_at").notNull(),
+  deletedAt: text("deleted_at"),
 });
 
 export const sessions = pgTable("sessions", {

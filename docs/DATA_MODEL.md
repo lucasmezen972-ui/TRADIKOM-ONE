@@ -15,3 +15,5 @@ Tables principales :
 Toutes les donnees metier portent `tenant_id`. Les services verifient le membership avant lecture/ecriture et toutes les requetes metier filtrent par tenant.
 
 Phase 2 ajoute les colonnes `current_draft_version_id`, `current_published_version_id` et `version_type` pour separer les brouillons des publications immuables.
+
+La suppression de compte RGPD ajoute `users.deleted_at` : le compte supprime est anonymise (nom, email, hash de mot de passe) au lieu d'etre efface, pour preserver l'integrite referentielle des donnees metier.
