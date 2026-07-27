@@ -60,6 +60,7 @@ export const opportunityFiltersSchema = z.object({
   search: z.string().optional(),
   stageId: z.string().optional(),
   followUpDue: z.boolean().default(false),
+  stalled: z.boolean().default(false),
   now: z.date().default(() => new Date()),
   timeZone: z
     .string()

@@ -13,6 +13,7 @@ export default async function OpportunitiesPage({
 }: OpportunitiesPageProps) {
   const params = await searchParams;
   const followUpDue = params.filtre === "relance";
+  const stalled = params.filtre === "bloquees";
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
   const [dashboard, pipeline] = await Promise.all([
@@ -21,8 +22,14 @@ export default async function OpportunitiesPage({
       search: params.q,
       stageId: params.stageId,
       followUpDue,
+      stalled,
     }),
   ]);
+  const activeFilter = followUpDue
+    ? "Opportunités à relancer (échéance aujourd'hui ou dépassée)"
+    : stalled
+      ? "Opportunités bloquées (sans avancée depuis plus de 7 jours)"
+      : null;
 
   return (
     <div className="grid gap-6">
@@ -40,10 +47,10 @@ export default async function OpportunitiesPage({
           </div>
         ))}
       </section>
-      {followUpDue ? (
+      {activeFilter ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#0b8f84] bg-[#0b8f84]/5 px-4 py-3">
           <span className="rounded-full bg-[#0b8f84] px-3 py-1 text-sm font-semibold text-white">
-            Filtre actif : opportunités à relancer (échéance aujourd&apos;hui ou dépassée)
+            Filtre actif : {activeFilter}
           </span>
           <Link
             href="/opportunites"
@@ -62,8 +69,8 @@ export default async function OpportunitiesPage({
             </p>
           </div>
           <form className="grid w-full gap-3 md:w-auto md:grid-cols-[16rem_14rem_auto]">
-            {followUpDue ? (
-              <input type="hidden" name="filtre" value="relance" />
+            {params.filtre ? (
+              <input type="hidden" name="filtre" value={params.filtre} />
             ) : null}
             <input
               name="q"
@@ -93,12 +100,16 @@ export default async function OpportunitiesPage({
             <p className="font-semibold text-slate-700">
               {followUpDue
                 ? "Aucune opportunité à relancer. Toutes les relances sont à jour."
-                : "Aucune opportunité ne correspond à ces critères."}
+                : stalled
+                  ? "Aucune opportunité bloquée. Toutes vos ventes ouvertes ont avancé récemment."
+                  : "Aucune opportunité ne correspond à ces critères."}
             </p>
             <p className="mt-1 text-sm text-slate-500">
               {followUpDue
                 ? "Planifiez une prochaine action sur vos opportunités ouvertes pour ne perdre aucune vente."
-                : "Modifiez la recherche ou le filtre d'étape, ou créez une opportunité depuis la fiche d'un contact."}
+                : stalled
+                  ? "Une opportunité apparaît ici quand elle reste ouverte plus de 7 jours sans avancer, faute d'action planifiée ou de relance effectuée."
+                  : "Modifiez la recherche ou le filtre d'étape, ou créez une opportunité depuis la fiche d'un contact."}
             </p>
           </div>
         ) : (

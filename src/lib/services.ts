@@ -86,7 +86,7 @@ import {
   submitMarketingProposalSchema,
 } from "@/modules/autonomous-marketing";
 import { getAuditLogs } from "@/modules/audit";
-import { getDashboardData } from "@/modules/dashboard";
+import { dashboardQuerySchema, getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
 import {
   acceptInvitation,
@@ -555,9 +555,14 @@ export function createServices(
       submitPublicLeadDomain(db, slug, payload, {
         getPublishedSite,
       }),
-    getDashboard: (userId: string, tenantId: string) =>
+    getDashboard: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof dashboardQuerySchema> = {},
+    ) =>
       getDashboardData(db, userId, tenantId, {
         timeZone: process.env.BUSINESS_TIME_ZONE,
+        ...input,
       }),
     getOpportunityRadar: (userId: string, tenantId: string) =>
       getOpportunityRadar(db, userId, tenantId),

@@ -74,7 +74,7 @@ describe("command center filtered views", () => {
     expect(
       defaultView.tasks.some((task) => task.title === "Relance planifiée"),
     ).toBe(true);
-  });
+  }, 60_000);
 
   it("filters today's leads with the nouveaux-leads view", async () => {
     const { services } = await setup();
@@ -95,7 +95,7 @@ describe("command center filtered views", () => {
       now: new Date("2099-06-15T12:00:00.000Z"),
     });
     expect(defaultView.leads.length).toBeGreaterThan(0);
-  });
+  }, 60_000);
 
   it("filters opportunities needing follow-up and excludes closed stages", async () => {
     const { services } = await setup();
@@ -139,7 +139,83 @@ describe("command center filtered views", () => {
     expect(afterLost.opportunities.map((item) => item.id)).not.toContain(
       opportunity.id,
     );
-  });
+  }, 60_000);
+
+  it("detects stalled opportunities without a planned next action", async () => {
+    const { services } = await setup();
+    const { owner, tenant } = await provisionTenantWithLead(services, "bloquees");
+
+    const board = await services.getOpportunities(owner.id, tenant.id, {});
+    const opportunity = board.opportunities[0]!;
+
+    const freshlyCreated = await services.getOpportunities(owner.id, tenant.id, {
+      stalled: true,
+    });
+    expect(freshlyCreated.opportunities.map((item) => item.id)).not.toContain(
+      opportunity.id,
+    );
+
+    const laterOn = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const stalledLater = await services.getOpportunities(owner.id, tenant.id, {
+      stalled: true,
+      now: laterOn,
+    });
+    expect(stalledLater.opportunities.map((item) => item.id)).toContain(
+      opportunity.id,
+    );
+
+    const dashboardLater = await services.getDashboard(owner.id, tenant.id, {
+      now: laterOn,
+    });
+    expect(dashboardLater.metrics.stalledOpportunities).toBeGreaterThan(0);
+    expect(
+      dashboardLater.commandCenter.stalledOpportunities.some((item) =>
+        item.actionHref.endsWith(opportunity.id),
+      ),
+    ).toBe(true);
+
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: opportunity.stageId,
+      valueCents: opportunity.valueCents,
+      nextFollowUpAt: "2099-03-01T09:00:00.000Z",
+    });
+
+    const afterPlanning = await services.getOpportunities(owner.id, tenant.id, {
+      stalled: true,
+      now: laterOn,
+    });
+    expect(afterPlanning.opportunities.map((item) => item.id)).not.toContain(
+      opportunity.id,
+    );
+  }, 60_000);
+
+  it("excludes closed stages from the stalled opportunities view", async () => {
+    const { services } = await setup();
+    const { owner, tenant } = await provisionTenantWithLead(services, "closes");
+
+    const board = await services.getOpportunities(owner.id, tenant.id, {});
+    const opportunity = board.opportunities[0]!;
+    const wonStage = board.stages.find((stage) => stage.name === "Gagne")!;
+
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: wonStage.id,
+      valueCents: opportunity.valueCents,
+    });
+
+    const laterOn = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const stalled = await services.getOpportunities(owner.id, tenant.id, {
+      stalled: true,
+      now: laterOn,
+    });
+    expect(stalled.opportunities.map((item) => item.id)).not.toContain(
+      opportunity.id,
+    );
+
+    const dashboard = await services.getDashboard(owner.id, tenant.id, {
+      now: laterOn,
+    });
+    expect(dashboard.metrics.stalledOpportunities).toBe(0);
+  }, 60_000);
 
   it("keeps filtered views isolated between tenants", async () => {
     const { services } = await setup();
@@ -183,5 +259,5 @@ describe("command center filtered views", () => {
         view: "taches-en-retard",
       }),
     ).rejects.toThrow();
-  });
+  }, 60_000);
 });

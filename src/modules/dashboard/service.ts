@@ -1,5 +1,6 @@
 import { getBusinessDayPeriod } from "@/lib/business-day";
 import type { DbClient } from "@/lib/db";
+import { stalledBefore } from "@/lib/pipeline-stages";
 import type {
   DashboardActionItem,
   DashboardData,
@@ -19,6 +20,7 @@ import {
   listOpportunityStageCounts,
   listOverdueTaskActions,
   listPendingApprovalActions,
+  listStalledOpportunityActions,
 } from "@/modules/dashboard/repository";
 import {
   dashboardQuerySchema,
@@ -45,6 +47,7 @@ export async function getDashboardData(
   }
   const parsed = dashboardQuerySchema.parse(input);
   const period = getBusinessDayPeriod(parsed.now, parsed.timeZone);
+  const stalledThreshold = stalledBefore(parsed.now);
   const canApprove = approvalRoles.includes(role);
   const [
     tenant,
@@ -59,6 +62,7 @@ export async function getDashboardData(
     newLeads,
     overdueTasks,
     opportunitiesNeedingFollowUp,
+    stalledOpportunities,
     apiSourceFailures,
     breakingApiChanges,
     pendingApprovals,
@@ -69,6 +73,7 @@ export async function getDashboardData(
       now: parsed.now.toISOString(),
       dayStartedAt: period.dayStartedAt,
       dayEndsAt: period.dayEndsAt,
+      stalledBefore: stalledThreshold,
       canApprove,
     }),
     listOpportunityStageCounts(db, tenantId),
@@ -94,6 +99,12 @@ export async function getDashboardData(
       db,
       tenantId,
       period.dayEndsAt,
+      parsed.itemLimit,
+    ),
+    listStalledOpportunityActions(
+      db,
+      tenantId,
+      stalledThreshold,
       parsed.itemLimit,
     ),
     listApiSourceFailureActions(db, tenantId, parsed.itemLimit),
@@ -123,6 +134,7 @@ export async function getDashboardData(
       })),
       ...newLeads,
       ...opportunitiesNeedingFollowUp,
+      ...stalledOpportunities,
       ...pendingApprovals,
       ...mapConnectorIssues(connectors),
       ...mapWebsiteAction(websiteSummary),
@@ -147,6 +159,7 @@ export async function getDashboardData(
       overdueTasks,
       newLeads,
       opportunitiesNeedingFollowUp,
+      stalledOpportunities,
       workflowFailures,
       deadLetters: deadLetterActions,
       apiSourceFailures,

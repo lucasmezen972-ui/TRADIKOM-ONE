@@ -345,6 +345,7 @@ export type DashboardData = {
     formSubmissions: number;
     overdueTasks: number;
     opportunitiesNeedingFollowUp: number;
+    stalledOpportunities: number;
     workflowFailures: number;
     deadLetters: number;
     connectorIssues: number;
@@ -367,6 +368,7 @@ export type DashboardData = {
     overdueTasks: DashboardActionItem[];
     newLeads: DashboardActionItem[];
     opportunitiesNeedingFollowUp: DashboardActionItem[];
+    stalledOpportunities: DashboardActionItem[];
     workflowFailures: DashboardActionItem[];
     deadLetters: DashboardActionItem[];
     apiSourceFailures: DashboardApiSourceFailure[];

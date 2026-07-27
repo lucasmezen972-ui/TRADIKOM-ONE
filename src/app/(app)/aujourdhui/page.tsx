@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Clock3,
   Globe2,
+  PauseCircle,
   ShieldAlert,
   Target,
 } from "lucide-react";
@@ -46,6 +47,13 @@ export default async function TodayPage() {
       icon: ClipboardCheck,
     },
     {
+      label: "Opportunités bloquées",
+      value: dashboard.metrics.stalledOpportunities,
+      detail: "Sans avancée depuis plus de 7 jours",
+      href: "/opportunites?filtre=bloquees",
+      icon: PauseCircle,
+    },
+    {
       label: "Incidents actifs",
       value:
         dashboard.metrics.workflowFailures +
@@ -78,7 +86,7 @@ export default async function TodayPage() {
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs opérationnels">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="Indicateurs opérationnels">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
@@ -134,6 +142,18 @@ export default async function TodayPage() {
           title="Opportunités à relancer"
           items={commandCenter.opportunitiesNeedingFollowUp}
           empty="Aucune relance commerciale attendue aujourd'hui."
+        />
+      </OperationalSection>
+
+      <OperationalSection
+        title="Ventes à risque"
+        description="Opportunités ouvertes qui n'ont pas avancé depuis plus de 7 jours, faute d'action planifiée ou de relance effectuée."
+      >
+        <ActionColumn
+          title="Opportunités bloquées"
+          items={commandCenter.stalledOpportunities}
+          empty="Aucune opportunité bloquée : toutes vos ventes ouvertes ont avancé récemment."
+          wide
         />
       </OperationalSection>
 

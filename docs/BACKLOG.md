@@ -20,4 +20,5 @@
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves.
-- Ajouter exports de donnees et suppression de compte.
+- Ajouter exports de donnees. La suppression de compte est livree (`src/modules/account-deletion`).
+- Rendre configurable par organisation le seuil d'opportunite bloquee, fixe a 7 jours (`docs/COMMAND_CENTER.md`).

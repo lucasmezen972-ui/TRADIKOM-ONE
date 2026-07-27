@@ -1,6 +1,7 @@
 import { withTenantDbTransaction } from "@/db/tenant-context";
 import { getBusinessDayPeriod } from "@/lib/business-day";
 import type { DbClient } from "@/lib/db";
+import { stalledBefore } from "@/lib/pipeline-stages";
 import { id, nowIso, toJson } from "@/lib/security";
 import type { Contact, Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
@@ -659,6 +660,7 @@ export async function getOpportunities(
     followUpDueBefore: parsed.followUpDue
       ? getBusinessDayPeriod(parsed.now, parsed.timeZone).dayEndsAt
       : undefined,
+    stalledBefore: parsed.stalled ? stalledBefore(parsed.now) : undefined,
   };
   const [stages, opportunities] = await Promise.all([
     listPipelineStages(db, tenantId),

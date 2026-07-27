@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { openStageCondition } from "@/lib/pipeline-stages";
 import { safeJson } from "@/lib/security";
 import type { Activity, Contact, Lead, Task } from "@/lib/types";
 
@@ -695,7 +696,12 @@ export async function findPipelineStageById(
 export async function listOpportunities(
   db: DbClient,
   tenantId: string,
-  filters: { search?: string; stageId?: string; followUpDueBefore?: string },
+  filters: {
+    search?: string;
+    stageId?: string;
+    followUpDueBefore?: string;
+    stalledBefore?: string;
+  },
 ) {
   const params: unknown[] = [tenantId];
   const where = ["opportunities.tenant_id = $1"];
@@ -717,7 +723,17 @@ export async function listOpportunities(
     where.push(
       `opportunities.next_follow_up_at is not null
        and opportunities.next_follow_up_at < $${params.length}
-       and lower(pipeline_stages.name) not in ('gagne', 'gagné', 'perdu', 'won', 'lost')`,
+       and ${openStageCondition}`,
+    );
+  }
+
+  if (filters.stalledBefore) {
+    params.push(filters.stalledBefore);
+    where.push(
+      `opportunities.updated_at < $${params.length}
+       and (opportunities.next_follow_up_at is null
+            or opportunities.next_follow_up_at < $${params.length})
+       and ${openStageCondition}`,
     );
   }
 
