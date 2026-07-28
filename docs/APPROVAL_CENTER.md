@@ -30,6 +30,14 @@ Chaque carte présente le problème détecté, la justification, le résultat at
 
 L'historique des décisions récentes est affiché sous la file, toutes familles confondues.
 
+## Reporter une décision
+
+Une proposition peut être reportée à une date future (90 jours au maximum). **Reporter n'est pas décider** : la ligne `approvals` reste `pending`, elle disparaît simplement de la file, du compteur du tableau de bord et de la carte « Actions à valider » jusqu'à l'échéance, puis y revient d'elle-même. Rien n'entre dans l'historique des décisions.
+
+Les propositions reportées sont listées dans une section dédiée, avec leur date de retour, le motif éventuel et l'auteur du report. Un bouton « Reprendre maintenant » annule le report immédiatement.
+
+Le report et la reprise sont transactionnels, réservés aux mêmes rôles que la décision, et tracés en audit (`approval.snoozed`, `approval.resumed`) sans contenu de proposition. La mise à jour est conditionnée à `status = 'pending'` et au tenant : reporter une proposition d'une autre organisation renvoie `approval_not_found`.
+
 ## Rôles
 
 Seuls `owner`, `administrator` et `manager` accèdent au contenu, alignés sur la règle du tableau de bord. Un collaborateur reçoit une file vide et un message explicite : il ne doit pas voir le détail d'une décision qu'il ne peut pas prendre.
@@ -41,5 +49,5 @@ Les server actions de décision acceptent un champ `retour`. Sa valeur est valid
 ## Limites actuelles
 
 - Le contenu d'une proposition ne peut pas être modifié depuis le centre ; la modification reste sur la page du module, qui connaît la forme exacte de l'objet.
-- Le report d'une décision (« reporter à plus tard ») n'est pas implémenté : une proposition est approuvée ou refusée.
-- La file est bornée à 25 propositions et l'historique à 15 décisions.
+- La file est bornée à 25 propositions, la liste des reportées à 25 et l'historique à 15 décisions.
+- Aucune notification n'est envoyée quand une proposition reportée revient dans la file : elle réapparaît au prochain chargement.

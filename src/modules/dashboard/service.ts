@@ -109,7 +109,13 @@ export async function getDashboardData(
     ),
     listApiSourceFailureActions(db, tenantId, parsed.itemLimit),
     listBreakingApiChangeActions(db, tenantId, parsed.itemLimit),
-    listPendingApprovalActions(db, tenantId, canApprove, parsed.itemLimit),
+    listPendingApprovalActions(
+      db,
+      tenantId,
+      canApprove,
+      parsed.now.toISOString(),
+      parsed.itemLimit,
+    ),
   ]);
 
   const visibleWorkflowRuns = workflowRuns.slice(0, parsed.workflowLimit);
@@ -188,6 +194,7 @@ export async function getPendingApprovalOverview(
     db,
     tenantId,
     canApprove,
+    new Date().toISOString(),
     Math.max(1, Math.min(limit, 20)),
   );
 

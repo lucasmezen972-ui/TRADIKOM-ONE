@@ -320,6 +320,7 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "069_pipeline_detail_rls", sql: pipelineDetailRlsMigrationSql }]
       : []),
+    { id: "070_approval_snooze", sql: approvalSnoozeMigrationSql },
   ];
 }
 
@@ -3988,6 +3989,15 @@ create index if not exists idx_opportunity_changes_tenant_opportunity
   on opportunity_changes (tenant_id, opportunity_id, created_at desc);
 create index if not exists idx_opportunities_tenant_assigned
   on opportunities (tenant_id, assigned_user_id);
+`;
+
+const approvalSnoozeMigrationSql = `
+alter table approvals add column if not exists snoozed_until text;
+alter table approvals add column if not exists snoozed_by text references users(id);
+alter table approvals add column if not exists snooze_reason text;
+
+create index if not exists idx_approvals_tenant_status_snoozed
+  on approvals (tenant_id, status, snoozed_until);
 `;
 
 const pipelineDetailRlsMigrationSql = `

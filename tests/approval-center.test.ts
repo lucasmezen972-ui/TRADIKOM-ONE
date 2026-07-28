@@ -96,6 +96,136 @@ describe("approval center", () => {
     });
   }, 60_000);
 
+  it("hides a snoozed proposal until its date, without deciding it", async () => {
+    const { services, owner, tenant } = await setupTenantWithProposals("report");
+
+    const before = await services.getApprovalCenter(owner.id, tenant.id);
+    const target = before.pending.find((item) => item.kind === "strategic")!;
+    const inTenDays = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+
+    await services.snoozeApproval(owner.id, tenant.id, {
+      approvalId: target.approvalId,
+      snoozedUntil: inTenDays.toISOString(),
+      reason: "En attente du budget trimestriel.",
+    });
+
+    const after = await services.getApprovalCenter(owner.id, tenant.id);
+    expect(after.pending.map((item) => item.approvalId)).not.toContain(
+      target.approvalId,
+    );
+    expect(after.snoozed).toHaveLength(1);
+    expect(after.snoozed[0]).toMatchObject({
+      id: target.approvalId,
+      kind: "strategic",
+      snoozeReason: "En attente du budget trimestriel.",
+      snoozedByName: owner.name,
+    });
+
+    // Reporter n'est pas décider : rien n'entre dans l'historique.
+    expect(after.history).toEqual([]);
+
+    // Le compteur du tableau de bord ignore lui aussi les reportées.
+    const dashboard = await services.getDashboard(owner.id, tenant.id);
+    expect(
+      dashboard.commandCenter.pendingApprovals.some((item) =>
+        item.id.endsWith(target.approvalId),
+      ),
+    ).toBe(false);
+  }, 60_000);
+
+  it("brings a snoozed proposal back once the date has passed", async () => {
+    const { db, services, owner, tenant } =
+      await setupTenantWithProposals("retour");
+
+    const before = await services.getApprovalCenter(owner.id, tenant.id);
+    const target = before.pending.find((item) => item.kind === "strategic")!;
+
+    await services.snoozeApproval(owner.id, tenant.id, {
+      approvalId: target.approvalId,
+      snoozedUntil: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    expect(
+      (await services.getApprovalCenter(owner.id, tenant.id)).snoozed,
+    ).toHaveLength(1);
+
+    // L'échéance est ramenée dans le passé : la file doit la reprendre seule.
+    await db.query(
+      "update approvals set snoozed_until = $1 where tenant_id = $2 and id = $3",
+      ["2020-01-01T00:00:00.000Z", tenant.id, target.approvalId],
+    );
+
+    const resumed = await services.getApprovalCenter(owner.id, tenant.id);
+    expect(resumed.snoozed).toEqual([]);
+    expect(resumed.pending.map((item) => item.approvalId)).toContain(
+      target.approvalId,
+    );
+  }, 60_000);
+
+  it("resumes a snoozed proposal on demand and refuses an implausible date", async () => {
+    const { services, owner, tenant } =
+      await setupTenantWithProposals("reprise");
+
+    const before = await services.getApprovalCenter(owner.id, tenant.id);
+    const target = before.pending.find((item) => item.kind === "strategic")!;
+
+    await expect(
+      services.snoozeApproval(owner.id, tenant.id, {
+        approvalId: target.approvalId,
+        snoozedUntil: "2020-01-01T00:00:00.000Z",
+      }),
+    ).rejects.toMatchObject({ code: "snooze_window_invalid" });
+
+    await expect(
+      services.snoozeApproval(owner.id, tenant.id, {
+        approvalId: target.approvalId,
+        snoozedUntil: new Date(
+          Date.now() + 400 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: "snooze_window_invalid" });
+
+    await services.snoozeApproval(owner.id, tenant.id, {
+      approvalId: target.approvalId,
+      snoozedUntil: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    await services.resumeApproval(owner.id, tenant.id, {
+      approvalId: target.approvalId,
+    });
+
+    const after = await services.getApprovalCenter(owner.id, tenant.id);
+    expect(after.snoozed).toEqual([]);
+    expect(after.pending.map((item) => item.approvalId)).toContain(
+      target.approvalId,
+    );
+  }, 60_000);
+
+  it("refuses to snooze an approval from another organisation", async () => {
+    const first = await setupTenantWithProposals("snooze-iso-a");
+    const second = await setupTenantWithProposals("snooze-iso-b");
+
+    const firstTarget = (
+      await first.services.getApprovalCenter(first.owner.id, first.tenant.id)
+    ).pending[0]!;
+
+    await expect(
+      second.services.snoozeApproval(second.owner.id, second.tenant.id, {
+        approvalId: firstTarget.approvalId,
+        snoozedUntil: new Date(
+          Date.now() + 3 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: "approval_not_found" });
+
+    const untouched = await first.services.getApprovalCenter(
+      first.owner.id,
+      first.tenant.id,
+    );
+    expect(untouched.snoozed).toEqual([]);
+    expect(untouched.pending.map((item) => item.approvalId)).toContain(
+      firstTarget.approvalId,
+    );
+  }, 60_000);
+
   it("hides every proposal from a role that cannot decide", async () => {
     const { db, services, tenant } = await setupTenantWithProposals("role");
 
@@ -110,7 +240,12 @@ describe("approval center", () => {
     );
 
     const view = await services.getApprovalCenter(collaborator.id, tenant.id);
-    expect(view).toEqual({ canApprove: false, pending: [], history: [] });
+    expect(view).toEqual({
+      canApprove: false,
+      pending: [],
+      snoozed: [],
+      history: [],
+    });
   }, 60_000);
 
   it("never exposes another organisation's proposals", async () => {

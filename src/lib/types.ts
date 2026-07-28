@@ -345,6 +345,7 @@ export type ApprovalCenterItem = {
     | "reputation"
     | "competitor";
   kindLabel: string;
+  approvalId: string;
   targetId: string;
   title: string;
   rationale: string | null;
@@ -366,9 +367,20 @@ export type ApprovalCenterDecision = {
   decidedAt: string;
 };
 
+export type ApprovalCenterSnoozedItem = {
+  id: string;
+  kind: ApprovalCenterItem["kind"];
+  kindLabel: string;
+  targetId: string;
+  snoozedUntil: string;
+  snoozeReason: string | null;
+  snoozedByName: string | null;
+};
+
 export type ApprovalCenterData = {
   canApprove: boolean;
   pending: ApprovalCenterItem[];
+  snoozed: ApprovalCenterSnoozedItem[];
   history: ApprovalCenterDecision[];
 };
 

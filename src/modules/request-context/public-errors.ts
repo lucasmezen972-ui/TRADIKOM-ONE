@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import { AccountDeletionError } from "@/modules/account-deletion";
+import { ApprovalCenterError } from "@/modules/approval-center";
 import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
@@ -33,6 +34,9 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof AuthError) return mapAuthError(error);
   if (error instanceof AccountDeletionError) {
     return mapAccountDeletionError(error);
+  }
+  if (error instanceof ApprovalCenterError) {
+    return mapApprovalCenterError(error);
   }
   if (error instanceof TenantError) return mapTenantError(error);
   if (error instanceof ConnectorError) return mapConnectorError(error);
@@ -73,6 +77,32 @@ function mapAuthError(error: AuthError): PublicError {
         error.code,
         "auth",
         "Lien de réinitialisation invalide ou expiré.",
+        400,
+      );
+  }
+}
+
+function mapApprovalCenterError(error: ApprovalCenterError): PublicError {
+  switch (error.code) {
+    case "approval_center_access_denied":
+      return publicError(
+        error.code,
+        "approval_center",
+        "Vous n'avez pas le droit de décider de cette action.",
+        403,
+      );
+    case "approval_not_found":
+      return publicError(
+        error.code,
+        "approval_center",
+        "Cette action n'est plus en attente.",
+        404,
+      );
+    default:
+      return publicError(
+        error.code,
+        "approval_center",
+        "La date de report est invalide.",
         400,
       );
   }

@@ -88,6 +88,10 @@ import {
 import {
   approvalCenterQuerySchema,
   getApprovalCenter,
+  resumeApproval,
+  resumeApprovalSchema,
+  snoozeApproval,
+  snoozeApprovalSchema,
 } from "@/modules/approval-center";
 import { getAuditLogs } from "@/modules/audit";
 import { dashboardQuerySchema, getDashboardData } from "@/modules/dashboard";
@@ -573,6 +577,16 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof approvalCenterQuerySchema> = {},
     ) => getApprovalCenter(db, userId, tenantId, input),
+    snoozeApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof snoozeApprovalSchema>,
+    ) => snoozeApproval(db, userId, tenantId, input),
+    resumeApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof resumeApprovalSchema>,
+    ) => resumeApproval(db, userId, tenantId, input),
     getOpportunityRadar: (userId: string, tenantId: string) =>
       getOpportunityRadar(db, userId, tenantId),
     dismissOpportunityRadarAlert: (

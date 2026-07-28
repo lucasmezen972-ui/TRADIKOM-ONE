@@ -1810,3 +1810,31 @@ function mergeFieldSource(
   const value = text(formData, key);
   return value && value !== survivorContactId ? "merged" : "survivor";
 }
+
+export async function snoozeApprovalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("approval_center.snooze", () =>
+    services.snoozeApproval(user.id, tenant.id, {
+      approvalId: text(formData, "approvalId"),
+      snoozedUntil: text(formData, "snoozedUntil"),
+      reason: text(formData, "reason") || undefined,
+    }),
+  );
+  revalidatePath("/validations");
+  revalidatePath("/aujourdhui");
+  redirect("/validations?report=1");
+}
+
+export async function resumeApprovalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("approval_center.resume", () =>
+    services.resumeApproval(user.id, tenant.id, {
+      approvalId: text(formData, "approvalId"),
+    }),
+  );
+  revalidatePath("/validations");
+  revalidatePath("/aujourdhui");
+  redirect("/validations?reprise=1");
+}

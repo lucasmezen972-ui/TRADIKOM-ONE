@@ -1,5 +1,17 @@
 import type { DbClient } from "@/lib/db";
-import type { ApprovalCenterDecision, ApprovalCenterItem } from "@/lib/types";
+import type {
+  ApprovalCenterDecision,
+  ApprovalCenterItem,
+  ApprovalCenterSnoozedItem,
+} from "@/lib/types";
+
+/**
+ * Une proposition reportée reste `pending` : elle disparaît simplement de la
+ * file tant que l'échéance n'est pas atteinte, puis y revient d'elle-même.
+ * Le report ne vaut jamais décision.
+ */
+const notSnoozed =
+  "(approvals.snoozed_until is null or approvals.snoozed_until <= $2)";
 
 type PendingRow = {
   approval_id: string;
@@ -21,6 +33,7 @@ type PendingRow = {
 export async function listPendingStrategicApprovals(
   db: DbClient,
   tenantId: string,
+  now: string,
   limit: number,
 ) {
   const result = await db.query<PendingRow>(
@@ -34,9 +47,10 @@ export async function listPendingStrategicApprovals(
        and recommendations.tenant_id = approvals.tenant_id
      where approvals.tenant_id = $1 and approvals.status = 'pending'
        and approvals.target_type = 'strategic_recommendation'
+       and ${notSnoozed}
      order by approvals.created_at asc
-     limit $2`,
-    [tenantId, limit],
+     limit $3`,
+    [tenantId, now, limit],
   );
   return result.rows.map((row) => mapPending(row, "strategic"));
 }
@@ -44,6 +58,7 @@ export async function listPendingStrategicApprovals(
 export async function listPendingMarketingApprovals(
   db: DbClient,
   tenantId: string,
+  now: string,
   limit: number,
 ) {
   const result = await db.query<PendingRow>(
@@ -58,9 +73,10 @@ export async function listPendingMarketingApprovals(
        and proposals.tenant_id = approvals.tenant_id
      where approvals.tenant_id = $1 and approvals.status = 'pending'
        and approvals.target_type = 'marketing_campaign_proposal'
+       and ${notSnoozed}
      order by approvals.created_at asc
-     limit $2`,
-    [tenantId, limit],
+     limit $3`,
+    [tenantId, now, limit],
   );
   return result.rows.map((row) => mapPending(row, "marketing"));
 }
@@ -68,6 +84,7 @@ export async function listPendingMarketingApprovals(
 export async function listPendingWebsiteAiApprovals(
   db: DbClient,
   tenantId: string,
+  now: string,
   limit: number,
 ) {
   const result = await db.query<PendingRow>(
@@ -81,9 +98,10 @@ export async function listPendingWebsiteAiApprovals(
        and proposals.tenant_id = approvals.tenant_id
      where approvals.tenant_id = $1 and approvals.status = 'pending'
        and approvals.target_type = 'website_ai_proposal'
+       and ${notSnoozed}
      order by approvals.created_at asc
-     limit $2`,
-    [tenantId, limit],
+     limit $3`,
+    [tenantId, now, limit],
   );
   return result.rows.map((row) => mapPending(row, "website_ai"));
 }
@@ -91,6 +109,7 @@ export async function listPendingWebsiteAiApprovals(
 export async function listPendingReputationApprovals(
   db: DbClient,
   tenantId: string,
+  now: string,
   limit: number,
 ) {
   const result = await db.query<PendingRow>(
@@ -105,9 +124,10 @@ export async function listPendingReputationApprovals(
        and proposals.tenant_id = approvals.tenant_id
      where approvals.tenant_id = $1 and approvals.status = 'pending'
        and approvals.target_type = 'reputation_response'
+       and ${notSnoozed}
      order by approvals.created_at asc
-     limit $2`,
-    [tenantId, limit],
+     limit $3`,
+    [tenantId, now, limit],
   );
   return result.rows.map((row) => mapPending(row, "reputation"));
 }
@@ -115,6 +135,7 @@ export async function listPendingReputationApprovals(
 export async function listPendingCompetitorApprovals(
   db: DbClient,
   tenantId: string,
+  now: string,
   limit: number,
 ) {
   const result = await db.query<PendingRow>(
@@ -128,11 +149,116 @@ export async function listPendingCompetitorApprovals(
        and insights.tenant_id = approvals.tenant_id
      where approvals.tenant_id = $1 and approvals.status = 'pending'
        and approvals.target_type = 'competitor_insight'
+       and ${notSnoozed}
      order by approvals.created_at asc
-     limit $2`,
-    [tenantId, limit],
+     limit $3`,
+    [tenantId, now, limit],
   );
   return result.rows.map((row) => mapPending(row, "competitor"));
+}
+
+export async function listSnoozedApprovals(
+  db: DbClient,
+  tenantId: string,
+  now: string,
+  limit: number,
+) {
+  const result = await db.query<{
+    id: string;
+    target_type: string;
+    target_id: string;
+    snoozed_until: string;
+    snooze_reason: string | null;
+    snoozed_by_name: string | null;
+  }>(
+    `select approvals.id, approvals.target_type, approvals.target_id,
+       approvals.snoozed_until, approvals.snooze_reason,
+       users.name as snoozed_by_name
+     from approvals
+     left join users on users.id = approvals.snoozed_by
+     where approvals.tenant_id = $1 and approvals.status = 'pending'
+       and approvals.snoozed_until is not null
+       and approvals.snoozed_until > $2
+     order by approvals.snoozed_until asc
+     limit $3`,
+    [tenantId, now, limit],
+  );
+
+  return result.rows
+    .map((row) => {
+      const kind = kindForTargetType(row.target_type);
+      if (!kind) {
+        return null;
+      }
+      return {
+        id: row.id,
+        kind,
+        kindLabel: kindLabels[kind],
+        targetId: row.target_id,
+        snoozedUntil: row.snoozed_until,
+        snoozeReason: row.snooze_reason,
+        snoozedByName: row.snoozed_by_name,
+      };
+    })
+    .filter((row): row is ApprovalCenterSnoozedItem => row !== null);
+}
+
+export async function snoozeApprovalRecord(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    approvalId: string;
+    snoozedUntil: string;
+    snoozedBy: string;
+    reason: string | null;
+  },
+) {
+  const result = await db.query(
+    `update approvals
+     set snoozed_until = $1, snoozed_by = $2, snooze_reason = $3
+     where tenant_id = $4 and id = $5 and status = 'pending'`,
+    [
+      input.snoozedUntil,
+      input.snoozedBy,
+      input.reason,
+      input.tenantId,
+      input.approvalId,
+    ],
+  );
+  return (result.affectedRows ?? 0) > 0;
+}
+
+export async function resumeApprovalRecord(
+  db: DbClient,
+  tenantId: string,
+  approvalId: string,
+) {
+  const result = await db.query(
+    `update approvals
+     set snoozed_until = null, snoozed_by = null, snooze_reason = null
+     where tenant_id = $1 and id = $2 and status = 'pending'`,
+    [tenantId, approvalId],
+  );
+  return (result.affectedRows ?? 0) > 0;
+}
+
+function kindForTargetType(
+  targetType: string,
+): ApprovalCenterItem["kind"] | null {
+  switch (targetType) {
+    case "strategic_recommendation":
+      return "strategic";
+    case "marketing_campaign_proposal":
+      return "marketing";
+    case "website_ai_proposal":
+      return "website_ai";
+    case "reputation_response":
+      return "reputation";
+    case "competitor_insight":
+      return "competitor";
+    default:
+      return null;
+  }
 }
 
 type DecisionRow = {
@@ -238,6 +364,7 @@ function mapPending(
     id: `${kind}:${row.target_id}`,
     kind,
     kindLabel: kindLabels[kind],
+    approvalId: row.approval_id,
     targetId: row.target_id,
     title: row.title,
     rationale: row.rationale,

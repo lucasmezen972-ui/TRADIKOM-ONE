@@ -71,7 +71,8 @@ export async function getDashboardMetrics(
         where tenant_id = $1 and upgrade_blocked = 1) as breaking_api_changes,
        case when $5 = 1 then
          (select count(*)::int from approvals
-          where tenant_id = $1 and status = 'pending')
+          where tenant_id = $1 and status = 'pending'
+            and (snoozed_until is null or snoozed_until <= $4))
          +
          (select count(*)::int from connector_approval_requests
           where tenant_id = $1 and status = 'pending')
@@ -329,6 +330,7 @@ export async function listPendingApprovalActions(
   db: DbClient,
   tenantId: string,
   canApprove: boolean,
+  now: string,
   limit: number,
 ) {
   if (!canApprove) {
@@ -357,12 +359,13 @@ export async function listPendingApprovalActions(
        end as approval_type,
        created_at
      from approvals where tenant_id = $1 and status = 'pending'
+       and (snoozed_until is null or snoozed_until <= $3)
      union all
      select id, 'connector' as approval_type, created_at
      from connector_approval_requests where tenant_id = $1 and status = 'pending'
      order by created_at asc
      limit $2`,
-    [tenantId, limit],
+    [tenantId, limit, now],
   );
   return result.rows.map((row) => ({
     id: `approval:${row.approval_type}:${row.id}`,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
+  Clock3,
   History,
   ShieldCheck,
   XCircle,
@@ -12,10 +13,16 @@ import {
   decideReputationProposalAction,
   decideStrategicRecommendationAction,
   decideWebsiteAiProposalAction,
+  resumeApprovalAction,
+  snoozeApprovalAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
-import type { ApprovalCenterDecision, ApprovalCenterItem } from "@/lib/types";
+import type {
+  ApprovalCenterDecision,
+  ApprovalCenterItem,
+  ApprovalCenterSnoozedItem,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +35,12 @@ const decisionActions = {
 } as const;
 
 type ValidationsPageProps = {
-  searchParams: Promise<{ decision?: string; iaDecision?: string }>;
+  searchParams: Promise<{
+    decision?: string;
+    iaDecision?: string;
+    report?: string;
+    reprise?: string;
+  }>;
 };
 
 export default async function ValidationsPage({
@@ -136,6 +148,28 @@ export default async function ValidationsPage({
         </section>
       )}
 
+      {center.canApprove && center.snoozed.length > 0 ? (
+        <section className="border-t border-slate-300 pt-6" aria-labelledby="snoozed-title">
+          <div className="mb-4 flex items-center gap-2">
+            <Clock3 size={20} className="text-slate-500" aria-hidden />
+            <h2 id="snoozed-title" className="text-2xl font-bold">
+              Reportées
+            </h2>
+          </div>
+          <p className="mb-4 text-sm text-slate-600">
+            Ces actions reviendront d&apos;elles-mêmes dans la file à la date
+            prévue. Elles ne sont ni approuvées, ni refusées.
+          </p>
+          <ul className="grid gap-3">
+            {center.snoozed.map((item) => (
+              <li key={item.id}>
+                <SnoozedRow item={item} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {center.canApprove && center.history.length > 0 ? (
         <section className="border-t border-slate-300 pt-6" aria-labelledby="history-title">
           <div className="mb-4 flex items-center gap-2">
@@ -227,7 +261,69 @@ function PendingCard({ item }: { item: ApprovalCenterItem }) {
           </Link>
         </div>
       </form>
+
+      <details className="mt-4 border-t border-slate-100 pt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+          Reporter cette action à plus tard
+        </summary>
+        <form action={snoozeApprovalAction} className="mt-3 grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
+          <input type="hidden" name="approvalId" value={item.approvalId} />
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Revenir le
+            <input
+              type="date"
+              name="snoozedUntil"
+              required
+              className="rounded-md border border-slate-300 px-4 py-3 font-normal"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Motif du report (facultatif)
+            <input
+              name="reason"
+              maxLength={300}
+              placeholder="En attente d'un devis, d'une réponse client…"
+              className="rounded-md border border-slate-300 px-4 py-3 font-normal"
+            />
+          </label>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800"
+          >
+            <Clock3 size={17} aria-hidden />
+            Reporter
+          </button>
+        </form>
+        <p className="mt-2 text-xs text-slate-500">
+          Reporter n&apos;est pas décider : l&apos;action revient
+          automatiquement dans la file à la date choisie.
+        </p>
+      </details>
     </article>
+  );
+}
+
+function SnoozedRow({ item }: { item: ApprovalCenterSnoozedItem }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+      <div className="min-w-0">
+        <p className="font-semibold text-slate-900">{item.kindLabel}</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Revient le {formatDate(item.snoozedUntil)}
+          {item.snoozeReason ? ` — ${item.snoozeReason}` : ""}
+          {item.snoozedByName ? ` (reporté par ${item.snoozedByName})` : ""}
+        </p>
+      </div>
+      <form action={resumeApprovalAction}>
+        <input type="hidden" name="approvalId" value={item.id} />
+        <button
+          type="submit"
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
+        >
+          Reprendre maintenant
+        </button>
+      </form>
+    </div>
   );
 }
 
