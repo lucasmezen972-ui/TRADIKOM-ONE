@@ -1,0 +1,171 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { createMemoryDb } from "../src/lib/db";
+import { defaultGarageOnboarding } from "../src/lib/generation";
+import { createServices } from "../src/lib/services";
+
+const opened: Array<{ close: () => Promise<void> }> = [];
+
+afterEach(async () => {
+  await Promise.all(opened.splice(0).map((db) => db.close()));
+});
+
+async function setupPipeline(suffix: string) {
+  const db = await createMemoryDb();
+  opened.push(db);
+  const services = createServices(db);
+  const owner = await services.registerUser({
+    name: `Owner Pipeline ${suffix}`,
+    email: `owner.pipeline.${suffix}@example.com`,
+    password: "Password!1",
+  });
+  const tenant = await services.createTenant(owner.id, {
+    name: `Garage Pipeline ${suffix}`,
+    category: "Garage automobile",
+  });
+  await services.saveOnboarding(owner.id, tenant.id, defaultGarageOnboarding());
+  await services.publishWebsite(owner.id, tenant.id);
+  await services.submitPublicLead(tenant.slug, {
+    name: `Client Pipeline ${suffix}`,
+    email: `client.pipeline.${suffix}@example.com`,
+    phone: "+596 696 77 88 99",
+    message: "Demande de devis pipeline",
+  });
+  const board = await services.getOpportunities(owner.id, tenant.id, {});
+  return { db, services, owner, tenant, opportunity: board.opportunities[0]! };
+}
+
+describe("pipeline detail", () => {
+  it("persists owner, probability and expected close date", async () => {
+    const { services, owner, tenant, opportunity } =
+      await setupPipeline("champs");
+
+    expect(opportunity.assignedUserId).toBeUndefined();
+    expect(opportunity.probability).toBeUndefined();
+    expect(opportunity.expectedCloseAt).toBeUndefined();
+
+    const updated = await services.updateOpportunity(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+      {
+        stageId: opportunity.stageId,
+        valueCents: opportunity.valueCents,
+        assignedUserId: owner.id,
+        probability: 60,
+        expectedCloseAt: "2026-09-30",
+      },
+    );
+
+    expect(updated.assignedUserId).toBe(owner.id);
+    expect(updated.probability).toBe(60);
+    expect(updated.expectedCloseAt?.slice(0, 10)).toBe("2026-09-30");
+
+    const detail = await services.getOpportunityDetail(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+    );
+    expect(detail?.opportunity.probability).toBe(60);
+    expect(detail?.members.some((member) => member.id === owner.id)).toBe(true);
+  }, 60_000);
+
+  it("records only the fields that actually changed", async () => {
+    const { services, owner, tenant, opportunity } =
+      await setupPipeline("historique");
+
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: opportunity.stageId,
+      valueCents: opportunity.valueCents,
+      nextFollowUpAt: opportunity.nextFollowUpAt,
+      probability: 40,
+    });
+
+    const afterFirst = await services.getOpportunityDetail(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+    );
+    expect(afterFirst?.changes.map((change) => change.field)).toEqual([
+      "probability",
+    ]);
+    expect(afterFirst?.changes[0]).toMatchObject({
+      previousValue: null,
+      nextValue: "40",
+      changedByName: owner.name,
+    });
+
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: opportunity.stageId,
+      valueCents: opportunity.valueCents,
+      nextFollowUpAt: opportunity.nextFollowUpAt,
+      probability: 75,
+    });
+
+    const afterSecond = await services.getOpportunityDetail(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+    );
+    expect(afterSecond?.changes).toHaveLength(2);
+    expect(afterSecond?.changes[0]).toMatchObject({
+      field: "probability",
+      previousValue: "40",
+      nextValue: "75",
+    });
+
+    // Une mise à jour sans modification réelle n'ajoute rien à l'historique.
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: opportunity.stageId,
+      valueCents: opportunity.valueCents,
+      nextFollowUpAt: opportunity.nextFollowUpAt,
+      probability: 75,
+    });
+    const afterNoop = await services.getOpportunityDetail(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+    );
+    expect(afterNoop?.changes).toHaveLength(2);
+  }, 60_000);
+
+  it("refuses an owner who does not belong to the organisation", async () => {
+    const first = await setupPipeline("membre-a");
+    const second = await setupPipeline("membre-b");
+
+    await expect(
+      first.services.updateOpportunity(
+        first.owner.id,
+        first.tenant.id,
+        first.opportunity.id,
+        {
+          stageId: first.opportunity.stageId,
+          valueCents: first.opportunity.valueCents,
+          assignedUserId: second.owner.id,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "assignee_not_member" });
+
+    const detail = await first.services.getOpportunityDetail(
+      first.owner.id,
+      first.tenant.id,
+      first.opportunity.id,
+    );
+    expect(detail?.opportunity.assignedUserId).toBeUndefined();
+    expect(
+      detail?.members.some((member) => member.id === second.owner.id),
+    ).toBe(false);
+  }, 60_000);
+
+  it("rejects a probability outside the 0-100 range", async () => {
+    const { services, owner, tenant, opportunity } =
+      await setupPipeline("bornes");
+
+    await expect(
+      services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+        stageId: opportunity.stageId,
+        valueCents: opportunity.valueCents,
+        probability: 140,
+      }),
+    ).rejects.toThrow();
+  }, 60_000);
+});

@@ -91,6 +91,12 @@ export const opportunityUpdateSchema = z.object({
     .optional()
     .refine((value) => !value || !Number.isNaN(Date.parse(value))),
   lostReason: z.string().optional(),
+  assignedUserId: z.string().optional(),
+  probability: z.number().int().min(0).max(100).optional(),
+  expectedCloseAt: z
+    .string()
+    .optional()
+    .refine((value) => !value || !Number.isNaN(Date.parse(value))),
 });
 
 export const contactMergeFieldSourceSchema = z.enum(["survivor", "merged"]);

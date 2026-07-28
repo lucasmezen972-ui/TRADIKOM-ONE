@@ -159,6 +159,14 @@ function mapCrmError(error: CrmError): PublicError {
       400,
     );
   }
+  if (error.code === "assignee_not_member") {
+    return publicError(
+      error.code,
+      "crm",
+      "Le responsable doit appartenir à cette organisation.",
+      400,
+    );
+  }
   return publicError(error.code, "crm", "Opération CRM impossible.", 400);
 }
 

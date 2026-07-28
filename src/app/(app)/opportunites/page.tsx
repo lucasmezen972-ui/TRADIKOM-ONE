@@ -120,6 +120,8 @@ export default async function OpportunitiesPage({
                 <th className="py-3">Contact</th>
                 <th>Etape</th>
                 <th>Valeur</th>
+                <th>Probabilité</th>
+                <th>Clôture estimée</th>
                 <th>Prochaine action</th>
                 <th>Perte</th>
               </tr>
@@ -138,6 +140,16 @@ export default async function OpportunitiesPage({
                   </td>
                   <td>{opportunity.stageName}</td>
                   <td>{formatCurrency(opportunity.valueCents)}</td>
+                  <td>
+                    {opportunity.probability === undefined
+                      ? "-"
+                      : `${opportunity.probability} %`}
+                  </td>
+                  <td>
+                    {opportunity.expectedCloseAt
+                      ? new Date(opportunity.expectedCloseAt).toLocaleDateString("fr-FR")
+                      : "-"}
+                  </td>
                   <td>
                     {opportunity.nextFollowUpAt
                       ? new Date(opportunity.nextFollowUpAt).toLocaleDateString("fr-FR")

@@ -889,6 +889,9 @@ export async function updateOpportunityAction(formData: FormData) {
       valueCents: moneyToCents(text(formData, "valueEuros")),
       nextFollowUpAt: text(formData, "nextFollowUpAt") || undefined,
       lostReason: text(formData, "lostReason") || undefined,
+      assignedUserId: text(formData, "assignedUserId") || undefined,
+      probability: percentToNumber(text(formData, "probability")),
+      expectedCloseAt: text(formData, "expectedCloseAt") || undefined,
     },
   );
 
@@ -1774,6 +1777,14 @@ function moneyToCents(value: string) {
 
 function optionalMoneyToCents(value: string) {
   return value ? strictMoneyToCents(value) : null;
+}
+
+function percentToNumber(value: string) {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function strictMoneyToCents(value: string) {

@@ -20,6 +20,7 @@ import {
   insertContactConsent,
   insertContactNote,
   insertContactTask,
+  insertOpportunityChanges,
   listActivities,
   listContactActivities,
   listContactNotes,
@@ -29,7 +30,9 @@ import {
   listContacts,
   listLeads,
   listOpportunities,
+  listOpportunityChanges,
   listPipelineStages,
+  listTenantMemberOptions,
   listTasks,
   mergeContactConsents,
   reassignMergedContactReferences,
@@ -62,6 +65,7 @@ import {
   type OpportunityUpdateInput,
 } from "@/modules/crm/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
+import { findMembershipRole } from "@/modules/tenants/repository";
 
 const crmWriteRoles: Role[] = [
   "owner",
@@ -678,16 +682,18 @@ export async function getOpportunityDetail(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const parsed = opportunityLookupSchema.parse({ opportunityId });
-  const [opportunity, stages] = await Promise.all([
+  const [opportunity, stages, members, changes] = await Promise.all([
     findOpportunityById(db, tenantId, parsed.opportunityId),
     listPipelineStages(db, tenantId),
+    listTenantMemberOptions(db, tenantId),
+    listOpportunityChanges(db, tenantId, parsed.opportunityId, 20),
   ]);
 
   if (!opportunity) {
     return null;
   }
 
-  return { opportunity, stages };
+  return { opportunity, stages, members, changes };
 }
 
 export async function updateOpportunity(
@@ -715,20 +721,91 @@ export async function updateOpportunity(
     throw new CrmError("stage_not_found", "Etape de pipeline introuvable.");
   }
 
-  const updated = await updateOpportunityRecord(db, {
-    tenantId,
-    opportunityId: existing.id,
+  const assignedUserId = parsed.assignedUserId?.trim() || null;
+  if (assignedUserId) {
+    const isMember = await findMembershipRole(db, assignedUserId, tenantId);
+    if (!isMember) {
+      throw new CrmError(
+        "assignee_not_member",
+        "Le responsable doit appartenir à cette organisation.",
+      );
+    }
+  }
+
+  const nextValues = {
     stageId: stage.id,
     valueCents: parsed.valueCents,
     nextFollowUpAt: parsed.nextFollowUpAt
       ? new Date(parsed.nextFollowUpAt).toISOString()
       : null,
     lostReason: parsed.lostReason?.trim() || null,
+    assignedUserId,
+    probability: parsed.probability ?? null,
+    expectedCloseAt: parsed.expectedCloseAt
+      ? new Date(parsed.expectedCloseAt).toISOString()
+      : null,
+  };
+
+  const updated = await updateOpportunityRecord(db, {
+    tenantId,
+    opportunityId: existing.id,
+    ...nextValues,
     updatedAt: nowIso(),
   });
 
   if (!updated) {
     throw new CrmError("opportunity_not_found", "Opportunite introuvable.");
+  }
+
+  const changedAt = nowIso();
+  const changes = [
+    {
+      field: "stage",
+      previous: existing.stageName,
+      next: stage.name,
+    },
+    {
+      field: "value_cents",
+      previous: String(existing.valueCents),
+      next: String(nextValues.valueCents),
+    },
+    {
+      field: "assigned_user_id",
+      previous: existing.assignedUserId ?? null,
+      next: nextValues.assignedUserId,
+    },
+    {
+      field: "probability",
+      previous:
+        existing.probability === undefined ? null : String(existing.probability),
+      next:
+        nextValues.probability === null ? null : String(nextValues.probability),
+    },
+    {
+      field: "expected_close_at",
+      previous: existing.expectedCloseAt ?? null,
+      next: nextValues.expectedCloseAt,
+    },
+    {
+      field: "next_follow_up_at",
+      previous: existing.nextFollowUpAt ?? null,
+      next: nextValues.nextFollowUpAt,
+    },
+  ]
+    .filter((change) => (change.previous ?? null) !== (change.next ?? null))
+    .map((change) => ({
+      id: id("opportunity_change"),
+      tenantId,
+      opportunityId: updated.id,
+      field: change.field,
+      previousValue: change.previous ?? null,
+      nextValue: change.next ?? null,
+      changedBy: userId,
+      createdAt: changedAt,
+    }));
+
+  if (changes.length > 0) {
+    await insertOpportunityChanges(db, changes);
   }
 
   await insertActivity(db, {
