@@ -85,6 +85,10 @@ import {
   submitMarketingProposalForApproval,
   submitMarketingProposalSchema,
 } from "@/modules/autonomous-marketing";
+import {
+  approvalCenterQuerySchema,
+  getApprovalCenter,
+} from "@/modules/approval-center";
 import { getAuditLogs } from "@/modules/audit";
 import { dashboardQuerySchema, getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
@@ -564,6 +568,11 @@ export function createServices(
         timeZone: process.env.BUSINESS_TIME_ZONE,
         ...input,
       }),
+    getApprovalCenter: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof approvalCenterQuerySchema> = {},
+    ) => getApprovalCenter(db, userId, tenantId, input),
     getOpportunityRadar: (userId: string, tenantId: string) =>
       getOpportunityRadar(db, userId, tenantId),
     dismissOpportunityRadarAlert: (

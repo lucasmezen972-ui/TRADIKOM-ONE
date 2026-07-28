@@ -382,20 +382,15 @@ export async function listPendingApprovalActions(
           : "Approbation de connecteur",
     explanation: "Une décision autorisée est en attente.",
     actionLabel: "Examiner",
+    // Les propositions IA sont décidées dans le centre d'approbation unifié ;
+    // workflows et connecteurs gardent leurs écrans dédiés, avec leurs propres
+    // contrôles (reprise, file d'attente, sandbox).
     actionHref:
       row.approval_type === "workflow"
         ? "/automatisations"
-        : row.approval_type === "strategic"
-          ? "/conseiller-strategique"
-          : row.approval_type === "marketing"
-            ? "/marketing"
-            : row.approval_type === "website_ai"
-              ? "/mon-site"
-              : row.approval_type === "reputation"
-                ? "/reputation"
-                : row.approval_type === "competitor"
-                  ? "/veille-concurrentielle"
-          : "/intelligence-api",
+        : row.approval_type === "connector"
+          ? "/intelligence-api"
+          : "/validations",
     severity: "warning" as const,
     approvalType: row.approval_type,
   }));

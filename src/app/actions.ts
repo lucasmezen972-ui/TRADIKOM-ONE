@@ -340,7 +340,9 @@ export async function decideStrategicRecommendationAction(formData: FormData) {
   );
   revalidatePath("/conseiller-strategique");
   revalidatePath("/aujourdhui");
-  redirect(`/conseiller-strategique?decision=${decision}`);
+  redirect(
+    decisionRedirect(formData, "/conseiller-strategique", `decision=${decision}`),
+  );
 }
 
 export async function generateMarketingProposalsAction() {
@@ -381,7 +383,7 @@ export async function decideMarketingProposalAction(formData: FormData) {
   );
   revalidatePath("/marketing");
   revalidatePath("/aujourdhui");
-  redirect(`/marketing?decision=${decision}`);
+  redirect(decisionRedirect(formData, "/marketing", `decision=${decision}`));
 }
 
 export async function reviseMarketingProposalAction(formData: FormData) {
@@ -445,7 +447,9 @@ export async function decideWebsiteAiProposalAction(formData: FormData) {
   );
   revalidatePath("/mon-site");
   revalidatePath("/aujourdhui");
-  redirect(`/mon-site?iaDecision=${decision}`);
+  redirect(
+    decisionRedirect(formData, "/mon-site", `iaDecision=${decision}`),
+  );
 }
 
 export async function applyWebsiteAiProposalAction(formData: FormData) {
@@ -528,7 +532,7 @@ export async function decideReputationProposalAction(formData: FormData) {
   );
   revalidatePath("/reputation");
   revalidatePath("/aujourdhui");
-  redirect(`/reputation?decision=${decision}`);
+  redirect(decisionRedirect(formData, "/reputation", `decision=${decision}`));
 }
 
 export async function createCompetitorProfileAction(formData: FormData) {
@@ -606,7 +610,9 @@ export async function decideCompetitorInsightAction(formData: FormData) {
   );
   revalidatePath("/veille-concurrentielle");
   revalidatePath("/aujourdhui");
-  redirect(`/veille-concurrentielle?decision=${decision}`);
+  redirect(
+    decisionRedirect(formData, "/veille-concurrentielle", `decision=${decision}`),
+  );
 }
 
 export async function recordFinancialInputSnapshotAction(formData: FormData) {
@@ -1735,6 +1741,23 @@ export async function seedDemoAction() {
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * Destination de retour après une décision prise hors de la page du module.
+ * Seules des destinations internes connues sont acceptées : la valeur vient
+ * d'un formulaire et ne doit jamais permettre une redirection ouverte.
+ */
+const decisionReturnPaths = new Set(["/validations"]);
+
+function decisionRedirect(
+  formData: FormData,
+  fallback: string,
+  query: string,
+) {
+  const requested = text(formData, "retour");
+  const destination = decisionReturnPaths.has(requested) ? requested : fallback;
+  return `${destination}?${query}`;
 }
 
 function list(formData: FormData, key: string) {

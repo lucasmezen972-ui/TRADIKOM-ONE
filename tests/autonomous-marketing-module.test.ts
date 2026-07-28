@@ -77,7 +77,9 @@ describe("autonomous marketing module", () => {
     expect(
       dashboard.commandCenter.pendingApprovals.some(
         (item) =>
-          item.approvalType === "marketing" && item.actionHref === "/marketing",
+          // Les propositions IA sont décidées dans le centre d'approbation unifié.
+          item.approvalType === "marketing" &&
+          item.actionHref === "/validations",
       ),
     ).toBe(true);
 

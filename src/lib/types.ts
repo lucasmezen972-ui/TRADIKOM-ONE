@@ -336,6 +336,42 @@ export type DashboardPendingApproval = DashboardActionItem & {
     | "competitor";
 };
 
+export type ApprovalCenterItem = {
+  id: string;
+  kind:
+    | "strategic"
+    | "marketing"
+    | "website_ai"
+    | "reputation"
+    | "competitor";
+  kindLabel: string;
+  targetId: string;
+  title: string;
+  rationale: string | null;
+  expectedGain: string | null;
+  riskSummary: string | null;
+  confidence: number | null;
+  requestedAt: string;
+  detailHref: string;
+  decisionField: string;
+};
+
+export type ApprovalCenterDecision = {
+  id: string;
+  kind: ApprovalCenterItem["kind"];
+  kindLabel: string;
+  title: string;
+  decision: "approved" | "rejected";
+  reason: string;
+  decidedAt: string;
+};
+
+export type ApprovalCenterData = {
+  canApprove: boolean;
+  pending: ApprovalCenterItem[];
+  history: ApprovalCenterDecision[];
+};
+
 export type DashboardData = {
   tenant: Tenant;
   metrics: {

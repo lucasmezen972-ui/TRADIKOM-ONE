@@ -74,7 +74,9 @@ describe("Website AI module", () => {
     expect(
       dashboard.commandCenter.pendingApprovals.some(
         (item) =>
-          item.approvalType === "website_ai" && item.actionHref === "/mon-site",
+          // Les propositions IA sont décidées dans le centre d'approbation unifié.
+          item.approvalType === "website_ai" &&
+          item.actionHref === "/validations",
       ),
     ).toBe(true);
 

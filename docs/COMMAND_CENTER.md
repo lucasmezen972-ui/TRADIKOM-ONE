@@ -16,6 +16,8 @@ Toutes les valeurs viennent de lectures SQL tenant-scoped. Chaque indicateur ouv
 
 Le jour métier est calculé dans le fuseau de l'organisation (`BUSINESS_TIME_ZONE`, par défaut `America/Martinique`) par `src/lib/business-day.ts`, et non en UTC : un lead reçu à 22 h aux Antilles reste un lead du jour.
 
+Les actions préparées par les modules IA sont regroupées dans le centre d'approbation (`docs/APPROVAL_CENTER.md`) ; la carte « Actions à valider » du tableau de bord y renvoie.
+
 ## Opportunité bloquée
 
 Une opportunité est bloquée quand elle réunit les trois conditions suivantes :

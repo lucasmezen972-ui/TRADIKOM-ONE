@@ -212,7 +212,24 @@ export default async function TodayPage() {
         title="Approbations et publication"
         description="Décisions autorisées et état de la vitrine publique."
       >
-        <ActionColumn title="Approbations en attente" items={commandCenter.pendingApprovals} empty="Aucune approbation visible pour votre rôle." />
+        <div className="grid content-start gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold">Actions à valider</h3>
+            {commandCenter.pendingApprovals.length > 0 ? (
+              <Link
+                href="/validations"
+                className="text-sm font-semibold text-[#0b8f84] underline-offset-4 hover:underline"
+              >
+                Tout examiner
+              </Link>
+            ) : null}
+          </div>
+          {commandCenter.pendingApprovals.length > 0
+            ? commandCenter.pendingApprovals.map((item) => (
+                <ActionCard key={item.id} action={item} />
+              ))
+            : <EmptyState>Aucune action en attente de validation.</EmptyState>}
+        </div>
         <div className="grid gap-3">
           <h3 className="font-bold">Site web</h3>
           <Link href="/mon-site" className="rounded-lg border border-slate-200 bg-white p-4">
