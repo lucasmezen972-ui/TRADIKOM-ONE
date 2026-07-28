@@ -15,7 +15,7 @@
 
 ## Prochaines priorites
 
-- Brancher un fournisseur email de production pour reset password et invitations.
+- Gerer les webhooks de bounce et la suppression list du fournisseur email (`docs/EMAIL_PROVIDER.md`).
 - Ajouter file upload valide pour logo/photos.
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.

@@ -1,3 +1,4 @@
+export * from "@/modules/email/http-provider";
 export * from "@/modules/email/providers";
 export * from "@/modules/email/schemas";
 export * from "@/modules/email/service";
