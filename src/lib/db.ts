@@ -325,6 +325,7 @@ function getMigrations(enableRls: boolean) {
     ...(enableRls
       ? [{ id: "072_tenant_assets_rls", sql: tenantAssetsRlsMigrationSql }]
       : []),
+    { id: "073_tenant_preferences", sql: tenantPreferencesMigrationSql },
   ];
 }
 
@@ -4023,6 +4024,22 @@ drop policy if exists tenant_isolation on tenant_assets;
 create policy tenant_isolation on tenant_assets
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+/**
+ * Colonne additive sur une table qui porte déjà sa politique RLS : rien à
+ * ajouter côté isolation, contrairement à une nouvelle table.
+ */
+const tenantPreferencesMigrationSql = `
+alter table tenants
+  add column if not exists stalled_opportunity_days integer not null default 7;
+
+alter table tenants
+  drop constraint if exists tenants_stalled_opportunity_days_range;
+
+alter table tenants
+  add constraint tenants_stalled_opportunity_days_range
+  check (stalled_opportunity_days between 1 and 90);
 `;
 
 const approvalSnoozeMigrationSql = `

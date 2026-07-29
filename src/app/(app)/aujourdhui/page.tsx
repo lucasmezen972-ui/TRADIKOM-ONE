@@ -23,6 +23,7 @@ export default async function TodayPage() {
   const services = await getServices();
   const dashboard = await services.getDashboard(user.id, tenant.id);
   const commandCenter = dashboard.commandCenter;
+  const stalledDays = dashboard.tenant.stalledOpportunityDays;
 
   const metrics = [
     {
@@ -49,7 +50,7 @@ export default async function TodayPage() {
     {
       label: "Opportunités bloquées",
       value: dashboard.metrics.stalledOpportunities,
-      detail: "Sans avancée depuis plus de 7 jours",
+      detail: `Sans avancée depuis plus de ${stalledDays} jours`,
       href: "/opportunites?filtre=bloquees",
       icon: PauseCircle,
     },
@@ -147,7 +148,7 @@ export default async function TodayPage() {
 
       <OperationalSection
         title="Ventes à risque"
-        description="Opportunités ouvertes qui n'ont pas avancé depuis plus de 7 jours, faute d'action planifiée ou de relance effectuée."
+        description={`Opportunités ouvertes qui n'ont pas avancé depuis plus de ${stalledDays} jours, faute d'action planifiée ou de relance effectuée.`}
       >
         <ActionColumn
           title="Opportunités bloquées"

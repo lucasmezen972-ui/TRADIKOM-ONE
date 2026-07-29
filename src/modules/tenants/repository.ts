@@ -6,6 +6,7 @@ export type TenantRow = {
   name: string;
   slug: string;
   category: string;
+  stalled_opportunity_days: number;
   created_at: string;
 };
 
@@ -41,13 +42,37 @@ export async function insertTenant(
     name: string;
     slug: string;
     category: string;
+    stalledOpportunityDays: number;
     createdAt: string;
   },
 ) {
   await db.query(
-    "insert into tenants (id, name, slug, category, created_at) values ($1, $2, $3, $4, $5)",
-    [tenant.id, tenant.name, tenant.slug, tenant.category, tenant.createdAt],
+    `insert into tenants
+       (id, name, slug, category, stalled_opportunity_days, created_at)
+     values ($1, $2, $3, $4, $5, $6)`,
+    [
+      tenant.id,
+      tenant.name,
+      tenant.slug,
+      tenant.category,
+      tenant.stalledOpportunityDays,
+      tenant.createdAt,
+    ],
   );
+}
+
+export async function updateTenantStalledThreshold(
+  db: DbClient,
+  tenantId: string,
+  days: number,
+) {
+  const result = await db.query<TenantRow>(
+    `update tenants set stalled_opportunity_days = $2
+     where id = $1
+     returning *`,
+    [tenantId, days],
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function tenantSlugExists(db: DbClient, slug: string) {

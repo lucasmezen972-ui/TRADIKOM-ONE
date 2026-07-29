@@ -11,6 +11,8 @@
 - Creation automatique contact, lead, opportunite, activite, tache et notification mock.
 - Dashboard, CRM, workflows, connecteurs, import CSV, webhook et audit log.
 - Reset password securise, invitations d'equipe et administration des roles non-owner.
+- Exports universels (8 entites, CSV/XLSX/JSON, selection de champs et fenetre de dates) et suppression de compte RGPD.
+- Seuil d'opportunite bloquee reglable par organisation, entre 1 et 90 jours (`docs/COMMAND_CENTER.md`).
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
@@ -20,7 +22,5 @@
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.
-- Ajouter exports de donnees. La suppression de compte est livree (`src/modules/account-deletion`).
-- Rendre configurable par organisation le seuil d'opportunite bloquee, fixe a 7 jours (`docs/COMMAND_CENTER.md`).
 - Permettre le reordonnancement des cartes a l'interieur d'une colonne du pipeline (`docs/PIPELINE.md`).
 - Permettre de modifier une proposition depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).

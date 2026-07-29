@@ -3,7 +3,12 @@ import {
   deleteAccountAction,
   resendInvitationAction,
   updateMemberRoleAction,
+  updateTenantPreferencesAction,
 } from "@/app/actions";
+import {
+  maxStalledOpportunityDays,
+  minStalledOpportunityDays,
+} from "@/lib/pipeline-stages";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
 import type { Role } from "@/lib/types";
@@ -24,6 +29,8 @@ type SettingsPageProps = {
     lien?: string;
     suppressionCompte?: string;
     messageSuppression?: string;
+    preferences?: string;
+    messagePreferences?: string;
   }>;
 };
 
@@ -190,6 +197,69 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </div>
           </div>
         ) : null}
+      </section>
+      <section className="rounded-lg bg-white p-5 shadow-sm">
+        <h2 className="text-xl font-bold">Pilotage commercial</h2>
+        <p className="mt-1 max-w-3xl text-sm text-slate-600">
+          Une opportunité ouverte est signalée comme bloquée quand elle
+          n&apos;a pas avancé depuis ce nombre de jours, faute d&apos;action
+          planifiée ou de relance effectuée. Le seuil s&apos;applique au
+          tableau de bord et au filtre « Opportunités bloquées ».
+        </p>
+        {params.preferences === "ok" ? (
+          <p
+            role="status"
+            className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900"
+          >
+            Seuil enregistré. Les vues « bloquées » utilisent désormais{" "}
+            {tenant.stalledOpportunityDays} jours.
+          </p>
+        ) : null}
+        {params.preferences === "erreur" ? (
+          <p
+            role="status"
+            className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"
+          >
+            {params.messagePreferences ?? "Seuil refusé."}
+          </p>
+        ) : null}
+        {canManageTeam ? (
+          <form
+            action={updateTenantPreferencesAction}
+            className="mt-4 flex flex-wrap items-end gap-3"
+          >
+            <label
+              className="grid gap-1 text-sm font-semibold text-slate-700"
+              htmlFor="stalledOpportunityDays"
+            >
+              Seuil d&apos;opportunité bloquée (jours)
+              <input
+                id="stalledOpportunityDays"
+                name="stalledOpportunityDays"
+                type="number"
+                inputMode="numeric"
+                min={minStalledOpportunityDays}
+                max={maxStalledOpportunityDays}
+                step={1}
+                required
+                defaultValue={tenant.stalledOpportunityDays}
+                className="w-40 rounded-md border border-slate-200 px-4 py-3 font-normal"
+              />
+            </label>
+            <button className="rounded-md bg-[#08111f] px-5 py-3 font-semibold text-white">
+              Enregistrer
+            </button>
+            <p className="text-sm text-slate-500">
+              Entre {minStalledOpportunityDays} et {maxStalledOpportunityDays}{" "}
+              jours.
+            </p>
+          </form>
+        ) : (
+          <p className="mt-4 rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-600">
+            Seuil actuel : {tenant.stalledOpportunityDays} jours. Seuls le
+            propriétaire et les administrateurs peuvent le modifier.
+          </p>
+        )}
       </section>
       <section className="rounded-lg border border-red-200 bg-white p-5 shadow-sm">
         <h2 className="text-xl font-bold text-red-700">Supprimer mon compte</h2>

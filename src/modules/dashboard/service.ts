@@ -47,10 +47,14 @@ export async function getDashboardData(
   }
   const parsed = dashboardQuerySchema.parse(input);
   const period = getBusinessDayPeriod(parsed.now, parsed.timeZone);
-  const stalledThreshold = stalledBefore(parsed.now);
+  // Le seuil vient de l'organisation, il conditionne les requêtes qui suivent.
+  const tenant = await getTenantById(db, tenantId);
+  const stalledThreshold = stalledBefore(
+    parsed.now,
+    tenant.stalledOpportunityDays,
+  );
   const canApprove = approvalRoles.includes(role);
   const [
-    tenant,
     website,
     metrics,
     stages,
@@ -67,7 +71,6 @@ export async function getDashboardData(
     breakingApiChanges,
     pendingApprovals,
   ] = await Promise.all([
-    getTenantById(db, tenantId),
     getWebsite(db, tenantId),
     getDashboardMetrics(db, tenantId, {
       now: parsed.now.toISOString(),

@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { withTenantDbTransaction } from "@/db/tenant-context";
+import { stalledOpportunityDays } from "@/lib/pipeline-stages";
 import { daysFromNow, hashToken, id, nowIso, secureToken, slugify } from "@/lib/security";
 import type { Membership, Role, Tenant } from "@/lib/types";
 import {
@@ -30,6 +31,7 @@ import {
   tenantSlugExists,
   updateInvitationDelivery,
   updateMembershipRole,
+  updateTenantStalledThreshold,
   type InvitationRow,
   type TenantRow,
 } from "@/modules/tenants/repository";
@@ -37,11 +39,13 @@ import {
   acceptInvitationSchema,
   invitationSchema,
   orgSchema,
+  tenantPreferencesSchema,
   updateMemberRoleSchema,
   type AcceptInvitationInput,
   type CreateInvitationInput,
   type CreateTenantInput,
   type UpdateMemberRoleInput,
+  type UpdateTenantPreferencesInput,
 } from "@/modules/tenants/schemas";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
@@ -82,6 +86,7 @@ export async function createTenant(
       name: parsed.name,
       slug,
       category: parsed.category,
+      stalledOpportunityDays,
       createdAt: now,
     });
     await insertMembership(transaction, {
@@ -105,6 +110,7 @@ export async function createTenant(
       name: parsed.name,
       slug,
       category: parsed.category,
+      stalledOpportunityDays,
       createdAt: now,
     } satisfies Tenant;
   });
@@ -571,6 +577,60 @@ export async function getTenantById(db: DbClient, tenantId: string) {
   return mapTenant(tenant);
 }
 
+/**
+ * Le seuil décide de ce que le dirigeant voit comme « bloqué » sur son tableau
+ * de bord : c'est une règle de pilotage, réservée au propriétaire et aux
+ * administrateurs, et tracée comme les autres décisions d'organisation.
+ */
+export async function updateTenantPreferences(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: UpdateTenantPreferencesInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator"]);
+  const result = tenantPreferencesSchema.safeParse(input);
+  if (!result.success) {
+    // Le seuil est saisi à la main : le dirigeant doit lire la borne franchie,
+    // pas un « informations invalides » générique.
+    throw new TenantError(
+      "invalid_tenant_preference",
+      result.error.issues[0]?.message ?? "Seuil invalide.",
+    );
+  }
+  const parsed = result.data;
+
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    const previous = await getTenantById(transaction, tenantId);
+    const row = await updateTenantStalledThreshold(
+      transaction,
+      tenantId,
+      parsed.stalledOpportunityDays,
+    );
+    if (!row) {
+      throw new TenantError("tenant_not_found", "Organisation introuvable.");
+    }
+
+    // Une sauvegarde sans changement réel n'encombre pas le journal d'audit.
+    if (previous.stalledOpportunityDays !== parsed.stalledOpportunityDays) {
+      await recordAuditLog(transaction, {
+        tenantId,
+        actorId: userId,
+        action: "organization.preferences_updated",
+        targetType: "tenant",
+        targetId: tenantId,
+        metadata: {
+          field: "stalledOpportunityDays",
+          previousValue: previous.stalledOpportunityDays,
+          nextValue: parsed.stalledOpportunityDays,
+        },
+      });
+    }
+
+    return mapTenant(row);
+  });
+}
+
 export async function getTenantBySlug(db: DbClient, slug: string) {
   const tenant = await findTenantBySlug(db, slug);
   return tenant ? mapTenant(tenant) : null;
@@ -641,6 +701,9 @@ function mapTenant(row: TenantRow): Tenant {
     name: row.name,
     slug: row.slug,
     category: row.category,
+    // Une organisation créée avant la migration lit la valeur par défaut.
+    stalledOpportunityDays:
+      row.stalled_opportunity_days ?? stalledOpportunityDays,
     createdAt: row.created_at,
   };
 }

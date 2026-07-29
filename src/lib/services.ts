@@ -115,8 +115,10 @@ import {
   invitationSchema,
   orgSchema,
   resendInvitation,
+  tenantPreferencesSchema,
   updateMemberRole,
   updateMemberRoleSchema,
+  updateTenantPreferences,
   acceptInvitationSchema,
 } from "@/modules/tenants";
 import { createDefaultTenantResources } from "@/modules/tenants/provisioning";
@@ -386,6 +388,11 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof updateMemberRoleSchema>,
     ) => updateMemberRole(db, userId, tenantId, input),
+    updateTenantPreferences: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof tenantPreferencesSchema>,
+    ) => updateTenantPreferences(db, userId, tenantId, input),
     saveOnboarding: (
       userId: string,
       tenantId: string,

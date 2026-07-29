@@ -224,6 +224,32 @@ export async function updateMemberRoleAction(formData: FormData) {
   redirect("/parametres");
 }
 
+export async function updateTenantPreferencesAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+
+  try {
+    await safeServerAction("organization.preferences_update", () =>
+      services.updateTenantPreferences(user.id, tenant.id, {
+        stalledOpportunityDays: text(formData, "stalledOpportunityDays"),
+      }),
+    );
+  } catch (error) {
+    // Une saisie hors bornes revient sur la page avec son message, pas en 500.
+    if (error instanceof PublicActionError) {
+      redirect(
+        `/parametres?preferences=erreur&messagePreferences=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/parametres");
+  revalidatePath("/aujourdhui");
+  revalidatePath("/opportunites");
+  redirect("/parametres?preferences=ok");
+}
+
 export async function saveOnboardingAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

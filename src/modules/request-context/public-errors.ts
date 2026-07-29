@@ -143,6 +143,10 @@ function mapTenantError(error: TenantError): PublicError {
   if (error.code === "member_exists") {
     return publicError(error.code, "tenant", "Cette personne est déjà membre.", 409);
   }
+  if (error.code === "invalid_tenant_preference") {
+    // Le message vient d'un libellé écrit dans le schéma, pas d'une trace zod.
+    return publicError(error.code, "validation", error.message, 400);
+  }
   if (error.code.startsWith("invalid_invitation")) {
     return publicError(
       error.code,

@@ -33,10 +33,11 @@ export default async function OpportunitiesPage({
     }),
   ]);
   const boardView = params.vue === "tableau";
+  const stalledDays = tenant.stalledOpportunityDays;
   const activeFilter = followUpDue
     ? "Opportunités à relancer (échéance aujourd'hui ou dépassée)"
     : stalled
-      ? "Opportunités bloquées (sans avancée depuis plus de 7 jours)"
+      ? `Opportunités bloquées (sans avancée depuis plus de ${stalledDays} jours)`
       : null;
 
   return (
@@ -194,7 +195,7 @@ export default async function OpportunitiesPage({
               {followUpDue
                 ? "Planifiez une prochaine action sur vos opportunités ouvertes pour ne perdre aucune vente."
                 : stalled
-                  ? "Une opportunité apparaît ici quand elle reste ouverte plus de 7 jours sans avancer, faute d'action planifiée ou de relance effectuée."
+                  ? `Une opportunité apparaît ici quand elle reste ouverte plus de ${stalledDays} jours sans avancer, faute d'action planifiée ou de relance effectuée.`
                   : "Modifiez la recherche ou le filtre d'étape, ou créez une opportunité depuis la fiche d'un contact."}
             </p>
           </div>

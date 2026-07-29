@@ -30,6 +30,8 @@ export type Tenant = {
   name: string;
   slug: string;
   category: string;
+  /** Jours d'inactivité avant qu'une opportunité ouverte soit dite bloquée. */
+  stalledOpportunityDays: number;
   createdAt: string;
 };
 

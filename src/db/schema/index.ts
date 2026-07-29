@@ -42,6 +42,9 @@ export const tenants = pgTable("tenants", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   category: text("category").notNull(),
+  stalledOpportunityDays: integer("stalled_opportunity_days")
+    .notNull()
+    .default(7),
   createdAt: text("created_at").notNull(),
 });
 

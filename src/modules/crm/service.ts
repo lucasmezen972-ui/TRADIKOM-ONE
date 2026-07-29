@@ -64,7 +64,7 @@ import {
   type OpportunityFiltersInput,
   type OpportunityUpdateInput,
 } from "@/modules/crm/schemas";
-import { assertTenantAccess } from "@/modules/tenants";
+import { assertTenantAccess, getTenantById } from "@/modules/tenants";
 import { findMembershipRole } from "@/modules/tenants/repository";
 
 const crmWriteRoles: Role[] = [
@@ -658,13 +658,21 @@ export async function getOpportunities(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const parsed = opportunityFiltersSchema.parse(input);
+  // Le seuil configuré n'est lu que si le filtre « bloquées » est demandé :
+  // la liste sans filtre garde son coût d'origine.
+  const stalledThreshold = parsed.stalled
+    ? stalledBefore(
+        parsed.now,
+        (await getTenantById(db, tenantId)).stalledOpportunityDays,
+      )
+    : undefined;
   const filters = {
     search: parsed.search?.trim() || undefined,
     stageId: parsed.stageId?.trim() || undefined,
     followUpDueBefore: parsed.followUpDue
       ? getBusinessDayPeriod(parsed.now, parsed.timeZone).dayEndsAt
       : undefined,
-    stalledBefore: parsed.stalled ? stalledBefore(parsed.now) : undefined,
+    stalledBefore: stalledThreshold,
   };
   const [stages, opportunities] = await Promise.all([
     listPipelineStages(db, tenantId),
