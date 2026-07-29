@@ -13,6 +13,7 @@
 - Reset password securise, invitations d'equipe et administration des roles non-owner.
 - Exports universels (8 entites, CSV/XLSX/JSON, selection de champs et fenetre de dates) et suppression de compte RGPD.
 - Seuil d'opportunite bloquee reglable par organisation, entre 1 et 90 jours (`docs/COMMAND_CENTER.md`).
+- Apprentissage des refus par le conseiller strategique : une regle refusee est mise en sourdine 30 jours (`docs/STRATEGIC_ADVISOR.md`).
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
@@ -24,3 +25,4 @@
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.
 - Permettre le reordonnancement des cartes a l'interieur d'une colonne du pipeline (`docs/PIPELINE.md`).
 - Permettre de modifier une proposition depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).
+- Rendre configurable la duree de sourdine d'une regle refusee, fixee a 30 jours (`docs/STRATEGIC_ADVISOR.md`).

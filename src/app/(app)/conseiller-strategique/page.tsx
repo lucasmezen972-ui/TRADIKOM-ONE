@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BellOff,
   Check,
   Lightbulb,
   RefreshCw,
@@ -10,6 +11,7 @@ import {
 import {
   decideStrategicRecommendationAction,
   generateStrategicRecommendationsAction,
+  liftStrategicRuleMuteAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
@@ -34,6 +36,8 @@ type StrategicAdvisorPageProps = {
   searchParams: Promise<{
     analyse?: string;
     nouvelles?: string;
+    ecartees?: string;
+    sourdine?: string;
     decision?: "approved" | "rejected";
   }>;
 };
@@ -44,10 +48,10 @@ export default async function StrategicAdvisorPage({
   const params = await searchParams;
   const { user, tenant, membership } = await requireTenantContext();
   const services = await getServices();
-  const recommendations = await services.getStrategicAdvisor(
-    user.id,
-    tenant.id,
-  );
+  const [recommendations, mutedRules] = await Promise.all([
+    services.getStrategicAdvisor(user.id, tenant.id),
+    services.getStrategicRuleMutes(user.id, tenant.id),
+  ]);
   const canDecide = ["owner", "administrator", "manager"].includes(
     membership.role,
   );
@@ -86,7 +90,20 @@ export default async function StrategicAdvisorPage({
           <Check size={18} aria-hidden />
           Analyse terminée : {Number(params.nouvelles ?? 0)} nouvelle
           {Number(params.nouvelles ?? 0) > 1 ? "s" : ""} proposition
-          {Number(params.nouvelles ?? 0) > 1 ? "s" : ""}.
+          {Number(params.nouvelles ?? 0) > 1 ? "s" : ""}
+          {Number(params.ecartees ?? 0) > 0
+            ? `, ${Number(params.ecartees)} écartée${Number(params.ecartees) > 1 ? "s" : ""} car la règle est en sourdine`
+            : ""}
+          .
+        </div>
+      ) : null}
+      {params.sourdine === "levee" ? (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-950"
+        >
+          <Check size={18} aria-hidden />
+          Règle réactivée. Elle pourra être proposée à la prochaine analyse.
         </div>
       ) : null}
       {params.decision ? (
@@ -108,6 +125,55 @@ export default async function StrategicAdvisorPage({
         />
       </section>
 
+
+      {mutedRules.length > 0 ? (
+        <section
+          aria-labelledby="regles-en-sourdine"
+          className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <div className="flex items-start gap-3">
+            <BellOff className="mt-1 shrink-0 text-slate-500" size={19} aria-hidden />
+            <div>
+              <h2 id="regles-en-sourdine" className="text-xl font-bold">
+                Règles en sourdine
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Ces conseils ne reviendront pas avant l&apos;échéance indiquée
+                parce que vous les avez écartés — pas parce qu&apos;ils ne sont
+                plus détectés.
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 grid gap-3">
+            {mutedRules.map((mute) => (
+              <li
+                key={mute.ruleKey}
+                className="rounded-md border border-slate-200 px-4 py-3"
+              >
+                <p className="font-semibold text-slate-900">{mute.title}</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Motif du refus : {mute.reason}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Écartée le{" "}
+                  {new Date(mute.decidedAt).toLocaleDateString("fr-FR")}
+                  {mute.decidedByName ? ` par ${mute.decidedByName}` : ""} —
+                  réapparaîtra le{" "}
+                  {new Date(mute.muteEndsAt).toLocaleDateString("fr-FR")}.
+                </p>
+                {canDecide ? (
+                  <form action={liftStrategicRuleMuteAction} className="mt-3">
+                    <input type="hidden" name="ruleKey" value={mute.ruleKey} />
+                    <button className="inline-flex min-h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
+                      Réactiver maintenant
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {recommendations.length === 0 ? (
         <section className="rounded-lg border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
           <Lightbulb className="mx-auto text-slate-400" size={28} aria-hidden />

@@ -347,7 +347,7 @@ export async function generateStrategicRecommendationsAction() {
   revalidatePath("/conseiller-strategique");
   revalidatePath("/aujourdhui");
   redirect(
-    `/conseiller-strategique?analyse=1&nouvelles=${result.createdIds.length}`,
+    `/conseiller-strategique?analyse=1&nouvelles=${result.createdIds.length}&ecartees=${result.mutedCount}`,
   );
 }
 
@@ -369,6 +369,18 @@ export async function decideStrategicRecommendationAction(formData: FormData) {
   redirect(
     decisionRedirect(formData, "/conseiller-strategique", `decision=${decision}`),
   );
+}
+
+export async function liftStrategicRuleMuteAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("strategic_advisor.lift_rule_mute", () =>
+    services.liftStrategicRecommendationMute(user.id, tenant.id, {
+      ruleKey: text(formData, "ruleKey"),
+    }),
+  );
+  revalidatePath("/conseiller-strategique");
+  redirect("/conseiller-strategique?sourdine=levee");
 }
 
 export async function generateMarketingProposalsAction() {

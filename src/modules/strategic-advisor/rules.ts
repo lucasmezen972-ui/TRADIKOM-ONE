@@ -32,6 +32,24 @@ export type StrategicRecommendationCandidate = {
 
 export const strategicAdvisorGenerationVersion = "deterministic-rules-v1";
 
+/**
+ * Durée pendant laquelle une règle refusée n'est plus proposée. Le refus vaut
+ * pour la règle, pas pour l'empreinte : l'empreinte inclut les valeurs
+ * observées, donc un simple compteur qui bouge d'une unité suffirait à faire
+ * revenir un conseil que le dirigeant vient d'écarter.
+ */
+export const strategicRefusalMuteDays = 30;
+
+export function strategicMuteStartedAfter(now: Date, days = strategicRefusalMuteDays) {
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+export function strategicMuteEndsAt(decidedAt: string, days = strategicRefusalMuteDays) {
+  return new Date(
+    new Date(decidedAt).getTime() + days * 24 * 60 * 60 * 1000,
+  ).toISOString();
+}
+
 export function buildStrategicRecommendationCandidates(
   workspace: BusinessBrainWorkspace,
 ) {

@@ -207,7 +207,10 @@ import {
   decideStrategicRecommendation,
   generateStrategicRecommendations,
   getStrategicAdvisor,
+  getStrategicRuleMutes,
+  liftStrategicRecommendationMute,
   strategicRecommendationDecisionSchema,
+  strategicRuleMuteSchema,
 } from "@/modules/strategic-advisor";
 import {
   applyApprovedWebsiteAiProposal,
@@ -419,8 +422,21 @@ export function createServices(
     ) => archiveBusinessBrainEntry(db, userId, tenantId, input),
     getStrategicAdvisor: (userId: string, tenantId: string) =>
       getStrategicAdvisor(db, userId, tenantId),
-    generateStrategicRecommendations: (userId: string, tenantId: string) =>
-      generateStrategicRecommendations(db, userId, tenantId),
+    getStrategicRuleMutes: (
+      userId: string,
+      tenantId: string,
+      options: { now?: Date } = {},
+    ) => getStrategicRuleMutes(db, userId, tenantId, options),
+    liftStrategicRecommendationMute: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof strategicRuleMuteSchema>,
+    ) => liftStrategicRecommendationMute(db, userId, tenantId, input),
+    generateStrategicRecommendations: (
+      userId: string,
+      tenantId: string,
+      options: { now?: Date } = {},
+    ) => generateStrategicRecommendations(db, userId, tenantId, options),
     decideStrategicRecommendation: (
       userId: string,
       tenantId: string,
