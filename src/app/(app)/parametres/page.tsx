@@ -10,6 +10,10 @@ import {
   maxStalledOpportunityDays,
   minStalledOpportunityDays,
 } from "@/lib/pipeline-stages";
+import {
+  maxStrategicMuteDays,
+  minStrategicMuteDays,
+} from "@/modules/strategic-advisor/rules";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
 import type { Role } from "@/lib/types";
@@ -325,18 +329,41 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 className="w-40 rounded-md border border-slate-200 px-4 py-3 font-normal"
               />
             </label>
+            <label
+              className="grid gap-1 text-sm font-semibold text-slate-700"
+              htmlFor="strategicMuteDays"
+            >
+              Sourdine d&apos;une règle refusée (jours)
+              <input
+                id="strategicMuteDays"
+                name="strategicMuteDays"
+                type="number"
+                inputMode="numeric"
+                min={minStrategicMuteDays}
+                max={maxStrategicMuteDays}
+                step={1}
+                required
+                defaultValue={tenant.strategicMuteDays}
+                className="w-40 rounded-md border border-slate-200 px-4 py-3 font-normal"
+              />
+            </label>
             <button className="rounded-md bg-[#08111f] px-5 py-3 font-semibold text-white">
               Enregistrer
             </button>
-            <p className="text-sm text-slate-500">
-              Entre {minStalledOpportunityDays} et {maxStalledOpportunityDays}{" "}
-              jours.
+            <p className="w-full text-sm text-slate-500">
+              Seuil bloqué : entre {minStalledOpportunityDays} et{" "}
+              {maxStalledOpportunityDays} jours. Sourdine : entre{" "}
+              {minStrategicMuteDays} et {maxStrategicMuteDays} jours — durée
+              pendant laquelle un conseil refusé n&apos;est plus proposé
+              (`docs/STRATEGIC_ADVISOR.md`).
             </p>
           </form>
         ) : (
           <p className="mt-4 rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-600">
-            Seuil actuel : {tenant.stalledOpportunityDays} jours. Seuls le
-            propriétaire et les administrateurs peuvent le modifier.
+            Seuil d&apos;opportunité bloquée : {tenant.stalledOpportunityDays}{" "}
+            jours. Sourdine d&apos;une règle refusée :{" "}
+            {tenant.strategicMuteDays} jours. Seuls le propriétaire et les
+            administrateurs peuvent les modifier.
           </p>
         )}
       </section>

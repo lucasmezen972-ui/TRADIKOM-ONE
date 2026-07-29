@@ -337,6 +337,7 @@ function getMigrations(enableRls: boolean) {
           sql: emailSuppressionsRlsMigrationSql,
         }]
       : []),
+    { id: "077_tenant_mute_preference", sql: tenantMutePreferenceMigrationSql },
   ];
 }
 
@@ -4093,6 +4094,23 @@ alter table strategic_recommendations
 
 create index if not exists idx_strategic_recommendations_tenant_rule_decided
   on strategic_recommendations (tenant_id, rule_key, decided_at desc);
+`;
+
+/**
+ * Seconde préférence d'organisation, même table et même raisonnement que
+ * `073_tenant_preferences` : colonne additive, contrainte SQL en miroir des
+ * bornes zod, aucune migration d'isolation à ajouter.
+ */
+const tenantMutePreferenceMigrationSql = `
+alter table tenants
+  add column if not exists strategic_mute_days integer not null default 30;
+
+alter table tenants
+  drop constraint if exists tenants_strategic_mute_days_range;
+
+alter table tenants
+  add constraint tenants_strategic_mute_days_range
+  check (strategic_mute_days between 1 and 365);
 `;
 
 /**

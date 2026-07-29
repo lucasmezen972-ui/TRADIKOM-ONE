@@ -1,6 +1,7 @@
 import type { DbClient } from "@/lib/db";
 import { withTenantDbTransaction } from "@/db/tenant-context";
 import { stalledOpportunityDays } from "@/lib/pipeline-stages";
+import { strategicRefusalMuteDays } from "@/modules/strategic-advisor/rules";
 import { daysFromNow, hashToken, id, nowIso, secureToken, slugify } from "@/lib/security";
 import type { Membership, Role, Tenant } from "@/lib/types";
 import {
@@ -35,7 +36,7 @@ import {
   tenantSlugExists,
   updateInvitationDelivery,
   updateMembershipRole,
-  updateTenantStalledThreshold,
+  updateTenantPreferenceColumns,
   type InvitationRow,
   type TenantRow,
 } from "@/modules/tenants/repository";
@@ -91,6 +92,7 @@ export async function createTenant(
       slug,
       category: parsed.category,
       stalledOpportunityDays,
+      strategicMuteDays: strategicRefusalMuteDays,
       createdAt: now,
     });
     await insertMembership(transaction, {
@@ -115,6 +117,7 @@ export async function createTenant(
       slug,
       category: parsed.category,
       stalledOpportunityDays,
+      strategicMuteDays: strategicRefusalMuteDays,
       createdAt: now,
     } satisfies Tenant;
   });
@@ -618,17 +621,26 @@ export async function updateTenantPreferences(
 
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     const previous = await getTenantById(transaction, tenantId);
-    const row = await updateTenantStalledThreshold(
-      transaction,
-      tenantId,
-      parsed.stalledOpportunityDays,
-    );
+    const next = {
+      stalledOpportunityDays:
+        parsed.stalledOpportunityDays ?? previous.stalledOpportunityDays,
+      strategicMuteDays: parsed.strategicMuteDays ?? previous.strategicMuteDays,
+    };
+    const row = await updateTenantPreferenceColumns(transaction, tenantId, next);
     if (!row) {
       throw new TenantError("tenant_not_found", "Organisation introuvable.");
     }
 
-    // Une sauvegarde sans changement réel n'encombre pas le journal d'audit.
-    if (previous.stalledOpportunityDays !== parsed.stalledOpportunityDays) {
+    // Une sauvegarde sans changement réel n'encombre pas le journal d'audit,
+    // et un champ inchangé n'y apparaît pas non plus.
+    const changed = (
+      [
+        ["stalledOpportunityDays", next.stalledOpportunityDays],
+        ["strategicMuteDays", next.strategicMuteDays],
+      ] as const
+    ).filter(([field, value]) => previous[field] !== value);
+
+    for (const [field, nextValue] of changed) {
       await recordAuditLog(transaction, {
         tenantId,
         actorId: userId,
@@ -636,9 +648,9 @@ export async function updateTenantPreferences(
         targetType: "tenant",
         targetId: tenantId,
         metadata: {
-          field: "stalledOpportunityDays",
-          previousValue: previous.stalledOpportunityDays,
-          nextValue: parsed.stalledOpportunityDays,
+          field,
+          previousValue: previous[field],
+          nextValue,
         },
       });
     }
@@ -720,6 +732,7 @@ function mapTenant(row: TenantRow): Tenant {
     // Une organisation créée avant la migration lit la valeur par défaut.
     stalledOpportunityDays:
       row.stalled_opportunity_days ?? stalledOpportunityDays,
+    strategicMuteDays: row.strategic_mute_days ?? strategicRefusalMuteDays,
     createdAt: row.created_at,
   };
 }

@@ -39,6 +39,8 @@ export const strategicAdvisorGenerationVersion = "deterministic-rules-v1";
  * revenir un conseil que le dirigeant vient d'écarter.
  */
 export const strategicRefusalMuteDays = 30;
+export const minStrategicMuteDays = 1;
+export const maxStrategicMuteDays = 365;
 
 export function strategicMuteStartedAfter(now: Date, days = strategicRefusalMuteDays) {
   return new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();

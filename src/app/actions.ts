@@ -266,6 +266,7 @@ export async function updateTenantPreferencesAction(formData: FormData) {
     await safeServerAction("organization.preferences_update", () =>
       services.updateTenantPreferences(user.id, tenant.id, {
         stalledOpportunityDays: text(formData, "stalledOpportunityDays"),
+        strategicMuteDays: text(formData, "strategicMuteDays"),
       }),
     );
   } catch (error) {
@@ -281,6 +282,7 @@ export async function updateTenantPreferencesAction(formData: FormData) {
   revalidatePath("/parametres");
   revalidatePath("/aujourdhui");
   revalidatePath("/opportunites");
+  revalidatePath("/conseiller-strategique");
   redirect("/parametres?preferences=ok");
 }
 

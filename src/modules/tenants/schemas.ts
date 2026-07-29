@@ -4,6 +4,10 @@ import {
   maxStalledOpportunityDays,
   minStalledOpportunityDays,
 } from "@/lib/pipeline-stages";
+import {
+  maxStrategicMuteDays,
+  minStrategicMuteDays,
+} from "@/modules/strategic-advisor/rules";
 
 export const invitationRoles = [
   "administrator",
@@ -34,9 +38,12 @@ export const updateMemberRoleSchema = z.object({
 });
 
 /**
- * Les bornes reprennent celles de la contrainte SQL `tenants_stalled_
- * opportunity_days_range` : un refus se voit ici, avec un message lisible,
- * plutôt qu'en erreur de base.
+ * Les bornes reprennent celles des contraintes SQL correspondantes : un refus
+ * se voit ici, avec un message lisible, plutôt qu'en erreur de base.
+ *
+ * Chaque réglage est facultatif et seul ce qui est fourni est écrit : un
+ * appelant qui ne touche qu'une préférence n'a pas à connaître la valeur de
+ * l'autre, ni à risquer de l'écraser.
  */
 export const tenantPreferencesSchema = z.object({
   stalledOpportunityDays: z.coerce
@@ -49,7 +56,20 @@ export const tenantPreferencesSchema = z.object({
     .max(
       maxStalledOpportunityDays,
       `Le seuil ne peut pas dépasser ${maxStalledOpportunityDays} jours.`,
-    ),
+    )
+    .optional(),
+  strategicMuteDays: z.coerce
+    .number()
+    .int("La durée de sourdine doit être un nombre entier de jours.")
+    .min(
+      minStrategicMuteDays,
+      `La sourdine doit durer au moins ${minStrategicMuteDays} jour.`,
+    )
+    .max(
+      maxStrategicMuteDays,
+      `La sourdine ne peut pas dépasser ${maxStrategicMuteDays} jours.`,
+    )
+    .optional(),
 });
 
 export type CreateTenantInput = z.input<typeof orgSchema>;

@@ -44,6 +44,7 @@ describe("tenant preferences", () => {
   it("defaults to seven days and applies the configured threshold", async () => {
     const { services, owner, tenant } = await setupTenant("defaut");
     expect(tenant.stalledOpportunityDays).toBe(7);
+    expect(tenant.strategicMuteDays).toBe(30);
 
     const now = fourDaysLater();
     const withDefault = await services.getOpportunities(owner.id, tenant.id, {
@@ -160,5 +161,98 @@ describe("tenant preferences", () => {
         (log) => log.action === "organization.preferences_updated",
       ),
     ).toHaveLength(1);
+  }, 60_000);
+});
+
+describe("strategic mute duration", () => {
+  it("shortens the mute window when the organisation reduces it", async () => {
+    const { services, owner, tenant } = await setupTenant("sourdine");
+    await services.createBusinessBrainEntry(owner.id, tenant.id, {
+      domain: "objectives",
+      title: "Developper les contrats recurrents",
+      summary: "Signer dix contrats recurrents avant la fin du trimestre.",
+      details: "Cible validee par la direction.",
+      confidence: 88,
+      sourceType: "manual",
+      evidenceType: "document",
+      evidenceSummary: "Compte-rendu de la revue trimestrielle.",
+    });
+    await services.generateStrategicRecommendations(owner.id, tenant.id);
+    const recommendations = await services.getStrategicAdvisor(
+      owner.id,
+      tenant.id,
+    );
+    const proposed = recommendations.find((item) => item.status === "proposed")!;
+    await services.decideStrategicRecommendation(owner.id, tenant.id, {
+      recommendationId: proposed.id,
+      decision: "rejected",
+      reason: "Priorite differente ce trimestre.",
+    });
+
+    // A J+10, la sourdine par defaut de 30 jours court encore.
+    const tenDaysLater = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    const stillMuted = await services.getStrategicRuleMutes(
+      owner.id,
+      tenant.id,
+      { now: tenDaysLater },
+    );
+    expect(stillMuted.some((item) => item.ruleKey === proposed.ruleKey)).toBe(
+      true,
+    );
+    expect(stillMuted[0]?.muteDays).toBe(30);
+
+    // Ramenee a 5 jours, la meme regle est de nouveau proposable.
+    await services.updateTenantPreferences(owner.id, tenant.id, {
+      strategicMuteDays: 5,
+    });
+    const released = await services.getStrategicRuleMutes(owner.id, tenant.id, {
+      now: tenDaysLater,
+    });
+    expect(released.some((item) => item.ruleKey === proposed.ruleKey)).toBe(
+      false,
+    );
+
+    const generation = await services.generateStrategicRecommendations(
+      owner.id,
+      tenant.id,
+      { now: tenDaysLater },
+    );
+    expect(generation.mutedCount).toBe(0);
+  }, 60_000);
+
+  it("updates only the preference that was submitted", async () => {
+    const { services, owner, tenant } = await setupTenant("partiel");
+
+    await services.updateTenantPreferences(owner.id, tenant.id, {
+      strategicMuteDays: 60,
+    });
+    const context = await services.getTenantContext(owner.id, tenant.id);
+    // Le seuil d'opportunite bloquee n'a pas ete touche.
+    expect(context?.tenant.stalledOpportunityDays).toBe(7);
+    expect(context?.tenant.strategicMuteDays).toBe(60);
+
+    const logs = await services.getAuditLogs(owner.id, tenant.id);
+    const entries = logs.filter(
+      (log) => log.action === "organization.preferences_updated",
+    );
+    // Un seul champ a change : une seule ligne d'audit.
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.metadata).toMatchObject({
+      field: "strategicMuteDays",
+      previousValue: 30,
+      nextValue: 60,
+    });
+  }, 60_000);
+
+  it("refuses a mute duration outside the bounds", async () => {
+    const { services, owner, tenant } = await setupTenant("bornes-sourdine");
+
+    for (const invalid of [0, 366, 2.5, "abc"]) {
+      await expect(
+        services.updateTenantPreferences(owner.id, tenant.id, {
+          strategicMuteDays: invalid,
+        }),
+      ).rejects.toMatchObject({ code: "invalid_tenant_preference" });
+    }
   }, 60_000);
 });

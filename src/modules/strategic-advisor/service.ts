@@ -25,7 +25,6 @@ import {
   strategicAdvisorGenerationVersion,
   strategicMuteEndsAt,
   strategicMuteStartedAfter,
-  strategicRefusalMuteDays,
 } from "@/modules/strategic-advisor/rules";
 import {
   strategicRecommendationDecisionSchema,
@@ -33,7 +32,7 @@ import {
   type StrategicRecommendationDecisionInput,
   type StrategicRuleMuteInput,
 } from "@/modules/strategic-advisor/schemas";
-import { assertTenantAccess } from "@/modules/tenants";
+import { assertTenantAccess, getTenantById } from "@/modules/tenants";
 
 const advisorRoles = ["owner", "administrator", "manager"] as const;
 
@@ -107,6 +106,8 @@ export async function generateStrategicRecommendations(
     const candidates = buildStrategicRecommendationCandidates(workspace);
     const clock = options.now ?? new Date();
     const now = clock.toISOString();
+    const muteDays = (await getTenantById(transaction, tenantId))
+      .strategicMuteDays;
     // Une règle refusée récemment est écartée avant toute autre vérification :
     // la déduplication par empreinte ne suffit pas, l'empreinte change dès
     // qu'une valeur observée bouge.
@@ -115,7 +116,7 @@ export async function generateStrategicRecommendations(
         await listActiveStrategicRuleMutes(
           transaction,
           tenantId,
-          strategicMuteStartedAfter(clock),
+          strategicMuteStartedAfter(clock, muteDays),
         )
       ).map((mute) => mute.rule_key),
     );
@@ -208,10 +209,11 @@ export async function getStrategicRuleMutes(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const clock = options.now ?? new Date();
+  const muteDays = (await getTenantById(db, tenantId)).strategicMuteDays;
   const rows = await listActiveStrategicRuleMutes(
     db,
     tenantId,
-    strategicMuteStartedAfter(clock),
+    strategicMuteStartedAfter(clock, muteDays),
   );
 
   return rows.map((row) => ({
@@ -221,8 +223,8 @@ export async function getStrategicRuleMutes(
     reason: row.decision_reason,
     decidedAt: row.decided_at,
     decidedByName: row.decided_by_name ?? undefined,
-    muteEndsAt: strategicMuteEndsAt(row.decided_at),
-    muteDays: strategicRefusalMuteDays,
+    muteEndsAt: strategicMuteEndsAt(row.decided_at, muteDays),
+    muteDays,
   }));
 }
 
@@ -242,13 +244,15 @@ export async function liftStrategicRecommendationMute(
   const clock = options.now ?? new Date();
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, [...advisorRoles]);
+    const muteDays = (await getTenantById(transaction, tenantId))
+      .strategicMuteDays;
     // La levée ne touche que les refus qui mettent réellement la règle en
     // sourdine : un refus déjà expiré ne rend pas l'opération « réussie ».
     const lifted = await liftStrategicRuleMute(transaction, {
       tenantId,
       ruleKey: parsed.ruleKey,
       actorId: userId,
-      mutedSince: strategicMuteStartedAfter(clock),
+      mutedSince: strategicMuteStartedAfter(clock, muteDays),
       now: nowIso(),
     });
     if (lifted.length === 0) {

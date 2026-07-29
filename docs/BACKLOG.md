@@ -18,6 +18,7 @@
 - Liste de suppression email alimentee par les echecs definitifs de livraison (`docs/EMAIL_PROVIDER.md`).
 - Suppression d'un fichier envoye, refusee tant qu'il est utilise (`docs/ASSET_UPLOAD.md`).
 - Revision depuis le centre d'approbation des trois familles de contenu : marketing, reponse a un avis, contenu de site (`docs/APPROVAL_CENTER.md`).
+- Duree de sourdine d'une regle refusee reglable par organisation, entre 1 et 365 jours (`docs/STRATEGIC_ADVISOR.md`).
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
@@ -28,4 +29,3 @@
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.
 - Permettre le reordonnancement des cartes a l'interieur d'une colonne du pipeline (`docs/PIPELINE.md`).
-- Rendre configurable la duree de sourdine d'une regle refusee, fixee a 30 jours (`docs/STRATEGIC_ADVISOR.md`).

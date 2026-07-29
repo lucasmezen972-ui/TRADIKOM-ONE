@@ -30,7 +30,7 @@ La troisième condition compte les deux cas parce que le workflow de lead planif
 
 ### Seuil réglable par organisation
 
-N vaut 7 jours par défaut et se règle dans `Paramètres` → `Pilotage commercial`, entre 1 et 90 jours. La valeur vit dans `tenants.stalled_opportunity_days` (migration `073_tenant_preferences`, miroir SQL `0067`) : une colonne additive sur une table qui porte déjà sa politique RLS, donc rien à ajouter côté isolation, contrairement à une nouvelle table.
+N vaut 7 jours par défaut et se règle dans `Paramètres` → `Pilotage commercial`, entre 1 et 90 jours, aux côtés de la durée de sourdine du conseiller (`docs/STRATEGIC_ADVISOR.md`). La valeur vit dans `tenants.stalled_opportunity_days` (migration `073_tenant_preferences`, miroir SQL `0067`) : une colonne additive sur une table qui porte déjà sa politique RLS, donc rien à ajouter côté isolation, contrairement à une nouvelle table.
 
 Le réglage est réservé au propriétaire et aux administrateurs, et chaque changement réel est tracé dans le journal d'audit (`organization.preferences_updated`, avec l'ancienne et la nouvelle valeur). Une sauvegarde identique n'écrit rien.
 

@@ -8,7 +8,9 @@ Un refus vaut pour **la règle**, pas pour la proposition qui l'a portée.
 
 La déduplication d'origine compare une empreinte calculée sur `ruleKey` **et les preuves**, valeurs observées comprises. Elle empêchait bien de recréer une proposition strictement identique, mais pas de faire revenir le même conseil dès qu'un compteur bougeait d'une unité : nouvelle empreinte, nouvelle proposition, alors que le dirigeant venait de l'écarter. Ce n'était pas un apprentissage, c'était de l'insistance.
 
-Depuis, refuser une recommandation met sa règle **en sourdine pendant 30 jours** (`strategicRefusalMuteDays`). Pendant cette fenêtre, la génération écarte la règle **avant** toute vérification d'empreinte, quelle que soit l'évolution des valeurs observées.
+Depuis, refuser une recommandation met sa règle **en sourdine**, par défaut 30 jours. Pendant cette fenêtre, la génération écarte la règle **avant** toute vérification d'empreinte, quelle que soit l'évolution des valeurs observées.
+
+La durée se règle par organisation dans `Paramètres` → `Pilotage commercial`, entre 1 et 365 jours (`tenants.strategic_mute_days`, migration `077_tenant_mute_preference`, miroir SQL `0071`). Réduire la durée **libère immédiatement** les règles dont le refus est déjà plus ancien que la nouvelle fenêtre : l'état est dérivé, pas stocké, donc il n'y a rien à recalculer. Les deux réglages d'organisation partagent le même formulaire et le même service ; chacun est facultatif et n'écrase pas l'autre.
 
 ### Ce que voit le dirigeant
 
@@ -37,7 +39,6 @@ L'état de sourdine est **dérivé** du refus le plus récent de chaque règle (
 
 ## Limites actuelles
 
-- La durée de 30 jours est une constante, pas un réglage par organisation.
 - La sourdine est binaire : elle ne pondère pas la confiance d'une règle souvent refusée, elle la suspend.
 - Le motif du refus est conservé et affiché, mais il n'influence pas le contenu des recommandations suivantes — les règles restent déterministes.
 - Une règle refusée puis réactivée peut immédiatement reproposer la même proposition si l'empreinte a changé entre-temps.

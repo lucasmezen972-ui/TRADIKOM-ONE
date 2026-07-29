@@ -32,6 +32,8 @@ export type Tenant = {
   category: string;
   /** Jours d'inactivité avant qu'une opportunité ouverte soit dite bloquée. */
   stalledOpportunityDays: number;
+  /** Jours pendant lesquels une règle refusée n'est plus proposée. */
+  strategicMuteDays: number;
   createdAt: string;
 };
 
