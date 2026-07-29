@@ -294,7 +294,14 @@ export async function reviseMarketingProposal(
         "La proposition a déjà été modifiée.",
       );
     }
-    await supersedeMarketingApproval(transaction, tenantId, current.id);
+    // Une proposition qui attendait une decision doit continuer a l'attendre
+    // apres correction : sans cela, reviser depuis le centre d'approbation la
+    // ferait disparaitre silencieusement de la file.
+    const wasAwaitingDecision = await supersedeMarketingApproval(
+      transaction,
+      tenantId,
+      current.id,
+    );
     const proposalId = id("marketing_proposal");
     const version = current.version + 1;
     await insertMarketingProposal(transaction, {
@@ -346,6 +353,16 @@ export async function reviseMarketingProposal(
         now,
       });
     }
+    if (wasAwaitingDecision) {
+      await submitMarketingProposal(transaction, tenantId, proposalId, now);
+      await insertMarketingApproval(transaction, {
+        id: id("approval"),
+        tenantId,
+        actorId: userId,
+        proposalId,
+        now,
+      });
+    }
     await recordAuditLog(transaction, {
       tenantId,
       actorId: userId,
@@ -355,9 +372,10 @@ export async function reviseMarketingProposal(
       metadata: {
         supersedesId: current.id,
         version,
+        awaitingDecision: wasAwaitingDecision,
         executionTriggered: false,
       },
     });
-    return { proposalId, version };
+    return { proposalId, version, awaitingDecision: wasAwaitingDecision };
   });
 }

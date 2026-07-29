@@ -46,8 +46,22 @@ Seuls `owner`, `administrator` et `manager` accèdent au contenu, alignés sur l
 
 Les server actions de décision acceptent un champ `retour`. Sa valeur est validée contre une allowlist (`/validations` uniquement) avant redirection : le champ vient d'un formulaire et ne doit jamais permettre une redirection ouverte. Sans ce champ, chaque action redirige vers sa page d'origine comme avant.
 
+## Modifier une proposition avant de décider
+
+Approuver ou refuser n'est pas toujours le bon geste : une campagne peut être juste dans son intention et fausse dans sa formulation. Chaque carte dont le module sait réviser une proposition porte donc un volet « Modifier cette proposition avant de décider », replié par défaut.
+
+**Le centre d'approbation reste en lecture seule.** Le formulaire soumet la server action du module d'origine — aujourd'hui `reviseMarketingProposalAction` — qui seule connaît le versionnage des propositions : la version courante est marquée `superseded`, son approbation aussi, et une nouvelle version `version + 1` est créée avec sa propre demande d'approbation. Le centre n'écrit jamais dans un module à sa place, exactement comme pour les décisions.
+
+Enregistrer une modification **ne décide rien** : la nouvelle version revient dans la file, à décider, avec les corrections. Rien n'est envoyé.
+
+Le champ `retour` est validé contre la même allowlist que les décisions avant redirection.
+
+### Modules concernés
+
+Seul le **marketing autonome** expose aujourd'hui une révision. Le champ `revision` de `ApprovalCenterItem` est optionnel et discriminé par `module` : brancher un second module consiste à ajouter une variante, que le compilateur oblige alors à traiter partout. Les quatre autres familles n'affichent aucun contrôle de modification — un bouton inerte serait pire qu'une absence.
+
 ## Limites actuelles
 
-- Le contenu d'une proposition ne peut pas être modifié depuis le centre ; la modification reste sur la page du module, qui connaît la forme exacte de l'objet.
+- Seul le marketing autonome permet la modification depuis le centre. Les recommandations stratégiques, le contenu de site, les réponses aux avis et la veille concurrentielle n'ont pas encore de révision — chacune a ses propres champs, sa table et sa sémantique de version.
 - La file est bornée à 25 propositions, la liste des reportées à 25 et l'historique à 15 décisions.
 - Aucune notification n'est envoyée quand une proposition reportée revient dans la file : elle réapparaît au prochain chargement.

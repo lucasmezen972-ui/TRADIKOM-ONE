@@ -25,6 +25,19 @@ type PendingRow = {
 };
 
 /**
+ * Colonnes supplémentaires du marketing, seul module qui sache aujourd'hui
+ * réviser une proposition. Elles ne rejoignent la ligne générique que pour
+ * alimenter le formulaire d'édition.
+ */
+type MarketingPendingRow = PendingRow & {
+  channel: "email" | "sms" | "whatsapp";
+  subject: string;
+  audience: string;
+  content: string;
+  call_to_action: string;
+};
+
+/**
  * Les propositions en attente sont lues type par type : chaque module borné
  * possède son propre contenu, son propre vocabulaire de statut et sa propre
  * page de décision. La jointure part toujours de `approvals`, seule source
@@ -61,12 +74,14 @@ export async function listPendingMarketingApprovals(
   now: string,
   limit: number,
 ) {
-  const result = await db.query<PendingRow>(
+  const result = await db.query<MarketingPendingRow>(
     `select approvals.id as approval_id, proposals.id as target_id,
        approvals.created_at as requested_at, proposals.title,
        proposals.objective as rationale,
        proposals.expected_outcome as expected_gain,
-       proposals.risk_summary, null as confidence
+       proposals.risk_summary, null as confidence,
+       proposals.channel, proposals.subject, proposals.audience,
+       proposals.content, proposals.call_to_action
      from approvals
      join marketing_campaign_proposals as proposals
        on proposals.id = approvals.target_id
@@ -78,7 +93,21 @@ export async function listPendingMarketingApprovals(
      limit $3`,
     [tenantId, now, limit],
   );
-  return result.rows.map((row) => mapPending(row, "marketing"));
+  return result.rows.map((row) => ({
+    ...mapPending(row, "marketing"),
+    revision: {
+      module: "marketing" as const,
+      channel: row.channel,
+      title: row.title,
+      subject: row.subject,
+      objective: row.rationale ?? "",
+      audience: row.audience,
+      content: row.content,
+      callToAction: row.call_to_action,
+      expectedOutcome: row.expected_gain ?? "",
+      riskSummary: row.risk_summary ?? "",
+    },
+  }));
 }
 
 export async function listPendingWebsiteAiApprovals(

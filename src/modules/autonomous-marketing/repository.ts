@@ -303,15 +303,22 @@ export async function supersedeMarketingProposal(
   return result.rows[0] ?? null;
 }
 
+/**
+ * Renvoie vrai si une demande d'approbation etait reellement en attente. La
+ * revision s'en sert pour savoir si la nouvelle version doit, elle aussi,
+ * attendre une decision.
+ */
 export async function supersedeMarketingApproval(
   db: DbClient,
   tenantId: string,
   proposalId: string,
 ) {
-  await db.query(
+  const result = await db.query<{ id: string }>(
     `update approvals set status = 'superseded'
      where tenant_id = $1 and target_type = 'marketing_campaign_proposal'
-       and target_id = $2 and status = 'pending'`,
+       and target_id = $2 and status = 'pending'
+     returning id`,
     [tenantId, proposalId],
   );
+  return result.rows.length > 0;
 }

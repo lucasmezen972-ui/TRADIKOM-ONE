@@ -3,6 +3,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
+  FilePenLine,
   History,
   ShieldCheck,
   XCircle,
@@ -14,6 +15,7 @@ import {
   decideStrategicRecommendationAction,
   decideWebsiteAiProposalAction,
   resumeApprovalAction,
+  reviseMarketingProposalAction,
   snoozeApprovalAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -22,6 +24,7 @@ import type {
   ApprovalCenterDecision,
   ApprovalCenterItem,
   ApprovalCenterSnoozedItem,
+  MarketingApprovalRevision,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +41,7 @@ type ValidationsPageProps = {
   searchParams: Promise<{
     decision?: string;
     iaDecision?: string;
+    revision?: string;
     report?: string;
     reprise?: string;
   }>;
@@ -86,6 +90,19 @@ export default async function ValidationsPage({
             {lastDecision === "approved"
               ? "Action approuvée. Elle est enregistrée dans l'historique ci-dessous."
               : "Action refusée. Elle ne sera pas exécutée."}
+          </p>
+        </div>
+      ) : null}
+
+      {params.revision === "1" ? (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3"
+        >
+          <FilePenLine size={20} className="mt-0.5 text-emerald-700" aria-hidden />
+          <p className="text-sm font-semibold text-slate-800">
+            Nouvelle version enregistrée. Elle remplace la proposition
+            précédente et reste à décider.
           </p>
         </div>
       ) : null}
@@ -262,6 +279,23 @@ function PendingCard({ item }: { item: ApprovalCenterItem }) {
         </div>
       </form>
 
+      {item.revision ? (
+        <details className="mt-4 border-t border-slate-100 pt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+            Modifier cette proposition avant de décider
+          </summary>
+          <p className="mt-2 text-sm text-slate-500">
+            Enregistrer une modification crée une nouvelle version : celle-ci
+            remplace la proposition en attente, qui revient à décider avec vos
+            corrections. Rien n&apos;est envoyé.
+          </p>
+          <MarketingRevisionForm
+            targetId={item.targetId}
+            revision={item.revision}
+          />
+        </details>
+      ) : null}
+
       <details className="mt-4 border-t border-slate-100 pt-4">
         <summary className="cursor-pointer text-sm font-semibold text-slate-700">
           Reporter cette action à plus tard
@@ -300,6 +334,108 @@ function PendingCard({ item }: { item: ApprovalCenterItem }) {
         </p>
       </details>
     </article>
+  );
+}
+
+/**
+ * Le formulaire soumet la server action du module marketing, la seule qui
+ * connaisse le versionnage des propositions. Le centre d'approbation reste un
+ * agrégateur en lecture : il n'écrit jamais dans un module à sa place.
+ */
+function MarketingRevisionForm({
+  targetId,
+  revision,
+}: {
+  targetId: string;
+  revision: MarketingApprovalRevision;
+}) {
+  return (
+    <form
+      action={reviseMarketingProposalAction}
+      className="mt-3 grid gap-3"
+    >
+      <input type="hidden" name="proposalId" value={targetId} />
+      <input type="hidden" name="retour" value="/validations" />
+      <RevisionField label="Titre" name="title" value={revision.title} />
+      {revision.channel === "email" ? (
+        <RevisionField label="Objet" name="subject" value={revision.subject} />
+      ) : (
+        <input type="hidden" name="subject" value="" />
+      )}
+      <RevisionField
+        label="Objectif"
+        name="objective"
+        value={revision.objective}
+        multiline
+      />
+      <RevisionField
+        label="Public"
+        name="audience"
+        value={revision.audience}
+        multiline
+      />
+      <RevisionField
+        label="Contenu"
+        name="content"
+        value={revision.content}
+        multiline
+      />
+      <RevisionField
+        label="Appel à l'action"
+        name="callToAction"
+        value={revision.callToAction}
+      />
+      <RevisionField
+        label="Résultat attendu"
+        name="expectedOutcome"
+        value={revision.expectedOutcome}
+        multiline
+      />
+      <RevisionField
+        label="Points de vigilance"
+        name="riskSummary"
+        value={revision.riskSummary}
+        multiline
+      />
+      <button className="inline-flex w-fit items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
+        <FilePenLine size={16} aria-hidden />
+        Enregistrer la nouvelle version
+      </button>
+    </form>
+  );
+}
+
+function RevisionField({
+  label,
+  name,
+  value,
+  multiline = false,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  return (
+    <label className="grid gap-1 text-sm font-semibold text-slate-700">
+      {label}
+      {multiline ? (
+        <textarea
+          required
+          name={name}
+          defaultValue={value}
+          rows={3}
+          className="rounded-md border border-slate-300 px-4 py-3 font-normal"
+        />
+      ) : (
+        <input
+          required
+          name={name}
+          defaultValue={value}
+          className="rounded-md border border-slate-300 px-4 py-3 font-normal"
+        />
+      )}
+    </label>
   );
 }
 

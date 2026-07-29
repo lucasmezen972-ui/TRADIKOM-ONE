@@ -444,7 +444,8 @@ export async function reviseMarketingProposalAction(formData: FormData) {
     }),
   );
   revalidatePath("/marketing");
-  redirect("/marketing?revision=1");
+  revalidatePath("/validations");
+  redirect(decisionRedirect(formData, "/marketing", "revision=1"));
 }
 
 export async function generateWebsiteAiProposalsAction() {

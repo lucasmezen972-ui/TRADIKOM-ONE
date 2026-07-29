@@ -357,6 +357,25 @@ export type ApprovalCenterItem = {
   requestedAt: string;
   detailHref: string;
   decisionField: string;
+  /**
+   * Présent uniquement pour les modules qui savent réviser une proposition.
+   * L'union est discriminée par `module` : brancher un second module se fait
+   * en ajoutant une variante, que le compilateur oblige alors à traiter.
+   */
+  revision?: MarketingApprovalRevision;
+};
+
+export type MarketingApprovalRevision = {
+  module: "marketing";
+  channel: "email" | "sms" | "whatsapp";
+  title: string;
+  subject: string;
+  objective: string;
+  audience: string;
+  content: string;
+  callToAction: string;
+  expectedOutcome: string;
+  riskSummary: string;
 };
 
 export type ApprovalCenterDecision = {
