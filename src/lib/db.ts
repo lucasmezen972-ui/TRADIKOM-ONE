@@ -338,6 +338,10 @@ function getMigrations(enableRls: boolean) {
         }]
       : []),
     { id: "077_tenant_mute_preference", sql: tenantMutePreferenceMigrationSql },
+    {
+      id: "078_opportunity_board_position",
+      sql: opportunityBoardPositionMigrationSql,
+    },
   ];
 }
 
@@ -4094,6 +4098,19 @@ alter table strategic_recommendations
 
 create index if not exists idx_strategic_recommendations_tenant_rule_decided
   on strategic_recommendations (tenant_id, rule_key, decided_at desc);
+`;
+
+/**
+ * Colonne nullable et sans reprise de données : une opportunité jamais
+ * réordonnée garde `null` et conserve le tri par date de mise à jour. Les
+ * positions ne sont attribuées qu'au premier déplacement manuel.
+ */
+const opportunityBoardPositionMigrationSql = `
+alter table opportunities
+  add column if not exists board_position integer;
+
+create index if not exists idx_opportunities_tenant_stage_position
+  on opportunities (tenant_id, stage_id, board_position);
 `;
 
 /**

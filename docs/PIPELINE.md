@@ -40,9 +40,20 @@ Le déplacement passe par le service `updateOpportunity` en reprenant les valeur
 
 `src/components/pipeline-board.tsx` est le premier composant client du dépôt ; le reste de l'interface demeure en composants serveur.
 
+## Ordre des cartes dans une colonne
+
+Chaque carte porte deux boutons « ↑ » et « ↓ » qui la déplacent d'un cran dans sa colonne. Le choix des boutons plutôt que du glisser-déposer suit la règle du déplacement d'étape : le contrôle doit fonctionner au clavier, sur mobile et avec un lecteur d'écran. Chaque bouton porte un `aria-label` nommant l'opportunité et le sens du déplacement.
+
+La colonne `board_position` (migration `078_opportunity_board_position`, miroir SQL `0072`) est **nullable et sans reprise de données** : une opportunité jamais réordonnée garde `null` et conserve le tri par date de mise à jour. Le tri est `board_position asc nulls last, updated_at desc` — les cartes rangées à la main viennent d'abord, les autres suivent dans l'ordre habituel.
+
+Les positions sont attribuées **à la volée** depuis l'ordre affiché au moment du premier déplacement, et seules les deux cartes échangées sont réécrites : pas de renumérotation globale, pas de migration de données.
+
+Un déplacement au-delà du bord de la colonne ne fait rien et ne remonte **pas** d'erreur : demander de monter la première carte est une intention légitime, pas une faute à signaler.
+
 ## Limites actuelles
 
-- Le glisser-déposer ne réordonne pas les cartes à l'intérieur d'une colonne : seule l'étape change.
+- Le glisser-déposer ne réordonne pas les cartes à l'intérieur d'une colonne : il ne sert qu'au changement d'étape, l'ordre se règle avec les boutons.
+- Une carte déplacée vers une autre étape conserve sa position numérique ; elle peut donc atterrir au milieu de la colonne d'arrivée plutôt qu'à la fin.
 - La probabilité est saisie manuellement ; elle n'est pas déduite de l'étape ni calculée par un modèle.
 - Un seul pipeline par organisation.
 - L'historique conserve l'identifiant du responsable, pas son nom au moment du changement ; l'affichage indique donc « un autre responsable » plutôt que de résoudre un identifiant devenu obsolète.

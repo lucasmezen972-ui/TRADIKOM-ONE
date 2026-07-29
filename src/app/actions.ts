@@ -2003,6 +2003,19 @@ export async function deleteTenantAssetAction(formData: FormData) {
   redirect("/mon-site?fichier=supprime");
 }
 
+export async function reorderOpportunityAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("opportunity.reorder", () =>
+    services.reorderOpportunityInStage(user.id, tenant.id, {
+      opportunityId: text(formData, "opportunityId"),
+      direction: text(formData, "direction") === "up" ? "up" : "down",
+    }),
+  );
+  revalidatePath("/opportunites");
+  redirect("/opportunites?vue=tableau");
+}
+
 export async function moveOpportunityStageAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

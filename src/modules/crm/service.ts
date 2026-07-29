@@ -32,6 +32,7 @@ import {
   listOpportunities,
   listOpportunityChanges,
   listPipelineStages,
+  listStageOpportunityOrder,
   listTenantMemberOptions,
   listTasks,
   mergeContactConsents,
@@ -39,6 +40,7 @@ import {
   updateContact,
   updateContactConsent,
   updateMergedContactSurvivor,
+  updateOpportunityBoardPosition,
   updateOpportunityRecord,
 } from "@/modules/crm/repository";
 import {
@@ -51,6 +53,7 @@ import {
   contactUpdateSchema,
   duplicatePairSchema,
   opportunityFiltersSchema,
+  opportunityReorderSchema,
   opportunityLookupSchema,
   opportunityUpdateSchema,
   tenantContactLookupSchema,
@@ -62,6 +65,7 @@ import {
   type ContactUpdateInput,
   type CrmQueryInput,
   type OpportunityFiltersInput,
+  type OpportunityReorderInput,
   type OpportunityUpdateInput,
 } from "@/modules/crm/schemas";
 import { assertTenantAccess, getTenantById } from "@/modules/tenants";
@@ -680,6 +684,75 @@ export async function getOpportunities(
   ]);
 
   return { stages, opportunities };
+}
+
+/**
+ * Remonte ou descend une carte d'un cran dans sa colonne. Les positions sont
+ * attribuées à la volée depuis l'ordre affiché, puis seules les deux cartes
+ * échangées sont réécrites : aucune reprise de données, aucune renumérotation
+ * globale.
+ */
+export async function reorderOpportunityInStage(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: OpportunityReorderInput,
+) {
+  const parsed = opportunityReorderSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, crmWriteRoles);
+    const opportunity = await findOpportunityById(
+      transaction,
+      tenantId,
+      parsed.opportunityId,
+    );
+    if (!opportunity) {
+      throw new CrmError("opportunity_not_found", "Opportunite introuvable.");
+    }
+
+    const order = await listStageOpportunityOrder(
+      transaction,
+      tenantId,
+      opportunity.stageId,
+    );
+    const index = order.findIndex((row) => row.id === parsed.opportunityId);
+    const target = parsed.direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= order.length) {
+      // Déjà en haut ou en bas : rien à faire, et surtout pas une erreur.
+      return { moved: false };
+    }
+
+    // La position vaut l'index d'affichage courant ; l'échange ne touche que
+    // les deux cartes concernées.
+    const swapped = [...order];
+    [swapped[index], swapped[target]] = [swapped[target]!, swapped[index]!];
+    for (const [position, row] of swapped.entries()) {
+      if (order[position]?.id !== row.id || row.board_position !== position) {
+        await updateOpportunityBoardPosition(
+          transaction,
+          tenantId,
+          row.id,
+          position,
+        );
+      }
+    }
+
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "opportunity.reordered",
+      targetType: "opportunity",
+      targetId: parsed.opportunityId,
+      metadata: {
+        stageId: opportunity.stageId,
+        direction: parsed.direction,
+        fromPosition: index,
+        toPosition: target,
+      },
+    });
+
+    return { moved: true };
+  });
 }
 
 export async function getOpportunityDetail(

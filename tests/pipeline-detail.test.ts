@@ -219,3 +219,75 @@ describe("stage move", () => {
     expect(stageChange.changedByName).toBe(owner.name);
   }, 60_000);
 });
+
+describe("stage reordering", () => {
+  async function setupTwoOpportunities(suffix: string) {
+    const first = await setupPipeline(`${suffix}-a`);
+    // Un second lead dans la même organisation, donc la même colonne.
+    await first.services.submitPublicLead(first.tenant.slug, {
+      name: `Second Client ${suffix}`,
+      email: `second.client.${suffix}@example.com`,
+      phone: "+596 696 22 33 44",
+      message: "Deuxieme demande de devis",
+    });
+    const board = await first.services.getOpportunities(
+      first.owner.id,
+      first.tenant.id,
+      {},
+    );
+    return { ...first, board };
+  }
+
+  it("moves a card down and back up inside its column", async () => {
+    const { services, owner, tenant, board } =
+      await setupTwoOpportunities("ordre");
+    expect(board.opportunities.length).toBeGreaterThanOrEqual(2);
+    const initial = board.opportunities.map((item) => item.id);
+    const top = initial[0]!;
+
+    const moved = await services.reorderOpportunityInStage(owner.id, tenant.id, {
+      opportunityId: top,
+      direction: "down",
+    });
+    expect(moved).toEqual({ moved: true });
+
+    const afterDown = await services.getOpportunities(owner.id, tenant.id, {});
+    expect(afterDown.opportunities[1]?.id).toBe(top);
+
+    await services.reorderOpportunityInStage(owner.id, tenant.id, {
+      opportunityId: top,
+      direction: "up",
+    });
+    const afterUp = await services.getOpportunities(owner.id, tenant.id, {});
+    expect(afterUp.opportunities.map((item) => item.id)).toEqual(initial);
+  }, 60_000);
+
+  it("treats a move past the edge as a no-op, not an error", async () => {
+    const { services, owner, tenant, board } =
+      await setupTwoOpportunities("bord");
+    const top = board.opportunities[0]!.id;
+
+    // Déjà en haut : rien à faire, et surtout pas une erreur affichée.
+    const result = await services.reorderOpportunityInStage(owner.id, tenant.id, {
+      opportunityId: top,
+      direction: "up",
+    });
+    expect(result).toEqual({ moved: false });
+
+    const after = await services.getOpportunities(owner.id, tenant.id, {});
+    expect(after.opportunities[0]?.id).toBe(top);
+  }, 60_000);
+
+  it("refuses to reorder an opportunity from another organisation", async () => {
+    const first = await setupTwoOpportunities("org-a");
+    const second = await setupPipeline("org-b");
+
+    await expect(
+      second.services.reorderOpportunityInStage(
+        second.owner.id,
+        second.tenant.id,
+        { opportunityId: first.board.opportunities[0]!.id, direction: "down" },
+      ),
+    ).rejects.toMatchObject({ code: "opportunity_not_found" });
+  }, 60_000);
+});

@@ -2,7 +2,10 @@
 
 import { useState, type DragEvent } from "react";
 import Link from "next/link";
-import { moveOpportunityStageAction } from "@/app/actions";
+import {
+  moveOpportunityStageAction,
+  reorderOpportunityAction,
+} from "@/app/actions";
 
 export type BoardStage = {
   id: string;
@@ -122,6 +125,32 @@ export function PipelineBoard({
                       Clôture estimée : {card.expectedCloseLabel}
                     </p>
                   ) : null}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Ordre</span>
+                    {(["up", "down"] as const).map((direction) => (
+                      <form key={direction} action={reorderOpportunityAction}>
+                        <input
+                          type="hidden"
+                          name="opportunityId"
+                          value={card.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="direction"
+                          value={direction}
+                        />
+                        <button
+                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-slate-800"
+                          aria-label={`${
+                            direction === "up" ? "Monter" : "Descendre"
+                          } ${card.contactName} dans cette colonne`}
+                        >
+                          {direction === "up" ? "↑" : "↓"}
+                        </button>
+                      </form>
+                    ))}
+                  </div>
 
                   <form
                     id={`move-${card.id}`}

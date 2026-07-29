@@ -42,7 +42,9 @@ import {
   mergeContacts,
   crmQuerySchema,
   opportunityFiltersSchema,
+  opportunityReorderSchema,
   opportunityUpdateSchema,
+  reorderOpportunityInStage,
   submitPublicLead as submitPublicLeadDomain,
   updateContactProfile,
   updateOpportunity,
@@ -681,6 +683,11 @@ export function createServices(
       opportunityId: string,
       input: z.input<typeof opportunityUpdateSchema>,
     ) => updateOpportunity(db, userId, tenantId, opportunityId, input),
+    reorderOpportunityInStage: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof opportunityReorderSchema>,
+    ) => reorderOpportunityInStage(db, userId, tenantId, input),
     getContactDetail: (userId: string, tenantId: string, contactId: string) =>
       getContactDetail(db, userId, tenantId, contactId),
     getContactDuplicateCandidates: (userId: string, tenantId: string) =>

@@ -746,7 +746,8 @@ export async function listOpportunities(
      join pipeline_stages on pipeline_stages.id = opportunities.stage_id
      join contacts on contacts.id = opportunities.contact_id and contacts.tenant_id = opportunities.tenant_id
      where ${where.join(" and ")}
-     order by opportunities.updated_at desc
+     order by opportunities.board_position asc nulls last,
+              opportunities.updated_at desc
      limit 100`,
     params,
   );
@@ -1219,4 +1220,36 @@ function mapOpportunityListItem(row: OpportunityListRow) {
     contactName: row.contact_name,
     contactEmail: row.contact_email,
   };
+}
+
+/**
+ * Les cartes d'une étape dans leur ordre d'affichage. Sert de base au
+ * déplacement manuel : les positions ne sont écrites qu'à partir de cet ordre,
+ * ce qui évite toute reprise de données à la migration.
+ */
+export async function listStageOpportunityOrder(
+  db: DbClient,
+  tenantId: string,
+  stageId: string,
+) {
+  const result = await db.query<{ id: string; board_position: number | null }>(
+    `select id, board_position from opportunities
+     where tenant_id = $1 and stage_id = $2
+     order by board_position asc nulls last, updated_at desc`,
+    [tenantId, stageId],
+  );
+  return result.rows;
+}
+
+export async function updateOpportunityBoardPosition(
+  db: DbClient,
+  tenantId: string,
+  opportunityId: string,
+  position: number,
+) {
+  await db.query(
+    `update opportunities set board_position = $3
+     where tenant_id = $1 and id = $2`,
+    [tenantId, opportunityId, position],
+  );
 }

@@ -138,3 +138,10 @@ export type CrmQueryInput = z.input<typeof crmQuerySchema>;
 export type CrmView = (typeof crmViews)[number];
 export type OpportunityUpdateInput = z.input<typeof opportunityUpdateSchema>;
 export type ContactMergeInput = z.input<typeof contactMergeSchema>;
+
+export const opportunityReorderSchema = z.object({
+  opportunityId: z.string().trim().min(1).max(160),
+  direction: z.enum(["up", "down"]),
+});
+
+export type OpportunityReorderInput = z.input<typeof opportunityReorderSchema>;
