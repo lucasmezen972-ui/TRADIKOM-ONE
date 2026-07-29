@@ -16,12 +16,13 @@
 - Apprentissage des refus par le conseiller strategique : une regle refusee est mise en sourdine 30 jours (`docs/STRATEGIC_ADVISOR.md`).
 - Modification d'une proposition marketing depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).
 - Liste de suppression email alimentee par les echecs definitifs de livraison (`docs/EMAIL_PROVIDER.md`).
+- Suppression d'un fichier envoye, refusee tant qu'il est utilise (`docs/ASSET_UPLOAD.md`).
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
 
 - Gerer les webhooks de bounce du fournisseur email pour capter les rebonds asynchrones ; la liste de suppression alimentee par les echecs a l'envoi est livree (`docs/EMAIL_PROVIDER.md`).
-- Ajouter analyse antivirus, redimensionnement et suppression des fichiers envoyes (`docs/ASSET_UPLOAD.md`).
+- Ajouter analyse antivirus et redimensionnement des fichiers envoyes ; la suppression est livree (`docs/ASSET_UPLOAD.md`).
 - Etendre la revision depuis le centre d'approbation aux quatre autres familles de propositions (`docs/APPROVAL_CENTER.md`).
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.

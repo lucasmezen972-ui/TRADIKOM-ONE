@@ -94,6 +94,7 @@ import {
   snoozeApprovalSchema,
 } from "@/modules/approval-center";
 import {
+  deleteTenantAsset,
   getTenantAssets,
   readPublicAsset,
   uploadTenantAsset,
@@ -625,6 +626,8 @@ export function createServices(
     ) => uploadTenantAsset(db, userId, tenantId, input),
     getTenantAssets: (userId: string, tenantId: string, limit?: number) =>
       getTenantAssets(db, userId, tenantId, limit),
+    deleteTenantAsset: (userId: string, tenantId: string, assetId: string) =>
+      deleteTenantAsset(db, userId, tenantId, assetId),
     readPublicAsset: (assetId: string) => readPublicAsset(db, assetId),
     snoozeApproval: (
       userId: string,

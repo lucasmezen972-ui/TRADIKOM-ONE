@@ -5,7 +5,10 @@ import type { Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import { AssetError } from "@/modules/assets/errors";
 import {
+  countAssetReferences,
+  deleteTenantAssetRow,
   findTenantAssetById,
+  findTenantAssetForTenant,
   insertTenantAsset,
   listTenantAssets,
 } from "@/modules/assets/repository";
@@ -152,6 +155,73 @@ export async function readPublicAsset(
     checksum: row.checksum,
     byteSize: row.byte_size,
   };
+}
+
+/**
+ * Supprimer un fichier encore affiché casserait une page publiée sans que
+ * personne ne s'en aperçoive : l'image manquante ne produit qu'un 404
+ * silencieux. La suppression est donc refusée tant que le fichier est
+ * référencé, et le message dit où il est utilisé.
+ */
+export async function deleteTenantAsset(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  assetId: string,
+  storage: AssetStorage = createRuntimeAssetStorage(),
+) {
+  await assertTenantAccess(db, userId, tenantId, uploadRoles);
+  const asset = await findTenantAssetForTenant(db, tenantId, assetId);
+  if (!asset) {
+    throw new AssetError("asset_not_found", "Ce fichier n'existe plus.");
+  }
+
+  const references = await countAssetReferences(
+    db,
+    tenantId,
+    assetPublicUrl(assetId),
+  );
+  if (references.sections > 0 || references.profile > 0) {
+    throw new AssetError("asset_in_use", referenceMessage(references));
+  }
+
+  const deleted = await deleteTenantAssetRow(db, tenantId, assetId);
+  if (!deleted) {
+    throw new AssetError("asset_not_found", "Ce fichier n'existe plus.");
+  }
+
+  // La ligne d'abord, le fichier ensuite. Si l'effacement du fichier échoue,
+  // il reste un orphelin invisible ; dans l'ordre inverse, une ligne
+  // survivante pointerait vers un fichier absent et servirait un 404.
+  await storage.remove(asset.storage_key);
+  await recordAuditLog(db, {
+    tenantId,
+    actorId: userId,
+    action: "asset.deleted",
+    targetType: "asset",
+    targetId: assetId,
+    metadata: {
+      kind: asset.kind,
+      byteSize: asset.byte_size,
+    },
+  });
+
+  return { id: assetId };
+}
+
+function referenceMessage(references: { sections: number; profile: number }) {
+  const places: string[] = [];
+  if (references.sections > 0) {
+    places.push(
+      references.sections > 1
+        ? `${references.sections} sections de votre site`
+        : "une section de votre site",
+    );
+  }
+  if (references.profile > 0) {
+    places.push("le profil de votre entreprise");
+  }
+  return `Ce fichier est encore utilisé par ${places.join(" et ")}. Remplacez-le à cet endroit avant de le supprimer.`;
 }
 
 export function assetPublicUrl(assetId: string) {

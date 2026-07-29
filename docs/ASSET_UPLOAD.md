@@ -43,10 +43,25 @@ La table `tenant_assets` est tenant-scopée, sous RLS (migration `072`), avec in
 
 Un checksum SHA-256 est conservé pour chaque fichier et sert d'`ETag`.
 
+## Suppression
+
+`Mon site` liste les fichiers envoyés avec un bouton de suppression. Le geste est réservé aux mêmes rôles que l'envoi.
+
+**La suppression est refusée tant que le fichier est utilisé** (`asset_in_use`, 409), et le message nomme les endroits concernés. La raison n'est pas la prudence de principe : une image supprimée alors qu'elle est encore affichée ne produit qu'un **404 silencieux** sur la page publiée. Personne ne s'en aperçoit, sauf les visiteurs.
+
+Deux emplacements sont vérifiés : `website_sections.image_url`, comparé à l'URL exacte, et le profil de l'entreprise (`business_profiles.data`, JSON contenant `brand.logoUrl` et `brand.photoUrls`), cherché par sous-chaîne. La sous-chaîne suffit ici : l'URL contient un identifiant non devinable, il n'existe pas de collision réaliste.
+
+### Ordre des opérations
+
+La ligne est supprimée **avant** le fichier. Si l'effacement du fichier échoue, il reste un orphelin — invisible, sans effet pour l'utilisateur, récupérable par une tâche de ménage. Dans l'ordre inverse, une ligne survivante pointerait vers un fichier absent et servirait un 404 sur un site publié. C'est la symétrie de l'envoi, où le fichier est écrit d'abord et effacé si l'insertion échoue.
+
+Une organisation ne peut pas supprimer le fichier d'une autre : la recherche est tenant-scopée et renvoie `asset_not_found`, sans révéler que l'identifiant existe ailleurs.
+
 ## Limites actuelles
 
 - Aucune analyse antivirus ni réencodage de l'image : le fichier est servi tel qu'il a été reçu.
 - Pas de redimensionnement ni de génération de miniatures.
 - L'URL d'un fichier est non devinable mais non authentifiée, comme n'importe quelle image de site public.
-- Aucune suppression depuis l'interface : un fichier remplacé reste stocké.
+- Aucune tâche de ménage ne ramasse les fichiers orphelins laissés par un effacement partiel.
+- Une version antérieure d'un site peut référencer un fichier supprimé : la vérification ne porte que sur les sections courantes, pas sur l'historique des versions.
 - Le SVG est volontairement exclu : il peut porter du script.

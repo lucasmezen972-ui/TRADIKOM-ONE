@@ -4,6 +4,7 @@ export type AssetErrorCode =
   | "asset_too_large"
   | "asset_type_not_allowed"
   | "asset_not_found"
+  | "asset_in_use"
   | "asset_storage_unavailable";
 
 export class AssetError extends Error {

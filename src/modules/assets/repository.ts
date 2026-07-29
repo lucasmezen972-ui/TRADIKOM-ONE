@@ -82,3 +82,44 @@ export async function listTenantAssets(
   );
   return result.rows;
 }
+
+/**
+ * Un fichier peut être référencé à deux endroits : la section d'un site
+ * publié, et le profil de l'entreprise (logo, photos) stocké en JSON. La
+ * recherche par sous-chaîne suffit pour le second : l'URL contient un
+ * identifiant non devinable, il n'existe pas de collision réaliste.
+ */
+export async function countAssetReferences(
+  db: DbClient,
+  tenantId: string,
+  assetUrl: string,
+) {
+  const sections = await db.query<{ count: number }>(
+    `select count(*)::int as count from website_sections
+     where tenant_id = $1 and image_url = $2`,
+    [tenantId, assetUrl],
+  );
+  const profiles = await db.query<{ count: number }>(
+    `select count(*)::int as count from business_profiles
+     where tenant_id = $1 and position($2 in data) > 0`,
+    [tenantId, assetUrl],
+  );
+  return {
+    sections: Number(sections.rows[0]?.count ?? 0),
+    profile: Number(profiles.rows[0]?.count ?? 0),
+  };
+}
+
+export async function deleteTenantAssetRow(
+  db: DbClient,
+  tenantId: string,
+  assetId: string,
+) {
+  const result = await db.query<{ id: string }>(
+    `delete from tenant_assets
+     where tenant_id = $1 and id = $2
+     returning id`,
+    [tenantId, assetId],
+  );
+  return result.rows[0]?.id ?? null;
+}

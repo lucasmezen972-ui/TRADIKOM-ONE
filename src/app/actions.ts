@@ -1949,6 +1949,28 @@ export async function uploadSectionImageAction(formData: FormData) {
   redirect("/mon-site?fichier=ajoute");
 }
 
+export async function deleteTenantAssetAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+
+  try {
+    await safeServerAction("asset.delete", () =>
+      services.deleteTenantAsset(user.id, tenant.id, text(formData, "assetId")),
+    );
+  } catch (error) {
+    // « Encore utilisé » est une réponse normale : elle dit où le remplacer.
+    if (error instanceof PublicActionError && error.code === "asset_in_use") {
+      redirect(
+        `/mon-site?fichier=utilise&messageFichier=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/mon-site");
+  redirect("/mon-site?fichier=supprime");
+}
+
 export async function moveOpportunityStageAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

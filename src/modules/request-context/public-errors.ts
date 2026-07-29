@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { AccountDeletionError } from "@/modules/account-deletion";
 import { ApprovalCenterError } from "@/modules/approval-center";
+import { AssetError } from "@/modules/assets";
 import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
@@ -41,6 +42,7 @@ export function toPublicError(error: unknown): PublicError {
   }
   if (error instanceof TenantError) return mapTenantError(error);
   if (error instanceof ConnectorError) return mapConnectorError(error);
+  if (error instanceof AssetError) return mapAssetError(error);
   if (error instanceof CrmError) return mapCrmError(error);
   if (error instanceof EmailSuppressionError) {
     return mapEmailSuppressionError(error);
@@ -206,6 +208,20 @@ function mapCrmError(error: CrmError): PublicError {
     );
   }
   return publicError(error.code, "crm", "Opération CRM impossible.", 400);
+}
+
+function mapAssetError(error: AssetError): PublicError {
+  if (error.code === "asset_in_use") {
+    // Le message nomme les endroits où le fichier sert encore.
+    return publicError(error.code, "asset", error.message, 409);
+  }
+  if (error.code === "asset_not_found") {
+    return publicError(error.code, "asset", "Ce fichier n'existe plus.", 404);
+  }
+  if (error.code === "asset_access_denied") {
+    return publicError(error.code, "authorization", "Accès refusé.", 403);
+  }
+  return publicError(error.code, "asset", error.message, 400);
 }
 
 function mapEmailSuppressionError(error: EmailSuppressionError): PublicError {
