@@ -29,6 +29,11 @@ type PendingRow = {
  * réviser une proposition. Elles ne rejoignent la ligne générique que pour
  * alimenter le formulaire d'édition.
  */
+type WebsiteAiPendingRow = PendingRow & {
+  proposed_title: string;
+  proposed_body: string;
+};
+
 type ReputationPendingRow = PendingRow & {
   response_draft: string;
   improvement_plan: string;
@@ -121,11 +126,12 @@ export async function listPendingWebsiteAiApprovals(
   now: string,
   limit: number,
 ) {
-  const result = await db.query<PendingRow>(
+  const result = await db.query<WebsiteAiPendingRow>(
     `select approvals.id as approval_id, proposals.id as target_id,
        approvals.created_at as requested_at, proposals.title,
        proposals.rationale, proposals.expected_gain, proposals.risk_summary,
-       null as confidence
+       null as confidence,
+       proposals.proposed_title, proposals.proposed_body
      from approvals
      join website_ai_proposals as proposals
        on proposals.id = approvals.target_id
@@ -137,7 +143,14 @@ export async function listPendingWebsiteAiApprovals(
      limit $3`,
     [tenantId, now, limit],
   );
-  return result.rows.map((row) => mapPending(row, "website_ai"));
+  return result.rows.map((row) => ({
+    ...mapPending(row, "website_ai"),
+    revision: {
+      module: "website_ai" as const,
+      proposedTitle: row.proposed_title,
+      proposedBody: row.proposed_body,
+    },
+  }));
 }
 
 export async function listPendingReputationApprovals(

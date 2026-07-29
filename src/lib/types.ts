@@ -367,7 +367,14 @@ export type ApprovalCenterItem = {
 
 export type ApprovalRevision =
   | MarketingApprovalRevision
-  | ReputationApprovalRevision;
+  | ReputationApprovalRevision
+  | WebsiteAiApprovalRevision;
+
+export type WebsiteAiApprovalRevision = {
+  module: "website_ai";
+  proposedTitle: string;
+  proposedBody: string;
+};
 
 export type ReputationApprovalRevision = {
   module: "reputation";

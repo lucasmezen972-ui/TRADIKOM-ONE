@@ -56,18 +56,26 @@ Enregistrer une modification **ne décide rien** : la nouvelle version revient d
 
 Le champ `retour` est validé contre la même allowlist que les décisions avant redirection.
 
-### Modules concernés
+### Quelles familles sont révisables, et pourquoi pas les autres
 
-Deux familles exposent une révision : le **marketing autonome** et la **réponse à un avis client**. Le champ `revision` de `ApprovalCenterItem` est optionnel et discriminé par `module` ; brancher le second l'a confirmé — le compilateur a refusé de construire tant que la nouvelle variante n'était pas traitée dans l'interface et dans les tests. Les trois familles restantes n'affichent aucun contrôle de modification : un bouton inerte serait pire qu'une absence.
+Trois familles exposent une révision : le **marketing autonome**, la **réponse à un avis client** et le **contenu de site**. Elles ont un point commun : ce sont des **textes destinés à être envoyés ou publiés**. Le fond proposé est souvent juste, la formulation appartient au dirigeant, et corriger avant d'approuver est le geste naturel.
+
+Les deux familles restantes — **recommandation stratégique** et **veille concurrentielle** — n'ont volontairement pas de révision. Ce sont des **analyses**, pas du contenu : réécrire une recommandation ferait dire au journal d'audit que le modèle a proposé quelque chose qu'il n'a pas proposé. Le geste correct y reste approuver ou refuser, et un refus n'est plus sans effet depuis que le conseiller met la règle en sourdine (`docs/STRATEGIC_ADVISOR.md`).
+
+Le champ `revision` de `ApprovalCenterItem` est optionnel et discriminé par `module`. L'aiguillage de l'interface est exhaustif sur cette union : ajouter une famille casse la compilation tant que son formulaire n'existe pas. Les deux branchements successifs l'ont vérifié — la première fois en attrapant au passage un test qui lisait le contenu marketing sans vérifier le module.
 
 #### Ce qui est modifiable, et ce qui ne l'est pas
 
-Pour une réponse à un avis, seuls **le texte adressé au client** et **le plan d'amélioration interne** sont éditables. Le sentiment, la confiance et le niveau de risque sont des évaluations, pas de la rédaction ; et réécrire la justification ferait mentir la piste d'audit sur ce que le modèle a réellement avancé. La nouvelle version reprend donc l'évaluation d'origine telle quelle.
+La règle est la même partout : **le contenu se corrige, l'analyse se conserve**.
+
+Pour une réponse à un avis, seuls le texte adressé au client et le plan d'amélioration interne sont éditables. Le sentiment, la confiance et le niveau de risque sont des évaluations ; réécrire la justification ferait mentir la piste d'audit sur ce que le modèle a réellement avancé.
+
+Pour un contenu de site, seuls le titre et le corps proposés le sont. **L'empreinte du contenu d'origine est reprise telle quelle** : c'est elle qui empêche d'appliquer une proposition à une section modifiée entre-temps, et la régénérer à la révision reviendrait à désactiver cette garde sans le dire. Un test vérifie qu'après révision, approbation et modification de la section, l'application est toujours refusée pour obsolescence.
 
 La reprise des preuves suit la même règle que le marketing : elles sont recopiées sur la nouvelle version, sans quoi une seconde révision serait refusée faute de preuve vérifiée.
 
 ## Limites actuelles
 
-- Les recommandations stratégiques, le contenu de site et la veille concurrentielle n'ont pas encore de révision — chacune a ses propres champs, sa table et sa sémantique de version.
+- Les recommandations stratégiques et la veille concurrentielle n'ont pas de révision, par choix : ce sont des analyses, pas du contenu à publier.
 - La file est bornée à 25 propositions, la liste des reportées à 25 et l'historique à 15 décisions.
 - Aucune notification n'est envoyée quand une proposition reportée revient dans la file : elle réapparaît au prochain chargement.

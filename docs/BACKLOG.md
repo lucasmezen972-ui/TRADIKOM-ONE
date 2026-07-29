@@ -17,14 +17,13 @@
 - Modification d'une proposition marketing depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).
 - Liste de suppression email alimentee par les echecs definitifs de livraison (`docs/EMAIL_PROVIDER.md`).
 - Suppression d'un fichier envoye, refusee tant qu'il est utilise (`docs/ASSET_UPLOAD.md`).
-- Revision d'une reponse a un avis client depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).
+- Revision depuis le centre d'approbation des trois familles de contenu : marketing, reponse a un avis, contenu de site (`docs/APPROVAL_CENTER.md`).
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
 
 - Gerer les webhooks de bounce du fournisseur email pour capter les rebonds asynchrones ; la liste de suppression alimentee par les echecs a l'envoi est livree (`docs/EMAIL_PROVIDER.md`).
 - Ajouter analyse antivirus et redimensionnement des fichiers envoyes ; la suppression est livree (`docs/ASSET_UPLOAD.md`).
-- Etendre la revision depuis le centre d'approbation aux trois familles restantes : recommandations strategiques, contenu de site, veille concurrentielle (`docs/APPROVAL_CENTER.md`).
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.

@@ -497,6 +497,21 @@ export async function reviseReputationProposalAction(formData: FormData) {
   redirect(decisionRedirect(formData, "/reputation", "revision=1"));
 }
 
+export async function reviseWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("website_ai.revise", () =>
+    services.reviseWebsiteAiProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      proposedTitle: text(formData, "proposedTitle"),
+      proposedBody: text(formData, "proposedBody"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  revalidatePath("/validations");
+  redirect(decisionRedirect(formData, "/mon-site", "revision=1"));
+}
+
 export async function generateWebsiteAiProposalsAction() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

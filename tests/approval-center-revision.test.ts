@@ -270,3 +270,99 @@ describe("reputation revision", () => {
     ).rejects.toMatchObject({ code: "reputation_proposal_not_found" });
   }, 60_000);
 });
+
+describe("website content revision", () => {
+  async function setupPendingWebsiteProposal(suffix: string) {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const owner = await services.registerUser({
+      name: `Owner Site ${suffix}`,
+      email: `owner.site.${suffix}@example.com`,
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(owner.id, {
+      name: `Garage Site ${suffix}`,
+      category: "Garage automobile",
+    });
+    await services.saveOnboarding(owner.id, tenant.id, defaultGarageOnboarding());
+    await services.generateWebsiteAiProposals(owner.id, tenant.id);
+    const workspace = await services.getWebsiteAiWorkspace(owner.id, tenant.id);
+    const proposal = workspace[0]!;
+    await services.submitWebsiteAiProposalForApproval(owner.id, tenant.id, {
+      proposalId: proposal.id,
+    });
+    return { db, services, owner, tenant, proposal };
+  }
+
+  it("carries the publishable copy and replaces the pending version", async () => {
+    const { services, owner, tenant, proposal } =
+      await setupPendingWebsiteProposal("contenu");
+
+    const before = await services.getApprovalCenter(owner.id, tenant.id);
+    const item = before.pending.find(
+      (entry) => entry.kind === "website_ai" && entry.targetId === proposal.id,
+    )!;
+    expect(item.revision).toMatchObject({ module: "website_ai" });
+
+    const revised = await services.reviseWebsiteAiProposal(owner.id, tenant.id, {
+      proposalId: proposal.id,
+      proposedTitle: "Entretien automobile a Fort-de-France",
+      proposedBody:
+        "Nous entretenons votre vehicule avec des pieces tracees et un devis clair.",
+    });
+    expect(revised.awaitingDecision).toBe(true);
+
+    const after = await services.getApprovalCenter(owner.id, tenant.id);
+    const website = after.pending.filter((entry) => entry.kind === "website_ai");
+    expect(website.some((entry) => entry.targetId === proposal.id)).toBe(false);
+    const current = website.find(
+      (entry) => entry.targetId === revised.proposalId,
+    )!;
+    expect(
+      current.revision?.module === "website_ai"
+        ? current.revision.proposedTitle
+        : null,
+    ).toBe("Entretien automobile a Fort-de-France");
+  }, 60_000);
+
+  it("keeps the staleness guard after a revision", async () => {
+    const { services, owner, tenant, proposal } =
+      await setupPendingWebsiteProposal("obsolescence");
+
+    const revised = await services.reviseWebsiteAiProposal(owner.id, tenant.id, {
+      proposalId: proposal.id,
+      proposedTitle: "Titre revu par le dirigeant",
+      proposedBody: "Contenu revu par le dirigeant avant toute approbation.",
+    });
+    await services.decideWebsiteAiProposal(owner.id, tenant.id, {
+      proposalId: revised.proposalId,
+      decision: "approved",
+      reason: "Contenu conforme apres relecture.",
+    });
+
+    // La section change entre l'approbation et l'application : la garde doit
+    // toujours mordre, sinon reviser reviendrait a la desactiver.
+    const workspace = await services.getWebsiteWorkspace(owner.id, tenant.id);
+    const section = workspace.sections.find(
+      (item) => item.id === proposal.sectionId,
+    )!;
+    await services.updateWebsiteSection(owner.id, tenant.id, section.id, {
+      title: `${section.title} (modifie entre-temps)`,
+      body: section.body,
+      imageUrl: section.imageUrl,
+      buttonLabel: section.buttonLabel,
+      buttonHref: section.buttonHref,
+      enabled: section.enabled,
+    });
+
+    const applied = await services.applyApprovedWebsiteAiProposal(
+      owner.id,
+      tenant.id,
+      {
+        proposalId: revised.proposalId,
+      },
+    );
+    expect(applied).toMatchObject({ applied: false, stale: true });
+  }, 60_000);
+});

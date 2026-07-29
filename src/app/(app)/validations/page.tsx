@@ -17,6 +17,7 @@ import {
   resumeApprovalAction,
   reviseMarketingProposalAction,
   reviseReputationProposalAction,
+  reviseWebsiteAiProposalAction,
   snoozeApprovalAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -25,8 +26,10 @@ import type {
   ApprovalCenterDecision,
   ApprovalCenterItem,
   ApprovalCenterSnoozedItem,
+  ApprovalRevision,
   MarketingApprovalRevision,
   ReputationApprovalRevision,
+  WebsiteAiApprovalRevision,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -291,17 +294,7 @@ function PendingCard({ item }: { item: ApprovalCenterItem }) {
             remplace la proposition en attente, qui revient à décider avec vos
             corrections. Rien n&apos;est envoyé.
           </p>
-          {item.revision.module === "marketing" ? (
-            <MarketingRevisionForm
-              targetId={item.targetId}
-              revision={item.revision}
-            />
-          ) : (
-            <ReputationRevisionForm
-              targetId={item.targetId}
-              revision={item.revision}
-            />
-          )}
+          <RevisionForm targetId={item.targetId} revision={item.revision} />
         </details>
       ) : null}
 
@@ -351,6 +344,63 @@ function PendingCard({ item }: { item: ApprovalCenterItem }) {
  * connaisse le versionnage des propositions. Le centre d'approbation reste un
  * agrégateur en lecture : il n'écrit jamais dans un module à sa place.
  */
+/**
+ * Aiguillage exhaustif sur le module : ajouter une famille de propositions
+ * révisables casse la compilation ici tant que son formulaire n'existe pas.
+ */
+function RevisionForm({
+  targetId,
+  revision,
+}: {
+  targetId: string;
+  revision: ApprovalRevision;
+}) {
+  switch (revision.module) {
+    case "marketing":
+      return <MarketingRevisionForm targetId={targetId} revision={revision} />;
+    case "reputation":
+      return <ReputationRevisionForm targetId={targetId} revision={revision} />;
+    case "website_ai":
+      return <WebsiteAiRevisionForm targetId={targetId} revision={revision} />;
+  }
+}
+
+/**
+ * Le contenu proposé pour une section est destiné à être publié : il se
+ * corrige avant d'approuver. L'empreinte du contenu d'origine n'est pas
+ * exposée — la reprendre à l'identique est ce qui préserve la garde contre
+ * l'application à une section modifiée depuis.
+ */
+function WebsiteAiRevisionForm({
+  targetId,
+  revision,
+}: {
+  targetId: string;
+  revision: WebsiteAiApprovalRevision;
+}) {
+  return (
+    <form action={reviseWebsiteAiProposalAction} className="mt-3 grid gap-3">
+      <input type="hidden" name="proposalId" value={targetId} />
+      <input type="hidden" name="retour" value="/validations" />
+      <RevisionField
+        label="Titre proposé"
+        name="proposedTitle"
+        value={revision.proposedTitle}
+      />
+      <RevisionField
+        label="Contenu proposé"
+        name="proposedBody"
+        value={revision.proposedBody}
+        multiline
+      />
+      <button className="inline-flex w-fit items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
+        <FilePenLine size={16} aria-hidden />
+        Enregistrer la nouvelle version
+      </button>
+    </form>
+  );
+}
+
 function MarketingRevisionForm({
   targetId,
   revision,

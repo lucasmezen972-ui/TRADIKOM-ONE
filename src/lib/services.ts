@@ -223,6 +223,8 @@ import {
   decideWebsiteAiProposal,
   generateWebsiteAiProposals,
   getWebsiteAiWorkspace,
+  reviseWebsiteAiProposal,
+  reviseWebsiteAiProposalSchema,
   submitWebsiteAiProposalForApproval,
   websiteAiProposalDecisionSchema,
   websiteAiProposalReferenceSchema,
@@ -490,6 +492,11 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof websiteAiProposalDecisionSchema>,
     ) => decideWebsiteAiProposal(db, userId, tenantId, input),
+    reviseWebsiteAiProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseWebsiteAiProposalSchema>,
+    ) => reviseWebsiteAiProposal(db, userId, tenantId, input),
     applyApprovedWebsiteAiProposal: (
       userId: string,
       tenantId: string,

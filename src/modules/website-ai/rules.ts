@@ -125,6 +125,20 @@ export function buildWebsiteAiProposalCandidates(input: {
   }));
 }
 
+/**
+ * Empreinte d'une version révisée : elle porte le contenu réellement saisi,
+ * pas les signaux d'origine, pour que deux révisions différentes du même
+ * conseil restent distinctes.
+ */
+export function hashWebsiteAiRevision(input: {
+  proposalKey: string;
+  version: number;
+  proposedTitle: string;
+  proposedBody: string;
+}) {
+  return hashToken(toJson(input));
+}
+
 export function hashWebsiteSectionContent(
   section: Pick<WebsiteSection, "title" | "body">,
 ) {
