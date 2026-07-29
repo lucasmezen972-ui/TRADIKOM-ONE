@@ -19,7 +19,7 @@
 - Ajouter analyse antivirus, redimensionnement et suppression des fichiers envoyes (`docs/ASSET_UPLOAD.md`).
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
-- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves.
+- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.
 - Ajouter exports de donnees. La suppression de compte est livree (`src/modules/account-deletion`).
 - Rendre configurable par organisation le seuil d'opportunite bloquee, fixe a 7 jours (`docs/COMMAND_CENTER.md`).
 - Ajouter le glisser-deposer entre etapes du pipeline (`docs/PIPELINE.md`).

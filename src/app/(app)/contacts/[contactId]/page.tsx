@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { MessageCircle } from "lucide-react";
 import {
   addContactNoteAction,
   completeContactTaskAction,
@@ -8,6 +9,7 @@ import {
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
+import { buildWhatsAppSuggestions } from "@/modules/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,11 @@ export default async function ContactDetailPage({
   }
 
   const { contact, notes, consent, tasks, activities, opportunities } = detail;
+  const whatsAppSuggestions = buildWhatsAppSuggestions({
+    phone: contact.phone,
+    contactName: contact.name,
+    businessName: tenant.name,
+  });
 
   return (
     <div className="grid gap-6">
@@ -57,6 +64,53 @@ export default async function ContactDetailPage({
           {contact.status}
         </span>
       </header>
+
+      <section className="rounded-lg bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold">Écrire sur WhatsApp</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Le message s&apos;ouvre pré-rempli dans WhatsApp. Vous le relisez
+              et vous l&apos;envoyez vous-même : TRADIKOM ONE n&apos;envoie
+              jamais de message à votre place.
+            </p>
+          </div>
+        </div>
+        {whatsAppSuggestions.length === 0 ? (
+          <p className="mt-4 rounded-md border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+            Aucun numéro de téléphone exploitable sur cette fiche. Ajoutez un
+            numéro pour préparer un message WhatsApp en un clic.
+          </p>
+        ) : (
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+            {whatsAppSuggestions.map((suggestion) => (
+              <li
+                key={suggestion.key}
+                className="rounded-md border border-slate-200 px-4 py-3"
+              >
+                <p className="font-semibold text-slate-900">
+                  {suggestion.label}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {suggestion.description}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {suggestion.message}
+                </p>
+                <a
+                  href={suggestion.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="mt-3 inline-flex items-center gap-2 rounded-md bg-[#0b8f84] px-4 py-2 text-sm font-semibold text-white"
+                >
+                  <MessageCircle size={16} aria-hidden />
+                  Ouvrir dans WhatsApp
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
         <form
