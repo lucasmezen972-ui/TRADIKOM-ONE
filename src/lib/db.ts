@@ -321,6 +321,10 @@ function getMigrations(enableRls: boolean) {
       ? [{ id: "069_pipeline_detail_rls", sql: pipelineDetailRlsMigrationSql }]
       : []),
     { id: "070_approval_snooze", sql: approvalSnoozeMigrationSql },
+    { id: "071_tenant_assets", sql: tenantAssetsMigrationSql },
+    ...(enableRls
+      ? [{ id: "072_tenant_assets_rls", sql: tenantAssetsRlsMigrationSql }]
+      : []),
   ];
 }
 
@@ -3989,6 +3993,36 @@ create index if not exists idx_opportunity_changes_tenant_opportunity
   on opportunity_changes (tenant_id, opportunity_id, created_at desc);
 create index if not exists idx_opportunities_tenant_assigned
   on opportunities (tenant_id, assigned_user_id);
+`;
+
+const tenantAssetsMigrationSql = `
+create table if not exists tenant_assets (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  kind text not null check (kind in ('section_image', 'logo')),
+  content_type text not null check (
+    content_type in ('image/png', 'image/jpeg', 'image/webp')
+  ),
+  byte_size integer not null check (byte_size > 0),
+  checksum text not null check (char_length(checksum) = 64),
+  storage_key text not null,
+  original_name text not null,
+  uploaded_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id)
+);
+
+create index if not exists idx_tenant_assets_tenant_created
+  on tenant_assets (tenant_id, created_at desc);
+`;
+
+const tenantAssetsRlsMigrationSql = `
+alter table tenant_assets enable row level security;
+
+drop policy if exists tenant_isolation on tenant_assets;
+create policy tenant_isolation on tenant_assets
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
 
 const approvalSnoozeMigrationSql = `

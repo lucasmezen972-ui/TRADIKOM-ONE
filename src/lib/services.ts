@@ -93,6 +93,12 @@ import {
   snoozeApproval,
   snoozeApprovalSchema,
 } from "@/modules/approval-center";
+import {
+  getTenantAssets,
+  readPublicAsset,
+  uploadTenantAsset,
+  type UploadAssetInput,
+} from "@/modules/assets";
 import { getAuditLogs } from "@/modules/audit";
 import { dashboardQuerySchema, getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
@@ -577,6 +583,14 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof approvalCenterQuerySchema> = {},
     ) => getApprovalCenter(db, userId, tenantId, input),
+    uploadTenantAsset: (
+      userId: string,
+      tenantId: string,
+      input: UploadAssetInput,
+    ) => uploadTenantAsset(db, userId, tenantId, input),
+    getTenantAssets: (userId: string, tenantId: string, limit?: number) =>
+      getTenantAssets(db, userId, tenantId, limit),
+    readPublicAsset: (assetId: string) => readPublicAsset(db, assetId),
     snoozeApproval: (
       userId: string,
       tenantId: string,

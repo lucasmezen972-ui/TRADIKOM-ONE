@@ -16,7 +16,7 @@
 ## Prochaines priorites
 
 - Gerer les webhooks de bounce et la suppression list du fournisseur email (`docs/EMAIL_PROVIDER.md`).
-- Ajouter file upload valide pour logo/photos.
+- Ajouter analyse antivirus, redimensionnement et suppression des fichiers envoyes (`docs/ASSET_UPLOAD.md`).
 - Ajouter connecteurs OAuth reels.
 - Brancher les vrais appels OpenAI structures derriere l'abstraction.
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves.

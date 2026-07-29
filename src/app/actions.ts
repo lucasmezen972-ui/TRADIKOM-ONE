@@ -1838,3 +1838,40 @@ export async function resumeApprovalAction(formData: FormData) {
   revalidatePath("/aujourdhui");
   redirect("/validations?reprise=1");
 }
+
+export async function uploadSectionImageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const file = formData.get("fichier");
+
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/mon-site?fichier=vide");
+  }
+
+  const asset = await safeServerAction("asset.upload", async () =>
+    services.uploadTenantAsset(user.id, tenant.id, {
+      kind: "section_image",
+      originalName: file.name,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+    }),
+  );
+
+  const sectionId = text(formData, "sectionId");
+  if (sectionId) {
+    const workspace = await services.getWebsiteWorkspace(user.id, tenant.id);
+    const section = workspace.sections.find((item) => item.id === sectionId);
+    if (section) {
+      await services.updateWebsiteSection(user.id, tenant.id, sectionId, {
+        title: section.title,
+        body: section.body,
+        imageUrl: asset.url,
+        buttonLabel: section.buttonLabel,
+        buttonHref: section.buttonHref,
+        enabled: section.enabled,
+      });
+    }
+  }
+
+  revalidatePath("/mon-site");
+  redirect("/mon-site?fichier=ajoute");
+}

@@ -20,6 +20,7 @@ import {
   restoreVersionAction,
   submitWebsiteAiProposalAction,
   updateSectionAction,
+  uploadSectionImageAction,
 } from "@/app/actions";
 import { SiteRenderer } from "@/components/site-renderer";
 import { getServices } from "@/lib/services";
@@ -246,6 +247,31 @@ export default async function WebsitePage({ searchParams }: WebsitePageProps) {
                   <Save size={16} aria-hidden />
                   Enregistrer
                 </button>
+              </form>
+
+              <form
+                action={uploadSectionImageAction}
+                encType="multipart/form-data"
+                className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3"
+              >
+                <input type="hidden" name="sectionId" value={section.id} />
+                <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                  Remplacer l&apos;image
+                  <input
+                    type="file"
+                    name="fichier"
+                    accept="image/png,image/jpeg,image/webp"
+                    required
+                    className="rounded-md border border-slate-200 px-3 py-2 font-normal"
+                  />
+                </label>
+                <button className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-800">
+                  Envoyer l&apos;image
+                </button>
+                <p className="w-full text-xs text-slate-500">
+                  PNG, JPEG ou WebP, 5 Mo maximum. Le format est vérifié à
+                  partir du contenu du fichier, pas de son extension.
+                </p>
               </form>
             </div>
           ))}
