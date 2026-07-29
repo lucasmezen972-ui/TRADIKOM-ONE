@@ -58,10 +58,16 @@ Le champ `retour` est validé contre la même allowlist que les décisions avant
 
 ### Modules concernés
 
-Seul le **marketing autonome** expose aujourd'hui une révision. Le champ `revision` de `ApprovalCenterItem` est optionnel et discriminé par `module` : brancher un second module consiste à ajouter une variante, que le compilateur oblige alors à traiter partout. Les quatre autres familles n'affichent aucun contrôle de modification — un bouton inerte serait pire qu'une absence.
+Deux familles exposent une révision : le **marketing autonome** et la **réponse à un avis client**. Le champ `revision` de `ApprovalCenterItem` est optionnel et discriminé par `module` ; brancher le second l'a confirmé — le compilateur a refusé de construire tant que la nouvelle variante n'était pas traitée dans l'interface et dans les tests. Les trois familles restantes n'affichent aucun contrôle de modification : un bouton inerte serait pire qu'une absence.
+
+#### Ce qui est modifiable, et ce qui ne l'est pas
+
+Pour une réponse à un avis, seuls **le texte adressé au client** et **le plan d'amélioration interne** sont éditables. Le sentiment, la confiance et le niveau de risque sont des évaluations, pas de la rédaction ; et réécrire la justification ferait mentir la piste d'audit sur ce que le modèle a réellement avancé. La nouvelle version reprend donc l'évaluation d'origine telle quelle.
+
+La reprise des preuves suit la même règle que le marketing : elles sont recopiées sur la nouvelle version, sans quoi une seconde révision serait refusée faute de preuve vérifiée.
 
 ## Limites actuelles
 
-- Seul le marketing autonome permet la modification depuis le centre. Les recommandations stratégiques, le contenu de site, les réponses aux avis et la veille concurrentielle n'ont pas encore de révision — chacune a ses propres champs, sa table et sa sémantique de version.
+- Les recommandations stratégiques, le contenu de site et la veille concurrentielle n'ont pas encore de révision — chacune a ses propres champs, sa table et sa sémantique de version.
 - La file est bornée à 25 propositions, la liste des reportées à 25 et l'historique à 15 décisions.
 - Aucune notification n'est envoyée quand une proposition reportée revient dans la file : elle réapparaît au prochain chargement.

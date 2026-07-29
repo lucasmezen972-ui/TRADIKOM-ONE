@@ -362,7 +362,17 @@ export type ApprovalCenterItem = {
    * L'union est discriminée par `module` : brancher un second module se fait
    * en ajoutant une variante, que le compilateur oblige alors à traiter.
    */
-  revision?: MarketingApprovalRevision;
+  revision?: ApprovalRevision;
+};
+
+export type ApprovalRevision =
+  | MarketingApprovalRevision
+  | ReputationApprovalRevision;
+
+export type ReputationApprovalRevision = {
+  module: "reputation";
+  responseDraft: string;
+  improvementPlan: string;
 };
 
 export type MarketingApprovalRevision = {

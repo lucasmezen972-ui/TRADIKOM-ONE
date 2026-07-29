@@ -29,6 +29,11 @@ type PendingRow = {
  * réviser une proposition. Elles ne rejoignent la ligne générique que pour
  * alimenter le formulaire d'édition.
  */
+type ReputationPendingRow = PendingRow & {
+  response_draft: string;
+  improvement_plan: string;
+};
+
 type MarketingPendingRow = PendingRow & {
   channel: "email" | "sms" | "whatsapp";
   subject: string;
@@ -141,12 +146,13 @@ export async function listPendingReputationApprovals(
   now: string,
   limit: number,
 ) {
-  const result = await db.query<PendingRow>(
+  const result = await db.query<ReputationPendingRow>(
     `select approvals.id as approval_id, proposals.id as target_id,
        approvals.created_at as requested_at,
        'Réponse à un avis client' as title,
        proposals.rationale, proposals.response_draft as expected_gain,
-       proposals.risk_level as risk_summary, proposals.confidence
+       proposals.risk_level as risk_summary, proposals.confidence,
+       proposals.response_draft, proposals.improvement_plan
      from approvals
      join reputation_response_proposals as proposals
        on proposals.id = approvals.target_id
@@ -158,7 +164,14 @@ export async function listPendingReputationApprovals(
      limit $3`,
     [tenantId, now, limit],
   );
-  return result.rows.map((row) => mapPending(row, "reputation"));
+  return result.rows.map((row) => ({
+    ...mapPending(row, "reputation"),
+    revision: {
+      module: "reputation" as const,
+      responseDraft: row.response_draft,
+      improvementPlan: row.improvement_plan,
+    },
+  }));
 }
 
 export async function listPendingCompetitorApprovals(

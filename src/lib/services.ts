@@ -239,6 +239,8 @@ import {
   reputationProposalDecisionSchema,
   reputationProposalReferenceSchema,
   reputationReviewSchema,
+  reviseReputationProposal,
+  reviseReputationProposalSchema,
   submitReputationProposalForApproval,
 } from "@/modules/reputation-ai";
 import {
@@ -516,6 +518,11 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof reputationProposalDecisionSchema>,
     ) => decideReputationProposal(db, userId, tenantId, input),
+    reviseReputationProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseReputationProposalSchema>,
+    ) => reviseReputationProposal(db, userId, tenantId, input),
     getCompetitorIntelligenceWorkspace: (userId: string, tenantId: string) =>
       getCompetitorIntelligenceWorkspace(db, userId, tenantId),
     createCompetitorProfile: (

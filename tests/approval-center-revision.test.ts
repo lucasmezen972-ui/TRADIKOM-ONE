@@ -110,9 +110,11 @@ describe("approval center revision", () => {
       (entry) => entry.targetId === revised.proposalId,
     )!;
     expect(current.title).toBe("Relance des entretiens saisonniers");
-    expect(current.revision?.content).toBe(
-      "Bonjour, votre entretien saisonnier peut etre planifie.",
-    );
+    // L'union est discriminée : le contenu marketing n'est lisible qu'après
+    // avoir vérifié le module, ce que le compilateur impose.
+    expect(
+      current.revision?.module === "marketing" ? current.revision.content : null,
+    ).toBe("Bonjour, votre entretien saisonnier peut etre planifie.");
   }, 60_000);
 
   it("leaves an unsubmitted draft as a draft", async () => {
@@ -167,5 +169,104 @@ describe("approval center revision", () => {
     expect(
       center.pending.some((entry) => entry.targetId === first.proposal.id),
     ).toBe(true);
+  }, 60_000);
+});
+
+describe("reputation revision", () => {
+  async function setupPendingReview(suffix: string) {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const services = createServices(db);
+    const owner = await services.registerUser({
+      name: `Owner Avis ${suffix}`,
+      email: `owner.avis.${suffix}@example.com`,
+      password: "Password!1",
+    });
+    const tenant = await services.createTenant(owner.id, {
+      name: `Garage Avis ${suffix}`,
+      category: "Garage automobile",
+    });
+    await services.createReputationReview(owner.id, tenant.id, {
+      source: "google",
+      reviewerAlias: "Client mecontent",
+      rating: 2,
+      reviewText:
+        "Attente trop longue et accueil decevant lors de mon dernier passage.",
+      occurredAt: new Date().toISOString(),
+    });
+    await services.generateReputationProposals(owner.id, tenant.id);
+    const workspace = await services.getReputationWorkspace(owner.id, tenant.id);
+    const proposal = workspace.proposals[0]!;
+    await services.submitReputationProposalForApproval(owner.id, tenant.id, {
+      proposalId: proposal.id,
+    });
+    return { db, services, owner, tenant, proposal };
+  }
+
+  it("carries the customer-facing text and keeps the assessment out of reach", async () => {
+    const { services, owner, tenant, proposal } =
+      await setupPendingReview("contenu");
+
+    const center = await services.getApprovalCenter(owner.id, tenant.id);
+    const item = center.pending.find(
+      (entry) => entry.kind === "reputation" && entry.targetId === proposal.id,
+    )!;
+
+    expect(item.revision).toMatchObject({
+      module: "reputation",
+      responseDraft: proposal.responseDraft,
+      improvementPlan: proposal.improvementPlan,
+    });
+    // Ni le sentiment, ni la confiance, ni la justification ne sont exposés à
+    // l'édition : ce sont des évaluations, pas de la rédaction.
+    expect(item.revision).not.toHaveProperty("rationale");
+    expect(item.revision).not.toHaveProperty("confidence");
+  }, 60_000);
+
+  it("replaces the pending response with the revised version", async () => {
+    const { services, owner, tenant, proposal } =
+      await setupPendingReview("remplacement");
+
+    const revised = await services.reviseReputationProposal(owner.id, tenant.id, {
+      proposalId: proposal.id,
+      responseDraft:
+        "Bonjour, merci pour votre retour. Nous vous rappelons cette semaine.",
+      improvementPlan: "Revoir la planification des rendez-vous du samedi.",
+    });
+    expect(revised.version).toBeGreaterThan(proposal.version);
+    expect(revised.awaitingDecision).toBe(true);
+
+    const center = await services.getApprovalCenter(owner.id, tenant.id);
+    const reputation = center.pending.filter(
+      (entry) => entry.kind === "reputation",
+    );
+    expect(reputation.some((entry) => entry.targetId === proposal.id)).toBe(
+      false,
+    );
+    const current = reputation.find(
+      (entry) => entry.targetId === revised.proposalId,
+    )!;
+    expect(
+      current.revision?.module === "reputation"
+        ? current.revision.responseDraft
+        : null,
+    ).toBe("Bonjour, merci pour votre retour. Nous vous rappelons cette semaine.");
+  }, 60_000);
+
+  it("refuses to revise a response from another organisation", async () => {
+    const first = await setupPendingReview("org-a");
+    const second = await setupPendingReview("org-b");
+
+    await expect(
+      second.services.reviseReputationProposal(
+        second.owner.id,
+        second.tenant.id,
+        {
+          proposalId: first.proposal.id,
+          responseDraft: "Tentative depuis une autre organisation entierement.",
+          improvementPlan: "Aucun plan, cette revision ne doit pas aboutir.",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "reputation_proposal_not_found" });
   }, 60_000);
 });

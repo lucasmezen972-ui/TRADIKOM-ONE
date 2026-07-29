@@ -16,6 +16,7 @@ import {
   decideWebsiteAiProposalAction,
   resumeApprovalAction,
   reviseMarketingProposalAction,
+  reviseReputationProposalAction,
   snoozeApprovalAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -25,6 +26,7 @@ import type {
   ApprovalCenterItem,
   ApprovalCenterSnoozedItem,
   MarketingApprovalRevision,
+  ReputationApprovalRevision,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -289,10 +291,17 @@ function PendingCard({ item }: { item: ApprovalCenterItem }) {
             remplace la proposition en attente, qui revient à décider avec vos
             corrections. Rien n&apos;est envoyé.
           </p>
-          <MarketingRevisionForm
-            targetId={item.targetId}
-            revision={item.revision}
-          />
+          {item.revision.module === "marketing" ? (
+            <MarketingRevisionForm
+              targetId={item.targetId}
+              revision={item.revision}
+            />
+          ) : (
+            <ReputationRevisionForm
+              targetId={item.targetId}
+              revision={item.revision}
+            />
+          )}
         </details>
       ) : null}
 
@@ -395,6 +404,42 @@ function MarketingRevisionForm({
         label="Points de vigilance"
         name="riskSummary"
         value={revision.riskSummary}
+        multiline
+      />
+      <button className="inline-flex w-fit items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
+        <FilePenLine size={16} aria-hidden />
+        Enregistrer la nouvelle version
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Seul le contenu adressé au client est modifiable. Le sentiment, la
+ * confiance et la justification restent ceux de l'analyse : les réécrire
+ * ferait mentir la piste d'audit sur ce que le modèle a avancé.
+ */
+function ReputationRevisionForm({
+  targetId,
+  revision,
+}: {
+  targetId: string;
+  revision: ReputationApprovalRevision;
+}) {
+  return (
+    <form action={reviseReputationProposalAction} className="mt-3 grid gap-3">
+      <input type="hidden" name="proposalId" value={targetId} />
+      <input type="hidden" name="retour" value="/validations" />
+      <RevisionField
+        label="Réponse au client"
+        name="responseDraft"
+        value={revision.responseDraft}
+        multiline
+      />
+      <RevisionField
+        label="Plan d'amélioration interne"
+        name="improvementPlan"
+        value={revision.improvementPlan}
         multiline
       />
       <button className="inline-flex w-fit items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
