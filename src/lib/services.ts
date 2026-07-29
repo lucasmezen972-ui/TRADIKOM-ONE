@@ -100,6 +100,11 @@ import {
   type UploadAssetInput,
 } from "@/modules/assets";
 import { getAuditLogs } from "@/modules/audit";
+import {
+  getEmailSuppressions,
+  releaseEmailSuppression,
+  releaseSuppressionSchema,
+} from "@/modules/email-suppression";
 import { dashboardQuerySchema, getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
 import {
@@ -391,6 +396,13 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof updateMemberRoleSchema>,
     ) => updateMemberRole(db, userId, tenantId, input),
+    getEmailSuppressions: (userId: string, tenantId: string) =>
+      getEmailSuppressions(db, userId, tenantId),
+    releaseEmailSuppression: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof releaseSuppressionSchema>,
+    ) => releaseEmailSuppression(db, userId, tenantId, input),
     updateTenantPreferences: (
       userId: string,
       tenantId: string,

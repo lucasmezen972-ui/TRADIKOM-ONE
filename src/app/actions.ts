@@ -146,12 +146,24 @@ export async function switchTenantAction(formData: FormData) {
 export async function createInvitationAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const invitation = await safeServerAction("invitation.create", () =>
-    services.createInvitation(user.id, tenant.id, {
-      email: text(formData, "email"),
-      role: text(formData, "role") as Exclude<Role, "owner">,
-    }),
-  );
+  let invitation;
+  try {
+    invitation = await safeServerAction("invitation.create", () =>
+      services.createInvitation(user.id, tenant.id, {
+        email: text(formData, "email"),
+        role: text(formData, "role") as Exclude<Role, "owner">,
+      }),
+    );
+  } catch (error) {
+    // Une adresse bloquée est un cas normal, pas une panne : le message dit
+    // quoi faire plutôt que d'afficher une page d'erreur.
+    if (error instanceof PublicActionError && error.code === "email_suppressed") {
+      redirect(
+        `/parametres?blocage=refus&messageBlocage=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
   revalidatePath("/parametres");
   const preview = invitation.developmentLink
     ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
@@ -166,13 +178,23 @@ export async function createInvitationAction(formData: FormData) {
 export async function resendInvitationAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const invitation = await safeServerAction("invitation.resend", () =>
-    services.resendInvitation(
-      user.id,
-      tenant.id,
-      text(formData, "invitationId"),
-    ),
-  );
+  let invitation;
+  try {
+    invitation = await safeServerAction("invitation.resend", () =>
+      services.resendInvitation(
+        user.id,
+        tenant.id,
+        text(formData, "invitationId"),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof PublicActionError && error.code === "email_suppressed") {
+      redirect(
+        `/parametres?blocage=refus&messageBlocage=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
 
   revalidatePath("/parametres");
   const preview = invitation.developmentLink
@@ -222,6 +244,18 @@ export async function updateMemberRoleAction(formData: FormData) {
   );
   revalidatePath("/parametres");
   redirect("/parametres");
+}
+
+export async function releaseEmailSuppressionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("email.suppression_release", () =>
+    services.releaseEmailSuppression(user.id, tenant.id, {
+      email: text(formData, "email"),
+    }),
+  );
+  revalidatePath("/parametres");
+  redirect("/parametres?blocage=leve");
 }
 
 export async function updateTenantPreferencesAction(formData: FormData) {

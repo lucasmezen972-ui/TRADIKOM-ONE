@@ -15,11 +15,12 @@
 - Seuil d'opportunite bloquee reglable par organisation, entre 1 et 90 jours (`docs/COMMAND_CENTER.md`).
 - Apprentissage des refus par le conseiller strategique : une regle refusee est mise en sourdine 30 jours (`docs/STRATEGIC_ADVISOR.md`).
 - Modification d'une proposition marketing depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).
+- Liste de suppression email alimentee par les echecs definitifs de livraison (`docs/EMAIL_PROVIDER.md`).
 - Seed Garage Caraibes Auto.
 
 ## Prochaines priorites
 
-- Gerer les webhooks de bounce et la suppression list du fournisseur email (`docs/EMAIL_PROVIDER.md`).
+- Gerer les webhooks de bounce du fournisseur email pour capter les rebonds asynchrones ; la liste de suppression alimentee par les echecs a l'envoi est livree (`docs/EMAIL_PROVIDER.md`).
 - Ajouter analyse antivirus, redimensionnement et suppression des fichiers envoyes (`docs/ASSET_UPLOAD.md`).
 - Etendre la revision depuis le centre d'approbation aux quatre autres familles de propositions (`docs/APPROVAL_CENTER.md`).
 - Ajouter connecteurs OAuth reels.

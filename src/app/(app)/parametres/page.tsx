@@ -1,6 +1,7 @@
 import {
   createInvitationAction,
   deleteAccountAction,
+  releaseEmailSuppressionAction,
   resendInvitationAction,
   updateMemberRoleAction,
   updateTenantPreferencesAction,
@@ -31,6 +32,8 @@ type SettingsPageProps = {
     messageSuppression?: string;
     preferences?: string;
     messagePreferences?: string;
+    blocage?: string;
+    messageBlocage?: string;
   }>;
 };
 
@@ -44,11 +47,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     membership.role === "owner"
       ? editableRoles
       : editableRoles.filter((role) => role !== "administrator");
-  const [logs, members, pendingInvitations] = await Promise.all([
+  const [logs, members, pendingInvitations, suppressions] = await Promise.all([
     services.getAuditLogs(user.id, tenant.id),
     services.getTenantMembers(user.id, tenant.id),
     canManageTeam
       ? services.getPendingInvitations(user.id, tenant.id)
+      : Promise.resolve([]),
+    canManageTeam
+      ? services.getEmailSuppressions(user.id, tenant.id)
       : Promise.resolve([]),
   ]);
 
@@ -198,6 +204,79 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </div>
         ) : null}
       </section>
+      {canManageTeam ? (
+        <section className="rounded-lg bg-white p-5 shadow-sm">
+          <h2 className="text-xl font-bold">Adresses bloquées</h2>
+          <p className="mt-1 max-w-3xl text-sm text-slate-600">
+            Une adresse dont l&apos;envoi a définitivement échoué est bloquée :
+            réessayer n&apos;aboutirait pas et abîmerait la réputation du
+            domaine d&apos;expédition. Corrigez l&apos;adresse, puis
+            réautorisez-la si elle est valide.
+          </p>
+          {params.blocage === "leve" ? (
+            <p
+              role="status"
+              className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900"
+            >
+              Adresse réautorisée. Vous pouvez de nouveau lui envoyer une
+              invitation.
+            </p>
+          ) : null}
+          {params.blocage === "refus" ? (
+            <p
+              role="status"
+              className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
+            >
+              {params.messageBlocage ?? "Cette adresse est bloquée."}
+            </p>
+          ) : null}
+          {suppressions.length === 0 ? (
+            <p className="mt-4 rounded-md border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+              Aucune adresse bloquée. Tous vos envois d&apos;invitation ont
+              abouti ou n&apos;ont échoué que temporairement.
+            </p>
+          ) : (
+            <ul className="mt-4 grid gap-3">
+              {suppressions.map((suppression) => (
+                <li
+                  key={suppression.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">
+                      {suppression.email}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {suppression.detail}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {suppressionReasonLabel(suppression.reason)} — via{" "}
+                      {suppression.provider}
+                      {suppression.errorCode
+                        ? ` (${suppression.errorCode})`
+                        : ""}{" "}
+                      le{" "}
+                      {new Date(suppression.createdAt).toLocaleDateString(
+                        "fr-FR",
+                      )}
+                    </p>
+                  </div>
+                  <form action={releaseEmailSuppressionAction}>
+                    <input
+                      type="hidden"
+                      name="email"
+                      value={suppression.email}
+                    />
+                    <button className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
+                      Réautoriser
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <h2 className="text-xl font-bold">Pilotage commercial</h2>
         <p className="mt-1 max-w-3xl text-sm text-slate-600">
@@ -329,6 +408,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       </section>
     </div>
   );
+}
+
+function suppressionReasonLabel(reason: string) {
+  return reason === "permanent_failure"
+    ? "Échec définitif de livraison"
+    : "Blocage manuel";
 }
 
 function roleLabel(role: Role) {

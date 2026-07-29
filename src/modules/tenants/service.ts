@@ -10,6 +10,10 @@ import {
   registerUser,
 } from "@/modules/auth";
 import { recordAuditLog } from "@/modules/audit";
+import {
+  assertEmailNotSuppressed,
+  suppressEmail,
+} from "@/modules/email-suppression/enforcement";
 import { TenantError } from "@/modules/tenants/errors";
 import {
   findMembershipRole,
@@ -220,6 +224,10 @@ export async function createInvitation(
     );
   }
 
+  // Refusé avant d'écrire l'invitation : créer une ligne qu'on sait
+  // indélivrable ne ferait qu'encombrer la liste des invitations en attente.
+  await assertEmailNotSuppressed(db, tenantId, email);
+
   const now = nowIso();
   const invitationToken = secureToken();
   const invitationId = id("invite");
@@ -254,6 +262,7 @@ export async function createInvitation(
     attemptedAt: nowIso(),
     errorCode: delivery.outcome.errorCode,
   });
+  await recordSuppressionOnPermanentFailure(db, tenantId, email, delivery.outcome);
   await recordAuditLog(db, {
     tenantId,
     actorId: userId,
@@ -309,6 +318,7 @@ export async function resendInvitation(
     limit: rateLimitPolicies.invitationCreate.limit,
     windowSeconds: rateLimitPolicies.invitationCreate.windowSeconds,
   });
+  await assertEmailNotSuppressed(db, tenantId, invitation.email);
 
   const invitationToken = secureToken();
   const expiresAt = daysFromNow(7);
@@ -338,6 +348,12 @@ export async function resendInvitation(
     attemptedAt: nowIso(),
     errorCode: delivery.outcome.errorCode,
   });
+  await recordSuppressionOnPermanentFailure(
+    db,
+    tenantId,
+    invitation.email,
+    delivery.outcome,
+  );
   await recordAuditLog(db, {
     tenantId,
     actorId: userId,
@@ -706,6 +722,34 @@ function mapTenant(row: TenantRow): Tenant {
       row.stalled_opportunity_days ?? stalledOpportunityDays,
     createdAt: row.created_at,
   };
+}
+
+/**
+ * Seul un échec **définitif** bloque l'adresse. Un 429 ou un 5xx est
+ * retryable : le fournisseur est indisponible, l'adresse n'y est pour rien, et
+ * la bloquer sur cette base priverait l'organisation d'un destinataire valide.
+ */
+async function recordSuppressionOnPermanentFailure(
+  db: DbClient,
+  tenantId: string,
+  email: string,
+  outcome: {
+    status: string;
+    provider: string;
+    errorCode?: string;
+  },
+) {
+  if (outcome.status !== "permanent_failure") {
+    return;
+  }
+  await suppressEmail(db, tenantId, {
+    email,
+    reason: "permanent_failure",
+    provider: outcome.provider,
+    errorCode: outcome.errorCode ?? null,
+    detail:
+      "La livraison a définitivement échoué lors d'un envoi d'invitation.",
+  });
 }
 
 function invitationRoleLabel(role: Role) {

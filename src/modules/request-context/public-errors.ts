@@ -4,6 +4,7 @@ import { ApprovalCenterError } from "@/modules/approval-center";
 import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
+import { EmailSuppressionError } from "@/modules/email-suppression";
 import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
@@ -41,6 +42,9 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof TenantError) return mapTenantError(error);
   if (error instanceof ConnectorError) return mapConnectorError(error);
   if (error instanceof CrmError) return mapCrmError(error);
+  if (error instanceof EmailSuppressionError) {
+    return mapEmailSuppressionError(error);
+  }
   if (error instanceof WorkflowError) return mapWorkflowError(error);
   if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
   if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
@@ -202,6 +206,19 @@ function mapCrmError(error: CrmError): PublicError {
     );
   }
   return publicError(error.code, "crm", "Opération CRM impossible.", 400);
+}
+
+function mapEmailSuppressionError(error: EmailSuppressionError): PublicError {
+  if (error.code === "email_suppressed") {
+    // Le message explique quoi faire : corriger l'adresse ou la réautoriser.
+    return publicError(error.code, "email", error.message, 409);
+  }
+  return publicError(
+    error.code,
+    "email",
+    "Cette adresse n'est pas bloquée.",
+    404,
+  );
 }
 
 function mapWorkflowError(error: WorkflowError): PublicError {

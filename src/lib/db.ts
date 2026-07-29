@@ -330,6 +330,13 @@ function getMigrations(enableRls: boolean) {
       id: "074_strategic_refusal_learning",
       sql: strategicRefusalLearningMigrationSql,
     },
+    { id: "075_email_suppressions", sql: emailSuppressionsMigrationSql },
+    ...(enableRls
+      ? [{
+          id: "076_email_suppressions_rls",
+          sql: emailSuppressionsRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -4026,6 +4033,38 @@ alter table tenant_assets enable row level security;
 
 drop policy if exists tenant_isolation on tenant_assets;
 create policy tenant_isolation on tenant_assets
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+/**
+ * Nouvelle table tenant-scopée : la migration RLS générique ne couvre que les
+ * tables présentes quand elle s'exécute, d'où la migration d'isolation dédiée.
+ */
+const emailSuppressionsMigrationSql = `
+create table if not exists email_suppressions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  email text not null,
+  reason text not null check (reason in ('permanent_failure', 'manual')),
+  provider text not null,
+  error_code text,
+  detail text not null,
+  suppressed_by text references users(id),
+  created_at text not null,
+  unique (tenant_id, email),
+  unique (tenant_id, id)
+);
+
+create index if not exists idx_email_suppressions_tenant_created
+  on email_suppressions (tenant_id, created_at desc);
+`;
+
+const emailSuppressionsRlsMigrationSql = `
+alter table email_suppressions enable row level security;
+
+drop policy if exists tenant_isolation on email_suppressions;
+create policy tenant_isolation on email_suppressions
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
