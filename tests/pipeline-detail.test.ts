@@ -169,3 +169,53 @@ describe("pipeline detail", () => {
     ).rejects.toThrow();
   }, 60_000);
 });
+
+describe("stage move", () => {
+  it("records a stage change in the history and keeps the other fields", async () => {
+    const { services, owner, tenant, opportunity } =
+      await setupPipeline("deplacement");
+
+    const board = await services.getOpportunities(owner.id, tenant.id, {});
+    const target = board.stages.find((stage) => stage.name === "Devis envoye")!;
+
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: opportunity.stageId,
+      valueCents: opportunity.valueCents,
+      nextFollowUpAt: opportunity.nextFollowUpAt,
+      probability: 55,
+      expectedCloseAt: "2026-10-15",
+    });
+
+    // Le déplacement reprend les valeurs existantes : rien d'autre ne bouge.
+    const before = await services.getOpportunityDetail(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+    );
+    const current = before!.opportunity;
+    await services.updateOpportunity(owner.id, tenant.id, opportunity.id, {
+      stageId: target.id,
+      valueCents: current.valueCents,
+      nextFollowUpAt: current.nextFollowUpAt,
+      lostReason: current.lostReason,
+      assignedUserId: current.assignedUserId,
+      probability: current.probability,
+      expectedCloseAt: current.expectedCloseAt,
+    });
+
+    const after = await services.getOpportunityDetail(
+      owner.id,
+      tenant.id,
+      opportunity.id,
+    );
+    expect(after!.opportunity.stageId).toBe(target.id);
+    expect(after!.opportunity.probability).toBe(55);
+    expect(after!.opportunity.expectedCloseAt?.slice(0, 10)).toBe("2026-10-15");
+
+    const stageChange = after!.changes.find(
+      (change) => change.field === "stage",
+    )!;
+    expect(stageChange.nextValue).toBe("Devis envoye");
+    expect(stageChange.changedByName).toBe(owner.name);
+  }, 60_000);
+});

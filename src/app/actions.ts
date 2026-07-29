@@ -1875,3 +1875,36 @@ export async function uploadSectionImageAction(formData: FormData) {
   revalidatePath("/mon-site");
   redirect("/mon-site?fichier=ajoute");
 }
+
+export async function moveOpportunityStageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const opportunityId = text(formData, "opportunityId");
+  const stageId = text(formData, "stageId");
+
+  const detail = await services.getOpportunityDetail(
+    user.id,
+    tenant.id,
+    opportunityId,
+  );
+  if (!detail) {
+    redirect("/opportunites?deplacement=introuvable");
+  }
+
+  // Le changement d'étape passe par le service métier : garde de rôle,
+  // transaction, audit et historique des changements sont conservés.
+  const { opportunity } = detail;
+  await services.updateOpportunity(user.id, tenant.id, opportunityId, {
+    stageId,
+    valueCents: opportunity.valueCents,
+    nextFollowUpAt: opportunity.nextFollowUpAt,
+    lostReason: opportunity.lostReason,
+    assignedUserId: opportunity.assignedUserId,
+    probability: opportunity.probability,
+    expectedCloseAt: opportunity.expectedCloseAt,
+  });
+
+  revalidatePath("/opportunites");
+  revalidatePath(`/opportunites/${opportunityId}`);
+  redirect("/opportunites?vue=tableau&deplacement=ok");
+}

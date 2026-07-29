@@ -1,11 +1,18 @@
 import Link from "next/link";
+import { PipelineBoard } from "@/components/pipeline-board";
 import { getServices } from "@/lib/services";
 import { requireTenantContext } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 type OpportunitiesPageProps = {
-  searchParams: Promise<{ q?: string; stageId?: string; filtre?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    stageId?: string;
+    filtre?: string;
+    vue?: string;
+    deplacement?: string;
+  }>;
 };
 
 export default async function OpportunitiesPage({
@@ -25,6 +32,7 @@ export default async function OpportunitiesPage({
       stalled,
     }),
   ]);
+  const boardView = params.vue === "tableau";
   const activeFilter = followUpDue
     ? "Opportunités à relancer (échéance aujourd'hui ou dépassée)"
     : stalled
@@ -60,6 +68,84 @@ export default async function OpportunitiesPage({
           </Link>
         </div>
       ) : null}
+      {params.deplacement === "ok" ? (
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900"
+        >
+          Opportunité déplacée. Le changement est enregistré dans son historique.
+        </p>
+      ) : null}
+      {params.deplacement === "introuvable" ? (
+        <p
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
+        >
+          Cette opportunité n&apos;existe plus. Le tableau a été rechargé.
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={buildViewHref(params, undefined)}
+          aria-current={boardView ? undefined : "page"}
+          className={`rounded-md px-4 py-2 text-sm font-semibold ${
+            boardView
+              ? "border border-slate-300 bg-white text-slate-800"
+              : "bg-[#08111f] text-white"
+          }`}
+        >
+          Vue liste
+        </Link>
+        <Link
+          href={buildViewHref(params, "tableau")}
+          aria-current={boardView ? "page" : undefined}
+          className={`rounded-md px-4 py-2 text-sm font-semibold ${
+            boardView
+              ? "bg-[#08111f] text-white"
+              : "border border-slate-300 bg-white text-slate-800"
+          }`}
+        >
+          Vue tableau
+        </Link>
+      </div>
+
+      {boardView ? (
+        <section className="rounded-lg bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold">Tableau par étape</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Faites glisser une carte vers une autre colonne, ou utilisez le
+              menu « Déplacer » de la carte — les deux enregistrent le
+              changement dans l&apos;historique de l&apos;opportunité.
+            </p>
+          </div>
+          {pipeline.opportunities.length === 0 ? (
+            <p className="rounded-md border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+              Aucune opportunité à afficher. Retirez le filtre ou créez une
+              opportunité depuis la fiche d&apos;un contact.
+            </p>
+          ) : (
+            <PipelineBoard
+              stages={pipeline.stages.map((stage) => ({
+                id: stage.id,
+                name: stage.name,
+              }))}
+              cards={pipeline.opportunities.map((opportunity) => ({
+                id: opportunity.id,
+                contactName: opportunity.contactName,
+                contactEmail: opportunity.contactEmail,
+                stageId: opportunity.stageId,
+                valueLabel: formatCurrency(opportunity.valueCents),
+                probability: opportunity.probability,
+                expectedCloseLabel: opportunity.expectedCloseAt
+                  ? new Date(opportunity.expectedCloseAt).toLocaleDateString("fr-FR")
+                  : undefined,
+              }))}
+            />
+          )}
+        </section>
+      ) : (
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -163,6 +249,7 @@ export default async function OpportunitiesPage({
         </div>
         )}
       </section>
+      )}
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -198,6 +285,19 @@ export default async function OpportunitiesPage({
       </section>
     </div>
   );
+}
+
+function buildViewHref(
+  params: { q?: string; stageId?: string; filtre?: string },
+  view: "tableau" | undefined,
+) {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.stageId) search.set("stageId", params.stageId);
+  if (params.filtre) search.set("filtre", params.filtre);
+  if (view) search.set("vue", view);
+  const query = search.toString();
+  return query ? `/opportunites?${query}` : "/opportunites";
 }
 
 function formatCurrency(valueCents: number) {

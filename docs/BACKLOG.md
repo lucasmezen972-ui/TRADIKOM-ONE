@@ -22,5 +22,5 @@
 - Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.
 - Ajouter exports de donnees. La suppression de compte est livree (`src/modules/account-deletion`).
 - Rendre configurable par organisation le seuil d'opportunite bloquee, fixe a 7 jours (`docs/COMMAND_CENTER.md`).
-- Ajouter le glisser-deposer entre etapes du pipeline (`docs/PIPELINE.md`).
+- Permettre le reordonnancement des cartes a l'interieur d'une colonne du pipeline (`docs/PIPELINE.md`).
 - Permettre de modifier une proposition depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).

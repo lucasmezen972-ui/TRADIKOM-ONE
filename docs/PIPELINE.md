@@ -27,9 +27,22 @@ Chaque ligne conserve la valeur précédente, la nouvelle valeur, l'auteur et l'
 
 L'historique est affiché sur la fiche de l'opportunité, le plus récent en premier, borné à 20 entrées.
 
+## Vue tableau et déplacement
+
+`/opportunites?vue=tableau` affiche le pipeline en colonnes par étape. Une carte se déplace de deux façons :
+
+- **glisser-déposer** vers une autre colonne, sur les navigateurs de bureau ;
+- **menu « Déplacer »** présent sur chaque carte, utilisable au clavier, sur mobile et par un lecteur d'écran.
+
+Les deux chemins soumettent **le même formulaire** vers la même server action : il n'existe pas de route parallèle, donc aucune garde n'est contournée. Le glisser-déposer n'est qu'une amélioration ajoutée par-dessus une base qui fonctionne sans lui — il est inutilisable au clavier et peu fiable sur mobile, il ne pouvait donc pas être le seul moyen de déplacer une opportunité.
+
+Le déplacement passe par le service `updateOpportunity` en reprenant les valeurs existantes : responsable, probabilité, montant et échéances sont préservés, la garde de rôle s'applique, et le changement d'étape entre dans l'historique comme n'importe quelle autre modification.
+
+`src/components/pipeline-board.tsx` est le premier composant client du dépôt ; le reste de l'interface demeure en composants serveur.
+
 ## Limites actuelles
 
-- Pas de glisser-déposer entre étapes : le changement d'étape se fait depuis la fiche.
+- Le glisser-déposer ne réordonne pas les cartes à l'intérieur d'une colonne : seule l'étape change.
 - La probabilité est saisie manuellement ; elle n'est pas déduite de l'étape ni calculée par un modèle.
 - Un seul pipeline par organisation.
 - L'historique conserve l'identifiant du responsable, pas son nom au moment du changement ; l'affichage indique donc « un autre responsable » plutôt que de résoudre un identifiant devenu obsolète.
