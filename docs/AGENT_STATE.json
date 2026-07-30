@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-30T04:15:13.000Z",
+  "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
+  "branch": "codex/tradikom-one-os",
+  "pullRequest": null,
+  "lastCommit": "aa46bb1cf948ffdafd0c089608bc059516da7041",
+  "status": "in_progress",
+  "currentPhase": "OS-0",
+  "currentObjective": "Auditer et recadrer le dépôt, rendre la reprise automatique et préparer la première tranche Conversation Hub.",
+  "nextAction": "Faire valider OS-0 par la CI de la PR brouillon, corriger tout échec puis créer le contrat borné du Conversation Hub canonique et ses tests de schéma.",
+  "nextFile": "src/modules/conversation-hub/schemas.ts",
+  "automation": {
+    "nativeId": "continuit-tradikom-one-os",
+    "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
+    "schedule": "Toutes les six heures à la minute 17"
+  },
+  "commandsRun": [
+    "git status --short --branch",
+    "git branch --all --verbose --no-abbrev",
+    "git log --oneline --decorate --graph --all -n 60",
+    "gh pr view 10",
+    "gh pr checks 10",
+    "gh run view 30127033174 --log-failed",
+    "inspection PDF 71 pages",
+    "pnpm agent:continuity-check",
+    "pnpm audit --prod --audit-level high",
+    "git diff --check",
+    "Next.js dev et build locaux avec environnement CI"
+  ],
+  "lastValidation": [
+    {
+      "command": "PR #10 - GitHub Actions 30483590061",
+      "status": "passed"
+    },
+    {
+      "command": "main - GitHub Actions 30127033174",
+      "status": "failed_before_os0_postcss_fix"
+    },
+    {
+      "command": "agent:continuity-check, JSON, YAML et git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high",
+      "status": "passed_with_documented_brace_expansion_exception"
+    },
+    {
+      "command": "lint, typecheck et tests locaux",
+      "status": "blocked_by_local_node_stall_without_diagnostic_ci_pending"
+    },
+    {
+      "command": "Next.js dev, navigateur et build locaux",
+      "status": "blocked_by_local_turbopack_stall_ci_pending"
+    }
+  ],
+  "humanBlockers": [
+    "Credentials et consentements des fournisseurs réels",
+    "Toute dépense, ressource payante ou dépassement de quota",
+    "Fusion, déploiement de production et changement DNS réel"
+  ]
+}
