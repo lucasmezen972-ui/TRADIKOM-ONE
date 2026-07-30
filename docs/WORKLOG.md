@@ -230,3 +230,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les URLs média doivent être HTTPS sur `api.twilio.com` avec un SID final sûr; elles sont seulement préparées en mémoire et jamais téléchargées. Les clés d'idempotence et corrélation dérivent de `MessageSid`.
 - Les 34 tests ciblés registre/vérificateur/HTTP/adaptateur, ESLint et typecheck complet passent.
 - Aucun credential, appel réseau, accès base, mapping tenant, ingestion canonique, envoi WhatsApp ou état `ready` n'est ajouté dans ce checkpoint.
+
+## 2026-07-30 - Mapping tenant des endpoints fournisseur sans PII
+
+- Le vérificateur Twilio `7609ad8` est entièrement vert : CI `30563781762`, continuité `30563781851`, migrations, backup/restore, lint, typecheck, tests, build et Playwright.
+- Les migrations runtime `073`/`074` et miroirs `0067`/`0068` créent `channel_provider_endpoints`, son trigger d'identité immuable et sa policy RLS tenant/système.
+- La conception suit les règles PostgreSQL/Supabase : contrainte unique globale pour le lookup exact, index composite tenant/provider/statut, index de la clé étrangère `created_by` et index tenant-leading pour la RLS.
+- Aucune adresse, destination, numéro, payload, credential ou token n'est stocké. Le lookup utilise une empreinte HMAC-SHA256 versionnée avec le secret de chiffrement connecteur, le SID de compte et l'adresse canonique.
+- Seuls propriétaire et administrateur peuvent réserver, activer ou désactiver un endpoint. La même destination ne peut pas être attribuée à deux tenants; un replay dans le même tenant ne duplique ni ligne ni audit.
+- La résolution entrante globale s'exécute uniquement sous transaction système, retourne seulement `endpointId` et `tenantId`, et ignore immédiatement un endpoint désactivé.
+- Les audits omettent SID, adresse et empreinte. Les 8 tests ciblés couvrent parité SQL, colonnes interdites, contraintes, immutabilité, conflit inter-tenant, rôle, replay, résolution et désactivation.
+- Aucun endpoint réel n'est configuré, aucun secret n'est créé, aucune ingestion de message ou activation de transport n'est encore branchée.

@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; service et route Resend verts; vérificateur Twilio publié, route fail-closed et enveloppe WhatsApp locale testés sur signature préalable, URL exacte, champs bornés, médias non téléchargés et absence de réseau.
-- Écarts restants : la CI du vérificateur puis celle du lot route/enveloppe restent à clore; aucun mapping tenant, ingestion canonique, état `ready`, credential, consentement ou transport réel n'existe.
+- Preuve actuelle : Resend et vérificateur Twilio verts; route/enveloppe WhatsApp publiées; mapping endpoint local avec HMAC secret, unicité globale, trigger immuable, index composites, RLS, rôle et audit sûr testé sans PII.
+- Écarts restants : la CI du lot route/enveloppe puis celle du mapping restent à clore; aucune ingestion canonique, état `ready`, credential, consentement ou transport réel n'existe.
 
 ## Modules touchés
 
@@ -35,7 +35,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 ## Risques
 
 - la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
-- WhatsApp/Twilio n'a pas encore de mapping tenant entrant ni de persistance idempotente;
+- WhatsApp/Twilio n'a pas encore d'ingestion canonique ni de persistance idempotente du message;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -55,7 +55,7 @@ Le run `30549936954` est entièrement vert sur `e561f57`. Les échecs intermédi
 
 Le premier checkpoint OS-2 `d181a97` est entièrement vert dans la CI `30556603463` : migrations, backup/restore, lint, typecheck, tests, build production et Playwright. La continuité `30556603427` est également verte.
 
-La route Resend `6dd61b5` est entièrement verte dans la CI `30562294162`, avec 268 tests, build et Playwright; sa continuité `30562294361` est verte. Le vérificateur Twilio passe localement ses 6 tests, ESLint et le typecheck complet.
+La route Resend `6dd61b5` est entièrement verte dans la CI `30562294162`, avec 268 tests, build et Playwright; sa continuité `30562294361` est verte. Le vérificateur Twilio `7609ad8` est entièrement vert dans la CI `30563781762` et la continuité `30563781851`.
 
 Le contrôle de continuité renforcé pour le prompt maître retourne localement `ready`, sans erreur ni avertissement, en vérifiant le PDF de 71 pages et son empreinte. La commande exacte `pnpm agent:continuity-check` termine désormais en environ six secondes grâce au runtime TypeScript natif de Node 22. L'automation native lit directement les pages cœur et exige une preuve paginée avant de choisir une tâche.
 
@@ -69,4 +69,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Valider la CI du vérificateur Twilio, publier route et enveloppe préparée puis ajouter un mapping tenant hashé, RLS et audité avant toute ingestion.
+Valider la CI route/enveloppe, publier le mapping HMAC/RLS puis relier la verticale entrante au Conversation Hub de façon idempotente.
