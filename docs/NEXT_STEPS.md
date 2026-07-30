@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-Publier et faire valider l'exécution durable des deux capacités mock et le résultat routé vers le web et le canal de test. Enchaîner avec le parcours Playwright Conversation complet sur desktop et mobile.
+Publier et faire valider le parcours Playwright Conversation complet sur desktop et mobile. En cas de vert, produire le rapport final OS-1; en cas de rouge, corriger uniquement le diagnostic observé.
 
 ## Référence prompt maître
 
@@ -10,15 +10,15 @@ Les pages 31, 46 et 48 imposent de terminer la première verticale avant toute e
 
 ## Bloc de reprise exact
 
-Le service de plan est publié dans `1dca742` et l'interface dans `ffe258e`. L'exécution durable est prête localement avec un test d'intégration. Aucun secret, déploiement, merge ou dépense n'est requis.
+Le service, l'interface et l'exécution durable sont publiés jusqu'à `84d064c`. Le typecheck de ce head est vert et les tests complets tournent. Le scénario Playwright desktop/mobile est prêt localement.
 
 ```text
-1. Publier le workflow durable mock, la correction du test de tables et le renforcement de l'automation PDF.
-2. Suivre la CI de la PR #11 jusqu'à migrations, lint, typecheck, tests, build et Playwright.
-3. Ajouter le parcours Conversation message web -> canal test -> plan -> approbation -> exécution -> résultat.
-4. Exécuter ce parcours aux largeurs desktop et mobile et vérifier le clavier.
-5. Vérifier les preuves audit, idempotence, routage et absence d'effet externe en base.
-6. Corriger uniquement les causes observées puis produire le rapport OS-1.
+1. Publier le parcours Conversation message web -> canal test -> plan -> approbation -> exécution -> résultat.
+2. Suivre la CI jusqu'à migrations, lint, typecheck, tests, build et Playwright.
+3. Vérifier son exécution aux largeurs desktop et mobile et ses commandes clavier.
+4. Vérifier les preuves SQL : un run, deux étapes, deux routes, un audit, aucune tâche réelle.
+5. Corriger uniquement les causes observées.
+6. Produire le rapport OS-1 contre la Definition of Done page 32 et la matrice page 69.
 ```
 
 ## Critères du prochain checkpoint

@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-12, 16-18, 22, 24, 31-33, 46, 48, 64, 68 et 69-71.
 - Exigence servie : suivre l'ordre exact de la page 48 et achever la verticale OS-1 de la page 31 sans dérive CRM.
-- Preuve actuelle : Conversation Hub web/test, plan structuré, validation unique, workflow durable avec deux actions mock, RLS, idempotence, audit et message résultat routé vers les deux canaux.
-- Écarts restants : validation CI du workflow, Playwright mobile/desktop, accessibilité clavier et matrice complète de la page 69.
+- Preuve actuelle : Conversation Hub web/test, plan structuré, validation unique, workflow durable avec deux actions mock, RLS, idempotence, audit, message résultat routé et scénario Playwright desktop/mobile piloté au clavier.
+- Écarts restants : validation CI complète du workflow et du nouveau Playwright, puis rapport final de la matrice page 69.
 
 ## Modules touchés
 
@@ -65,4 +65,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Faire valider l'exécution durable mock et sa projection multicanale, puis fermer OS-1 avec Playwright desktop/mobile, accessibilité et rapport de preuve.
+Faire valider le parcours Playwright desktop/mobile complet, corriger uniquement les causes observées, puis fermer OS-1 avec le rapport de preuve.

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { getDb } from "../../src/lib/db";
 import { createServices } from "../../src/lib/services";
 import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
@@ -1029,6 +1029,139 @@ test("operational health distinguishes measured incidents from unknown telemetry
     }),
   ).toHaveCount(0);
 });
+
+test("Conversation completes an audited mock plan on desktop and mobile", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  for (const viewport of [
+    { label: "desktop", width: 1440, height: 900 },
+    { label: "mobile", width: 390, height: 844 },
+  ]) {
+    await runConversationJourney(browser, viewport);
+  }
+});
+
+async function runConversationJourney(
+  browser: Browser,
+  viewport: { label: string; width: number; height: number },
+) {
+  const db = await getDb();
+  const services = createServices(db);
+  const suffix = `${viewport.label}-${Date.now()}`;
+  const email = `conversation-${suffix}@example.com`;
+  const password = "ConversationE2E!2026";
+  const user = await services.registerUser({
+    name: `Responsable Conversation ${viewport.label}`,
+    email,
+    password,
+  });
+  const tenant = await services.createTenant(user.id, {
+    name: `Organisation Conversation ${viewport.label}`,
+    category: "Services",
+  });
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  const page = await context.newPage();
+  try {
+    await page.goto("/");
+    const loginForm = page.locator("form").filter({
+      has: page.getByRole("button", { name: "Se connecter" }),
+    });
+    await loginForm.getByPlaceholder("Email professionnel").fill(email);
+    await loginForm.getByPlaceholder("Mot de passe").fill(password);
+    await loginForm.getByRole("button", { name: "Se connecter" }).click();
+    await expect(page).toHaveURL(/aujourdhui/);
+
+    await page.goto("/conversation");
+    await expect(
+      page.getByRole("heading", { name: "Conversation", exact: true }),
+    ).toBeVisible();
+    const webMessage = `Préparer un suivi client ${suffix}`;
+    const webForm = page.locator("form").filter({ hasText: "Écrire depuis le web" });
+    await webForm.getByLabel("Écrire depuis le web").fill(webMessage);
+    await webForm.getByRole("button", { name: "Envoyer" }).click();
+    await expect(page).toHaveURL(/envoye=web/);
+    await expect(page.getByText(webMessage)).toBeVisible();
+
+    const testMessage = `Confirmation depuis le canal test ${suffix}`;
+    const testForm = page
+      .locator("form")
+      .filter({ hasText: "Simuler le canal de test" });
+    await testForm.getByLabel("Simuler le canal de test").fill(testMessage);
+    await testForm.getByRole("button", { name: "Envoyer" }).click();
+    await expect(page).toHaveURL(/envoye=test/);
+    await expect(page.getByText(webMessage)).toBeVisible();
+    await expect(page.getByText(testMessage)).toBeVisible();
+
+    const prepare = page.getByRole("button", { name: "Préparer le plan" });
+    await prepare.focus();
+    await expect(prepare).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=cree/);
+    await expect(page.getByText("crm.contacts.search")).toBeVisible();
+    await expect(page.getByText("project.task.create")).toBeVisible();
+    await expect(page.getByText("0,00 €")).toBeVisible();
+
+    await page
+      .getByLabel("Motif de validation")
+      .fill("Parcours vérifié au clavier avant exécution mock.");
+    const approve = page.getByRole("button", { name: "Approuver une fois" });
+    await approve.focus();
+    await expect(approve).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=approved/);
+
+    const execute = page.getByRole("button", {
+      name: "Exécuter les deux étapes en mock",
+    });
+    await execute.focus();
+    await expect(execute).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=executed/);
+    await expect(
+      page.getByText(
+        "Exécution mock terminée : contact simulé retrouvé et tâche simulée préparée. Aucun effet externe.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(page.getByText("Exécuté", { exact: true })).toBeVisible();
+
+    const evidence = await db.query<{
+      runs: number;
+      steps: number;
+      routes: number;
+      audits: number;
+      tasks: number;
+    }>(
+      `select
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key like 'conversation_plan:%') as runs,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1
+           and action_name in ('mock_search_contact', 'mock_create_task')) as steps,
+         (select count(*)::int
+            from conversation_message_route_hops as routes
+            join conversation_messages as messages
+              on messages.tenant_id = routes.tenant_id
+             and messages.id = routes.message_id
+           where routes.tenant_id = $1 and messages.kind = 'result') as routes,
+         (select count(*)::int from audit_logs where tenant_id = $1
+           and action = 'conversation.plan_executed') as audits,
+         (select count(*)::int from tasks where tenant_id = $1) as tasks`,
+      [tenant.id],
+    );
+    expect(evidence.rows[0]).toEqual({
+      runs: 1,
+      steps: 2,
+      routes: 2,
+      audits: 1,
+      tasks: 0,
+    });
+  } finally {
+    await context.close();
+  }
+}
 
 async function openDemo(page: Page) {
   await page.goto("/");

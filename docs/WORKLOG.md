@@ -136,3 +136,10 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les étapes de plan passent par `running` puis `succeeded`; le plan devient `executed`, un message canonique `result` est créé et ses routes web/test sont persistées.
 - Le replay retrouve le même workflow run sans dupliquer événement, étapes, message, audit ou résultat. L'audit conserve fingerprint, run et classification sûre sans motif ni contenu client.
 - Le test d'intégration couvre refus avant approbation, contrôle de rôle, deux canaux, absence de `fetch`, absence de tâche réelle, durabilité, replay et audit. Le test de migration Conversation inclut désormais les deux tables de plan observées par la CI.
+
+## 2026-07-30 - Parcours Playwright Conversation desktop et mobile
+
+- Un scénario isolé crée un tenant dédié puis rejoue la verticale complète en `1440x900` et `390x844` : message web, réponse canal de test, plan, validation unique, exécution mock et résultat.
+- Les trois commandes critiques de plan sont focalisées puis activées avec la touche Entrée pour prouver le parcours clavier.
+- Après chaque parcours, une requête SQL vérifie exactement un workflow run, deux étapes mock, deux routes de résultat, un audit d'exécution et zéro tâche CRM réelle.
+- Le scénario est prêt à être publié; la CI de `84d064c` a déjà validé migrations, backup/restore, lint et typecheck du moteur durable et poursuit les tests complets.
