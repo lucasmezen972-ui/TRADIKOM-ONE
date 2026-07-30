@@ -45,6 +45,19 @@ Le module `src/modules/channels` définit désormais :
 - Les signatures ne sont pas simulées. L'adaptateur Twilio utilisera le SDK officiel, notamment parce que la signature dépend de l'URL publique exacte et du corps ou des paramètres reçus.
 - Le registre prépare l'activation; il ne constitue pas encore un adaptateur entrant ni une preuve d'intégration réelle.
 
+## Provider Email/Resend préparé
+
+Le client HTTP extrait de la PR #10 est durci dans `src/modules/email/resend-provider.ts` : origine fixe, redirections refusées, timeout, contenu et réponse bornés, identifiant de réponse borné, clé d'idempotence opaque dérivée du payload exact et erreurs temporaires/permanentes sans fuite du corps fournisseur. Les conflits Resend `409` concurrents sont réessayables; une même clé avec un payload différent est permanente.
+
+Il n'est pas sélectionné par `createRuntimeEmailProvider`. Même avec des noms de variables présents, le runtime retourne `unavailable`; la console reste locale et est toujours refusée en production. Le code est donc testable sans constituer une activation, un consentement ou une livraison réelle.
+
 ## Prochain incrément
 
-Extraire le provider Resend HTTP de la PR #10 derrière l'abstraction email existante, conserver le mode console en développement, refuser proprement la production sans configuration et ajouter les tests de timeout, idempotence, redirection, erreur temporaire/permanente et absence de fuite de secret. Le webhook de bounce restera désactivé jusqu'à la vérification de signature officielle.
+Préparer le webhook Resend sur corps brut et en-têtes Svix, avec signature officielle, fenêtre anti-rejeu, déduplication persistante `svix-id`, mapping tenant explicite et état désactivé sans secret. Aucun endpoint public ne sera activé avant cette preuve.
+
+## Références fournisseur vérifiées
+
+- [API d'envoi Resend](https://resend.com/docs/api-reference/emails/send-email) : origine, payload et en-tête d'idempotence;
+- [clés d'idempotence Resend](https://resend.com/docs/dashboard/emails/idempotency-keys) : limite de 256 caractères, rétention de 24 heures et conflits `409`;
+- [classification officielle des erreurs](https://www.resend.com/docs/api-reference/errors) : authentification, quota, concurrence et indisponibilité;
+- [vérification des webhooks Resend](https://resend.com/docs/webhooks/verify-webhooks-requests) : corps brut et en-têtes Svix obligatoires avant parsing.

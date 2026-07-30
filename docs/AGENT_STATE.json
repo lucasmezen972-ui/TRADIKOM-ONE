@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T15:22:28.000Z",
+  "updatedAt": "2026-07-30T15:33:45.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "20abfe264d5eae651e168e04664e70733619af9e",
+  "lastCommit": "d181a97976afafa0b4bdd4dec9d7e3d765452869",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider le contrat transversal et le registre sûr des fournisseurs OS-2, puis extraire le provider Email/Resend sans fausse intégration.",
+  "currentObjective": "Valider le contrat transversal et le provider Email/Resend préparé, puis construire le webhook signé sans activation réelle.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Audit des quatre canaux, contrat d’adaptateur, registre sans réseau, états disabled/not_configured/awaiting_human_auth, erreurs normalisées et tests interdisant un faux état prêt."
+      "evidenceExpected": "Audit, contrat commun, registre sans réseau et provider Resend borné/idempotent impossible à sélectionner, puis webhook signé sur corps brut et dédupliqué avant ingestion."
     }
   },
-  "nextAction": "Valider le checkpoint transversal OS-2 en CI, puis extraire le provider Resend HTTP de la PR #10 derrière l'abstraction email existante.",
-  "nextFile": "src/modules/email/providers.ts",
+  "nextAction": "Valider le provider Resend préparé en CI, puis définir le webhook Resend sur corps brut avec signature officielle et déduplication svix-id.",
+  "nextFile": "src/modules/email/resend-webhook.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -98,7 +98,10 @@
     "relecture des pages 13-15 et 64-68 du prompt maître",
     "audit du framework connecteur, des webhooks, de l'email courant et des branches PR #10",
     "revue des exigences Twilio de vérification officielle et d'idempotence",
-    "contrat ChannelAdapter et registre des quatre fournisseurs sans accès réseau"
+    "contrat ChannelAdapter et registre des quatre fournisseurs sans accès réseau",
+    "consultation des documentations officielles Resend d'envoi, idempotence, erreurs et webhooks",
+    "extraction et durcissement du provider Resend sans sélection runtime",
+    "Vitest ciblé Email/Resend - tentative locale bornée"
   ],
   "lastValidation": [
     {
@@ -251,6 +254,18 @@
     },
     {
       "command": "Vitest et ESLint ciblés du registre OS-2",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 30556603427 sur d181a97",
+      "status": "passed"
+    },
+    {
+      "command": "CI 30556603463 sur d181a97",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright"
+    },
+    {
+      "command": "Vitest ciblé provider Email/Resend et sélection runtime",
       "status": "blocked_by_known_local_node_stall_ci_pending"
     }
   ],

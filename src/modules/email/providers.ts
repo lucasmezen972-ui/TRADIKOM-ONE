@@ -78,12 +78,10 @@ export function createUnavailableEmailProvider(): EmailProvider {
 
 export function createRuntimeEmailProvider(): EmailProvider {
   const selected = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
-  const consoleAllowedInProduction =
-    process.env.ALLOW_CONSOLE_EMAIL_IN_PRODUCTION === "true";
 
   if (
-    process.env.NODE_ENV !== "production" ||
-    (selected === "console" && consoleAllowedInProduction)
+    process.env.NODE_ENV !== "production" &&
+    (!selected || selected === "console")
   ) {
     return createConsoleEmailProvider();
   }

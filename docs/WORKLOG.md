@@ -161,3 +161,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les variables sont documentées sans valeur dans `.env.example`; aucun secret réel n'est manipulé. Les plugins externes Slack/Teams et les consoles fournisseurs ne sont pas ouverts.
 - Les tests couvrent l'absence de réseau, les quatre états désactivés, la configuration manquante, l'attente humaine, l'interdiction d'un faux état prêt et la limite du payload brut.
 - Le contrôle de continuité et `git diff --check` passent. Vitest et ESLint ciblés reproduisent le blocage Node local silencieux et sont interrompus proprement; la CI de la PR reste l'arbitre exécutable.
+
+## 2026-07-30 - Provider Email/Resend préparé sans activation
+
+- Le checkpoint transversal précédent `d181a97` est entièrement vert : CI `30556603463` et continuité `30556603427`.
+- Le provider HTTP de la PR #10 est extrait séparément, sans reprendre les suppressions, écrans CRM ou mutations sans rapport de cette branche.
+- La documentation officielle Resend a été vérifiée pour l'API d'envoi, la limite d'idempotence de 256 caractères/24 heures, les erreurs `409`, `429` et `5xx`, et la future signature Svix sur corps brut.
+- L'origine API est constante, les redirections sont refusées, le timeout est borné et aucun texte d'erreur fournisseur n'est propagé. Le message est limité à 2 Mio et la réponse lue en flux à 8 Kio maximum.
+- La clé d'idempotence est l'empreinte du payload exact : un replay identique garde sa clé, une modification en change, et ni destinataire ni token ne sont placés dans l'en-tête.
+- `createRuntimeEmailProvider` n'active pas Resend, même si des noms de variables sont présents. Il renvoie `unavailable`; le provider console est désormais impossible en production, conformément à la page 67.
+- Les tests couvrent origine, absence de redirection, idempotence, quota, indisponibilité, conflits concurrents/permanents, clé invalide, domaine refusé, payload/réponse bornés, timeout, échec réseau, absence de fuite et sélection runtime sûre.
+- Vitest ciblé reproduit le blocage Node local silencieux; ce lot attend lint, typecheck et tests exécutables dans la CI de la PR.

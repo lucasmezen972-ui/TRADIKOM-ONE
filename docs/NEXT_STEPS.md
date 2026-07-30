@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-L'audit OS-2 et le contrat commun sont préparés dans `OS2_CHANNEL_AUDIT.md` et `src/modules/channels`. Valider ce checkpoint en CI, puis extraire le provider Email/Resend de la PR #10 derrière l'abstraction email existante, sans activer de webhook ni de transport réel.
+Le contrat commun OS-2 est publié et sa CI est en cours. Le provider Email/Resend est maintenant extrait et durci sans sélection runtime. Valider ce second checkpoint en CI, puis préparer le webhook Resend signé et idempotent, toujours désactivé sans secret et sans mapping tenant prouvé.
 
 ## Référence prompt maître
 
@@ -10,15 +10,15 @@ OS-1 satisfait désormais les pages 31, 32, 46, 48 et 69. Pour OS-2, relire les 
 
 ## Bloc de reprise exact
 
-Le head OS-1 `95da35e` est entièrement vert dans les runs `30554462472` et `30554462620`. Le rapport `OS1_VALIDATION_REPORT.md` clôt la première verticale. L'audit OS-2 classe les quatre canaux et le premier checkpoint transversal attend sa validation CI.
+Le head OS-1 `95da35e` est entièrement vert. Le contrat transversal OS-2 est publié sur `d181a97`; sa continuité, son lint et son typecheck sont verts, tandis que la suite complète poursuit son exécution. Le provider Resend préparé reste local jusqu'à ce verdict.
 
 ```text
-1. Valider en CI le contrat commun, le registre sans réseau et les états fournisseurs honnêtes.
-2. Extraire uniquement le provider Resend HTTP de la PR #10 et le revalider dans l'abstraction email courante.
-3. Tester mode développement, refus production sans clé, timeout, redirection, idempotence et classification d'erreur.
-4. Préparer ensuite le webhook Resend signé, désactivé sans secret.
-5. Conserver WhatsApp, Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
-6. Ajouter l'ingestion canonique, l'audit et l'isolation tenant avant toute activation.
+1. Valider en CI le contrat commun et le provider Resend préparé.
+2. Définir le contrat du webhook Resend sur le corps brut et les trois en-têtes Svix.
+3. Vérifier la signature avec la bibliothèque officielle, puis dédupliquer `svix-id` avant tout effet.
+4. Persister uniquement les événements utiles avec tenant explicite, RLS, index tenant-leading et audit sûr.
+5. Tester signature invalide, rejeu, ordre tardif, payload trop grand et secret absent.
+6. Conserver WhatsApp, Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
 ```
 
 ## Critères du prochain checkpoint
@@ -37,7 +37,7 @@ Le head OS-1 `95da35e` est entièrement vert dans les runs `30554462472` et `305
 1. OS-1 Conversation Hub canonique. Terminé et validé par `30554462472`.
 2. OS-2 audit des préparations omnicanales. Terminé.
 3. Contrat d'adaptateur commun et provider states. Checkpoint actif.
-4. Email/Resend derrière feature flag et refus sûr.
-5. Webhooks signés et normalisation d'erreurs sans clés.
+4. Email/Resend préparé avec refus runtime sûr. Checkpoint actif.
+5. Webhook Resend signé et idempotent.
 6. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
 7. Tests provider mocks, sécurité, intégration et Playwright pertinents.

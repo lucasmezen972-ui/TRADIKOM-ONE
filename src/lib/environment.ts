@@ -34,6 +34,9 @@ const environmentSchema = z
     CONNECTOR_ENCRYPTION_KEY: z.string().min(32).optional(),
     CONNECTOR_ENCRYPTION_KEY_VERSION: z.string().trim().min(1).max(80).optional(),
     EMAIL_PROVIDER: z.enum(["console", "test"]).optional(),
+    RESEND_API_KEY: z.string().trim().min(1).max(512).optional(),
+    EMAIL_FROM: z.string().trim().min(3).max(320).optional(),
+    RESEND_WEBHOOK_SECRET: z.string().trim().min(1).max(512).optional(),
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_MODEL: z.string().min(1).optional(),
     FEATURE_PUBLIC_DEMO: booleanString.optional(),
@@ -46,7 +49,6 @@ const environmentSchema = z
     FEATURE_CHANNEL_TEAMS: booleanString.optional(),
     FEATURE_CHANNEL_SLACK: booleanString.optional(),
     FEATURE_CHANNEL_EMAIL: booleanString.optional(),
-    ALLOW_CONSOLE_EMAIL_IN_PRODUCTION: booleanString.optional(),
     COOKIE_SECURE: booleanString.optional(),
     WORKER_MODE: z.enum(["once", "poll"]).optional(),
     WORKER_BATCH_SIZE: positiveIntegerString.optional(),
@@ -95,14 +97,11 @@ const environmentSchema = z
       });
     }
 
-    if (
-      environment.EMAIL_PROVIDER === "console" &&
-      environment.ALLOW_CONSOLE_EMAIL_IN_PRODUCTION !== "true"
-    ) {
+    if (environment.EMAIL_PROVIDER === "console") {
       context.addIssue({
         code: "custom",
-        path: ["ALLOW_CONSOLE_EMAIL_IN_PRODUCTION"],
-        message: "Console email delivery requires explicit production opt-in.",
+        path: ["EMAIL_PROVIDER"],
+        message: "Console email delivery is not available in production.",
       });
     }
 

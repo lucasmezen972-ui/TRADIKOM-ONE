@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : OS-1 vert; audit des quatre canaux; contrat commun; registre sans réseau; feature flags; état `not_configured` avec configuration manquante et `awaiting_human_auth` même si les noms de variables sont présents.
-- Écarts restants : le checkpoint OS-2 attend sa CI; aucun adaptateur fournisseur, webhook signé, transport, credential ni consentement réel n'est encore activé.
+- Preuve actuelle : OS-1 vert; audit des quatre canaux; contrat commun; registre sans réseau; feature flags; état `not_configured`; provider Resend à origine fixe, borné et idempotent mais impossible à sélectionner dans le runtime.
+- Écarts restants : les checkpoints OS-2 attendent leur CI complète; aucun webhook signé, transport, credential, consentement ou mapping tenant réel n'est encore activé.
 
 ## Modules touchés
 
@@ -53,6 +53,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 Le run `30549936954` est entièrement vert sur `e561f57`. Les échecs intermédiaires `30551054764`, `30552219390` et `30552994527` ont été corrigés dans les checkpoints suivants. Le run final `30554462472` sur `95da35e` valide migrations, backup/restore, lint, typecheck, 234 tests, build production et Playwright desktop/mobile en 10 min 37 s. Le run de continuité `30554462620` est vert en 22 s.
 
+Le premier checkpoint OS-2 `d181a97` est entièrement vert dans la CI `30556603463` : migrations, backup/restore, lint, typecheck, tests, build production et Playwright. La continuité `30556603427` est également verte.
+
 Le contrôle de continuité renforcé pour le prompt maître retourne localement `ready`, sans erreur ni avertissement, en vérifiant le PDF de 71 pages et son empreinte. La commande exacte `pnpm agent:continuity-check` termine désormais en environ six secondes grâce au runtime TypeScript natif de Node 22. L'automation native lit directement les pages cœur et exige une preuve paginée avant de choisir une tâche.
 
 ## Ce qui reste simulé
@@ -65,4 +67,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Valider le contrat transversal OS-2 en CI, puis extraire et durcir le provider Email/Resend de la PR #10 sans activer de webhook ni de transport réel.
+Valider le contrat transversal et le provider Email/Resend préparé en CI, puis ajouter le webhook Resend signé et dédupliqué sans l'activer.
