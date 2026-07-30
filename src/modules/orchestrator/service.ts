@@ -9,7 +9,9 @@ import {
   insertConversationIdentityIfAbsent,
   insertConversationMessageIfAbsent,
   insertConversationParticipantIfAbsent,
+  insertConversationRouteHop,
   insertThreadParticipantIfAbsent,
+  listConversationIdentityRows,
   updateConversationThreadLastMessage,
   updateConversationThreadStatus,
 } from "@/modules/conversation-hub/repository";
@@ -32,19 +34,28 @@ import {
   insertActionPlanStep,
   listActionPlanRowsByThread,
   listActionPlanStepRows,
+  markActionPlanExecuted,
   updateActionPlanApprovalStatus,
+  updateActionPlanExecutionStatus,
   updateActionPlanStepStatuses,
   type ConversationActionPlanRow,
 } from "@/modules/orchestrator/repository";
 import {
   actionPlanCreationSchema,
   actionPlanDecisionSchema,
+  actionPlanExecutionSchema,
   actionPlanListSchema,
   actionPlanSchema,
   type ActionPlanCreation,
   type ActionPlanDecision,
 } from "@/modules/orchestrator/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
+import {
+  executeWorkflowDefinition,
+  findWorkflowRunByKey,
+  listWorkflowRunStepRows,
+  workflowDefinitionSchema,
+} from "@/modules/workflows";
 
 const mockScopes = ["crm.contacts.read", "project.tasks.write"];
 const creationRoles: Role[] = [
@@ -427,6 +438,187 @@ export async function decideConversationActionPlan(
   });
 }
 
+export async function executeConversationActionPlan(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  planId: string,
+) {
+  const parsed = actionPlanExecutionSchema.parse({ planId });
+  const outcome = await withTenantDbTransaction(
+    db,
+    tenantId,
+    userId,
+    async (transaction) => {
+      await assertTenantAccess(transaction, userId, tenantId, decisionRoles);
+      const plan = await findActionPlanRow(transaction, tenantId, parsed.planId);
+      if (!plan) {
+        throw new OrchestratorError(
+          "orchestrator_plan_not_found",
+          "Le plan est introuvable.",
+        );
+      }
+      const workflowKey = conversationPlanWorkflowKey(plan.id);
+      const existingRun = await findWorkflowRunByKey(
+        transaction,
+        tenantId,
+        workflowKey,
+      );
+      if (plan.approval_status === "executed") {
+        if (!existingRun || existingRun.status !== "succeeded") {
+          throw new OrchestratorError(
+            "orchestrator_execution_failed",
+            "La preuve durable de l’exécution est introuvable.",
+          );
+        }
+        return {
+          result: await mapExecutionResult(
+            transaction,
+            plan,
+            existingRun,
+            true,
+          ),
+        };
+      }
+      if (plan.approval_status !== "approved") {
+        throw new OrchestratorError(
+          "orchestrator_execution_not_approved",
+          "Le plan doit être approuvé avant son exécution.",
+        );
+      }
+      const steps = await listActionPlanStepRows(transaction, tenantId, plan.id);
+      if (steps.length !== 2) {
+        throw new OrchestratorError(
+          "orchestrator_execution_failed",
+          "Le plan mock OS-1 doit contenir exactement deux étapes.",
+        );
+      }
+      if (existingRun?.status === "failed") {
+        return { failure: "mock_workflow_failed" as const };
+      }
+      await updateActionPlanExecutionStatus(
+        transaction,
+        tenantId,
+        plan.id,
+        "running",
+      );
+      try {
+        const runId = existingRun
+          ? existingRun.id
+          : await executeWorkflowDefinition(
+              transaction,
+              buildConversationPlanWorkflow(plan, steps),
+              {
+                id: `event_${hashToken(plan.id).slice(0, 32)}`,
+                tenantId,
+                actorId: userId,
+                type: "conversation.plan.execute",
+                payload: {
+                  planId: plan.id,
+                  planFingerprint: plan.plan_fingerprint,
+                  threadId: plan.thread_id,
+                  sourceMessageId: plan.source_message_id,
+                },
+                correlationId: plan.id,
+                causationId: plan.source_message_id,
+                idempotencyKey: `conversation.plan.execute:${plan.id}`,
+              },
+            );
+        const run = runId
+          ? await findWorkflowRunByKey(transaction, tenantId, workflowKey)
+          : existingRun ??
+            (await findWorkflowRunByKey(transaction, tenantId, workflowKey));
+        if (!run || run.status !== "succeeded") {
+          throw new Error("mock_workflow_not_succeeded");
+        }
+        await updateActionPlanExecutionStatus(
+          transaction,
+          tenantId,
+          plan.id,
+          "succeeded",
+        );
+        const executedAt = nowIso();
+        const executedPlan = await markActionPlanExecuted(
+          transaction,
+          tenantId,
+          plan.id,
+          executedAt,
+        );
+        if (!executedPlan) {
+          throw new Error("plan_execution_state_conflict");
+        }
+        await appendOrchestratorMessage(transaction, {
+          tenantId,
+          threadId: plan.thread_id,
+          sourceMessageId: plan.source_message_id,
+          planId: plan.id,
+          kind: "result",
+          text: "Exécution mock terminée : contact simulé retrouvé et tâche simulée préparée. Aucun effet externe.",
+          correlationId: run.id,
+          createdAt: executedAt,
+        });
+        await updateConversationThreadStatus(transaction, {
+          tenantId,
+          threadId: plan.thread_id,
+          status: "open",
+          updatedAt: executedAt,
+        });
+        await recordAuditLog(transaction, {
+          tenantId,
+          actorId: userId,
+          action: "conversation.plan_executed",
+          targetType: "conversation_action_plan",
+          targetId: plan.id,
+          metadata: {
+            threadId: plan.thread_id,
+            workflowRunId: run.id,
+            planFingerprint: plan.plan_fingerprint,
+            executionEnvironment: "mock",
+            capabilityCount: steps.length,
+            externalSideEffect: false,
+          },
+        });
+        return {
+          result: await mapExecutionResult(
+            transaction,
+            executedPlan,
+            run,
+            false,
+          ),
+        };
+      } catch {
+        await updateActionPlanExecutionStatus(
+          transaction,
+          tenantId,
+          plan.id,
+          "failed",
+        );
+        await recordAuditLog(transaction, {
+          tenantId,
+          actorId: userId,
+          action: "conversation.plan_execution_failed",
+          targetType: "conversation_action_plan",
+          targetId: plan.id,
+          metadata: {
+            threadId: plan.thread_id,
+            planFingerprint: plan.plan_fingerprint,
+            executionEnvironment: "mock",
+            safeErrorClassification: "mock_workflow_failed",
+          },
+        });
+        return { failure: "mock_workflow_failed" as const };
+      }
+    },
+  );
+  if ("failure" in outcome) {
+    throw new OrchestratorError(
+      "orchestrator_execution_failed",
+      "L’exécution mock a échoué; sa preuve durable est conservée.",
+    );
+  }
+  return outcome.result;
+}
+
 async function appendOrchestratorMessage(
   db: DbClient,
   input: {
@@ -434,7 +626,7 @@ async function appendOrchestratorMessage(
     threadId: string;
     sourceMessageId: string;
     planId: string;
-    kind: "plan" | "approval";
+    kind: "plan" | "approval" | "result";
     text: string;
     correlationId: string;
     createdAt: string;
@@ -452,8 +644,9 @@ async function appendOrchestratorMessage(
     channelIdentityId: identity.id,
     joinedAt: input.createdAt,
   });
-  const discriminator = input.decision ?? "proposal";
-  await insertConversationMessageIfAbsent(db, {
+  const discriminator =
+    input.decision ?? (input.kind === "result" ? "executed" : "proposal");
+  const message = await insertConversationMessageIfAbsent(db, {
     id: id("conversation_message"),
     tenantId: input.tenantId,
     threadId: input.threadId,
@@ -470,12 +663,99 @@ async function appendOrchestratorMessage(
     occurredAt: input.createdAt,
     createdAt: input.createdAt,
   });
+  if (message) {
+    const identities = await listConversationIdentityRows(
+      db,
+      input.tenantId,
+      input.threadId,
+    );
+    const projectedIdentities = identities
+      .filter(
+        (candidate) =>
+          candidate.id !== identity.id && candidate.state === "active",
+      )
+      .slice(0, 8);
+    for (const [position, target] of projectedIdentities.entries()) {
+      await insertConversationRouteHop(db, {
+        tenantId: input.tenantId,
+        messageId: message.id,
+        position,
+        adapterKey: target.adapter_key,
+        channelIdentityId: target.id,
+        externalMessageId: `${input.planId}:${discriminator}:${position}`,
+      });
+    }
+  }
   await updateConversationThreadLastMessage(db, {
     tenantId: input.tenantId,
     threadId: input.threadId,
     occurredAt: input.createdAt,
     updatedAt: input.createdAt,
   });
+}
+
+function buildConversationPlanWorkflow(
+  plan: ConversationActionPlanRow,
+  steps: Awaited<ReturnType<typeof listActionPlanStepRows>>,
+) {
+  return workflowDefinitionSchema.parse({
+    key: conversationPlanWorkflowKey(plan.id),
+    version: 1,
+    trigger: "conversation.plan.execute",
+    active: true,
+    conditions: [],
+    actions: steps.map((step) => {
+      const type =
+        step.capability === "crm.contacts.search"
+          ? "mock_search_contact"
+          : step.capability === "project.task.create"
+            ? "mock_create_task"
+            : null;
+      if (!type) {
+        throw new OrchestratorError(
+          "orchestrator_capability_unavailable",
+          "Une capacité du plan n’est pas exécutable en mock.",
+        );
+      }
+      return {
+        type,
+        input: { planStepId: step.step_id, capability: step.capability },
+        idempotencyKey: step.idempotency_key,
+      };
+    }),
+    retryPolicy: { maxAttempts: 3, backoffMs: 500 },
+    timeoutMs: 30_000,
+    approvalPolicy: "no_approval_required",
+  });
+}
+
+function conversationPlanWorkflowKey(planId: string) {
+  return `conversation_plan:${planId}`;
+}
+
+async function mapExecutionResult(
+  db: DbClient,
+  plan: ConversationActionPlanRow,
+  run: NonNullable<Awaited<ReturnType<typeof findWorkflowRunByKey>>>,
+  idempotentReplay: boolean,
+) {
+  const mappedPlan = await mapPlanResult(db, plan, idempotentReplay);
+  const workflowSteps = await listWorkflowRunStepRows(db, plan.tenant_id, [run.id]);
+  return {
+    ...mappedPlan,
+    execution: {
+      workflowRunId: run.id,
+      status: run.status,
+      summary: run.summary,
+      environment: "mock" as const,
+      externalSideEffect: false as const,
+      steps: workflowSteps.map((step) => ({
+        action: step.action_name,
+        status: step.status,
+        attempts: Number(step.attempts),
+      })),
+    },
+  };
 }
 
 async function ensureOrchestratorIdentity(

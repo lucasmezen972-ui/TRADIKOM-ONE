@@ -2,6 +2,8 @@
 
 La roadmap progresse par tranches verticales utilisables. Une tranche horizontale ou un nouvel écran métier n'est pas prioritaire s'il ne rapproche pas la conversation continue d'un résultat auditable.
 
+Source normative : prompt maître PDF, pages 31-32 et 46-48. La carte de navigation et son empreinte sont conservées dans `docs/MASTER_PROMPT_REFERENCE.md`.
+
 | Phase | Objectif | État | Critère de sortie |
 | --- | --- | --- | --- |
 | OS-0 | Audit, recadrage et continuité | Terminé | Audit, ADR, drift report, état de reprise, automations et suite verte |

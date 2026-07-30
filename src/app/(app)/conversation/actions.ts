@@ -85,6 +85,23 @@ export async function decideConversationPlanAction(formData: FormData) {
   );
 }
 
+export async function executeConversationPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const threadId = text(formData, "threadId");
+  await safeServerAction("conversation.plan_execute", () =>
+    services.executePlan(
+      user.id,
+      tenant.id,
+      text(formData, "planId"),
+    ),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    `/conversation?fil=${encodeURIComponent(threadId)}&plan=executed`,
+  );
+}
+
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";

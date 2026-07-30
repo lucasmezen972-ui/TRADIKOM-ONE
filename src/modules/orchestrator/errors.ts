@@ -9,7 +9,9 @@ export type OrchestratorErrorCode =
   | "orchestrator_source_message_invalid"
   | "orchestrator_plan_not_found"
   | "orchestrator_approval_not_found"
-  | "orchestrator_decision_conflict";
+  | "orchestrator_decision_conflict"
+  | "orchestrator_execution_not_approved"
+  | "orchestrator_execution_failed";
 
 export class OrchestratorError extends Error {
   constructor(

@@ -178,6 +178,10 @@ export const actionPlanListSchema = z
   .object({ threadId: identifierSchema })
   .strict();
 
+export const actionPlanExecutionSchema = z
+  .object({ planId: identifierSchema })
+  .strict();
+
 export type CapabilityRisk = z.infer<typeof capabilityRiskSchema>;
 export type ActionPlanStep = z.infer<typeof actionPlanStepSchema>;
 export type ActionPlan = z.infer<typeof actionPlanSchema>;
@@ -185,6 +189,7 @@ export type ActionPlanProposal = z.infer<typeof actionPlanProposalSchema>;
 export type ActionPlanCreation = z.infer<typeof actionPlanCreationSchema>;
 export type ActionPlanDecision = z.infer<typeof actionPlanDecisionSchema>;
 export type ActionPlanList = z.infer<typeof actionPlanListSchema>;
+export type ActionPlanExecution = z.infer<typeof actionPlanExecutionSchema>;
 
 function safelySerializeInput(input: Record<string, unknown>) {
   try {

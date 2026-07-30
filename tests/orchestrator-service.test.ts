@@ -5,6 +5,7 @@ import { ingestConversationMessage } from "../src/modules/conversation-hub";
 import {
   createConversationActionPlan,
   decideConversationActionPlan,
+  executeConversationActionPlan,
   getConversationActionPlan,
   listConversationActionPlans,
 } from "../src/modules/orchestrator";
@@ -245,6 +246,150 @@ describe("service des plans Conversation", () => {
     );
   });
 
+  it("exécute les deux capacités mock durablement et projette un résultat multicanal", async () => {
+    const context = await createTenantContext("execution-owner@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    await ingestConversationMessage(context.db, context.userId, {
+      ...testChannelIngressFixture(context.tenantId),
+      threadId: source.threadId,
+    });
+    const plan = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    await expect(
+      executeConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_execution_not_approved" });
+    await decideConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      {
+        planId: plan.id,
+        decision: "approved",
+        reason: "Plan mock vérifié avant exécution.",
+      },
+    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("Aucun transport externe attendu."));
+
+    const executed = await executeConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      plan.id,
+    );
+    const replay = await executeConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      plan.id,
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(executed).toMatchObject({
+      id: plan.id,
+      approvalStatus: "executed",
+      idempotentReplay: false,
+      steps: [{ status: "succeeded" }, { status: "succeeded" }],
+      execution: {
+        status: "succeeded",
+        environment: "mock",
+        externalSideEffect: false,
+        steps: [
+          { action: "mock_search_contact", status: "succeeded", attempts: 1 },
+          { action: "mock_create_task", status: "succeeded", attempts: 1 },
+        ],
+      },
+    });
+    expect(replay).toMatchObject({
+      id: plan.id,
+      approvalStatus: "executed",
+      idempotentReplay: true,
+      execution: { workflowRunId: executed.execution.workflowRunId },
+    });
+
+    const counts = await context.db.query<{
+      runs: number;
+      steps: number;
+      events: number;
+      tasks: number;
+      results: number;
+    }>(
+      `select
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key = $2) as runs,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1) as steps,
+         (select count(*)::int from domain_events where tenant_id = $1
+           and idempotency_key = $3) as events,
+         (select count(*)::int from tasks where tenant_id = $1) as tasks,
+         (select count(*)::int from conversation_messages where tenant_id = $1
+           and thread_id = $4 and kind = 'result') as results`,
+      [
+        context.tenantId,
+        `conversation_plan:${plan.id}`,
+        `conversation.plan.execute:${plan.id}`,
+        source.threadId,
+      ],
+    );
+    expect(counts.rows[0]).toEqual({
+      runs: 1,
+      steps: 2,
+      events: 1,
+      tasks: 0,
+      results: 1,
+    });
+
+    const resultRoutes = await context.db.query<{ adapter_key: string }>(
+      `select routes.adapter_key
+       from conversation_message_route_hops as routes
+       join conversation_messages as messages
+         on messages.tenant_id = routes.tenant_id and messages.id = routes.message_id
+       where routes.tenant_id = $1 and messages.thread_id = $2
+         and messages.kind = 'result'
+       order by routes.position`,
+      [context.tenantId, source.threadId],
+    );
+    expect(resultRoutes.rows.map((row) => row.adapter_key)).toEqual([
+      "web-chat",
+      "test-channel",
+    ]);
+
+    const audit = await context.db.query<{
+      action: string;
+      safe_metadata: string;
+    }>(
+      `select action, safe_metadata from audit_logs
+       where tenant_id = $1 and target_type = 'conversation_action_plan'
+       order by created_at asc`,
+      [context.tenantId],
+    );
+    expect(audit.rows.map((row) => row.action)).toEqual([
+      "conversation.plan_created",
+      "conversation.plan_approved",
+      "conversation.plan_executed",
+    ]);
+    expect(audit.rows[2]?.safe_metadata).toContain('"externalSideEffect":false');
+    expect(audit.rows[2]?.safe_metadata).not.toContain(
+      "Plan mock vérifié avant exécution",
+    );
+  });
+
   it("isole les tenants et réserve la décision aux rôles autorisés", async () => {
     const ownerA = await createTenantContext("tenant-plan-a@example.com");
     const ownerB = await createSecondUserAndTenant(
@@ -307,6 +452,14 @@ describe("service des plans Conversation", () => {
         },
       ),
     ).rejects.toMatchObject({ code: "tenant_access_denied" });
+    await expect(
+      executeConversationActionPlan(
+        ownerA.db,
+        ownerB.userId,
+        ownerA.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "tenant_access_denied" });
   });
 });
 
@@ -353,6 +506,32 @@ function ingressFixture(tenantId: string) {
     correlationId: `correlation_${tenantId}`,
     routeTrace: [],
     text: "Texte client confidentiel à ne jamais placer dans l'audit.",
+    attachments: [],
+    occurredAt,
+  };
+}
+
+function testChannelIngressFixture(tenantId: string) {
+  return {
+    tenantId,
+    channelIdentity: {
+      id: `test_identity_${tenantId}`,
+      tenantId,
+      participantId: `test_participant_${tenantId}`,
+      channelKind: "test" as const,
+      adapterKey: "test-channel",
+      externalSubjectId: `test_member_${tenantId}`,
+      displayName: "Canal de test",
+      role: "member" as const,
+      state: "active" as const,
+      createdAt: occurredAt,
+      updatedAt: occurredAt,
+    },
+    externalMessageId: `test_external_${tenantId}`,
+    idempotencyKey: `ingress:test:${tenantId}`,
+    correlationId: `test_correlation_${tenantId}`,
+    routeTrace: [],
+    text: "Confirmation simulée depuis le second canal.",
     attachments: [],
     occurredAt,
   };

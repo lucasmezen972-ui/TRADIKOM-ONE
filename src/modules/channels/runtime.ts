@@ -8,6 +8,7 @@ import { createWebChannelAdapter } from "@/modules/channels/web-channel";
 import {
   createConversationActionPlan,
   decideConversationActionPlan,
+  executeConversationActionPlan,
   listConversationActionPlans,
 } from "@/modules/orchestrator";
 
@@ -49,6 +50,8 @@ export function createConversationChannelServices(db: DbClient) {
         decision,
         reason,
       }),
+    executePlan: (userId: string, tenantId: string, planId: string) =>
+      executeConversationActionPlan(db, userId, tenantId, planId),
   };
 }
 

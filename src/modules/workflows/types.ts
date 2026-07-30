@@ -12,6 +12,8 @@ export const workflowActionSchema = z.object({
     "call_webhook",
     "wait_for_duration",
     "request_approval",
+    "mock_search_contact",
+    "mock_create_task",
   ]),
   input: z.record(z.string(), z.unknown()).default({}),
   idempotencyKey: z.string().optional(),

@@ -50,6 +50,14 @@ export const workflowActionRegistry: Record<
   call_webhook: callWebhookAction,
   wait_for_duration: waitForDurationAction,
   request_approval: requestApprovalAction,
+  mock_search_contact: mockConversationCapability(
+    "crm.contacts.search",
+    "Recherche de contact simulée et vérifiée.",
+  ),
+  mock_create_task: mockConversationCapability(
+    "project.task.create",
+    "Création de tâche simulée et vérifiée.",
+  ),
 };
 
 export async function executeWorkflowAction(
@@ -65,6 +73,23 @@ export async function executeWorkflowAction(
   }
 
   return handler(context);
+}
+
+function mockConversationCapability(
+  capability: "crm.contacts.search" | "project.task.create",
+  summary: string,
+): WorkflowActionHandler {
+  return async ({ action }) => ({
+    status: "succeeded",
+    summary,
+    metadata: {
+      capability,
+      executionEnvironment: "mock",
+      planStepId: stringInput(action.input.planStepId, "unknown"),
+      evidence: "mock_execution_recorded",
+      externalSideEffect: false,
+    },
+  });
 }
 
 async function createTaskAction({

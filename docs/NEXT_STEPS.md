@@ -2,19 +2,23 @@
 
 ## Prochaine action concrète
 
-Faire valider par CI l'affichage exact du plan et les commandes françaises Approuver/Refuser sur l'écran Conversation. Enchaîner avec l'exécution durable des deux capacités mock et projeter le résultat dans le fil canonique.
+Publier et faire valider l'exécution durable des deux capacités mock et le résultat routé vers le web et le canal de test. Enchaîner avec le parcours Playwright Conversation complet sur desktop et mobile.
+
+## Référence prompt maître
+
+Les pages 31, 46 et 48 imposent de terminer la première verticale avant toute extension : validation unique, exécution des deux capacités mock, résultat répliqué, audit et reprise. Les pages 32 et 69 exigent les preuves unitaires, intégration, PostgreSQL/RLS, workflow, provider non configuré, sécurité, Playwright mobile/desktop et accessibilité. La page 71 conserve le critère suprême : obtenir un résultat métier plus simplement par la conversation.
 
 ## Bloc de reprise exact
 
-Le service de plan est publié dans `1dca742`. Aucun secret, déploiement, merge ou dépense n'est requis pour la suite locale et la CI de la PR brouillon.
+Le service de plan est publié dans `1dca742` et l'interface dans `ffe258e`. L'exécution durable est prête localement avec un test d'intégration. Aucun secret, déploiement, merge ou dépense n'est requis.
 
 ```text
-1. Valider le service de plan sur le run 30552219390.
-2. Publier l'interface de plan et décision unique avec ses tests tenant-aware.
-3. Suivre la CI de la PR #11 jusqu'à migrations, lint, typecheck, tests, build et Playwright.
-4. Implémenter l'exécution mock durable sur le moteur existant, avec idempotence et reprise.
-5. Projeter résultat et preuve d'audit dans le fil canonique et les deux canaux.
-6. Ajouter le parcours Playwright desktop et mobile, puis ne corriger que les causes observées.
+1. Publier le workflow durable mock, la correction du test de tables et le renforcement de l'automation PDF.
+2. Suivre la CI de la PR #11 jusqu'à migrations, lint, typecheck, tests, build et Playwright.
+3. Ajouter le parcours Conversation message web -> canal test -> plan -> approbation -> exécution -> résultat.
+4. Exécuter ce parcours aux largeurs desktop et mobile et vérifier le clavier.
+5. Vérifier les preuves audit, idempotence, routage et absence d'effet externe en base.
+6. Corriger uniquement les causes observées puis produire le rapport OS-1.
 ```
 
 ## Critères du prochain checkpoint
@@ -35,7 +39,7 @@ Le service de plan est publié dans `1dca742`. Aucun secret, déploiement, merge
 3. Repository et service tenant-aware. Terminé et validé.
 4. Adaptateur canal de test. Terminé et validé sans transport réseau.
 5. Web chat minimal. Terminé et validé par le run `30549936954`.
-6. Plan structuré, validation unique et deux capacités mock explicites. Repository/service publiés; interface et CI finale en cours.
-7. Playwright web + canal test, reprise et preuve d'audit.
+6. Plan structuré, validation unique et deux capacités mock explicites. Interface publiée; exécution durable prête à valider.
+7. Playwright web + canal test, reprise et preuve d'audit. Prochaine étape active.
 
 Ne pas ouvrir OS-2 tant que ce parcours n'est pas vert de bout en bout.

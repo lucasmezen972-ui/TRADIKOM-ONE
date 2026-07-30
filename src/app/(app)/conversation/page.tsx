@@ -15,6 +15,7 @@ import { getConversationChannelServices } from "@/modules/channels";
 import {
   createConversationPlanAction,
   decideConversationPlanAction,
+  executeConversationPlanAction,
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
 } from "@/app/(app)/conversation/actions";
@@ -25,7 +26,7 @@ type ConversationPageProps = {
   searchParams: Promise<{
     fil?: string;
     envoye?: "web" | "test";
-    plan?: "cree" | "approved" | "rejected";
+    plan?: "cree" | "approved" | "rejected" | "executed";
   }>;
 };
 
@@ -98,7 +99,9 @@ export default async function ConversationPage({
             ? "Plan déterministe créé et placé en attente de validation."
             : params.plan === "approved"
               ? "Plan approuvé. Il est prêt pour l’exécution mock."
-              : "Plan refusé. Aucune action n’a été exécutée."}
+              : params.plan === "executed"
+                ? "Exécution mock terminée et preuve durable enregistrée."
+                : "Plan refusé. Aucune action n’a été exécutée."}
         </div>
       ) : null}
 
@@ -348,6 +351,22 @@ function PlanPanel({
                 Un responsable, administrateur ou propriétaire doit valider ce plan.
               </p>
             )
+          ) : null}
+          {plan.approvalStatus === "approved" && canDecide ? (
+            <form
+              action={executeConversationPlanAction}
+              className="mt-4 border-t border-slate-200 pt-4"
+            >
+              <input type="hidden" name="threadId" value={threadId} />
+              <input type="hidden" name="planId" value={plan.id} />
+              <button className="inline-flex min-h-11 items-center gap-2 rounded-md bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800">
+                <Bot size={16} aria-hidden />
+                Exécuter les deux étapes en mock
+              </button>
+              <p className="mt-2 text-xs text-slate-500">
+                L’exécution est durable et idempotente, sans appel ni effet externe.
+              </p>
+            </form>
           ) : null}
         </div>
       ) : (

@@ -116,3 +116,23 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les responsables, administrateurs et propriétaires disposent des commandes françaises Approuver/Refuser avec motif; les collaborateurs voient l'état mais ne peuvent pas décider.
 - La création du plan cible le dernier message texte entrant et les actions serveur passent par le service tenant-aware. Les messages internes de plan et de décision sont identifiés comme TRADIKOM ONE dans la chronologie.
 - Le listing de plans est testé pour l'isolation tenant. La prochaine tranche est l'exécution mock durable après validation CI de cette interface.
+
+## 2026-07-30 - Prompt maître rendu exécutable par l'automation
+
+- Le PDF canonique `Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf` est confirmé à 71 pages avec l'empreinte SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+- Le texte a été extrait sur 71/71 pages. Les pages 1, 5, 31, 46, 69 et 71 ont aussi été rendues et vérifiées visuellement pour confirmer mandat, doctrine anti-dérive, roadmap, parcours démontrable, matrice de tests et gouvernance finale.
+- `docs/MASTER_PROMPT_REFERENCE.md` devient l'index versionné : pages cœur obligatoires à relire, carte des sections et contrat de preuve. Le PDF reste la source normative et son empreinte est contrôlée localement.
+- `AGENT_STATE.json`, `NEXT_STEPS.md` et `DRIFT_REPORT.md` doivent désormais citer les pages réellement appliquées, l'exigence active, la preuve attendue et les écarts restants.
+- Le contrôle de continuité bloque une référence, un état ou un drift report non relié au prompt maître. En CI, l'absence du PDF local est signalée; l'automation locale doit alors bloquer toute nouvelle sélection de tâche.
+- L'automation native `continuit-tradikom-one-os` conserve son exécution horaire à la minute 17, son modèle et son niveau de raisonnement, mais impose maintenant lecture directe des pages cœur, routage par la carte paginée, ordre exact de la page 48 et preuve selon les pages 32 et 69.
+- Le contrôle renforcé exécuté directement par Node 22 retourne `ready`, sans erreur ni avertissement, et valide l'empreinte du PDF local. Vitest ciblé reste bloqué silencieusement sur le runtime local connu et a été interrompu proprement.
+- Le script `agent:continuity-check` n'utilise plus le chargeur `tsx` qui se bloquait localement; il passe désormais par le support TypeScript natif de Node 22. La commande exacte `pnpm agent:continuity-check` termine en environ six secondes avec zéro erreur et zéro avertissement.
+- Aucun push, merge, déploiement, dépense, secret ou fournisseur réel n'a été utilisé pour ce renforcement.
+
+## 2026-07-30 - Exécution mock durable et résultat multicanal
+
+- Le plan approuvé est traduit en définition bornée du moteur de workflows existant : un événement idempotent, un run persistant et exactement deux actions `mock_search_contact` puis `mock_create_task`.
+- Les handlers mock ne font aucun appel réseau et ne créent ni tâche CRM ni effet externe. Ils ne persistent que des références de plan, une preuve sûre et l'environnement `mock`.
+- Les étapes de plan passent par `running` puis `succeeded`; le plan devient `executed`, un message canonique `result` est créé et ses routes web/test sont persistées.
+- Le replay retrouve le même workflow run sans dupliquer événement, étapes, message, audit ou résultat. L'audit conserve fingerprint, run et classification sûre sans motif ni contenu client.
+- Le test d'intégration couvre refus avant approbation, contrôle de rôle, deux canaux, absence de `fetch`, absence de tâche réelle, durabilité, replay et audit. Le test de migration Conversation inclut désormais les deux tables de plan observées par la CI.

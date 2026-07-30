@@ -1,15 +1,38 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T14:39:56.000Z",
+  "updatedAt": "2026-07-30T14:50:01.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "1dca7429e9d7d4144302468cfdc7e4259ffc1fc8",
+  "lastCommit": "ffe258e19dd745c060b075e6f9da5eb402174b8d",
   "status": "in_progress",
   "currentPhase": "OS-1",
   "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
-  "nextAction": "Faire valider par CI l’interface française de plan et de décision unique, puis implémenter l’exécution mock durable et la projection du résultat dans tous les canaux du fil.",
-  "nextFile": "src/app/(app)/conversation/page.tsx",
+  "masterPrompt": {
+    "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
+    "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
+    "pageCount": 71,
+    "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
+    "alignment": {
+      "pagesConsulted": [3, 4, 5, 6, 7, 11, 12, 16, 17, 18, 22, 24, 31, 32, 33, 46, 48, 64, 68, 69, 70, 71],
+      "sections": [
+        "0-4 Mandat, north star, anti-dérive et continuité",
+        "7 Conversation Hub canonique",
+        "11-13 Capacités, orchestrateur et workflows durables",
+        "17 PostgreSQL/RLS",
+        "19 UX radicalement simple",
+        "26-28 Roadmap, Definition of Done et reprise",
+        "41 Premier parcours démontrable",
+        "43 Ordre exact de la prochaine exécution",
+        "58 et 62 Provider runtime et WebChat sans clé",
+        "63-65 Tests, handoff et gouvernance"
+      ],
+      "requirement": "Achever OS-1 dans l'ordre de la page 48 : validation unique, exécution mock durable, résultat répliqué, audit et Playwright avant tout nouveau module.",
+      "evidenceExpected": "Une CI verte et un parcours ingest message -> plan -> decision -> execution mock -> résultat multicanal, tenant-isolé, idempotent, audité et vérifié en Playwright mobile et desktop."
+    }
+  },
+  "nextAction": "Publier et faire valider l’exécution mock durable et son résultat multicanal, puis ajouter le parcours Playwright Conversation complet sur desktop et mobile.",
+  "nextFile": "tests/e2e/vertical.spec.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -62,7 +85,15 @@
     "pnpm vitest run tests/orchestrator-service.test.ts - tentative locale bornée",
     "pnpm exec eslint orchestrateur/service - tentative locale bornée",
     "tsc --noEmit --pretty false - tentative locale bornée",
-    "contrôle statique tenant, RLS, audit, idempotence et absence de transport externe"
+    "contrôle statique tenant, RLS, audit, idempotence et absence de transport externe",
+    "pdfinfo et SHA-256 du prompt maître de 71 pages",
+    "extraction textuelle 71/71 pages et inspection visuelle des pages 1, 5, 31, 46, 69 et 71",
+    "création du référentiel paginé et du contrôle d'intégrité du prompt maître",
+    "mise à jour de l'automation native avec lecture paginée obligatoire",
+    "node --experimental-strip-types scripts/agent/continuity-check.ts",
+    "gh run view 30552219390 --log-failed",
+    "pnpm vitest run tests/orchestrator-service.test.ts - tentative locale bornée",
+    "implémentation du workflow durable mock et de la projection multicanale"
   ],
   "lastValidation": [
     {
@@ -160,6 +191,34 @@
     {
       "command": "service de plan - tenant, RLS, audit, idempotence et fournisseurs",
       "status": "static_checks_passed_executable_ci_pending"
+    },
+    {
+      "command": "prompt maître PDF - 71 pages, empreinte et pages de gouvernance",
+      "status": "passed_sha256_text_extraction_and_visual_sampling"
+    },
+    {
+      "command": "continuity-check natif Node 22 après renforcement prompt maître",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm agent:continuity-check avec runtime TypeScript natif Node 22",
+      "status": "passed_ready_zero_errors_zero_warnings_in_6_seconds"
+    },
+    {
+      "command": "tests/continuity-check.test.ts via Vitest local",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30552219390 sur 1dca742",
+      "status": "failed_only_stale_conversation_table_expectation_233_tests_passed"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30552994527 sur ffe258e",
+      "status": "migrations_lint_typecheck_passed_tests_running"
+    },
+    {
+      "command": "exécution Conversation mock durable, idempotence, audit et routage web/test",
+      "status": "integration_test_added_ci_pending"
     }
   ],
   "humanBlockers": [

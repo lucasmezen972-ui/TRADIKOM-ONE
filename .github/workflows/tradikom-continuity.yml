@@ -47,5 +47,6 @@ jobs:
             docs/NEXT_STEPS.md
             docs/DRIFT_REPORT.md
             docs/ROADMAP_TRADIKOM_ONE_OS.md
+            docs/MASTER_PROMPT_REFERENCE.md
           if-no-files-found: error
           retention-days: 14

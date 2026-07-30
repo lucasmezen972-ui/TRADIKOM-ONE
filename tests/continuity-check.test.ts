@@ -30,6 +30,19 @@ describe("contrôle de continuité", () => {
         nextAction: "Créer le schéma canonique de conversation.",
         nextFile: "src/modules/conversation-hub/schemas.ts",
         lastValidation: [],
+        masterPrompt: {
+          source: "/prompt-maitre-indisponible-en-ci.pdf",
+          sha256:
+            "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
+          pageCount: 71,
+          mandatoryPages: [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
+          alignment: {
+            pagesConsulted: [3, 4, 31, 48, 71],
+            sections: ["Instructions", "Roadmap", "Ordre exact"],
+            requirement: "Construire la première verticale conversationnelle.",
+            evidenceExpected: "Schéma canonique validé par les tests unitaires.",
+          },
+        },
       }),
     );
     for (const file of [
@@ -41,12 +54,16 @@ describe("contrôle de continuité", () => {
       writeFileSync(join(root, "docs", file), "Présent\n");
     }
     writeFileSync(
+      join(root, "docs/MASTER_PROMPT_REFERENCE.md"),
+      "# Référence\n\n- nombre de pages : `71`;\n- bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5\n\n## Boucle obligatoire de chaque automation\n\n## Carte des pages\n\n## Contrat de preuve\n",
+    );
+    writeFileSync(
       join(root, "docs/DRIFT_REPORT.md"),
-      "# Drift report\n\n## Impact north star\nConversation.\n",
+      "# Drift report\n\n## Impact north star\nConversation.\n\n## Alignement prompt maître\nPages 3, 31 et 48.\n",
     );
     writeFileSync(
       join(root, "docs/NEXT_STEPS.md"),
-      "# Étapes suivantes\n\n## Prochaine action concrète\nCréer le schéma.\n",
+      "# Étapes suivantes\n\n## Prochaine action concrète\nCréer le schéma.\n\n## Référence prompt maître\nPages 31 et 48.\n",
     );
 
     const result = checkContinuity(root, now);
@@ -77,6 +94,7 @@ describe("contrôle de continuité", () => {
       "ROADMAP_TRADIKOM_ONE_OS.md",
       "AUDIT_TRADIKOM_ONE_OS_ENTRY.md",
       "RESUME_PROMPT.md",
+      "MASTER_PROMPT_REFERENCE.md",
     ]) {
       writeFileSync(join(root, "docs", file), "Présent\n");
     }

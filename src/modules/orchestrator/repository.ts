@@ -325,3 +325,39 @@ export async function updateActionPlanStepStatuses(
     [status, tenantId, planId],
   );
 }
+
+export async function updateActionPlanExecutionStatus(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+  status: "running" | "succeeded" | "failed",
+) {
+  const eligibleStatuses =
+    status === "running" ? ["approved"] : ["approved", "running"];
+  const placeholders = eligibleStatuses
+    .map((_, index) => `$${index + 4}`)
+    .join(", ");
+  await db.query(
+    `update conversation_action_plan_steps
+     set status = $1
+     where tenant_id = $2 and plan_id = $3
+       and status in (${placeholders})`,
+    [status, tenantId, planId, ...eligibleStatuses],
+  );
+}
+
+export async function markActionPlanExecuted(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+  updatedAt: string,
+) {
+  const result = await db.query<ConversationActionPlanRow>(
+    `update conversation_action_plans
+     set approval_status = 'executed', updated_at = $1
+     where tenant_id = $2 and id = $3 and approval_status = 'approved'
+     returning *`,
+    [updatedAt, tenantId, planId],
+  );
+  return result.rows[0] ?? null;
+}
