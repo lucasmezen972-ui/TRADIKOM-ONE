@@ -4,6 +4,7 @@ import { createServices } from "../src/lib/services";
 import {
   getConversationThread,
   ingestConversationMessage,
+  listConversationThreads,
 } from "../src/modules/conversation-hub/service";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
@@ -54,6 +55,8 @@ describe("service du Conversation Hub", () => {
       id: first.threadId,
       tenantId: context.tenantId,
       status: "open",
+      createdAt: timestamp,
+      lastMessageAt: timestamp,
     });
     expect(thread.identities).toHaveLength(1);
     expect(thread.messages).toHaveLength(1);
@@ -73,6 +76,21 @@ describe("service du Conversation Hub", () => {
         routeTrace: input.routeTrace,
       },
     });
+    await expect(
+      listConversationThreads(
+        context.db,
+        context.userId,
+        context.tenantId,
+        500,
+      ),
+    ).rejects.toBeDefined();
+    expect(
+      await listConversationThreads(
+        context.db,
+        context.userId,
+        context.tenantId,
+      ),
+    ).toMatchObject([{ id: first.threadId, tenantId: context.tenantId }]);
 
     const audits = await context.db.query<{
       action: string;

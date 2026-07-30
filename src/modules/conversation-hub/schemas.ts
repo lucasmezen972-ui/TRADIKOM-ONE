@@ -235,6 +235,12 @@ export const conversationThreadLookupSchema = z
   })
   .strict();
 
+export const conversationThreadListSchema = z
+  .object({
+    limit: z.number().int().min(1).max(50).default(20),
+  })
+  .strict();
+
 export type ChannelKind = z.infer<typeof channelKindSchema>;
 export type ChannelIdentity = z.infer<typeof channelIdentitySchema>;
 export type CanonicalThread = z.infer<typeof canonicalThreadSchema>;
@@ -244,4 +250,7 @@ export type CanonicalMessage = z.infer<typeof canonicalMessageSchema>;
 export type MessageIngress = z.infer<typeof messageIngressSchema>;
 export type ConversationThreadLookup = z.infer<
   typeof conversationThreadLookupSchema
+>;
+export type ConversationThreadList = z.infer<
+  typeof conversationThreadListSchema
 >;

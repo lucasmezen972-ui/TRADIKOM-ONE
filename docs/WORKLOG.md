@@ -54,3 +54,30 @@ Ce fichier est append-only. Chaque entrée conserve les faits, commandes, décis
 - Les audits de réception et de replay ne contiennent que l'identifiant du fil, la direction, le statut, le nombre de pièces jointes et l'état d'idempotence, jamais le texte, le visiteur, le nom de fichier ni le stockage.
 - Les tests couvrent replay, restitution canonique, pièces jointes, provenance, membership absent, rôle lecture seule, isolation de lecture et conflit d'identité.
 - ESLint ciblé reste bloqué sans sortie sur le runtime Node local connu; le checkpoint est préparé pour validation par la CI de la PR.
+
+## 2026-07-30 - Durcissement du checkpoint service
+
+- La lecture du fil s'exécute désormais dans une transaction portant le contexte tenant et acteur PostgreSQL avant toute requête sur les tables protégées par RLS.
+- Un rejeu n'est accepté que si la clé d'idempotence correspond au même message sûr; une collision sur le contenu ou la provenance stable renvoie `conversation_idempotency_conflict` sans journaliser le contenu.
+- Une nouvelle identité déjà marquée bloquée ou révoquée est refusée avant toute création. Les tests ajoutent aussi le refus d'une relation vers un fil d'un autre tenant.
+- Les contrôles texte ne trouvent ni marqueur de conflit, ni espace terminal, ni fournisseur, credential ou payload brut dans le nouveau coeur. Toutes les requêtes du repository incluent le tenant dans leurs filtres ou valeurs.
+- `pnpm agent:continuity-check`, Vitest ciblé, ESLint ciblé et TypeScript ont été tentés puis interrompus après blocage silencieux reproductible. La dernière CI verte `30546099003` valide la persistance, pas encore ce lot service local.
+- Le lot ne peut pas être soumis à la CI sans publication; aucune autorisation de push n'étant donnée, aucun commit, push, merge ou déploiement n'a été effectué et aucun secret, fournisseur réel ou dépense n'a été utilisé.
+
+Correction de continuité : le mandat utilisateur de poursuivre le chantier et l'autorisation de travail sur la branche avaient déjà conduit à publier ce lot sur `aee85da`; la CI `30548008916` est en cours. Aucune fusion ni aucun déploiement n'a été effectué.
+
+## 2026-07-30 - Adaptateur canal de test
+
+- `src/modules/channels/test-channel.ts` normalise un message de test vers l'ingress canonique sans transport, SDK, credential ni appel réseau.
+- L'identité de test est stable par tenant et sujet externe grâce à une empreinte SHA-256 non secrète; elle ne peut donc ni collisionner entre tenants ni exposer le sujet dans un identifiant interne.
+- L'adaptateur conserve clé d'idempotence, corrélation, message externe et trace de routage anti-boucle.
+- Le test démarre un fil depuis le canal web, injecte puis rejoue le même message depuis `canal-test`, vérifie deux projections dans le même fil et prouve que `fetch` n'est jamais appelé.
+
+## 2026-07-30 - Correctif CI et web chat minimal
+
+- La CI `30548008916` valide migrations, lint et typecheck sur `aee85da`, puis échoue uniquement sur les deux tests du service Conversation : le fil créé à l'ingress refusait un message métier plus ancien que sa création technique.
+- `updateConversationThreadLastMessage` conserve désormais la première occurrence métier comme création du fil et la dernière occurrence comme dernier message. Le test verrouille les deux dates sans retirer la contrainte SQL.
+- L'adaptateur `web-chat` crée une identité membre stable par tenant et utilisateur, puis passe exclusivement par l'ingress canonique.
+- Le facade borné `getConversationChannelServices` évite d'ajouter les nouveaux canaux au monolithe `src/lib/services.ts` tout en centralisant migration, lecture et mutation.
+- L'écran protégé `/conversation` affiche les fils récents, leur provenance web/test et deux formulaires français. Le tenant vient uniquement de la session serveur; les clés d'idempotence, corrélation et dates sont conservées dans chaque soumission pour rendre le rejeu sûr.
+- Le rôle `read-only` voit le fil mais ne peut pas envoyer. Le canal de test reste explicitement local et sans fournisseur externe.

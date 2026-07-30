@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T13:29:21.000Z",
+  "updatedAt": "2026-07-30T13:55:32.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "2d30810b594667cbaee35f1b92e1411066b5ab96",
+  "lastCommit": "aee85dad10472a91207bb9d8229144cd7d0eca3f",
   "status": "in_progress",
   "currentPhase": "OS-1",
   "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
-  "nextAction": "Faire valider le repository et le service Conversation Hub par la CI, puis ajouter l'adaptateur canal de test et le web chat minimal en français.",
-  "nextFile": "src/modules/conversation-hub/test-channel.ts",
+  "nextAction": "Publier le correctif de date du fil, les adaptateurs web/test et l'écran Conversation, corriger toute CI rouge, puis ouvrir le plan structuré.",
+  "nextFile": "src/modules/conversation-hub/action-plan.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -43,7 +43,15 @@
     "git diff --check ciblé migrations et tests",
     "gh pr checks 11 - runs 30546099003 et 30546098944 verts",
     "revue statique du repository et du service Conversation Hub",
-    "ESLint ciblé service borné après blocage Node local silencieux"
+    "ESLint ciblé service borné après blocage Node local silencieux",
+    "pnpm agent:continuity-check borné après blocage Node local silencieux",
+    "Vitest, ESLint et TypeScript ciblés bornés après blocage Node local silencieux",
+    "contrôle statique des requêtes tenant-scoped, des marqueurs de conflit et de l'absence de fournisseurs",
+    "publication du service durci sur aee85da et démarrage de la CI 30548008916",
+    "revue test-first de l'adaptateur canal-test sans transport réseau",
+    "gh run view 30548008916 --log-failed",
+    "correction de la chronologie métier des fils pour les messages retardés",
+    "construction locale du canal web et de l'écran Conversation français"
   ],
   "lastValidation": [
     {
@@ -105,6 +113,18 @@
     {
       "command": "PR #11 - GitHub Actions 30546099003 et continuité 30546098944",
       "status": "passed_including_postgres_rls_migrations_lint_typecheck_tests_build_playwright"
+    },
+    {
+      "command": "repository/service Conversation Hub - isolation, audit, idempotence et fournisseurs",
+      "status": "static_checks_passed_executable_ci_pending"
+    },
+    {
+      "command": "agent:continuity-check, Vitest, ESLint et TypeScript locaux après durcissement du service",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30548008916 sur aee85da",
+      "status": "failed_2_conversation_service_tests_due_to_thread_date_constraint_fix_prepared"
     }
   ],
   "humanBlockers": [

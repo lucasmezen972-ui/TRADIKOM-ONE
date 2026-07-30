@@ -13,6 +13,7 @@ import {
   HeartPulse,
   Lightbulb,
   LibraryBig,
+  MessageCircle,
   Megaphone,
   PackageSearch,
   ScanSearch,
@@ -36,6 +37,7 @@ type AppShellProps = {
 };
 
 const navItems = [
+  { href: "/conversation", label: "Conversation", icon: MessageCircle },
   { href: "/aujourdhui", label: "Aujourd'hui", icon: Gauge },
   {
     href: "/cerveau-entreprise",

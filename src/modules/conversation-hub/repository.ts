@@ -172,6 +172,22 @@ export async function findConversationThreadRow(
   return result.rows[0] ?? null;
 }
 
+export async function listConversationThreadRows(
+  db: DbClient,
+  tenantId: string,
+  limit: number,
+) {
+  const result = await db.query<ConversationThreadRow>(
+    `select *
+     from conversation_threads
+     where tenant_id = $1
+     order by coalesce(last_message_at, created_at) desc, id desc
+     limit $2`,
+    [tenantId, limit],
+  );
+  return result.rows;
+}
+
 export async function insertConversationThread(
   db: DbClient,
   input: {
@@ -354,7 +370,11 @@ export async function updateConversationThreadLastMessage(
 ) {
   await db.query(
     `update conversation_threads
-     set last_message_at = case
+     set created_at = case
+           when created_at > $1 then $1
+           else created_at
+         end,
+         last_message_at = case
            when last_message_at is null or last_message_at < $1 then $1
            else last_message_at
          end,

@@ -19,11 +19,13 @@ import {
   listConversationIdentityRows,
   listConversationMessageRows,
   listConversationRouteHopRows,
+  listConversationThreadRows,
   updateConversationThreadLastMessage,
   type ConversationChannelIdentityRow,
   type ConversationMessageRow,
 } from "@/modules/conversation-hub/repository";
 import {
+  conversationThreadListSchema,
   conversationThreadLookupSchema,
   messageIngressSchema,
   type MessageIngress,
@@ -182,6 +184,32 @@ export async function getConversationThread(
       messageLimit,
     ),
   );
+}
+
+export async function listConversationThreads(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  limit = 20,
+) {
+  const parsed = conversationThreadListSchema.parse({ limit });
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId);
+    const threads = await listConversationThreadRows(
+      transaction,
+      tenantId,
+      parsed.limit,
+    );
+    return threads.map((thread) => ({
+      id: thread.id,
+      tenantId: thread.tenant_id,
+      status: thread.status,
+      subject: thread.subject ?? undefined,
+      lastMessageAt: thread.last_message_at ?? undefined,
+      createdAt: thread.created_at,
+      updatedAt: thread.updated_at,
+    }));
+  });
 }
 
 async function readConversationThread(
