@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb, getMigrationIds } from "../src/lib/db";
 
@@ -9,6 +10,28 @@ afterEach(async () => {
 });
 
 describe("migrations des événements email OS-2", () => {
+  it("garde les migrations runtime et leurs miroirs SQL identiques", () => {
+    const runtime = readFileSync(
+      new URL("../src/lib/db.ts", import.meta.url),
+      "utf8",
+    );
+    const definitions = [
+      [
+        "os2EmailProviderEventsMigrationSql",
+        "../src/db/migrations/0065_os2_email_provider_events.sql",
+      ],
+      [
+        "os2EmailProviderEventsRlsMigrationSql",
+        "../src/db/migrations/0066_os2_email_provider_events_rls.sql",
+      ],
+    ] as const;
+
+    for (const [constant, mirrorPath] of definitions) {
+      const mirror = readFileSync(new URL(mirrorPath, import.meta.url), "utf8");
+      expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
+    }
+  });
+
   it("crée les deux tables minimales et enregistre leurs migrations RLS", async () => {
     expect(getMigrationIds()).toContain("071_os2_email_provider_events");
     expect(getMigrationIds(true)).toEqual(
@@ -219,4 +242,14 @@ async function seedEvent(
       timestamp,
     ],
   );
+}
+
+function extractSqlTemplate(source: string, constant: string) {
+  const prefix = "const " + constant + " = `";
+  const start = source.indexOf(prefix);
+  if (start < 0) throw new Error(`Migration runtime absente : ${constant}.`);
+  const sqlStart = start + prefix.length;
+  const sqlEnd = source.indexOf("`;", sqlStart);
+  if (sqlEnd < 0) throw new Error(`Migration runtime invalide : ${constant}.`);
+  return source.slice(sqlStart, sqlEnd);
 }

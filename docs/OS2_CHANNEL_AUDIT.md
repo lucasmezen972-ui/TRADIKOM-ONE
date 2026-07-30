@@ -59,7 +59,9 @@ Le client d'envoi ajoute les tags bornés `tradikom_kind` et `tradikom_tenant`; 
 
 Les migrations `071`/`072`, miroirs SQL `0065`/`0066`, préparent deux tables minimales : une correspondance livraison/tenant/email fournisseur et un journal append-only des événements `svix-id`. Un trigger refuse la modification d'un événement déjà inséré. Elles n'ont aucune colonne de corps brut, destinataire, sujet ou détail de bounce. Les relations invitation, livraison et email fournisseur sont tenant-composées; les identifiants provider et `svix-id` sont uniques globalement, avec des index tenant-leading et RLS `ALL`.
 
-Le service relie désormais une livraison réussie à une invitation encore en attente, vérifie rôle, tenant et destinataire, puis ne conserve qu'un hash du destinataire. Après vérification Svix, il exige la correspondance tenant/email fournisseur, déduplique globalement `svix-id`, persiste les événements tardifs sans faire régresser l'état et audite sans PII. Une réponse Resend 2xx sans identifiant fournisseur sûr est traitée comme réessayable, jamais comme une livraison honnêtement confirmée. Aucun endpoint public n'est encore activé.
+Le service relie désormais une livraison réussie à une invitation encore en attente, vérifie rôle, tenant et destinataire, puis ne conserve qu'un hash du destinataire. Après vérification Svix, il exige la correspondance tenant/email fournisseur, déduplique globalement `svix-id`, persiste les événements tardifs sans faire régresser l'état et audite sans PII. Une réponse Resend 2xx sans identifiant fournisseur sûr est traitée comme réessayable, jamais comme une livraison honnêtement confirmée.
+
+La route `/api/webhooks/resend` est préparée avec un lecteur UTF-8 en flux limité à 512 Kio, le type JSON obligatoire, les trois en-têtes Svix exacts, `no-store` et des réponses sans identifiant métier ni PII. Elle consulte d'abord l'état du registre : comme aucun chemin runtime ne produit encore `ready`, elle renvoie 503 avant lecture du corps, ouverture de la base ou vérification. Le chemin prêt est seulement injecté dans les tests; aucune activation réelle n'est introduite.
 
 ## Références fournisseur vérifiées
 

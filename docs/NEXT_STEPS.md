@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-Le contrat, le provider et le vérificateur Svix sont verts. Les migrations tenant/RLS ont passé migration, backup, lint, typecheck et PostgreSQL RLS; leur CI a révélé seulement deux assertions de fixture obsolètes, désormais corrigées. Publier et valider le service de réservation, déduplication et ordre tardif, puis préparer une route webhook qui refuse tout appel sans configuration.
+Le service de réservation, déduplication et ordre tardif est publié sur `199482a`. Sa CI a passé migrations, backup, lint, typecheck et 268 tests; les six échecs restants provenaient d'une divergence runtime/miroir du trigger et d'un token de fixture partagé, désormais corrigés avec un garde de parité. La route webhook Resend est préparée localement mais refuse toute ingestion tant que le registre n'est pas explicitement `ready`.
 
 ## Référence prompt maître
 
@@ -13,13 +13,12 @@ OS-1 satisfait désormais les pages 31, 32, 46, 48 et 69. Pour OS-2, relire les 
 Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le checkpoint `76cf327` a validé migrations, backup, lint, typecheck et RLS; ses deux échecs de tests étaient des fixtures devenues obsolètes. Le lot local actif les corrige et ajoute le service sans endpoint public.
 
 ```text
-1. Publier le repository/service tenant-aware de réservation des livraisons Resend.
-2. Valider migrations `071`/`072`, immutabilité, contraintes, RLS et PostgreSQL dans la CI corrigée.
-3. Vérifier la correspondance invitation/destinataire/email fournisseur après signature.
-4. Dédupliquer `svix-id` et empêcher un événement tardif de faire régresser l'état.
-5. Auditer livraison et événement sans adresse, sujet, token, corps ni détail fournisseur.
-6. Tester replay, ordre tardif, conflit cross-tenant et intégration invitation.
-7. Conserver WhatsApp, Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
+1. Publier les corrections runtime/fixture avec la route HTTP Resend.
+2. Publier la route HTTP Resend avec refus par défaut, corps brut borné et réponses sans PII.
+3. Vérifier que le runtime ne peut toujours pas atteindre `ready` sans consentement humain.
+4. Ajouter l'adaptateur WhatsApp/Twilio avec vérification officielle de l'URL exacte et des paramètres bruts.
+5. Tester replay, signature, payload, erreur et absence d'appel réseau.
+6. Conserver Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
 ```
 
 ## Critères du prochain checkpoint
@@ -41,6 +40,7 @@ Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le ch
 4. Email/Resend préparé avec refus runtime sûr. Checkpoint actif.
 5. Webhook Resend signé et filtré. Vert sur `860a14d`.
 6. Persistance tenant/RLS des livraisons et événements Resend. Publiée sur `76cf327`; fixtures CI corrigées localement.
-7. Service de déduplication et d'ordre tardif Resend. Checkpoint actif.
-8. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
-9. Tests provider mocks, sécurité, intégration et Playwright pertinents.
+7. Service de déduplication et d'ordre tardif Resend. Publié sur `199482a`; corrections CI incluses dans le checkpoint local.
+8. Route HTTP Resend fail-closed. Checkpoint local actif.
+9. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
+10. Tests provider mocks, sécurité, intégration et Playwright pertinents.

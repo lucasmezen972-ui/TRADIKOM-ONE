@@ -202,3 +202,13 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les audits ne contiennent ni adresse, sujet, corps, token ni détail de bounce. L'intégration invitation n'enregistre une correspondance que pour un résultat Resend `sent` doté d'un identifiant.
 - Une réponse Resend 2xx sans identifiant sûr devient `retryable_failure/provider_response_invalid`; elle n'est plus présentée comme envoyée.
 - Vitest et ESLint ciblés reproduisent le blocage Node local silencieux connu. `git diff --check` passe; la prochaine CI est l'arbitre exécutable.
+
+## 2026-07-30 - Route HTTP Resend refusée par défaut
+
+- Le checkpoint service `199482a` est publié. Sa continuité `30561347436` est verte; sa CI `30561347444` a déjà validé migrations, backup/restore, lint et typecheck avant les tests.
+- Les tests de ce run confirment 268 cas verts et révèlent deux causes de fixture : le trigger n'avait été ajouté qu'au miroir SQL, et le second tenant du setup service réutilisait le même token. La migration runtime et le token sont corrigés; un test compare désormais automatiquement runtime et miroirs `0065`/`0066`.
+- La route `/api/webhooks/resend` reste fine et délègue au service OS-2. Elle refuse immédiatement les états `disabled`, `not_configured` et `awaiting_human_auth`; le registre actuel ne sait pas produire `ready`.
+- Aucun corps ni accès base n'a lieu avant l'état prêt. Le chemin futur impose `application/json`, lit au plus 512 Kio en flux, refuse l'UTF-8 invalide et transmet exactement corps brut et en-têtes Svix.
+- Les réponses n'exposent ni tenant, livraison, email fournisseur, `svix-id`, PII ni code interne. Les événements volontairement ignorés sont acquittés; un mapping encore absent reçoit 503 avec retry borné.
+- Les tests couvrent les trois états non prêts, corps brut, taille déclarée et effective, type de contenu, événement ignoré, mapping retardé et normalisation sûre des erreurs.
+- La syntaxe TypeScript ciblée des trois nouveaux fichiers est valide. La validation exécutable complète attend le prochain checkpoint CI; aucune variable, clé, connexion ou route réelle n'est activée.

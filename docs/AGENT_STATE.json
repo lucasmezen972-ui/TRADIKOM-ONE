@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T16:23:00.000Z",
+  "updatedAt": "2026-07-30T16:32:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "76cf327f0f9e35f2a0fa58bd618a5489e677727f",
+  "lastCommit": "199482a746d90f378372589648b958a66959d646",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider le service tenant-aware de réservation, déduplication et ordre tardif Resend, puis préparer une route publique refusée par défaut sans activer le fournisseur.",
+  "currentObjective": "Valider le point d'entrée HTTP Resend fail-closed sans activation, puis ouvrir l'adaptateur WhatsApp/Twilio officiel.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,8 +32,8 @@
       "evidenceExpected": "Vérifier Svix officiel sur corps brut, lier invitation/tenant/email fournisseur, dédupliquer svix-id, préserver l'ordre tardif, auditer sans PII et refuser toute route non configurée."
     }
   },
-  "nextAction": "Publier et valider en CI le service email provider corrigé, puis préparer le point d'entrée webhook Resend avec secret obligatoire et refus par défaut.",
-  "nextFile": "src/app/api/webhooks/resend/route.ts",
+  "nextAction": "Publier et valider en CI la route Resend refusée par défaut, puis préparer la vérification officielle Twilio sans credential ni transport.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-adapter.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -113,7 +113,9 @@
     "diagnostic CI 30560346248 : 265 tests verts, deux fixtures de migration obsolètes corrigées",
     "service tenant-aware de réservation livraison et ingestion webhook Resend",
     "immutabilité SQL des événements, déduplication svix-id et ordre tardif sans régression",
-    "intégration invitation Resend sans adresse stockée et refus des réponses provider sans identifiant"
+    "intégration invitation Resend sans adresse stockée et refus des réponses provider sans identifiant",
+    "route HTTP Resend fail-closed, corps brut UTF-8 borné et réponses provider sans PII",
+    "syntaxe TypeScript ciblée des fichiers HTTP Resend"
   ],
   "lastValidation": [
     {
@@ -311,6 +313,14 @@
     {
       "command": "service email provider - tenant, signature, audit, idempotence, immutabilité et ordre tardif",
       "status": "static_checks_passed_executable_ci_pending"
+    },
+    {
+      "command": "CI 30561347444 et continuité 30561347436 sur 199482a",
+      "status": "continuity_passed_migrations_backup_lint_typecheck_and_268_tests_passed_six_fixture_failures_from_runtime_sql_drift_and_duplicate_token_fixed"
+    },
+    {
+      "command": "parité automatisée migration OS-2 runtime et miroirs SQL",
+      "status": "passed_guard_added"
     }
   ],
   "humanBlockers": [

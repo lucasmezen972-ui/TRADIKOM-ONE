@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; migrations sans PII validées jusqu'aux tests, RLS PostgreSQL vert, service local tenant-aware avec déduplication, immutabilité et ordre tardif.
-- Écarts restants : deux fixtures CI corrigées attendent republication avec le service; aucune route, activation, credential, consentement ou livraison réelle n'existe.
+- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; migrations sans PII, RLS PostgreSQL, service publié tenant-aware; route HTTP locale bornée qui refuse avant lecture tant que le canal n'est pas `ready`.
+- Écarts restants : la CI complète du service puis celle de la route restent à clore; aucun état `ready`, credential, consentement ou transport réel n'existe.
 
 ## Modules touchés
 
@@ -67,4 +67,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Publier et valider le service tenant-aware de déduplication et d'ordre tardif, puis préparer une route publique fail-closed sans activer Resend.
+Valider le service puis publier la route publique fail-closed; ouvrir ensuite WhatsApp/Twilio avec vérification SDK officielle sans activation.

@@ -304,7 +304,7 @@ async function seedTenant(
       invitationId,
       tenantId,
       tenantId === "tenant_email_a" ? recipientA : recipientB,
-      "a".repeat(64),
+      tenantId === "tenant_email_a" ? "a".repeat(64) : "b".repeat(64),
       sentAt,
     ],
   );
