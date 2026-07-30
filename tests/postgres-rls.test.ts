@@ -111,6 +111,11 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ownerB.id,
       ],
     );
+    const conversation = await insertConversationTenantFixtures(
+      ownerDb,
+      tenantA.id,
+      tenantB.id,
+    );
     const apiIntelligence = await insertApiIntelligenceTenantFixtures(
       ownerDb,
       tenantA.id,
@@ -193,6 +198,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect((await restrictedPool.query("select id from products")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from imports")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from export_jobs")).rows).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from conversation_messages")).rows,
+    ).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -228,6 +236,38 @@ describeIfPostgres("PostgreSQL RLS", () => {
       async (client) => client.query<{ id: string }>("select id from export_jobs"),
     );
     expect(tenantAExports.rows).toEqual([{ id: exportAId }]);
+    const tenantAMessages = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) =>
+        client.query<{ id: string }>("select id from conversation_messages"),
+    );
+    expect(tenantAMessages.rows).toEqual([{ id: conversation.messageAId }]);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into conversation_thread_participants (
+             tenant_id, thread_id, channel_identity_id, joined_at
+           ) values ($1, $2, $3, $4)`,
+          [
+            tenantA.id,
+            conversation.threadAId,
+            conversation.identityBId,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into conversation_participants (
+             id, tenant_id, role, display_name, created_at, updated_at
+           ) values ($1, $2, 'customer', 'Interdit', $3, $3)`,
+          [id("conversation_participant"), tenantB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
         client.query(
@@ -2686,6 +2726,102 @@ async function insertContact(
     ],
   );
   return contactId;
+}
+
+async function insertConversationTenantFixtures(
+  db: ReturnType<typeof pgPoolAsSqlClient>,
+  tenantAId: string,
+  tenantBId: string,
+) {
+  const now = nowIso();
+  const participantAId = id("conversation_participant_a");
+  const participantBId = id("conversation_participant_b");
+  const identityAId = id("conversation_identity_a");
+  const identityBId = id("conversation_identity_b");
+  const threadAId = id("conversation_thread_a");
+  const threadBId = id("conversation_thread_b");
+  const messageAId = id("conversation_message_a");
+  const messageBId = id("conversation_message_b");
+
+  await db.query(
+    `insert into conversation_participants (
+       id, tenant_id, role, display_name, created_at, updated_at
+     ) values
+       ($1, $2, 'customer', 'Cliente A', $3, $3),
+       ($4, $5, 'customer', 'Cliente B', $3, $3)`,
+    [participantAId, tenantAId, now, participantBId, tenantBId],
+  );
+  await db.query(
+    `insert into conversation_channel_identities (
+       id, tenant_id, participant_id, channel_kind, adapter_key,
+       external_subject_id, display_name, role, state, created_at, updated_at
+     ) values
+       ($1, $2, $3, 'test', 'canal-test', $4, 'Cliente A',
+         'customer', 'active', $5, $5),
+       ($6, $7, $8, 'test', 'canal-test', $9, 'Cliente B',
+         'customer', 'active', $5, $5)`,
+    [
+      identityAId,
+      tenantAId,
+      participantAId,
+      `visitor-${identityAId}`,
+      now,
+      identityBId,
+      tenantBId,
+      participantBId,
+      `visitor-${identityBId}`,
+    ],
+  );
+  await db.query(
+    `insert into conversation_threads (
+       id, tenant_id, status, subject, created_at, updated_at
+     ) values
+       ($1, $2, 'open', 'Conversation A', $3, $3),
+       ($4, $5, 'open', 'Conversation B', $3, $3)`,
+    [threadAId, tenantAId, now, threadBId, tenantBId],
+  );
+  await db.query(
+    `insert into conversation_thread_participants (
+       tenant_id, thread_id, channel_identity_id, joined_at
+     ) values ($1, $2, $3, $4), ($5, $6, $7, $4)`,
+    [
+      tenantAId,
+      threadAId,
+      identityAId,
+      now,
+      tenantBId,
+      threadBId,
+      identityBId,
+    ],
+  );
+  await db.query(
+    `insert into conversation_messages (
+       id, tenant_id, thread_id, channel_identity_id, direction, kind, status,
+       text_content, adapter_key, external_message_id, idempotency_key,
+       correlation_id, occurred_at, created_at
+     ) values
+       ($1, $2, $3, $4, 'inbound', 'text', 'received', 'Bonjour A',
+         'canal-test', $5, 'ingress:canal-test:shared', $6, $7, $7),
+       ($8, $9, $10, $11, 'inbound', 'text', 'received', 'Bonjour B',
+         'canal-test', $12, 'ingress:canal-test:shared', $13, $7, $7)`,
+    [
+      messageAId,
+      tenantAId,
+      threadAId,
+      identityAId,
+      `external-${messageAId}`,
+      `correlation-${messageAId}`,
+      now,
+      messageBId,
+      tenantBId,
+      threadBId,
+      identityBId,
+      `external-${messageBId}`,
+      `correlation-${messageBId}`,
+    ],
+  );
+
+  return { identityBId, messageAId, threadAId };
 }
 
 async function insertApiIntelligenceTenantFixtures(

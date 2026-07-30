@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T04:30:10.000Z",
+  "updatedAt": "2026-07-30T13:07:19.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "184eced70bb2921757050b3480c66d42425eb1b7",
+  "lastCommit": "629ae13ec0004e4cd05bd9495273ee71379df77d",
   "status": "in_progress",
   "currentPhase": "OS-1",
   "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
-  "nextAction": "Créer les tests puis le contrat borné du Conversation Hub canonique avant toute migration ou interface.",
-  "nextFile": "src/modules/conversation-hub/schemas.ts",
+  "nextAction": "Faire valider la persistance Conversation Hub par la CI PostgreSQL puis implémenter le repository et le service tenant-aware avec membership, idempotence et audit.",
+  "nextFile": "src/modules/conversation-hub/repository.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
-    "schedule": "Toutes les six heures à la minute 17"
+    "schedule": "Toutes les heures à la minute 17"
   },
   "commandsRun": [
     "git status --short --branch",
@@ -26,7 +26,21 @@
     "pnpm agent:continuity-check",
     "pnpm audit --prod --audit-level high",
     "git diff --check",
-    "Next.js dev et build locaux avec environnement CI"
+    "Next.js dev et build locaux avec environnement CI",
+    "pnpm agent:continuity-check",
+    "gh pr view 11 --json ...",
+    "gh run list --branch codex/tradikom-one-os",
+    "pnpm vitest run tests/conversation-hub-schemas.test.ts",
+    "pnpm exec eslint src/modules/conversation-hub/schemas.ts tests/conversation-hub-schemas.test.ts",
+    "pnpm typecheck",
+    "pnpm test",
+    "pnpm lint",
+    "pnpm build avec les variables locales factices du workflow CI",
+    "git diff --check",
+    "tests Conversation Hub ciblés, nouvelle tentative locale bornée",
+    "eslint ciblé, nouvelle tentative locale bornée",
+    "comparaison exacte des migrations runtime 067/068 et miroirs SQL 0061/0062",
+    "git diff --check ciblé migrations et tests"
   ],
   "lastValidation": [
     {
@@ -56,6 +70,34 @@
     {
       "command": "PR #11 - GitHub Actions 30513556909 et continuité 30513556848",
       "status": "passed_including_postgres_migrations_backup_lint_typecheck_tests_build_playwright"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30514520472 et continuité 30514520487",
+      "status": "passed_on_e2a092b"
+    },
+    {
+      "command": "tests/conversation-hub-schemas.test.ts",
+      "status": "passed_5_tests"
+    },
+    {
+      "command": "eslint ciblé Conversation Hub",
+      "status": "passed"
+    },
+    {
+      "command": "Next.js build local avec environnement CI factice",
+      "status": "passed_including_typescript"
+    },
+    {
+      "command": "lint, typecheck et tests complets locaux",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "parité migrations runtime 067/068 et miroirs SQL 0061/0062",
+      "status": "passed"
+    },
+    {
+      "command": "tests et ESLint ciblés après migration",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
     }
   ],
   "humanBlockers": [
