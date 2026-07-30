@@ -135,6 +135,7 @@ describe("service des endpoints fournisseur tenant-aware", () => {
         actorId: setup.ownerA.id,
         externalAccountId: accountSid,
         destinationAddress,
+        occurredAt: timestamp,
       },
       fingerprintSecret,
     );

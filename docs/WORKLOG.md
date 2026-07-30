@@ -252,3 +252,13 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les médias ne sont pas téléchargés ni persistés. Un message média-only devient une indication française bornée « média WhatsApp en attente d’import » sans URL fournisseur ni pièce jointe fictive.
 - Le Conversation Hub possède désormais une entrée système explicite, réutilisant exactement les contrôles d'identité, de replay, de route et d'audit sans attribuer le webhook à un humain.
 - La route ne peut toujours pas atteindre `ready`; aucun credential, endpoint réel, appel Twilio sortant ou média distant n'est activé.
+
+## 2026-07-30 - Frontière Microsoft Teams officielle et fail-closed
+
+- Le mapping et l'ingestion WhatsApp `19ff401` sont entièrement verts : CI `30565079771`, continuité `30565079790`, migrations, backup/restore, lint, typecheck, tests, build et Playwright.
+- La documentation Microsoft actuelle confirme que la frontière HTTP Teams doit valider signature JWKS, émetteur, audience, expiration et algorithme RS256 avant tout handler. Le SDK Teams TypeScript v2 officiel `@microsoft/teams.apps@2.0.14` est épinglé; aucun nouvel advisory actif n'est ajouté.
+- Le vérificateur utilise `ServiceTokenValidator` du SDK officiel avec un logger silencieux : aucun token, payload, nom ou détail d'erreur Microsoft n'est journalisé. Un Bearer mal formé est refusé avant création du validateur.
+- L'activité JSON est bornée à 1 Mio, UTF-8 stricte et projetée sur les seuls identifiants nécessaires. Noms, payload inconnu, contenu et URL de pièce jointe ne quittent jamais la frontière; les URL de service doivent être HTTPS sans credentials ni fragment.
+- La route `/api/webhooks/microsoft/teams` refuse avant lecture dans les trois états actuels. Le registre reste incapable de produire `ready`; même le chemin futur vérifié retourne 503 tant qu'aucun endpoint n'est attribué à un tenant.
+- Les 12 tests ciblés couvrent refus avant lecture, validation avant consommation, rejet JWT, activité ignorée, taille réelle/déclarée, URL sûre et absence de propagation du payload. ESLint, typecheck, 328 tests complets et build de production passent; Next.js inventorie la route Teams.
+- Aucun tenant Microsoft, application Entra, consentement administrateur, secret, endpoint réel, transport sortant ou appel fournisseur n'est créé.

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T17:48:00.000Z",
+  "updatedAt": "2026-07-30T18:10:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "01d8f610ab413af5cef7fa6b9e11569434c67ae4",
+  "lastCommit": "19ff401b3d580accb8af0e43aeec74de91b1eb3b",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider mapping et ingestion canonique WhatsApp/Twilio, sans activer le transport ni télécharger les médias.",
+  "currentObjective": "Préparer la frontière HTTP Microsoft Teams avec le SDK officiel, sans consentement, credential, mapping réel ni transport actif.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Prouver signature avant base, résolution endpoint et ingestion atomiques, identité externe pseudonymisée, replay MessageSid sans doublon, audit système sans PII et média non téléchargé."
+      "evidenceExpected": "Prouver refus avant lecture hors état prêt, validation JWT Microsoft officielle avant remise au métier, projection minimale sans payload brut ni URL de pièce jointe et absence d'activation implicite."
     }
   },
-  "nextAction": "Publier et valider en CI l'ingestion WhatsApp idempotente, puis produire le rapport de validation OS-2 avant d'ouvrir Teams et Slack.",
-  "nextFile": "docs/OS2_VALIDATION_REPORT.md",
+  "nextAction": "Publier le checkpoint Teams fail-closed, puis ajouter mapping tenant et ingestion canonique Teams derrière le même endpoint HMAC/RLS sans activer le transport.",
+  "nextFile": "src/modules/channels/teams-microsoft-ingress-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -131,7 +131,13 @@
     "8 tests ciblés migration/service endpoints, ESLint et typecheck",
     "CI 30564535609 et continuité 30564535551 entièrement vertes sur f4e4816",
     "service entrant atomique signature vers Conversation Hub sans PII d'identité",
-    "tests intégration replay, mapping absent/désactivé, signature avant base et média sans fetch"
+    "tests intégration replay, mapping absent/désactivé, signature avant base et média sans fetch",
+    "CI 30565079771 et continuité 30565079790 entièrement vertes pour mapping et ingestion WhatsApp",
+    "consultation officielle du trust model et du SDK Microsoft Teams v2",
+    "pnpm add @microsoft/teams.apps@2.0.14 et audit production sans nouvel advisory actif",
+    "route Teams fail-closed, validateur JWT officiel et projection sans payload brut",
+    "12 tests Teams ciblés, ESLint et typecheck complets",
+    "suite complète 328 tests verts et build de production avec route Teams"
   ],
   "lastValidation": [
     {
@@ -369,6 +375,18 @@
     {
       "command": "ingestion WhatsApp/Twilio vers Conversation Hub - tests ciblés, ESLint et typecheck",
       "status": "passed_signature_before_database_mapping_replay_pseudonymization_no_media_fetch"
+    },
+    {
+      "command": "CI 30565079771 et continuité 30565079790 sur 19ff401",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "vérificateur et route Microsoft Teams - Vitest, ESLint et typecheck",
+      "status": "passed_12_tests_official_sdk_fail_closed_no_raw_payload"
+    },
+    {
+      "command": "pnpm test et pnpm build après frontière Teams",
+      "status": "passed_328_tests_13_skipped_build_lists_teams_route"
     }
   ],
   "humanBlockers": [

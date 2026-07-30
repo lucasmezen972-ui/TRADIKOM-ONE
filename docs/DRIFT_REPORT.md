@@ -3,7 +3,7 @@
 - Date : 2026-07-30
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Travail effectué : OS-1 vertical vert, Resend tenant-aware validé et ouverture WhatsApp/Twilio par une vérification SDK officielle sans activation.
+- Travail effectué : OS-1 vertical vert, Resend et WhatsApp préparés jusqu'à l'ingestion canonique, puis ouverture Teams par validation JWT SDK officielle sans activation.
 
 ## Impact north star
 
@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : Resend, vérificateur et route/enveloppe Twilio verts; mapping endpoint publié; ingestion locale atomique vérifie avant base, pseudonymise l'identité, rejoue `MessageSid` et refuse mapping absent/désactivé sans réseau.
-- Écarts restants : la CI du mapping puis celle de l'ingestion restent à clore; aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
+- Preuve actuelle : Resend et WhatsApp sont verts jusqu'à l'ingestion atomique; Teams refuse hors état prêt, borne le corps et utilise le validateur officiel avant de projeter une enveloppe sans payload brut, PII annexe ni URL de pièce jointe.
+- Écarts restants : Teams n'a encore ni mapping tenant ni ingestion canonique; Slack reste au contrat transversal. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
 
 ## Modules touchés
 
@@ -35,7 +35,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 ## Risques
 
 - la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
-- WhatsApp/Twilio n'a pas encore de preuve CI finale ni de rapport OS-2 consolidé;
+- Teams et Slack n'ont pas encore de verticale tenant-aware complète ni de rapport OS-2 consolidé;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -59,6 +59,8 @@ La route Resend `6dd61b5` est entièrement verte dans la CI `30562294162`, avec 
 
 Le contrôle de continuité renforcé pour le prompt maître retourne localement `ready`, sans erreur ni avertissement, en vérifiant le PDF de 71 pages et son empreinte. La commande exacte `pnpm agent:continuity-check` termine désormais en environ six secondes grâce au runtime TypeScript natif de Node 22. L'automation native lit directement les pages cœur et exige une preuve paginée avant de choisir une tâche.
 
+L'ingestion WhatsApp `19ff401` est validée par la CI `30565079771` et la continuité `30565079790`. Le checkpoint Teams local épingle `@microsoft/teams.apps@2.0.14`; ses 12 tests ciblés, ESLint et le typecheck complet sont verts sans accès fournisseur.
+
 ## Ce qui reste simulé
 
 - OAuth `mock_business`;
@@ -69,4 +71,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Valider mapping et ingestion WhatsApp en CI, puis produire le rapport OS-2 avant d'ouvrir Teams et Slack.
+Publier la frontière Teams, puis ajouter son mapping tenant et son ingestion canonique avant d'ouvrir Slack.

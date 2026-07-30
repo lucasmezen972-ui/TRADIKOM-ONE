@@ -10,3 +10,5 @@ export * from "@/modules/channels/provider-endpoints-errors";
 export * from "@/modules/channels/provider-endpoints-repository";
 export * from "@/modules/channels/provider-endpoints-service";
 export * from "@/modules/channels/whatsapp-twilio-ingress-service";
+export * from "@/modules/channels/teams-microsoft-webhook";
+export * from "@/modules/channels/teams-microsoft-webhook-http";
