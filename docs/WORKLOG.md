@@ -212,3 +212,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les réponses n'exposent ni tenant, livraison, email fournisseur, `svix-id`, PII ni code interne. Les événements volontairement ignorés sont acquittés; un mapping encore absent reçoit 503 avec retry borné.
 - Les tests couvrent les trois états non prêts, corps brut, taille déclarée et effective, type de contenu, événement ignoré, mapping retardé et normalisation sûre des erreurs.
 - La syntaxe TypeScript ciblée des trois nouveaux fichiers est valide. La validation exécutable complète attend le prochain checkpoint CI; aucune variable, clé, connexion ou route réelle n'est activée.
+
+## 2026-07-30 - Vérificateur WhatsApp/Twilio officiel sans activation
+
+- Le checkpoint HTTP Resend `6dd61b5` est entièrement vert : CI `30562294162`, continuité `30562294361`, migrations, backup/restore, lint, typecheck, 268 tests, build et Playwright.
+- La copie iCloud ayant été évacuée localement par macOS, une copie de travail intacte a été clonée dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`. L'original n'a pas été supprimé et l'automation horaire cible explicitement la copie stable.
+- La dépendance officielle `twilio@6.0.2` est épinglée. L'audit de production ne rapporte aucun advisory actif supplémentaire; l'unique niveau haut reste l'exception historique documentée.
+- `verifyTwilioWebhook` transmet l'URL reçue directement au SDK officiel, refuse HTTP, credentials et fragments, et borne le corps à 512 Kio réels avant toute normalisation.
+- Les formulaires conservent tous les paramètres, y compris les clés dupliquées sous forme de tableaux attendus par le SDK. Les corps JSON utilisent `validateRequestWithBody` et le `bodySHA256` de l'URL exacte.
+- La sortie vérifiée ne contient ni corps, texte, numéro de téléphone ni paramètre libre. Seuls les SID Twilio syntaxiquement sûrs et le nombre de paramètres peuvent être exposés.
+- Les six tests couvrent absence de token, signature valide, doublons, altération corps/URL, JSON signé, limites et absence de réseau. Vitest ciblé, ESLint ciblé et typecheck complet passent localement.
+- Aucun endpoint public Twilio, credential, appel réseau, ingestion canonique, envoi WhatsApp ou état `ready` n'est ajouté dans ce checkpoint.

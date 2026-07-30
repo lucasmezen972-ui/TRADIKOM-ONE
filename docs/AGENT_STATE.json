@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T16:32:00.000Z",
+  "updatedAt": "2026-07-30T17:02:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "199482a746d90f378372589648b958a66959d646",
+  "lastCommit": "6dd61b50e3496cbad01290c6b74aa8a87dd5ce98",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider le point d'entrée HTTP Resend fail-closed sans activation, puis ouvrir l'adaptateur WhatsApp/Twilio officiel.",
+  "currentObjective": "Préparer WhatsApp/Twilio avec vérification SDK officielle, entrées bornées et aucune activation du transport.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Vérifier Svix officiel sur corps brut, lier invitation/tenant/email fournisseur, dédupliquer svix-id, préserver l'ordre tardif, auditer sans PII et refuser toute route non configurée."
+      "evidenceExpected": "Vérifier Twilio avec le SDK officiel sur l'URL exacte et tous les paramètres, préserver le corps JSON signé, borner avant ingestion, ne restituer aucune PII et conserver le transport désactivé."
     }
   },
-  "nextAction": "Publier et valider en CI la route Resend refusée par défaut, puis préparer la vérification officielle Twilio sans credential ni transport.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-adapter.ts",
+  "nextAction": "Publier et valider en CI le vérificateur Twilio, puis ajouter sa route HTTP refusée par défaut sans ingestion ni transport.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-webhook-http.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -115,7 +115,12 @@
     "immutabilité SQL des événements, déduplication svix-id et ordre tardif sans régression",
     "intégration invitation Resend sans adresse stockée et refus des réponses provider sans identifiant",
     "route HTTP Resend fail-closed, corps brut UTF-8 borné et réponses provider sans PII",
-    "syntaxe TypeScript ciblée des fichiers HTTP Resend"
+    "syntaxe TypeScript ciblée des fichiers HTTP Resend",
+    "CI 30562294162 et continuité 30562294361 entièrement vertes sur 6dd61b5",
+    "copie locale stable hors iCloud dans /Users/TRADIKOM/Developer/TRADIKOM-ONE",
+    "pnpm add --save-exact twilio@6.0.2",
+    "Vitest, ESLint et typecheck locaux du vérificateur Twilio",
+    "pnpm audit --prod --audit-level high après ajout Twilio"
   ],
   "lastValidation": [
     {
@@ -321,6 +326,18 @@
     {
       "command": "parité automatisée migration OS-2 runtime et miroirs SQL",
       "status": "passed_guard_added"
+    },
+    {
+      "command": "CI 30562294162 et continuité 30562294361 sur 6dd61b5",
+      "status": "passed_migrations_backup_lint_typecheck_268_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "Vitest ciblé, ESLint ciblé et typecheck complet du vérificateur Twilio",
+      "status": "passed_6_tests"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high après ajout Twilio",
+      "status": "passed_one_preexisting_ignored_high_zero_active_advisories"
     }
   ],
   "humanBlockers": [

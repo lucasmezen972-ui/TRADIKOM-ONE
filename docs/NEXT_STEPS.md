@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-Le service de réservation, déduplication et ordre tardif est publié sur `199482a`. Sa CI a passé migrations, backup, lint, typecheck et 268 tests; les six échecs restants provenaient d'une divergence runtime/miroir du trigger et d'un token de fixture partagé, désormais corrigés avec un garde de parité. La route webhook Resend est préparée localement mais refuse toute ingestion tant que le registre n'est pas explicitement `ready`.
+La route Resend `6dd61b5` est entièrement verte, y compris 268 tests, build et Playwright. Le vérificateur WhatsApp/Twilio utilise désormais `twilio@6.0.2`, borne formulaire et JSON, vérifie l'URL exacte et ne restitue aucune PII. Le registre reste incapable de produire `ready` et aucun transport n'est activé.
 
 ## Référence prompt maître
 
@@ -10,14 +10,14 @@ OS-1 satisfait désormais les pages 31, 32, 46, 48 et 69. Pour OS-2, relire les 
 
 ## Bloc de reprise exact
 
-Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le checkpoint `76cf327` a validé migrations, backup, lint, typecheck et RLS; ses deux échecs de tests étaient des fixtures devenues obsolètes. Le lot local actif les corrige et ajoute le service sans endpoint public.
+Les checkpoints Resend jusqu'à `6dd61b5` sont entièrement verts. La copie de travail active est `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, hors iCloud, et l'automation horaire la cible explicitement.
 
 ```text
-1. Publier les corrections runtime/fixture avec la route HTTP Resend.
-2. Publier la route HTTP Resend avec refus par défaut, corps brut borné et réponses sans PII.
-3. Vérifier que le runtime ne peut toujours pas atteindre `ready` sans consentement humain.
-4. Ajouter l'adaptateur WhatsApp/Twilio avec vérification officielle de l'URL exacte et des paramètres bruts.
-5. Tester replay, signature, payload, erreur et absence d'appel réseau.
+1. Publier le vérificateur Twilio officiel et laisser la CI complète l'arbitrer.
+2. Ajouter une route HTTP Twilio qui refuse avant lecture tant que le registre n'est pas `ready`.
+3. Conserver le corps exact et tous les paramètres uniquement en mémoire après vérification, sans journalisation de PII.
+4. Préparer la normalisation WhatsApp vers le message canonique sans l'activer.
+5. Tester replay, signature, payload, erreur, URL proxy exacte et absence d'appel réseau.
 6. Conserver Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
 ```
 
@@ -41,6 +41,8 @@ Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le ch
 5. Webhook Resend signé et filtré. Vert sur `860a14d`.
 6. Persistance tenant/RLS des livraisons et événements Resend. Publiée sur `76cf327`; fixtures CI corrigées localement.
 7. Service de déduplication et d'ordre tardif Resend. Publié sur `199482a`; corrections CI incluses dans le checkpoint local.
-8. Route HTTP Resend fail-closed. Checkpoint local actif.
-9. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
-10. Tests provider mocks, sécurité, intégration et Playwright pertinents.
+8. Route HTTP Resend fail-closed. Verte sur `6dd61b5`.
+9. Vérification WhatsApp/Twilio officielle. Checkpoint local actif.
+10. Route HTTP et normalisation WhatsApp/Twilio derrière feature flag.
+11. Adaptateurs Teams et Slack derrière feature flags.
+12. Tests provider mocks, sécurité, intégration et Playwright pertinents.

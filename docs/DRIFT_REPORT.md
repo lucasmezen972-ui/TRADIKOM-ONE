@@ -3,7 +3,7 @@
 - Date : 2026-07-30
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Travail effectué : verticale web/test verte et ouverture du plan structuré avec catalogue mock, validation pure et persistance immuable tenant-scoped.
+- Travail effectué : OS-1 vertical vert, Resend tenant-aware validé et ouverture WhatsApp/Twilio par une vérification SDK officielle sans activation.
 
 ## Impact north star
 
@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; migrations sans PII, RLS PostgreSQL, service publié tenant-aware; route HTTP locale bornée qui refuse avant lecture tant que le canal n'est pas `ready`.
-- Écarts restants : la CI complète du service puis celle de la route restent à clore; aucun état `ready`, credential, consentement ou transport réel n'existe.
+- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; migrations sans PII, RLS PostgreSQL, service et route Resend verts; vérificateur Twilio SDK testé localement sur URL exacte, formulaires dupliqués et JSON signé.
+- Écarts restants : la CI du vérificateur Twilio puis sa route HTTP restent à clore; aucun état `ready`, credential, consentement, ingestion WhatsApp ou transport réel n'existe.
 
 ## Modules touchés
 
@@ -34,8 +34,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 ## Risques
 
-- le runtime Next.js local bloque avant ouverture du port; la preuve navigateur OS-1 vient de la CI verte;
-- OS-2 n'a pas encore son inventaire consolidé des quatre canaux;
+- la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
+- WhatsApp/Twilio n'a pas encore de route publique ni de normalisation canonique;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -55,6 +55,8 @@ Le run `30549936954` est entièrement vert sur `e561f57`. Les échecs intermédi
 
 Le premier checkpoint OS-2 `d181a97` est entièrement vert dans la CI `30556603463` : migrations, backup/restore, lint, typecheck, tests, build production et Playwright. La continuité `30556603427` est également verte.
 
+La route Resend `6dd61b5` est entièrement verte dans la CI `30562294162`, avec 268 tests, build et Playwright; sa continuité `30562294361` est verte. Le vérificateur Twilio passe localement ses 6 tests, ESLint et le typecheck complet.
+
 Le contrôle de continuité renforcé pour le prompt maître retourne localement `ready`, sans erreur ni avertissement, en vérifiant le PDF de 71 pages et son empreinte. La commande exacte `pnpm agent:continuity-check` termine désormais en environ six secondes grâce au runtime TypeScript natif de Node 22. L'automation native lit directement les pages cœur et exige une preuve paginée avant de choisir une tâche.
 
 ## Ce qui reste simulé
@@ -67,4 +69,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Valider le service puis publier la route publique fail-closed; ouvrir ensuite WhatsApp/Twilio avec vérification SDK officielle sans activation.
+Publier le vérificateur Twilio, valider sa CI puis ajouter une route HTTP fail-closed qui refuse avant lecture sans état `ready`.
