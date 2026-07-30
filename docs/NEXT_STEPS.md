@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-Faire valider les schémas de plan, le catalogue des deux capacités mock et les migrations runtime `069`/`070` avec leurs miroirs `0063`/`0064`. Ajouter ensuite le repository et le service tenant-aware qui créent un plan immuable et une seule approbation liée au plan exact.
+Publier le correctif TypeScript du fixture et le repository/service de planification. Faire valider migrations, RLS, création idempotente, validation unique, audit sûr et projection du plan dans le fil, puis ajouter les commandes françaises Approuver/Refuser sur l'écran Conversation.
 
 ## Critères du prochain checkpoint
 
@@ -22,7 +22,7 @@ Faire valider les schémas de plan, le catalogue des deux capacités mock et les
 3. Repository et service tenant-aware. Terminé et validé.
 4. Adaptateur canal de test. Terminé et validé sans transport réseau.
 5. Web chat minimal. Terminé et validé par le run `30549936954`.
-6. Plan structuré, validation unique et deux capacités mock explicites. Schémas et persistance locaux, service à faire après CI.
+6. Plan structuré, validation unique et deux capacités mock explicites. Repository/service et tests locaux, validation CI à lancer.
 7. Playwright web + canal test, reprise et preuve d'audit.
 
 Ne pas ouvrir OS-2 tant que ce parcours n'est pas vert de bout en bout.

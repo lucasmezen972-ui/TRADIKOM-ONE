@@ -91,3 +91,12 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Le validateur refuse rôle lecture seule, contexte manquant, coût externe, capacité absente, scope manquant ou politique altérée, puis résume au maximum une validation pour le plan complet.
 - Les migrations `069`/`070` et miroirs `0063`/`0064` ajoutent plans et étapes tenant-scoped, relations composées, index tenant-leading, RLS, fingerprint, unicité de l'approbation et triggers d'immuabilité.
 - Les tests de migration couvrent source inter-tenant, étape et idempotence dupliquées, deuxième approbation et mutations du plan exact. La parité runtime/SQL est verte; l'exécution CI reste à lancer.
+
+## 2026-07-30 - Service de plan et validation unique
+
+- Le run `30551054764` valide les migrations et le lint de `8288791`, puis le typecheck trouve un seul fixture dont l'inférence interdisait la clé de sécurité testée. Le fixture est maintenant explicitement typé `ActionPlan`.
+- Le générateur déterministe implémente l'abstraction de génération sans recopier le texte client, sans réseau, fournisseur, modèle ni coût; ses clés d'idempotence sont dérivées d'une empreinte bornée du message source.
+- La création vérifie le rôle avant toute génération, relit le message source sous contexte RLS, refuse les messages internes, valide capacité/policy/scope, calcule le fingerprint et persiste plan, étapes et approbation dans une transaction.
+- Un replay relit le même plan sans dupliquer étape, approbation, message ou audit. Le plan est projeté comme message canonique `plan` par l'identité système mock et place le fil en attente de validation.
+- La décision est réservée aux propriétaires, administrateurs et managers. Elle met à jour l'unique approbation, le plan et ses étapes atomiquement, projette un message `approval`, rouvre le fil et audite fingerprint, identifiants et statut sans conserver la raison dans l'audit.
+- Les tests couvrent absence de réseau, création/replay, deux capacités, fingerprint, projection, décision/replay/conflit, isolation tenant et refus du collaborateur.

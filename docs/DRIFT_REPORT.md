@@ -21,13 +21,14 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - `src/modules/channels/web-channel.ts`, `runtime.ts` et l'écran `/conversation`;
 - `src/components/app-shell.tsx` pour l'entrée de navigation Conversation;
 - `src/modules/orchestrator/` pour schémas, erreurs et catalogue des capacités;
+- `src/modules/orchestrator/repository.ts`, `generator.ts` et `service.ts`;
 - migrations runtime `069`/`070`, miroirs `0063`/`0064` et tests associés;
 - les quatre fichiers de continuité.
 
 ## Risques
 
 - le parcours web n'a pas encore sa preuve Playwright Conversation mobile/desktop dédiée;
-- le service de création et décision des plans n'est pas encore implémenté;
+- le service de plan est local et attend sa première validation CI complète;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -43,7 +44,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - `git diff --check` ciblé migrations/tests : vert.
 - PR #11 : runs `30546099003` et `30546098944` verts, incluant PostgreSQL/RLS, migrations, lint, typecheck, tests, build et Playwright.
 
-Le run `30549936954` est entièrement vert sur `e561f57` : migrations, lint, typecheck, 223 tests, build et Playwright. Il valide le correctif de chronologie, les adaptateurs web/test et l'écran Conversation. La parité des nouvelles migrations de plan runtime/SQL est verte; leur exécution CI reste à lancer.
+Le run `30549936954` est entièrement vert sur `e561f57`. Le run `30551054764` sur `8288791` valide les migrations et le lint, puis s'arrête au typecheck sur un fixture de test trop étroit; le fixture est maintenant typé `ActionPlan`. La parité runtime/SQL reste verte et le service complet sera inclus au prochain push.
 
 ## Ce qui reste simulé
 
@@ -55,4 +56,4 @@ Le run `30549936954` est entièrement vert sur `e561f57` : migrations, lint, typ
 
 ## Prochaine action recommandée
 
-Faire valider les contrats, capacités et migrations de plan, puis implémenter la création tenant-aware, l'approbation unique et l'audit du plan exact.
+Faire valider le correctif et le service de plan tenant-aware, puis afficher et traiter la validation unique dans le fil avant l'exécution durable mock.

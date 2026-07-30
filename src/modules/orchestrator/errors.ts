@@ -4,7 +4,12 @@ export type OrchestratorErrorCode =
   | "orchestrator_capability_mismatch"
   | "orchestrator_scope_missing"
   | "orchestrator_permission_denied"
-  | "orchestrator_external_cost_forbidden";
+  | "orchestrator_external_cost_forbidden"
+  | "orchestrator_source_message_not_found"
+  | "orchestrator_source_message_invalid"
+  | "orchestrator_plan_not_found"
+  | "orchestrator_approval_not_found"
+  | "orchestrator_decision_conflict";
 
 export class OrchestratorError extends Error {
   constructor(

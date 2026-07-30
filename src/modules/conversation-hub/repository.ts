@@ -246,6 +246,21 @@ export async function findConversationMessageByIdempotencyKey(
   return result.rows[0] ?? null;
 }
 
+export async function findConversationMessageRow(
+  db: DbClient,
+  tenantId: string,
+  threadId: string,
+  messageId: string,
+) {
+  const result = await db.query<ConversationMessageRow>(
+    `select *
+     from conversation_messages
+     where tenant_id = $1 and thread_id = $2 and id = $3`,
+    [tenantId, threadId, messageId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function insertConversationMessageIfAbsent(
   db: DbClient,
   input: {
@@ -381,6 +396,23 @@ export async function updateConversationThreadLastMessage(
          updated_at = $2
      where tenant_id = $3 and id = $4`,
     [input.occurredAt, input.updatedAt, input.tenantId, input.threadId],
+  );
+}
+
+export async function updateConversationThreadStatus(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    threadId: string;
+    status: ConversationThreadRow["status"];
+    updatedAt: string;
+  },
+) {
+  await db.query(
+    `update conversation_threads
+     set status = $1, updated_at = $2
+     where tenant_id = $3 and id = $4`,
+    [input.status, input.updatedAt, input.tenantId, input.threadId],
   );
 }
 

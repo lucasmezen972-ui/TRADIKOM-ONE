@@ -158,10 +158,28 @@ export const actionPlanProposalSchema = z
     }
   });
 
+export const actionPlanCreationSchema = z
+  .object({
+    tenantId: identifierSchema,
+    threadId: identifierSchema,
+    sourceMessageId: identifierSchema,
+  })
+  .strict();
+
+export const actionPlanDecisionSchema = z
+  .object({
+    planId: identifierSchema,
+    decision: z.enum(["approved", "rejected"]),
+    reason: z.string().trim().min(3).max(500),
+  })
+  .strict();
+
 export type CapabilityRisk = z.infer<typeof capabilityRiskSchema>;
 export type ActionPlanStep = z.infer<typeof actionPlanStepSchema>;
 export type ActionPlan = z.infer<typeof actionPlanSchema>;
 export type ActionPlanProposal = z.infer<typeof actionPlanProposalSchema>;
+export type ActionPlanCreation = z.infer<typeof actionPlanCreationSchema>;
+export type ActionPlanDecision = z.infer<typeof actionPlanDecisionSchema>;
 
 function safelySerializeInput(input: Record<string, unknown>) {
   try {

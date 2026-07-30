@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   actionPlanProposalSchema,
   actionPlanSchema,
+  type ActionPlan,
 } from "../src/modules/orchestrator";
 
 describe("schémas de l'orchestrateur", () => {
@@ -75,12 +76,12 @@ describe("schémas de l'orchestrateur", () => {
   });
 });
 
-function planFixture() {
+function planFixture(): ActionPlan {
   return {
     intent: "Préparer une relance commerciale",
     businessGoal: "Retrouver le contact puis créer une tâche de suivi",
     confidence: 0.96,
-    missingContextQuestions: [] as string[],
+    missingContextQuestions: [],
     riskSummary: "Lecture locale puis création d'une tâche réversible.",
     estimatedCost: { amount: 0, currency: "eur" },
     steps: [
@@ -89,7 +90,7 @@ function planFixture() {
         capability: "crm.contacts.search",
         providerPreference: [],
         input: { query: "cliente de démonstration" },
-        risk: "low" as const,
+        risk: "low",
         requiresApproval: false,
         reversible: true,
         evidenceRequired: ["Nombre de contacts correspondants"],
@@ -100,7 +101,7 @@ function planFixture() {
         capability: "project.task.create",
         providerPreference: [],
         input: { title: "Relancer la cliente" },
-        risk: "medium" as const,
+        risk: "medium",
         requiresApproval: true,
         reversible: true,
         evidenceRequired: ["Identifiant de la tâche mock"],

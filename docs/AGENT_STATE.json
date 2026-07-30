@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T14:16:46.000Z",
+  "updatedAt": "2026-07-30T14:26:23.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "e561f57474cf5748a57d45caa742d3cd9b75e57c",
+  "lastCommit": "828879122346bf116028274dff87e866dd1a4e45",
   "status": "in_progress",
   "currentPhase": "OS-1",
   "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
-  "nextAction": "Faire valider les schémas, le catalogue mock et les migrations 069/070 des plans immuables, puis implémenter création et validation unique tenant-aware.",
-  "nextFile": "src/modules/orchestrator/service.ts",
+  "nextAction": "Publier le correctif de typage et le service tenant-aware des plans, corriger toute CI rouge, puis exposer la validation unique dans la conversation.",
+  "nextFile": "src/app/(app)/conversation/page.tsx",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -54,7 +54,10 @@
     "construction locale du canal web et de l'écran Conversation français",
     "PR #11 - GitHub Actions 30549936954 vert sur e561f57",
     "contrats, catalogue mock et migrations 069/070 des plans structurés",
-    "parité runtime/SQL 0063/0064"
+    "parité runtime/SQL 0063/0064",
+    "gh run view 30551054764 --log-failed",
+    "correction du fixture TypeScript ActionPlan",
+    "repository et service tenant-aware de création et décision des plans"
   ],
   "lastValidation": [
     {
@@ -136,6 +139,10 @@
     {
       "command": "parité migrations runtime 069/070 et miroirs SQL 0063/0064",
       "status": "passed"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30551054764 sur 8288791",
+      "status": "failed_typecheck_fixture_auth_property_fix_prepared_migrations_passed"
     }
   ],
   "humanBlockers": [
