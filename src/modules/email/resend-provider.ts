@@ -121,10 +121,14 @@ function classifyResponse(
   body: string,
 ): EmailDeliveryOutcome {
   if (response.ok) {
+    const messageId = extractMessageId(body);
+    if (!messageId) {
+      return retryableFailure("provider_response_invalid", 60);
+    }
     return {
       status: "sent",
       provider: "resend",
-      messageId: extractMessageId(body),
+      messageId,
     };
   }
 
@@ -207,7 +211,9 @@ async function readBoundedBody(response: Response) {
 
 function extractMessageId(body: string) {
   const value = extractStringProperty(body, "id");
-  return value && value.length <= 256 ? value : undefined;
+  return value && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(value)
+    ? value
+    : undefined;
 }
 
 function extractProviderError(body: string) {

@@ -23,6 +23,7 @@ create table if not exists email_provider_deliveries (
   check (char_length(source_id) between 1 and 160),
   check (provider = 'resend'),
   check (char_length(provider_message_id) between 1 and 256),
+  check (provider_message_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
   check (recipient_hash ~ '^[A-Fa-f0-9]{64}$'),
   check (status in ('sent', 'delayed', 'delivered', 'failed')),
   check (updated_at >= created_at)
@@ -49,7 +50,9 @@ create table if not exists email_provider_events (
   check (char_length(delivery_id) between 1 and 160),
   check (provider = 'resend'),
   check (char_length(external_event_id) between 1 and 256),
+  check (external_event_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
   check (char_length(provider_message_id) between 1 and 256),
+  check (provider_message_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
   check (event_type in (
     'email.sent',
     'email.delivered',
@@ -61,6 +64,21 @@ create table if not exists email_provider_events (
   )),
   check (delivery_status in ('sent', 'delayed', 'delivered', 'failed'))
 );
+
+create or replace function reject_email_provider_event_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'email_provider_events rows are immutable';
+end;
+$$;
+
+drop trigger if exists email_provider_events_immutable_update
+  on email_provider_events;
+create trigger email_provider_events_immutable_update
+before update on email_provider_events
+for each row execute function reject_email_provider_event_update();
 
 create index if not exists idx_email_provider_deliveries_tenant_provider
   on email_provider_deliveries (tenant_id, provider, provider_message_id);

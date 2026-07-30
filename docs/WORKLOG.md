@@ -192,3 +192,13 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Livraison et événement portent `tenant_id`, relations composées, index tenant-leading et RLS `ALL`. L'email fournisseur et `svix-id` sont uniques globalement pour empêcher une réattribution inter-tenant.
 - La relation événement vérifie simultanément tenant, livraison et email fournisseur. Les tests refusent source inter-tenant, mauvais email, doublon provider, doublon `svix-id` et références non bornées.
 - La parité exacte runtime/SQL et `git diff --check` passent. Le checkpoint attend la CI PostgreSQL avant publication du service déjà préparé localement.
+
+## 2026-07-30 - Service tenant-aware des événements Resend
+
+- La CI `30560346248` valide migrations, backup/restore, lint, typecheck et PostgreSQL RLS. Elle termine avec 265 tests verts et deux échecs de fixtures : un token d'invitation dupliqué dans le nouveau test et une assertion OS-1 qui supposait encore que sa migration restait la dernière. Les deux fixtures sont corrigées.
+- Le service réserve une livraison Resend uniquement pour un propriétaire ou administrateur, une invitation en attente du même tenant et le même destinataire normalisé. Seul un hash du destinataire est stocké.
+- L'ingestion appelle d'abord le vérificateur Svix officiel, puis résout la livraison avec tenant et email fournisseur sous verrou. Le `svix-id` est globalement dédupliqué; une collision différente est refusée.
+- Les événements sont immuables en SQL. Un événement tardif reste dans le journal sans faire régresser l'état courant; à date égale, le rang opérationnel tranche de façon déterministe.
+- Les audits ne contiennent ni adresse, sujet, corps, token ni détail de bounce. L'intégration invitation n'enregistre une correspondance que pour un résultat Resend `sent` doté d'un identifiant.
+- Une réponse Resend 2xx sans identifiant sûr devient `retryable_failure/provider_response_invalid`; elle n'est plus présentée comme envoyée.
+- Vitest et ESLint ciblés reproduisent le blocage Node local silencieux connu. `git diff --check` passe; la prochaine CI est l'arbitre exécutable.

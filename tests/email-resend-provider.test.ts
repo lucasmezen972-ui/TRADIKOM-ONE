@@ -215,9 +215,10 @@ describe("provider email Resend préparé", () => {
         ),
     );
     await expect(oversizedResponse.provider.send(message)).resolves.toEqual({
-      status: "sent",
+      status: "retryable_failure",
       provider: "resend",
-      messageId: undefined,
+      errorCode: "provider_response_invalid",
+      retryAfterSeconds: 60,
     });
   });
 

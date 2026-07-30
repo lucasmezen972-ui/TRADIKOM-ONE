@@ -57,9 +57,9 @@ Le vérificateur préparé utilise `svix@1.99.1`, refuse le secret absent, les e
 
 Le client d'envoi ajoute les tags bornés `tradikom_kind` et `tradikom_tenant`; Resend les restitue officiellement dans ses événements. Un événement sans tenant canonique est refusé au lieu d'être attribué par supposition.
 
-Les migrations `071`/`072`, miroirs SQL `0065`/`0066`, préparent deux tables minimales : une correspondance livraison/tenant/email fournisseur et un journal append-only des événements `svix-id`. Elles n'ont aucune colonne de corps brut, destinataire, sujet ou détail de bounce. Les relations invitation, livraison et email fournisseur sont tenant-composées; les identifiants provider et `svix-id` sont uniques globalement, avec des index tenant-leading et RLS `ALL`.
+Les migrations `071`/`072`, miroirs SQL `0065`/`0066`, préparent deux tables minimales : une correspondance livraison/tenant/email fournisseur et un journal append-only des événements `svix-id`. Un trigger refuse la modification d'un événement déjà inséré. Elles n'ont aucune colonne de corps brut, destinataire, sujet ou détail de bounce. Les relations invitation, livraison et email fournisseur sont tenant-composées; les identifiants provider et `svix-id` sont uniques globalement, avec des index tenant-leading et RLS `ALL`.
 
-Le prochain incrément doit relier la livraison autorisée à l'invitation, vérifier la correspondance tenant/email après signature, auditer sans PII et gérer les événements tardifs sans régression d'état. Aucun endpoint public ne sera activé avant cette preuve.
+Le service relie désormais une livraison réussie à une invitation encore en attente, vérifie rôle, tenant et destinataire, puis ne conserve qu'un hash du destinataire. Après vérification Svix, il exige la correspondance tenant/email fournisseur, déduplique globalement `svix-id`, persiste les événements tardifs sans faire régresser l'état et audite sans PII. Une réponse Resend 2xx sans identifiant fournisseur sûr est traitée comme réessayable, jamais comme une livraison honnêtement confirmée. Aucun endpoint public n'est encore activé.
 
 ## Références fournisseur vérifiées
 

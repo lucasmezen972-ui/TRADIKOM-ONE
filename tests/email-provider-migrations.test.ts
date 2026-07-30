@@ -81,6 +81,14 @@ describe("migrations des événements email OS-2", () => {
       "email_a",
     );
     await expect(
+      db.query(
+        `update email_provider_events
+         set delivery_status = 'failed'
+         where tenant_id = $1 and id = $2`,
+        ["tenant_a", "event_a"],
+      ),
+    ).rejects.toThrow(/immutable/i);
+    await expect(
       seedEvent(
         db,
         "tenant_b",
@@ -159,7 +167,7 @@ async function seedTenantAndInvitation(
       invitationId,
       tenantId,
       `${tenantId}@example.test`,
-      "a".repeat(64),
+      tenantId === "tenant_a" ? "a".repeat(64) : "b".repeat(64),
       timestamp,
     ],
   );

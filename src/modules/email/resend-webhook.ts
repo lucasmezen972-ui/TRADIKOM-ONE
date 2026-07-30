@@ -2,13 +2,19 @@ import { Webhook } from "svix";
 import { z } from "zod";
 
 const maxPayloadBytes = 512 * 1024;
+const providerReferenceSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(256)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 
 const resendWebhookInputSchema = z
   .object({
     rawBody: z.string().max(maxPayloadBytes),
     headers: z
       .object({
-        id: z.string().trim().min(1).max(256),
+        id: providerReferenceSchema,
         timestamp: z.string().trim().min(1).max(32),
         signature: z.string().trim().min(1).max(2_048),
       })
@@ -32,7 +38,7 @@ const providerPayloadSchema = z
     created_at: z.string().datetime({ offset: true }),
     data: z
       .object({
-        email_id: z.string().trim().min(1).max(256),
+        email_id: providerReferenceSchema,
         tags: z
           .record(
             z.string().regex(/^[A-Za-z0-9_-]{1,256}$/),

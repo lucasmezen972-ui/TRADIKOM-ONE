@@ -7,6 +7,7 @@ import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import { hashToken, id, nowIso, secureToken, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
+import { recordAuthorizedResendDelivery } from "../src/modules/email";
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeIfPostgres = databaseUrl ? describe : describe.skip;
@@ -52,6 +53,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
       name: `Garage RLS B ${randomUUID()}`,
       category: "Garage automobile",
     });
+    const emailProvider = await insertEmailProviderTenantFixtures(
+      ownerDb,
+      tenantA.id,
+      tenantB.id,
+      ownerA.id,
+      ownerB.id,
+    );
     const contactAId = await insertContact(
       ownerDb,
       tenantA.id,
@@ -207,6 +215,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
       (await restrictedPool.query("select id from conversation_action_plans"))
         .rows,
     ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from email_provider_deliveries"))
+        .rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from email_provider_events")).rows,
+    ).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -256,6 +271,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
         client.query<{ id: string }>("select id from conversation_action_plans"),
     );
     expect(tenantAPlans.rows).toEqual([{ id: conversation.planAId }]);
+    const tenantAEmailRows = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        deliveries: (
+          await client.query<{ id: string }>(
+            "select id from email_provider_deliveries order by id",
+          )
+        ).rows,
+        events: (
+          await client.query<{ id: string }>(
+            "select id from email_provider_events order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAEmailRows).toEqual({
+      deliveries: [{ id: emailProvider.deliveryAId }],
+      events: [{ id: emailProvider.eventAId }],
+    });
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
         client.query(
@@ -278,6 +313,26 @@ describeIfPostgres("PostgreSQL RLS", () => {
              id, tenant_id, role, display_name, created_at, updated_at
            ) values ($1, $2, 'customer', 'Interdit', $3, $3)`,
           [id("conversation_participant"), tenantB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into email_provider_events (
+             id, tenant_id, delivery_id, provider, external_event_id,
+             provider_message_id, event_type, delivery_status,
+             occurred_at, received_at
+           ) values ($1, $2, $3, 'resend', $4, $5, 'email.delivered',
+             'delivered', $6, $6)`,
+          [
+            id("email_event"),
+            tenantB.id,
+            emailProvider.deliveryBId,
+            `svix_cross_${randomUUID()}`,
+            emailProvider.providerMessageBId,
+            nowIso(),
+          ],
         ),
       ),
     ).rejects.toThrow(/row-level security|violates/);
@@ -3202,6 +3257,89 @@ async function insertApiIntelligenceTenantFixtures(
     storeBId,
     planAId,
     planBId,
+  };
+}
+
+async function insertEmailProviderTenantFixtures(
+  db: ReturnType<typeof pgPoolAsSqlClient>,
+  tenantAId: string,
+  tenantBId: string,
+  ownerAId: string,
+  ownerBId: string,
+) {
+  const now = nowIso();
+  const invitationAId = id("invitation");
+  const invitationBId = id("invitation");
+  const recipientA = uniqueEmail("rls-email-provider-a");
+  const recipientB = uniqueEmail("rls-email-provider-b");
+  await db.query(
+    `insert into invitations (
+       id, tenant_id, email, role, status, token_hash, expires_at, created_at
+     ) values
+       ($1, $2, $3, 'manager', 'pending', $4, $5, $6),
+       ($7, $8, $9, 'manager', 'pending', $10, $5, $6)`,
+    [
+      invitationAId,
+      tenantAId,
+      recipientA,
+      hashToken(secureToken()),
+      "2027-01-01T00:00:00.000Z",
+      now,
+      invitationBId,
+      tenantBId,
+      recipientB,
+      hashToken(secureToken()),
+    ],
+  );
+  const providerMessageAId = `provider_${randomUUID()}`;
+  const providerMessageBId = `provider_${randomUUID()}`;
+  const deliveryA = await recordAuthorizedResendDelivery(db, {
+    tenantId: tenantAId,
+    actorId: ownerAId,
+    invitationId: invitationAId,
+    recipient: recipientA,
+    providerMessageId: providerMessageAId,
+    occurredAt: now,
+  });
+  const deliveryB = await recordAuthorizedResendDelivery(db, {
+    tenantId: tenantBId,
+    actorId: ownerBId,
+    invitationId: invitationBId,
+    recipient: recipientB,
+    providerMessageId: providerMessageBId,
+    occurredAt: now,
+  });
+  const eventAId = id("email_event");
+  const eventBId = id("email_event");
+  await db.query(
+    `insert into email_provider_events (
+       id, tenant_id, delivery_id, provider, external_event_id,
+       provider_message_id, event_type, delivery_status, occurred_at,
+       received_at
+     ) values
+       ($1, $2, $3, 'resend', $4, $5, 'email.sent', 'sent', $6, $6),
+       ($7, $8, $9, 'resend', $10, $11, 'email.sent', 'sent', $6, $6)`,
+    [
+      eventAId,
+      tenantAId,
+      deliveryA.deliveryId,
+      `svix_${randomUUID()}`,
+      providerMessageAId,
+      now,
+      eventBId,
+      tenantBId,
+      deliveryB.deliveryId,
+      `svix_${randomUUID()}`,
+      providerMessageBId,
+    ],
+  );
+
+  return {
+    deliveryAId: deliveryA.deliveryId,
+    deliveryBId: deliveryB.deliveryId,
+    eventAId,
+    eventBId,
+    providerMessageBId,
   };
 }
 

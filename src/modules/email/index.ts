@@ -1,4 +1,6 @@
 export * from "@/modules/email/providers";
+export * from "@/modules/email/provider-events-errors";
+export * from "@/modules/email/provider-events-service";
 export * from "@/modules/email/resend-provider";
 export * from "@/modules/email/resend-webhook";
 export * from "@/modules/email/schemas";

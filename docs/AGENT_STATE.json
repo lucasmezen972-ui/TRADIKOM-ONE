@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T16:10:15.000Z",
+  "updatedAt": "2026-07-30T16:23:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "860a14de0b0984e564f15bd9086b4a262dc5c293",
+  "lastCommit": "76cf327f0f9e35f2a0fa58bd618a5489e677727f",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider les migrations tenant/RLS des livraisons et événements Resend, puis publier leur service de déduplication et ordre tardif sans route publique.",
+  "currentObjective": "Valider le service tenant-aware de réservation, déduplication et ordre tardif Resend, puis préparer une route publique refusée par défaut sans activer le fournisseur.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Verifier Svix officiel sur corps brut, tags tenant bornés, sortie sans données personnelles, tests de signature/rejeu, puis unicité svix-id et correspondance email fournisseur sous RLS."
+      "evidenceExpected": "Vérifier Svix officiel sur corps brut, lier invitation/tenant/email fournisseur, dédupliquer svix-id, préserver l'ordre tardif, auditer sans PII et refuser toute route non configurée."
     }
   },
-  "nextAction": "Valider les migrations 071/072 en CI, puis publier le repository/service email provider et son intégration invitation déjà préparés localement.",
-  "nextFile": "src/modules/email/provider-events-service.ts",
+  "nextAction": "Publier et valider en CI le service email provider corrigé, puis préparer le point d'entrée webhook Resend avec secret obligatoire et refus par défaut.",
+  "nextFile": "src/app/api/webhooks/resend/route.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -109,7 +109,11 @@
     "vérificateur Svix sur corps brut et tests de signature/rejeu",
     "CI complète du vérificateur Svix 30559230976",
     "migrations 071/072 et miroirs 0065/0066 des événements email provider",
-    "contrôle de parité runtime/SQL des migrations email provider"
+    "contrôle de parité runtime/SQL des migrations email provider",
+    "diagnostic CI 30560346248 : 265 tests verts, deux fixtures de migration obsolètes corrigées",
+    "service tenant-aware de réservation livraison et ingestion webhook Resend",
+    "immutabilité SQL des événements, déduplication svix-id et ordre tardif sans régression",
+    "intégration invitation Resend sans adresse stockée et refus des réponses provider sans identifiant"
   ],
   "lastValidation": [
     {
@@ -295,6 +299,18 @@
     {
       "command": "parité migrations runtime 071/072 et miroirs SQL 0065/0066",
       "status": "passed"
+    },
+    {
+      "command": "CI 30560346248 sur 76cf327",
+      "status": "failed_two_test_fixtures_only_265_tests_passed_migrations_backup_lint_typecheck_and_postgres_rls_passed_fix_prepared"
+    },
+    {
+      "command": "Vitest et ESLint ciblés du service email provider",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "service email provider - tenant, signature, audit, idempotence, immutabilité et ordre tardif",
+      "status": "static_checks_passed_executable_ci_pending"
     }
   ],
   "humanBlockers": [

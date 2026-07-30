@@ -126,6 +126,15 @@ describe("webhook Resend préparé", () => {
     ).toEqual({ ok: false, code: "tenant_mapping_missing" });
   });
 
+  it("refuse une référence fournisseur signée mais non bornée au format sûr", () => {
+    const payload = providerPayload();
+    payload.data.email_id = "email_provider_123\\ntrace";
+
+    expect(
+      verifyResendWebhook(signedInput(payload), signingSecret),
+    ).toEqual({ ok: false, code: "payload_invalid" });
+  });
+
   it.each([
     ["email.sent", "sent"],
     ["email.delivered", "delivered"],

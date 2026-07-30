@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-Le contrat, le provider et le vérificateur Svix sont verts. Les migrations tenant/RLS des livraisons et événements sont préparées sans payload brut. Valider ce checkpoint en CI, puis publier le service de réservation, déduplication et ordre tardif déjà développé localement.
+Le contrat, le provider et le vérificateur Svix sont verts. Les migrations tenant/RLS ont passé migration, backup, lint, typecheck et PostgreSQL RLS; leur CI a révélé seulement deux assertions de fixture obsolètes, désormais corrigées. Publier et valider le service de réservation, déduplication et ordre tardif, puis préparer une route webhook qui refuse tout appel sans configuration.
 
 ## Référence prompt maître
 
@@ -10,11 +10,11 @@ OS-1 satisfait désormais les pages 31, 32, 46, 48 et 69. Pour OS-2, relire les 
 
 ## Bloc de reprise exact
 
-Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le lot local actif ajoute uniquement les tables `email_provider_deliveries` et `email_provider_events`, leurs contraintes, index et RLS; le service reste dans le lot suivant.
+Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le checkpoint `76cf327` a validé migrations, backup, lint, typecheck et RLS; ses deux échecs de tests étaient des fixtures devenues obsolètes. Le lot local actif les corrige et ajoute le service sans endpoint public.
 
 ```text
-1. Valider migrations `071`/`072`, parité SQL, contraintes, RLS et PostgreSQL.
-2. Publier le repository/service tenant-aware de réservation des livraisons Resend.
+1. Publier le repository/service tenant-aware de réservation des livraisons Resend.
+2. Valider migrations `071`/`072`, immutabilité, contraintes, RLS et PostgreSQL dans la CI corrigée.
 3. Vérifier la correspondance invitation/destinataire/email fournisseur après signature.
 4. Dédupliquer `svix-id` et empêcher un événement tardif de faire régresser l'état.
 5. Auditer livraison et événement sans adresse, sujet, token, corps ni détail fournisseur.
@@ -40,7 +40,7 @@ Les checkpoints `d181a97`, `f716b16` et `860a14d` sont entièrement verts. Le lo
 3. Contrat d'adaptateur commun et provider states. Checkpoint actif.
 4. Email/Resend préparé avec refus runtime sûr. Checkpoint actif.
 5. Webhook Resend signé et filtré. Vert sur `860a14d`.
-6. Persistance tenant/RLS des livraisons et événements Resend. Checkpoint actif.
-7. Service de déduplication et d'ordre tardif Resend.
+6. Persistance tenant/RLS des livraisons et événements Resend. Publiée sur `76cf327`; fixtures CI corrigées localement.
+7. Service de déduplication et d'ordre tardif Resend. Checkpoint actif.
 8. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
 9. Tests provider mocks, sécurité, intégration et Playwright pertinents.

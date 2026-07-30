@@ -10,11 +10,13 @@ afterEach(async () => {
 
 describe("migrations des plans Conversation", () => {
   it("ajoute les plans immuables et leurs étapes tenant-scoped", async () => {
-    expect(getMigrationIds().at(-1)).toBe("069_os1_conversation_action_plans");
-    expect(getMigrationIds(true).slice(-2)).toEqual([
-      "069_os1_conversation_action_plans",
-      "070_os1_conversation_action_plans_rls",
-    ]);
+    expect(getMigrationIds()).toContain("069_os1_conversation_action_plans");
+    expect(getMigrationIds(true)).toEqual(
+      expect.arrayContaining([
+        "069_os1_conversation_action_plans",
+        "070_os1_conversation_action_plans_rls",
+      ]),
+    );
 
     const db = await createMemoryDb();
     opened.push(db);
