@@ -3,7 +3,7 @@
 - Date : 2026-07-30
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Travail effectué : contrats, persistance, service tenant-aware, adaptateurs web/test et premier écran Conversation du Conversation Hub canonique.
+- Travail effectué : verticale web/test verte et ouverture du plan structuré avec catalogue mock, validation pure et persistance immuable tenant-scoped.
 
 ## Impact north star
 
@@ -20,12 +20,14 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - `src/modules/channels/test-channel.ts` et `tests/test-channel-adapter.test.ts`;
 - `src/modules/channels/web-channel.ts`, `runtime.ts` et l'écran `/conversation`;
 - `src/components/app-shell.tsx` pour l'entrée de navigation Conversation;
+- `src/modules/orchestrator/` pour schémas, erreurs et catalogue des capacités;
+- migrations runtime `069`/`070`, miroirs `0063`/`0064` et tests associés;
 - les quatre fichiers de continuité.
 
 ## Risques
 
-- le parcours web n'a pas encore sa preuve Playwright mobile/desktop;
-- le run service `30548008916` est rouge sur une contrainte de chronologie; le correctif local doit être revalidé;
+- le parcours web n'a pas encore sa preuve Playwright Conversation mobile/desktop dédiée;
+- le service de création et décision des plans n'est pas encore implémenté;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -41,7 +43,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - `git diff --check` ciblé migrations/tests : vert.
 - PR #11 : runs `30546099003` et `30546098944` verts, incluant PostgreSQL/RLS, migrations, lint, typecheck, tests, build et Playwright.
 
-Le run `30548008916` a validé migrations, lint et typecheck, puis a trouvé deux tests Conversation en échec : un message d'origine antérieur à la création technique du fil violait `last_message_at >= created_at`. Le correctif local fait reculer `created_at` vers la première occurrence métier tout en conservant `updated_at` et la dernière date de message. Les tentatives Vitest locales restent bloquées sans diagnostic.
+Le run `30549936954` est entièrement vert sur `e561f57` : migrations, lint, typecheck, 223 tests, build et Playwright. Il valide le correctif de chronologie, les adaptateurs web/test et l'écran Conversation. La parité des nouvelles migrations de plan runtime/SQL est verte; leur exécution CI reste à lancer.
 
 ## Ce qui reste simulé
 
@@ -53,4 +55,4 @@ Le run `30548008916` a validé migrations, lint et typecheck, puis a trouvé deu
 
 ## Prochaine action recommandée
 
-Faire valider le correctif, les deux adaptateurs et l'écran Conversation par la CI, puis ouvrir le plan structuré et la validation unique.
+Faire valider les contrats, capacités et migrations de plan, puis implémenter la création tenant-aware, l'approbation unique et l'audit du plan exact.

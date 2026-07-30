@@ -115,6 +115,8 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ownerDb,
       tenantA.id,
       tenantB.id,
+      ownerA.id,
+      ownerB.id,
     );
     const apiIntelligence = await insertApiIntelligenceTenantFixtures(
       ownerDb,
@@ -201,6 +203,10 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect(
       (await restrictedPool.query("select id from conversation_messages")).rows,
     ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from conversation_action_plans"))
+        .rows,
+    ).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -243,6 +249,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
         client.query<{ id: string }>("select id from conversation_messages"),
     );
     expect(tenantAMessages.rows).toEqual([{ id: conversation.messageAId }]);
+    const tenantAPlans = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) =>
+        client.query<{ id: string }>("select id from conversation_action_plans"),
+    );
+    expect(tenantAPlans.rows).toEqual([{ id: conversation.planAId }]);
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
         client.query(
@@ -265,6 +278,32 @@ describeIfPostgres("PostgreSQL RLS", () => {
              id, tenant_id, role, display_name, created_at, updated_at
            ) values ($1, $2, 'customer', 'Interdit', $3, $3)`,
           [id("conversation_participant"), tenantB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into conversation_action_plans (
+             id, tenant_id, thread_id, source_message_id, schema_version,
+             generation_source, approval_status, intent, business_goal,
+             confidence, risk_summary, estimated_cost_minor,
+             estimated_cost_currency, plan_json, plan_fingerprint, created_by,
+             created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, 1, 'deterministic_mock', 'awaiting_approval',
+             'Interdit', 'Interdit', 1, 'Interdit', 0, 'EUR', '{}', $5,
+             $6, $7, $7
+           )`,
+          [
+            id("conversation_action_plan"),
+            tenantB.id,
+            conversation.threadBId,
+            conversation.messageBId,
+            "f".repeat(64),
+            ownerB.id,
+            nowIso(),
+          ],
         ),
       ),
     ).rejects.toThrow(/row-level security|violates/);
@@ -2732,6 +2771,8 @@ async function insertConversationTenantFixtures(
   db: ReturnType<typeof pgPoolAsSqlClient>,
   tenantAId: string,
   tenantBId: string,
+  ownerAId: string,
+  ownerBId: string,
 ) {
   const now = nowIso();
   const participantAId = id("conversation_participant_a");
@@ -2742,6 +2783,8 @@ async function insertConversationTenantFixtures(
   const threadBId = id("conversation_thread_b");
   const messageAId = id("conversation_message_a");
   const messageBId = id("conversation_message_b");
+  const planAId = id("conversation_action_plan_a");
+  const planBId = id("conversation_action_plan_b");
 
   await db.query(
     `insert into conversation_participants (
@@ -2821,7 +2864,42 @@ async function insertConversationTenantFixtures(
     ],
   );
 
-  return { identityBId, messageAId, threadAId };
+  await db.query(
+    `insert into conversation_action_plans (
+       id, tenant_id, thread_id, source_message_id, schema_version,
+       generation_source, approval_status, intent, business_goal, confidence,
+       risk_summary, estimated_cost_minor, estimated_cost_currency, plan_json,
+       plan_fingerprint, created_by, created_at, updated_at
+     ) values
+       ($1, $2, $3, $4, 1, 'deterministic_mock', 'awaiting_approval',
+         'Plan A', 'Objectif A', 1, 'Risque A', 0, 'EUR', '{}', $5, $6, $7, $7),
+       ($8, $9, $10, $11, 1, 'deterministic_mock', 'awaiting_approval',
+         'Plan B', 'Objectif B', 1, 'Risque B', 0, 'EUR', '{}', $12, $13, $7, $7)`,
+    [
+      planAId,
+      tenantAId,
+      threadAId,
+      messageAId,
+      "a".repeat(64),
+      ownerAId,
+      now,
+      planBId,
+      tenantBId,
+      threadBId,
+      messageBId,
+      "b".repeat(64),
+      ownerBId,
+    ],
+  );
+
+  return {
+    identityBId,
+    messageAId,
+    messageBId,
+    planAId,
+    threadAId,
+    threadBId,
+  };
 }
 
 async function insertApiIntelligenceTenantFixtures(

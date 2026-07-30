@@ -2,27 +2,27 @@
 
 ## Prochaine action concrète
 
-Publier le correctif de chronologie du fil, les adaptateurs `web-chat` et `canal-test`, le service de lecture bornée et l'écran Conversation authentifié. Attendre lint, typecheck, tests PostgreSQL, build et Playwright de base avant d'ouvrir le plan structuré.
+Faire valider les schémas de plan, le catalogue des deux capacités mock et les migrations runtime `069`/`070` avec leurs miroirs `0063`/`0064`. Ajouter ensuite le repository et le service tenant-aware qui créent un plan immuable et une seule approbation liée au plan exact.
 
 ## Critères du prochain checkpoint
 
-- le canal de test n'effectue aucun appel réseau et produit une provenance canonique;
-- l'entrée web authentifiée est limitée en taille et protégée contre le rejeu;
-- le tenant est résolu côté serveur, jamais accepté depuis une sélection client arbitraire;
-- le web chat visible reste entièrement en français;
-- le même fil est lisible après un message web puis un message du canal test;
-- l'audit reste sans texte de message, payload brut, secret, binaire ni URL signée;
-- les erreurs publiques sont sûres et n'exposent ni structure SQL ni identifiant interne sensible;
+- le plan conserve source, version, fingerprint et état d'approbation;
+- chaque capacité est générique, mock explicite, bornée et validée par son schéma;
+- aucun secret, credential, payload brut ou texte LLM direct n'est persistant;
+- un plan incomplet, payant, sans scope ou altérant la politique est refusé;
+- une seule ligne d'approbation peut cibler un plan exact;
+- plan et étapes restent immuables hors transitions d'état autorisées;
+- RLS, relations tenant-composées et index tenant-leading couvrent les nouvelles tables;
 - état de reprise mis à jour avant l'arrêt.
 
 ## Ordre
 
 1. Contrats et tests du Conversation Hub. Terminé localement.
 2. Migration additive, relations tenant-composées, index tenant-leading et RLS. Terminée et validée par la CI.
-3. Repository et service tenant-aware. Publiés; correctif de date préparé après le run rouge `30548008916`.
-4. Adaptateur canal de test. Implémenté localement sans transport réseau.
-5. Web chat minimal. Implémenté localement, validation CI à lancer.
-6. Plan structuré, validation unique et deux capacités mock explicites. Prochain checkpoint après CI verte.
+3. Repository et service tenant-aware. Terminé et validé.
+4. Adaptateur canal de test. Terminé et validé sans transport réseau.
+5. Web chat minimal. Terminé et validé par le run `30549936954`.
+6. Plan structuré, validation unique et deux capacités mock explicites. Schémas et persistance locaux, service à faire après CI.
 7. Playwright web + canal test, reprise et preuve d'audit.
 
 Ne pas ouvrir OS-2 tant que ce parcours n'est pas vert de bout en bout.

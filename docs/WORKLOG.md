@@ -81,3 +81,13 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Le facade borné `getConversationChannelServices` évite d'ajouter les nouveaux canaux au monolithe `src/lib/services.ts` tout en centralisant migration, lecture et mutation.
 - L'écran protégé `/conversation` affiche les fils récents, leur provenance web/test et deux formulaires français. Le tenant vient uniquement de la session serveur; les clés d'idempotence, corrélation et dates sont conservées dans chaque soumission pour rendre le rejeu sûr.
 - Le rôle `read-only` voit le fil mais ne peut pas envoyer. Le canal de test reste explicitement local et sans fournisseur externe.
+
+## 2026-07-30 - Plan structuré et catalogue des capacités OS-1
+
+- Le run `30549936954` est vert sur `e561f57` et valide migrations, lint, typecheck, 223 tests, build, Playwright, adaptateurs web/test et écran Conversation.
+- `actionPlanSchema` borne intention, objectif, confiance, questions, risque, coût, douze étapes maximum, preuves, entrées et clés d'idempotence uniques. Les objets sont stricts et les clés sensibles sont refusées récursivement.
+- Chaque proposition conserve tenant, fil, message source, version de schéma, source de génération, éventuelle référence modèle et état d'approbation; aucun champ d'exécution libre n'est accepté.
+- Le catalogue OS-1 déclare `crm.contacts.search` et `project.task.create` comme capacités génériques en environnement mock, avec mode, risque, approbation, réversibilité, compensation, scopes, schémas, coût nul, batch et catégories de données.
+- Le validateur refuse rôle lecture seule, contexte manquant, coût externe, capacité absente, scope manquant ou politique altérée, puis résume au maximum une validation pour le plan complet.
+- Les migrations `069`/`070` et miroirs `0063`/`0064` ajoutent plans et étapes tenant-scoped, relations composées, index tenant-leading, RLS, fingerprint, unicité de l'approbation et triggers d'immuabilité.
+- Les tests de migration couvrent source inter-tenant, étape et idempotence dupliquées, deuxième approbation et mutations du plan exact. La parité runtime/SQL est verte; l'exécution CI reste à lancer.

@@ -10,11 +10,13 @@ afterEach(async () => {
 
 describe("migrations du Conversation Hub", () => {
   it("enregistre les migrations et crée uniquement le schéma canonique borné", async () => {
-    expect(getMigrationIds().at(-1)).toBe("067_os1_conversation_hub");
-    expect(getMigrationIds(true).slice(-2)).toEqual([
-      "067_os1_conversation_hub",
-      "068_os1_conversation_hub_rls",
-    ]);
+    expect(getMigrationIds()).toContain("067_os1_conversation_hub");
+    expect(getMigrationIds(true)).toEqual(
+      expect.arrayContaining([
+        "067_os1_conversation_hub",
+        "068_os1_conversation_hub_rls",
+      ]),
+    );
 
     const db = await createMemoryDb();
     opened.push(db);
