@@ -21,3 +21,5 @@ Ce fichier est append-only. Chaque entrée conserve les faits, commandes, décis
 - Après retrait du cache `.next` obsolète, l'erreur transitoire d'import du proxy disparaît. Le serveur et le build Turbopack restent toutefois bloqués pendant la compilation sans répondre à la requête HTTP.
 - Les onglets de vérification du navigateur intégré ont été fermés et les processus locaux arrêtés proprement.
 - Le commit `6bcb700` est publié sur `codex/tradikom-one-os` et la PR brouillon #11 est ouverte vers `main`; sa CI devient le checkpoint OS-0.
+- Les runs `30513556848` et `30513556909` de la PR #11 sont verts. Le second valide PostgreSQL, migrations, backup/restore, lint, typecheck, tests, build et Playwright en 10 min 21 s.
+- OS-0 est clos; la reprise passe à OS-1 sur les tests et contrats canoniques du Conversation Hub. La PR reste en brouillon et aucune fusion n'est effectuée.

@@ -4,8 +4,8 @@ La roadmap progresse par tranches verticales utilisables. Une tranche horizontal
 
 | Phase | Objectif | État | Critère de sortie |
 | --- | --- | --- | --- |
-| OS-0 | Audit, recadrage et continuité | En cours | Audit, ADR, drift report, état de reprise, automations et suite verte |
-| OS-1 | Conversation Hub canonique | À faire | Un fil visible sur le web et un canal de test, identité, idempotence, anti-boucle, plan, validation, deux capacités mock, audit et reprise |
+| OS-0 | Audit, recadrage et continuité | Terminé | Audit, ADR, drift report, état de reprise, automations et suite verte |
+| OS-1 | Conversation Hub canonique | En cours | Un fil visible sur le web et un canal de test, identité, idempotence, anti-boucle, plan, validation, deux capacités mock, audit et reprise |
 | OS-2 | Omnicanal réel préparé | Verrouillé | Adaptateurs WhatsApp, Teams, Slack et email feature-flaggés, signatures et erreurs normalisées, sans fausse intégration |
 | OS-3 | Connector Runtime générique | Partiel | Deux capacités génériques exécutables sous policy, preuve, idempotence, quota et classification d'échec |
 | OS-4 | Mission durable | Partiel | Plan confirmé, exécution multi-étapes, attente, retry, reprise et compensation |

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T04:17:47.000Z",
+  "updatedAt": "2026-07-30T04:30:10.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "6bcb7001c61b48062542856f0178f297c1a82e93",
+  "lastCommit": "184eced70bb2921757050b3480c66d42425eb1b7",
   "status": "in_progress",
-  "currentPhase": "OS-0",
-  "currentObjective": "Auditer et recadrer le dépôt, rendre la reprise automatique et préparer la première tranche Conversation Hub.",
-  "nextAction": "Faire valider OS-0 par la CI de la PR brouillon, corriger tout échec puis créer le contrat borné du Conversation Hub canonique et ses tests de schéma.",
+  "currentPhase": "OS-1",
+  "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
+  "nextAction": "Créer les tests puis le contrat borné du Conversation Hub canonique avant toute migration ou interface.",
   "nextFile": "src/modules/conversation-hub/schemas.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -52,6 +52,10 @@
     {
       "command": "Next.js dev, navigateur et build locaux",
       "status": "blocked_by_local_turbopack_stall_ci_pending"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30513556909 et continuité 30513556848",
+      "status": "passed_including_postgres_migrations_backup_lint_typecheck_tests_build_playwright"
     }
   ],
   "humanBlockers": [

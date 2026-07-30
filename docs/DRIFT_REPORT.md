@@ -31,7 +31,7 @@ La tranche rend la reprise vérifiable et recentre explicitement la prochaine li
 - PR #10 : verte dans le run `30483590061`;
 - dernier run de `main`, `30127033174` : rouge uniquement sur PostCSS avant la correction reprise ici.
 
-La vérification locale complète reste limitée par des processus Node/Turbopack qui se figent sans diagnostic : lint, typecheck, Vitest, rendu HTTP et build seront arbitrés par la CI Linux officielle avec PostgreSQL.
+La PR #11 passe les runs `30513556848` et `30513556909` : continuité, audit, migrations PostgreSQL, sauvegarde/restauration, lint, typecheck, tests, build et Playwright sont verts. La limite locale Node/Turbopack est donc contournée par une preuve reproductible Linux/PostgreSQL.
 
 ## Ce qui reste simulé
 
@@ -43,4 +43,4 @@ La vérification locale complète reste limitée par des processus Node/Turbopac
 
 ## Prochaine action recommandée
 
-Valider OS-0, puis commencer les contrats test-first du Conversation Hub dans `src/modules/conversation-hub/schemas.ts`.
+Commencer les contrats test-first du Conversation Hub dans `src/modules/conversation-hub/schemas.ts`; OS-0 est validé.
