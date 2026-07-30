@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T17:35:00.000Z",
+  "updatedAt": "2026-07-30T17:48:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "f4e4816f66f19596f0a6bf4f1bd26dcdbbd308f9",
+  "lastCommit": "01d8f610ab413af5cef7fa6b9e11569434c67ae4",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider route et mapping tenant WhatsApp/Twilio, puis brancher l'ingestion canonique idempotente sans activer le transport.",
+  "currentObjective": "Valider mapping et ingestion canonique WhatsApp/Twilio, sans activer le transport ni télécharger les médias.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Prouver l'unicité globale anti-réattribution, HMAC secret sans adresse en clair, RLS et audit sûr; résoudre le tenant seulement sous accès système avant ingestion idempotente par MessageSid."
+      "evidenceExpected": "Prouver signature avant base, résolution endpoint et ingestion atomiques, identité externe pseudonymisée, replay MessageSid sans doublon, audit système sans PII et média non téléchargé."
     }
   },
-  "nextAction": "Publier et valider en CI le mapping tenant des endpoints, puis relier signature, résolution et Conversation Hub dans un service entrant idempotent.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-ingress-service.ts",
+  "nextAction": "Publier et valider en CI l'ingestion WhatsApp idempotente, puis produire le rapport de validation OS-2 avant d'ouvrir Teams et Slack.",
+  "nextFile": "docs/OS2_VALIDATION_REPORT.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -128,7 +128,10 @@
     "CI 30563781762 et continuité 30563781851 entièrement vertes sur 7609ad8",
     "migrations 073/074 et miroirs 0067/0068 des endpoints fournisseur",
     "service tenant-aware HMAC, statut et résolution système des endpoints",
-    "8 tests ciblés migration/service endpoints, ESLint et typecheck"
+    "8 tests ciblés migration/service endpoints, ESLint et typecheck",
+    "CI 30564535609 et continuité 30564535551 entièrement vertes sur f4e4816",
+    "service entrant atomique signature vers Conversation Hub sans PII d'identité",
+    "tests intégration replay, mapping absent/désactivé, signature avant base et média sans fetch"
   ],
   "lastValidation": [
     {
@@ -358,6 +361,14 @@
     {
       "command": "migrations et service des endpoints fournisseur - tests ciblés, ESLint et typecheck",
       "status": "passed_8_tests_rls_mirror_hmac_tenant_audit"
+    },
+    {
+      "command": "CI 30564535609 et continuité 30564535551 sur f4e4816",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "ingestion WhatsApp/Twilio vers Conversation Hub - tests ciblés, ESLint et typecheck",
+      "status": "passed_signature_before_database_mapping_replay_pseudonymization_no_media_fetch"
     }
   ],
   "humanBlockers": [

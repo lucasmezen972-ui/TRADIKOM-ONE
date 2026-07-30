@@ -1,19 +1,21 @@
 import type { ChannelAdapterState } from "@/modules/channels/contracts";
-import type { TwilioWebhookVerificationResult } from "@/modules/channels/whatsapp-twilio-webhook";
-
 const maxWebhookBytes = 512 * 1024;
+
+type SafeReceiveResult =
+  | { accepted: true }
+  | { accepted: false; code: string };
 
 export async function handlePreparedTwilioWebhookRequest(
   request: Request,
   dependencies: {
     state: ChannelAdapterState;
     verificationUrl: string | undefined;
-    verify: (input: {
+    receive: (input: {
       url: string;
       contentType: string;
       rawBody: string;
       signature: string;
-    }) => TwilioWebhookVerificationResult;
+    }) => Promise<SafeReceiveResult> | SafeReceiveResult;
   },
 ) {
   if (
@@ -48,14 +50,14 @@ export async function handlePreparedTwilioWebhookRequest(
     );
   }
 
-  const result = dependencies.verify({
+  const result = await dependencies.receive({
     url: dependencies.verificationUrl.trim(),
     contentType,
     rawBody: body.value,
     signature: request.headers.get("x-twilio-signature") ?? "",
   });
 
-  if (result.ok) {
+  if (result.accepted) {
     return jsonResponse({ ok: true });
   }
 
@@ -113,6 +115,12 @@ function rejectedResponse(code: string) {
     return jsonResponse(
       { ok: false, error: "Canal WhatsApp indisponible." },
       { status: 503, headers: { "Retry-After": "300" } },
+    );
+  }
+  if (code === "channel_provider_endpoint_not_found") {
+    return jsonResponse(
+      { ok: false, error: "Webhook temporairement non attribué." },
+      { status: 503, headers: { "Retry-After": "60" } },
     );
   }
   if (code === "payload_too_large") {

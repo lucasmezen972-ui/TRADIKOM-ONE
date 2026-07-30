@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
 import {
   getPreparedChannelProvider,
   handlePreparedTwilioWebhookRequest,
-  verifyTwilioWebhook,
+  receivePreparedWhatsAppWebhook,
 } from "@/modules/channels";
 import {
   logServerError,
@@ -21,8 +22,11 @@ export async function POST(request: Request) {
     const response = await handlePreparedTwilioWebhookRequest(request, {
       state: manifest.state,
       verificationUrl: process.env.TWILIO_WHATSAPP_WEBHOOK_URL,
-      verify: (input) =>
-        verifyTwilioWebhook(input, process.env.TWILIO_AUTH_TOKEN),
+      receive: async (input) =>
+        receivePreparedWhatsAppWebhook(await getDb(), input, {
+          authToken: process.env.TWILIO_AUTH_TOKEN,
+          fingerprintSecret: process.env.CONNECTOR_ENCRYPTION_KEY,
+        }),
     });
     response.headers.set("x-correlation-id", correlationId);
     return response;

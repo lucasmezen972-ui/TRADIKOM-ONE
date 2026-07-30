@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : Resend et vérificateur Twilio verts; route/enveloppe WhatsApp publiées; mapping endpoint local avec HMAC secret, unicité globale, trigger immuable, index composites, RLS, rôle et audit sûr testé sans PII.
-- Écarts restants : la CI du lot route/enveloppe puis celle du mapping restent à clore; aucune ingestion canonique, état `ready`, credential, consentement ou transport réel n'existe.
+- Preuve actuelle : Resend, vérificateur et route/enveloppe Twilio verts; mapping endpoint publié; ingestion locale atomique vérifie avant base, pseudonymise l'identité, rejoue `MessageSid` et refuse mapping absent/désactivé sans réseau.
+- Écarts restants : la CI du mapping puis celle de l'ingestion restent à clore; aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
 
 ## Modules touchés
 
@@ -35,7 +35,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 ## Risques
 
 - la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
-- WhatsApp/Twilio n'a pas encore d'ingestion canonique ni de persistance idempotente du message;
+- WhatsApp/Twilio n'a pas encore de preuve CI finale ni de rapport OS-2 consolidé;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -69,4 +69,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Valider la CI route/enveloppe, publier le mapping HMAC/RLS puis relier la verticale entrante au Conversation Hub de façon idempotente.
+Valider mapping et ingestion WhatsApp en CI, puis produire le rapport OS-2 avant d'ouvrir Teams et Slack.

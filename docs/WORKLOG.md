@@ -241,3 +241,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La résolution entrante globale s'exécute uniquement sous transaction système, retourne seulement `endpointId` et `tenantId`, et ignore immédiatement un endpoint désactivé.
 - Les audits omettent SID, adresse et empreinte. Les 8 tests ciblés couvrent parité SQL, colonnes interdites, contraintes, immutabilité, conflit inter-tenant, rôle, replay, résolution et désactivation.
 - Aucun endpoint réel n'est configuré, aucun secret n'est créé, aucune ingestion de message ou activation de transport n'est encore branchée.
+
+## 2026-07-30 - Ingestion WhatsApp canonique préparée et désactivée
+
+- Le lot route/enveloppe `f4e4816` est entièrement vert : CI `30564535609`, continuité `30564535551`, migrations, backup/restore, lint, typecheck, tests, build et Playwright.
+- Le service entrant vérifie et prépare le webhook avant tout accès base. Une signature altérée ne déclenche aucune requête, ce que le test d'intégration vérifie directement.
+- Résolution de l'endpoint et ingestion Conversation Hub s'exécutent dans la même transaction système. Un mapping absent ou désactivé retourne un échec temporaire sans créer de fil ni message.
+- L'identité client ne stocke jamais le numéro WhatsApp : son sujet externe, son participant et son identité utilisent une empreinte HMAC tenant-scoped. Le destinataire et l'URL média restent éphémères.
+- `MessageSid` alimente l'identifiant externe, l'idempotence et la corrélation. Un replay conserve le même message et le même fil; seul un audit de replay sûr est ajouté.
+- Les médias ne sont pas téléchargés ni persistés. Un message média-only devient une indication française bornée « média WhatsApp en attente d’import » sans URL fournisseur ni pièce jointe fictive.
+- Le Conversation Hub possède désormais une entrée système explicite, réutilisant exactement les contrôles d'identité, de replay, de route et d'audit sans attribuer le webhook à un humain.
+- La route ne peut toujours pas atteindre `ready`; aucun credential, endpoint réel, appel Twilio sortant ou média distant n'est activé.

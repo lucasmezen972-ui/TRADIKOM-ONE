@@ -1,4 +1,5 @@
 export type ConversationHubErrorCode =
+  | "conversation_access_denied"
   | "conversation_thread_not_found"
   | "conversation_identity_conflict"
   | "conversation_identity_unavailable"

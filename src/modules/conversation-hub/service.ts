@@ -1,4 +1,7 @@
-import { withTenantDbTransaction } from "@/db/tenant-context";
+import {
+  withSystemDbTransaction,
+  withTenantDbTransaction,
+} from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
 import type { Role } from "@/lib/types";
@@ -57,115 +60,139 @@ export async function ingestConversationMessage(
         parsed.tenantId,
         conversationWriteRoles,
       );
-
-      const replay = await findConversationMessageByIdempotencyKey(
-        transaction,
-        parsed.tenantId,
-        parsed.idempotencyKey,
-      );
-      if (replay) {
-        assertReplayMatchesIngress(replay, parsed);
-        await auditReplay(transaction, userId, replay);
-        return ingressResult(replay, true);
-      }
-
-      const identity = await ensureConversationIdentity(transaction, parsed);
-      const thread = await ensureConversationThread(
-        transaction,
-        parsed.tenantId,
-        parsed.threadId,
-      );
-      const createdAt = nowIso();
-      await insertThreadParticipantIfAbsent(transaction, {
-        tenantId: parsed.tenantId,
-        threadId: thread.id,
-        channelIdentityId: identity.id,
-        joinedAt: createdAt,
-      });
-
-      const message = await insertConversationMessageIfAbsent(transaction, {
-        id: id("conversation_message"),
-        tenantId: parsed.tenantId,
-        threadId: thread.id,
-        channelIdentityId: identity.id,
-        direction: "inbound",
-        kind: "text",
-        status: "received",
-        textContent: parsed.text ?? null,
-        adapterKey: identity.adapter_key,
-        externalMessageId: parsed.externalMessageId,
-        idempotencyKey: parsed.idempotencyKey,
-        correlationId: parsed.correlationId,
-        causationId: parsed.causationId ?? null,
-        occurredAt: parsed.occurredAt,
-        createdAt,
-      });
-
-      if (!message) {
-        const concurrentReplay = await findConversationMessageByIdempotencyKey(
-          transaction,
-          parsed.tenantId,
-          parsed.idempotencyKey,
-        );
-        if (!concurrentReplay) {
-          throw new ConversationHubError(
-            "conversation_idempotency_conflict",
-            "Le message existe déjà mais ne peut pas être relu.",
-          );
-        }
-        assertReplayMatchesIngress(concurrentReplay, parsed);
-        await auditReplay(transaction, userId, concurrentReplay);
-        return ingressResult(concurrentReplay, true);
-      }
-
-      for (const attachment of parsed.attachments) {
-        await insertConversationAttachment(transaction, {
-          id: attachment.id,
-          tenantId: parsed.tenantId,
-          messageId: message.id,
-          kind: attachment.kind,
-          fileName: attachment.fileName,
-          mediaType: attachment.mediaType,
-          sizeBytes: attachment.sizeBytes,
-          storageReference: attachment.storageReference,
-          checksumSha256: attachment.checksumSha256,
-          createdAt,
-        });
-      }
-      for (const [position, hop] of parsed.routeTrace.entries()) {
-        await insertConversationRouteHop(transaction, {
-          tenantId: parsed.tenantId,
-          messageId: message.id,
-          position,
-          adapterKey: hop.adapterKey,
-          channelIdentityId: hop.channelIdentityId,
-          externalMessageId: hop.externalMessageId ?? null,
-        });
-      }
-      await updateConversationThreadLastMessage(transaction, {
-        tenantId: parsed.tenantId,
-        threadId: thread.id,
-        occurredAt: parsed.occurredAt,
-        updatedAt: createdAt,
-      });
-      await recordAuditLog(transaction, {
-        tenantId: parsed.tenantId,
-        actorId: userId,
-        action: "conversation.message_received",
-        targetType: "conversation_message",
-        targetId: message.id,
-        metadata: {
-          threadId: thread.id,
-          direction: message.direction,
-          status: message.status,
-          attachmentCount: parsed.attachments.length,
-          idempotentReplay: false,
-        },
-      });
-
-      return ingressResult(message, false);
+      return persistConversationMessage(transaction, userId, parsed);
     },
   );
+}
+
+export async function ingestSystemConversationMessage(
+  db: DbClient,
+  systemActorId: string,
+  input: MessageIngress,
+) {
+  const parsed = messageIngressSchema.parse(input);
+  if (!/^system_[A-Za-z0-9_:-]{1,151}$/.test(systemActorId)) {
+    throw new ConversationHubError(
+      "conversation_access_denied",
+      "Identité système de conversation invalide.",
+    );
+  }
+  return withSystemDbTransaction(db, (transaction) =>
+    persistConversationMessage(transaction, systemActorId, parsed),
+  );
+}
+
+async function persistConversationMessage(
+  transaction: DbClient,
+  actorId: string,
+  parsed: MessageIngress,
+) {
+  const replay = await findConversationMessageByIdempotencyKey(
+    transaction,
+    parsed.tenantId,
+    parsed.idempotencyKey,
+  );
+  if (replay) {
+    assertReplayMatchesIngress(replay, parsed);
+    await auditReplay(transaction, actorId, replay);
+    return ingressResult(replay, true);
+  }
+
+  const identity = await ensureConversationIdentity(transaction, parsed);
+  const thread = await ensureConversationThread(
+    transaction,
+    parsed.tenantId,
+    parsed.threadId,
+  );
+  const createdAt = nowIso();
+  await insertThreadParticipantIfAbsent(transaction, {
+    tenantId: parsed.tenantId,
+    threadId: thread.id,
+    channelIdentityId: identity.id,
+    joinedAt: createdAt,
+  });
+
+  const message = await insertConversationMessageIfAbsent(transaction, {
+    id: id("conversation_message"),
+    tenantId: parsed.tenantId,
+    threadId: thread.id,
+    channelIdentityId: identity.id,
+    direction: "inbound",
+    kind: "text",
+    status: "received",
+    textContent: parsed.text ?? null,
+    adapterKey: identity.adapter_key,
+    externalMessageId: parsed.externalMessageId,
+    idempotencyKey: parsed.idempotencyKey,
+    correlationId: parsed.correlationId,
+    causationId: parsed.causationId ?? null,
+    occurredAt: parsed.occurredAt,
+    createdAt,
+  });
+
+  if (!message) {
+    const concurrentReplay = await findConversationMessageByIdempotencyKey(
+      transaction,
+      parsed.tenantId,
+      parsed.idempotencyKey,
+    );
+    if (!concurrentReplay) {
+      throw new ConversationHubError(
+        "conversation_idempotency_conflict",
+        "Le message existe déjà mais ne peut pas être relu.",
+      );
+    }
+    assertReplayMatchesIngress(concurrentReplay, parsed);
+    await auditReplay(transaction, actorId, concurrentReplay);
+    return ingressResult(concurrentReplay, true);
+  }
+
+  for (const attachment of parsed.attachments) {
+    await insertConversationAttachment(transaction, {
+      id: attachment.id,
+      tenantId: parsed.tenantId,
+      messageId: message.id,
+      kind: attachment.kind,
+      fileName: attachment.fileName,
+      mediaType: attachment.mediaType,
+      sizeBytes: attachment.sizeBytes,
+      storageReference: attachment.storageReference,
+      checksumSha256: attachment.checksumSha256,
+      createdAt,
+    });
+  }
+  for (const [position, hop] of parsed.routeTrace.entries()) {
+    await insertConversationRouteHop(transaction, {
+      tenantId: parsed.tenantId,
+      messageId: message.id,
+      position,
+      adapterKey: hop.adapterKey,
+      channelIdentityId: hop.channelIdentityId,
+      externalMessageId: hop.externalMessageId ?? null,
+    });
+  }
+  await updateConversationThreadLastMessage(transaction, {
+    tenantId: parsed.tenantId,
+    threadId: thread.id,
+    occurredAt: parsed.occurredAt,
+    updatedAt: createdAt,
+  });
+  await recordAuditLog(transaction, {
+    tenantId: parsed.tenantId,
+    actorId,
+    action: "conversation.message_received",
+    targetType: "conversation_message",
+    targetId: message.id,
+    metadata: {
+      threadId: thread.id,
+      direction: message.direction,
+      status: message.status,
+      attachmentCount: parsed.attachments.length,
+      idempotentReplay: false,
+    },
+  });
+
+  return ingressResult(message, false);
 }
 
 export async function getConversationThread(
