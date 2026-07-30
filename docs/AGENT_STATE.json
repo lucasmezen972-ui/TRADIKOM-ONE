@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T15:51:37.000Z",
+  "updatedAt": "2026-07-30T16:10:15.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "f716b16b949e7d3087a3f635dbb4a1104e899c9c",
+  "lastCommit": "860a14de0b0984e564f15bd9086b4a262dc5c293",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider le webhook Resend signé et minimisé, puis ajouter la persistance tenant/RLS de ses livraisons et rejeux sans route publique.",
+  "currentObjective": "Valider les migrations tenant/RLS des livraisons et événements Resend, puis publier leur service de déduplication et ordre tardif sans route publique.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,8 +32,8 @@
       "evidenceExpected": "Verifier Svix officiel sur corps brut, tags tenant bornés, sortie sans données personnelles, tests de signature/rejeu, puis unicité svix-id et correspondance email fournisseur sous RLS."
     }
   },
-  "nextAction": "Valider le vérificateur Svix en CI, puis créer les migrations des livraisons email et événements Resend avec RLS et unicité svix-id.",
-  "nextFile": "src/db/migrations/0065_os2_email_provider_events.sql",
+  "nextAction": "Valider les migrations 071/072 en CI, puis publier le repository/service email provider et son intégration invitation déjà préparés localement.",
+  "nextFile": "src/modules/email/provider-events-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -106,7 +106,10 @@
     "consultation officielle des événements, tags et garanties webhook Resend",
     "pnpm view svix et ajout épinglé svix@1.99.1",
     "pnpm audit --prod --audit-level high",
-    "vérificateur Svix sur corps brut et tests de signature/rejeu"
+    "vérificateur Svix sur corps brut et tests de signature/rejeu",
+    "CI complète du vérificateur Svix 30559230976",
+    "migrations 071/072 et miroirs 0065/0066 des événements email provider",
+    "contrôle de parité runtime/SQL des migrations email provider"
   ],
   "lastValidation": [
     {
@@ -284,6 +287,14 @@
     {
       "command": "Vitest ciblé webhook Resend/Svix",
       "status": "blocked_by_known_local_dependency_install_node_stall_ci_pending"
+    },
+    {
+      "command": "CI 30559230976 et continuité 30559230886 sur 860a14d",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "parité migrations runtime 071/072 et miroirs SQL 0065/0066",
+      "status": "passed"
     }
   ],
   "humanBlockers": [

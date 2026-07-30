@@ -57,7 +57,9 @@ Le vérificateur préparé utilise `svix@1.99.1`, refuse le secret absent, les e
 
 Le client d'envoi ajoute les tags bornés `tradikom_kind` et `tradikom_tenant`; Resend les restitue officiellement dans ses événements. Un événement sans tenant canonique est refusé au lieu d'être attribué par supposition.
 
-Le prochain incrément doit persister la correspondance entre livraison et email fournisseur ainsi que `svix-id` sous RLS, vérifier cette correspondance après signature et gérer les événements tardifs sans régression d'état. Aucun endpoint public ne sera activé avant cette preuve.
+Les migrations `071`/`072`, miroirs SQL `0065`/`0066`, préparent deux tables minimales : une correspondance livraison/tenant/email fournisseur et un journal append-only des événements `svix-id`. Elles n'ont aucune colonne de corps brut, destinataire, sujet ou détail de bounce. Les relations invitation, livraison et email fournisseur sont tenant-composées; les identifiants provider et `svix-id` sont uniques globalement, avec des index tenant-leading et RLS `ALL`.
+
+Le prochain incrément doit relier la livraison autorisée à l'invitation, vérifier la correspondance tenant/email après signature, auditer sans PII et gérer les événements tardifs sans régression d'état. Aucun endpoint public ne sera activé avant cette preuve.
 
 ## Références fournisseur vérifiées
 

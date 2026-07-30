@@ -183,3 +183,12 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les tests signent avec Svix et couvrent altération du corps, timestamp expiré, secret/en-têtes absents, Unicode surdimensionné, événement non nécessaire, mapping tenant absent et normalisation des statuts.
 - Aucune route publique, table, mise à jour métier, console fournisseur, credential ou activation n'est ajoutée dans ce checkpoint.
 - Vitest local déclenche l'installation de dépendances puis reproduit le blocage Node local connu; la CI sera l'arbitre exécutable.
+
+## 2026-07-30 - Persistance minimale des événements email
+
+- Le vérificateur `860a14d` est entièrement vert dans la CI `30559230976`; la continuité `30559230886` est verte.
+- Les migrations runtime `071`/`072` et miroirs `0065`/`0066` créent `email_provider_deliveries` et `email_provider_events`.
+- Aucune colonne ne peut conserver corps, payload, adresse, sujet ou message de bounce. Seuls identifiants bornés, hash destinataire, statut et dates opérationnelles sont présents.
+- Livraison et événement portent `tenant_id`, relations composées, index tenant-leading et RLS `ALL`. L'email fournisseur et `svix-id` sont uniques globalement pour empêcher une réattribution inter-tenant.
+- La relation événement vérifie simultanément tenant, livraison et email fournisseur. Les tests refusent source inter-tenant, mauvais email, doublon provider, doublon `svix-id` et références non bornées.
+- La parité exacte runtime/SQL et `git diff --check` passent. Le checkpoint attend la CI PostgreSQL avant publication du service déjà préparé localement.
