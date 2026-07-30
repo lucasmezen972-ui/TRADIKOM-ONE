@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; migrations sans PII, RLS PostgreSQL, service et route Resend verts; vérificateur Twilio SDK testé localement sur URL exacte, formulaires dupliqués et JSON signé.
-- Écarts restants : la CI du vérificateur Twilio puis sa route HTTP restent à clore; aucun état `ready`, credential, consentement, ingestion WhatsApp ou transport réel n'existe.
+- Preuve actuelle : contrat, registre, provider et vérificateur Svix verts; service et route Resend verts; vérificateur Twilio publié, route fail-closed et enveloppe WhatsApp locale testés sur signature préalable, URL exacte, champs bornés, médias non téléchargés et absence de réseau.
+- Écarts restants : la CI du vérificateur puis celle du lot route/enveloppe restent à clore; aucun mapping tenant, ingestion canonique, état `ready`, credential, consentement ou transport réel n'existe.
 
 ## Modules touchés
 
@@ -35,7 +35,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 ## Risques
 
 - la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
-- WhatsApp/Twilio n'a pas encore de route publique ni de normalisation canonique;
+- WhatsApp/Twilio n'a pas encore de mapping tenant entrant ni de persistance idempotente;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -69,4 +69,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Publier le vérificateur Twilio, valider sa CI puis ajouter une route HTTP fail-closed qui refuse avant lecture sans état `ready`.
+Valider la CI du vérificateur Twilio, publier route et enveloppe préparée puis ajouter un mapping tenant hashé, RLS et audité avant toute ingestion.

@@ -4,3 +4,5 @@ export * from "@/modules/channels/runtime";
 export * from "@/modules/channels/test-channel";
 export * from "@/modules/channels/web-channel";
 export * from "@/modules/channels/whatsapp-twilio-webhook";
+export * from "@/modules/channels/whatsapp-twilio-webhook-http";
+export * from "@/modules/channels/whatsapp-twilio-adapter";

@@ -25,6 +25,7 @@ const definitions: Record<
       "TWILIO_ACCOUNT_SID",
       "TWILIO_AUTH_TOKEN",
       "TWILIO_WHATSAPP_SENDER",
+      "TWILIO_WHATSAPP_WEBHOOK_URL",
     ],
     signatureScheme: "twilio_sdk",
     capabilities: {

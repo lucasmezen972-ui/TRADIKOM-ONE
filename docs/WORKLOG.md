@@ -222,4 +222,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les formulaires conservent tous les paramètres, y compris les clés dupliquées sous forme de tableaux attendus par le SDK. Les corps JSON utilisent `validateRequestWithBody` et le `bodySHA256` de l'URL exacte.
 - La sortie vérifiée ne contient ni corps, texte, numéro de téléphone ni paramètre libre. Seuls les SID Twilio syntaxiquement sûrs et le nombre de paramètres peuvent être exposés.
 - Les six tests couvrent absence de token, signature valide, doublons, altération corps/URL, JSON signé, limites et absence de réseau. Vitest ciblé, ESLint ciblé et typecheck complet passent localement.
-- Aucun endpoint public Twilio, credential, appel réseau, ingestion canonique, envoi WhatsApp ou état `ready` n'est ajouté dans ce checkpoint.
+- La route `/api/webhooks/twilio/whatsapp` refuse avant lecture dans les trois états actuels et si l'URL publique HTTPS configurée est absente ou invalide. Elle ne reconstruit pas l'URL à partir d'en-têtes proxy.
+- Le corps est lu en flux à 512 Kio maximum, décodé en UTF-8 strict et transmis exactement avec `X-Twilio-Signature`. Les erreurs sont françaises, `no-store` et n'exposent ni code interne ni contenu.
+- Les 23 tests ciblés registre/vérificateur/HTTP, ESLint, typecheck complet et build production local passent. Le build inventorie bien la nouvelle route dynamique.
+- `consumeVerifiedTwilioFormWebhook` ne remet les paramètres à son consommateur qu'après signature valide. Une charge JSON, une signature altérée ou un formulaire hors limites ne peuvent pas atteindre la préparation WhatsApp.
+- L'enveloppe entrante exige SID, adresses `whatsapp:+E164`, nombre de médias et horodatage bornés. Les doublons sur champs sensibles, messages vides et plus de dix médias sont refusés.
+- Les URLs média doivent être HTTPS sur `api.twilio.com` avec un SID final sûr; elles sont seulement préparées en mémoire et jamais téléchargées. Les clés d'idempotence et corrélation dérivent de `MessageSid`.
+- Les 34 tests ciblés registre/vérificateur/HTTP/adaptateur, ESLint et typecheck complet passent.
+- Aucun credential, appel réseau, accès base, mapping tenant, ingestion canonique, envoi WhatsApp ou état `ready` n'est ajouté dans ce checkpoint.

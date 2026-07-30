@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T17:02:00.000Z",
+  "updatedAt": "2026-07-30T17:12:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "6dd61b50e3496cbad01290c6b74aa8a87dd5ce98",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Préparer WhatsApp/Twilio avec vérification SDK officielle, entrées bornées et aucune activation du transport.",
+  "currentObjective": "Valider route et préparation WhatsApp/Twilio, puis concevoir le mapping tenant entrant sans PII ni activation du transport.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Vérifier Twilio avec le SDK officiel sur l'URL exacte et tous les paramètres, préserver le corps JSON signé, borner avant ingestion, ne restituer aucune PII et conserver le transport désactivé."
+      "evidenceExpected": "Prouver que la signature SDK précède toute préparation WhatsApp, que les champs sensibles restent éphémères, que les médias ne sont pas téléchargés et que replay/mapping tenant seront explicites avant ingestion."
     }
   },
-  "nextAction": "Publier et valider en CI le vérificateur Twilio, puis ajouter sa route HTTP refusée par défaut sans ingestion ni transport.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-webhook-http.ts",
+  "nextAction": "Publier et valider en CI la route et l'enveloppe WhatsApp préparée, puis ajouter le mapping tenant des endpoints fournisseur avec hash, RLS et audit sûr.",
+  "nextFile": "src/modules/channels/provider-endpoints-repository.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -120,7 +120,11 @@
     "copie locale stable hors iCloud dans /Users/TRADIKOM/Developer/TRADIKOM-ONE",
     "pnpm add --save-exact twilio@6.0.2",
     "Vitest, ESLint et typecheck locaux du vérificateur Twilio",
-    "pnpm audit --prod --audit-level high après ajout Twilio"
+    "pnpm audit --prod --audit-level high après ajout Twilio",
+    "route HTTP Twilio fail-closed avec URL publique configurée obligatoire",
+    "23 tests ciblés Twilio/registre, ESLint, typecheck et build production local",
+    "enveloppe WhatsApp éphémère normalisée uniquement après signature",
+    "34 tests ciblés Twilio/registre, ESLint et typecheck complets"
   ],
   "lastValidation": [
     {
@@ -338,6 +342,10 @@
     {
       "command": "pnpm audit --prod --audit-level high après ajout Twilio",
       "status": "passed_one_preexisting_ignored_high_zero_active_advisories"
+    },
+    {
+      "command": "route et préparation entrante WhatsApp/Twilio - tests ciblés, ESLint et typecheck",
+      "status": "passed_34_tests_no_network_no_database"
     }
   ],
   "humanBlockers": [

@@ -25,6 +25,10 @@ const safeTwilioSidSchema = z
 
 type TwilioFormParameters = Record<string, string | string[]>;
 
+export type VerifiedTwilioFormParameters = Readonly<
+  Record<string, string | readonly string[]>
+>;
+
 export type SafeVerifiedTwilioWebhook = {
   signatureVerified: true;
   payloadKind: "form" | "json";
@@ -138,6 +142,30 @@ export function verifyTwilioWebhook(
   return { ok: false, code: "unsupported_content_type" };
 }
 
+export function consumeVerifiedTwilioFormWebhook<T>(
+  input: unknown,
+  authToken: string | undefined,
+  consume: (parameters: VerifiedTwilioFormParameters) => T,
+):
+  | { ok: true; value: T }
+  | Extract<TwilioWebhookVerificationResult, { ok: false }> {
+  const verification = verifyTwilioWebhook(input, authToken);
+  if (!verification.ok) return verification;
+  if (verification.event.payloadKind !== "form") {
+    return { ok: false, code: "unsupported_content_type" };
+  }
+
+  const parsedInput = twilioWebhookInputSchema.safeParse(input);
+  if (!parsedInput.success) return { ok: false, code: "payload_invalid" };
+  const parsedForm = parseBoundedFormBody(parsedInput.data.rawBody);
+  if (!parsedForm) return { ok: false, code: "payload_invalid" };
+
+  return {
+    ok: true,
+    value: consume(cloneReadonlyParameters(parsedForm.parameters)),
+  };
+}
+
 function isAcceptedWebhookUrl(value: string) {
   try {
     const url = new URL(value);
@@ -196,4 +224,17 @@ function firstSafeSid(
     if (parsed.success) return parsed.data;
   }
   return undefined;
+}
+
+function cloneReadonlyParameters(
+  parameters: TwilioFormParameters,
+): VerifiedTwilioFormParameters {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(parameters).map(([name, value]) => [
+        name,
+        Array.isArray(value) ? Object.freeze([...value]) : value,
+      ]),
+    ),
+  );
 }
