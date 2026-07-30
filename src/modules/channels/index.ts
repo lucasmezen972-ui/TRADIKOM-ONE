@@ -13,3 +13,5 @@ export * from "@/modules/channels/whatsapp-twilio-ingress-service";
 export * from "@/modules/channels/teams-microsoft-webhook";
 export * from "@/modules/channels/teams-microsoft-webhook-http";
 export * from "@/modules/channels/teams-microsoft-ingress-service";
+export * from "@/modules/channels/slack-webhook";
+export * from "@/modules/channels/slack-webhook-http";

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T18:30:00.000Z",
+  "updatedAt": "2026-07-30T19:05:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "4ecda6f2991ad0bc89b3780f3c5dc1a07eb68dfd",
+  "lastCommit": "9a4c65906d0ea75a5c5b3fa049a1933a96a01734",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider le mapping tenant et l'ingestion canonique Microsoft Teams, sans consentement, credential ni transport actif.",
+  "currentObjective": "Préparer la frontière HTTP Slack avec signature v0 et anti-rejeu, sans OAuth, credential ni transport actif.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Prouver validation JWT avant base, endpoint HMAC tenant-aware, identité et fil pseudonymisés, replay Activity ID, continuité multi-message, audit sans PII et aucune pièce jointe téléchargée."
+      "evidenceExpected": "Prouver HMAC-SHA256 v0 sur corps brut, fenêtre anti-rejeu de cinq minutes, comparaison constante avant parsing, challenge signé, anti-boucle bot et aucune remise au métier hors état prêt."
     }
   },
-  "nextAction": "Publier et valider en CI le mapping et l'ingestion Teams, puis ouvrir Slack par signature v0 anti-rejeu sans OAuth simulé.",
-  "nextFile": "src/modules/channels/slack-webhook.ts",
+  "nextAction": "Publier et valider en CI la frontière Slack, puis ajouter mapping workspace et ingestion canonique sans OAuth simulé.",
+  "nextFile": "src/modules/channels/slack-ingress-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -143,7 +143,11 @@
     "ingestion Teams vers Conversation Hub avec replay, pseudonymisation et pièces jointes non téléchargées",
     "27 tests ciblés canaux/Conversation Hub et typecheck complet",
     "CI 4ecda6f et continuité entièrement vertes pour la frontière Teams",
-    "suite complète 333 tests verts et build production après ingestion Teams"
+    "suite complète 333 tests verts et build production après ingestion Teams",
+    "consultation officielle Slack sur signature v0, corps brut et fenêtre anti-rejeu",
+    "frontière Slack fail-closed avec challenge signé et anti-boucle bot",
+    "14 tests Slack ciblés, ESLint et typecheck complet",
+    "suite complète 346 tests verts et build production avec route Slack"
   ],
   "lastValidation": [
     {
@@ -405,6 +409,14 @@
     {
       "command": "pnpm test et pnpm build après ingestion Teams",
       "status": "passed_333_tests_13_skipped_build_lists_teams_route"
+    },
+    {
+      "command": "vérificateur v0 et route Slack - Vitest, ESLint et typecheck",
+      "status": "passed_14_tests_raw_body_hmac_replay_window_constant_compare_fail_closed"
+    },
+    {
+      "command": "pnpm lint, pnpm test et pnpm build après frontière Slack",
+      "status": "passed_346_tests_13_skipped_build_lists_slack_route"
     }
   ],
   "humanBlockers": [

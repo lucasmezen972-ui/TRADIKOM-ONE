@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : Resend et WhatsApp sont verts jusqu'à l'ingestion atomique; Teams refuse hors état prêt, valide officiellement le JWT, résout un endpoint HMAC, pseudonymise identité et fil, rejoue l'Activity ID et ne télécharge aucune pièce jointe.
-- Écarts restants : la verticale Teams locale attend sa CI; Slack reste au contrat transversal. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
+- Preuve actuelle : Resend et WhatsApp sont verts; Teams valide officiellement le JWT et ingère via endpoint HMAC; Slack vérifie localement le corps brut par signature v0, timestamp anti-rejeu et comparaison constante avant parsing.
+- Écarts restants : la verticale Teams attend sa CI; Slack n'a encore ni mapping workspace ni ingestion canonique. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
 
 ## Modules touchés
 
@@ -73,4 +73,4 @@ La frontière Teams `4ecda6f` est entièrement verte en CI et continuité. Le ma
 
 ## Prochaine action recommandée
 
-Valider la verticale Teams en CI, puis ouvrir Slack avec signature et anti-rejeu avant le rapport OS-2.
+Valider Teams et publier la frontière Slack, puis ajouter son mapping/ingestion avant le rapport OS-2.

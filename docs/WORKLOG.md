@@ -273,3 +273,12 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les 27 tests ciblés canaux/Conversation Hub, le typecheck, 333 tests complets et le build de production passent. Ils couvrent replay, continuité multi-message, mapping absent/désactivé, conflit inter-tenant, HMAC, absence de PII et absence de `fetch`.
 - La frontière Teams précédente `4ecda6f` est entièrement verte : CI migrations/backup/lint/typecheck/tests/build/Playwright et continuité réussies.
 - Aucun tenant Entra, application, consentement, credential, endpoint réel ou transport Microsoft n'est activé.
+
+## 2026-07-30 - Frontière Slack v0 fail-closed
+
+- La documentation Slack officielle actuelle confirme la vérification sur corps brut avec base `v0:timestamp:body`, HMAC-SHA256, comparaison constante et refus au-delà de cinq minutes. Les verification tokens historiques ne sont pas utilisés.
+- Le vérificateur borne le corps à 1 Mio réel avant HMAC, vérifie signature et horodatage avant tout parsing JSON, puis projette seulement application, workspace, événement, utilisateur, conversation, texte et compteur de fichiers.
+- Les fichiers, URLs, noms et champs inconnus sont écartés. Un message de bot ou tout sous-type est volontairement ignoré après signature pour empêcher les boucles; un message direct conserve un fil stable et un fil public utilise `thread_ts` ou le message racine.
+- Le challenge de configuration n'est retourné qu'après signature valide. La route `/api/webhooks/slack` refuse avant lecture dans les trois états actuels; aucun chemin ne peut produire `ready` sans décision humaine future.
+- Les 14 tests ciblés couvrent corps brut, altération, anti-rejeu, événement futur, bot, challenge, UTF-8 surdimensionné, refus avant lecture, remise après vérification et taille déclarée. ESLint, typecheck, 346 tests complets et build de production passent; Next.js inventorie la route Slack.
+- Aucun package obsolète Events API n'est ajouté, aucun workspace, application, OAuth, token, secret réel, endpoint ou transport Slack n'est créé.
