@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : OS-1 vert; audit des quatre canaux; contrat commun; registre sans réseau; feature flags; état `not_configured`; provider Resend à origine fixe, borné et idempotent mais impossible à sélectionner dans le runtime.
-- Écarts restants : les checkpoints OS-2 attendent leur CI complète; aucun webhook signé, transport, credential, consentement ou mapping tenant réel n'est encore activé.
+- Preuve actuelle : OS-1 vert; contrat/registre OS-2 verts; provider Resend vert mais non sélectionnable; vérificateur Svix sur corps brut, tags tenant bornés, événements minimisés et tests de signature/rejeu préparés.
+- Écarts restants : le vérificateur attend sa CI; aucune persistance de `svix-id`, route, activation, credential, consentement ou livraison réelle n'existe encore.
 
 ## Modules touchés
 
@@ -67,4 +67,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Valider le contrat transversal et le provider Email/Resend préparé en CI, puis ajouter le webhook Resend signé et dédupliqué sans l'activer.
+Valider le vérificateur Svix en CI, puis persister livraisons et `svix-id` sous RLS sans créer de route publique.

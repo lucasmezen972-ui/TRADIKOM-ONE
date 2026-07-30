@@ -53,7 +53,11 @@ Il n'est pas sélectionné par `createRuntimeEmailProvider`. Même avec des noms
 
 ## Prochain incrément
 
-Préparer le webhook Resend sur corps brut et en-têtes Svix, avec signature officielle, fenêtre anti-rejeu, déduplication persistante `svix-id`, mapping tenant explicite et état désactivé sans secret. Aucun endpoint public ne sera activé avant cette preuve.
+Le vérificateur préparé utilise `svix@1.99.1`, refuse le secret absent, les en-têtes incomplets, les timestamps expirés, toute modification du corps et les payloads supérieurs à 512 Kio. Il ne retient que les événements opérationnels et retourne uniquement `svix-id`, tenant, email fournisseur, type, statut et date. Les ouvertures/clics et toutes les données personnelles du payload sont ignorés.
+
+Le client d'envoi ajoute les tags bornés `tradikom_kind` et `tradikom_tenant`; Resend les restitue officiellement dans ses événements. Un événement sans tenant canonique est refusé au lieu d'être attribué par supposition.
+
+Le prochain incrément doit persister la correspondance entre livraison et email fournisseur ainsi que `svix-id` sous RLS, vérifier cette correspondance après signature et gérer les événements tardifs sans régression d'état. Aucun endpoint public ne sera activé avant cette preuve.
 
 ## Références fournisseur vérifiées
 
@@ -61,3 +65,6 @@ Préparer le webhook Resend sur corps brut et en-têtes Svix, avec signature off
 - [clés d'idempotence Resend](https://resend.com/docs/dashboard/emails/idempotency-keys) : limite de 256 caractères, rétention de 24 heures et conflits `409`;
 - [classification officielle des erreurs](https://www.resend.com/docs/api-reference/errors) : authentification, quota, concurrence et indisponibilité;
 - [vérification des webhooks Resend](https://resend.com/docs/webhooks/verify-webhooks-requests) : corps brut et en-têtes Svix obligatoires avant parsing.
+- [types d'événements Resend](https://resend.com/docs/webhooks/event-types) : événements de livraison normalisés;
+- [tags Resend](https://resend.com/docs/dashboard/emails/tags) : tags d'envoi restitués dans le webhook;
+- [garanties de livraison webhook](https://resend.com/docs/webhooks/introduction) : livraison au moins une fois, ordre non garanti et déduplication par `svix-id`.

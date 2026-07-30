@@ -172,3 +172,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `createRuntimeEmailProvider` n'active pas Resend, même si des noms de variables sont présents. Il renvoie `unavailable`; le provider console est désormais impossible en production, conformément à la page 67.
 - Les tests couvrent origine, absence de redirection, idempotence, quota, indisponibilité, conflits concurrents/permanents, clé invalide, domaine refusé, payload/réponse bornés, timeout, échec réseau, absence de fuite et sélection runtime sûre.
 - Vitest ciblé reproduit le blocage Node local silencieux; ce lot attend lint, typecheck et tests exécutables dans la CI de la PR.
+
+## 2026-07-30 - Vérificateur webhook Resend officiel
+
+- Le provider préparé `f716b16` est entièrement vert dans la CI `30557617612`; la continuité `30557617778` est également verte.
+- La dépendance officielle `svix@1.99.1` est épinglée. L'audit de production passe avec l'unique exception haute déjà ignorée et sans advisory actif supplémentaire.
+- Le client d'envoi ajoute deux tags bornés : type métier et tenant. Aucun destinataire, sujet ou token n'est placé dans ces tags.
+- `verifyResendWebhook` borne le corps à 512 Kio, exige les trois en-têtes Svix et vérifie le corps brut avant parsing. Le SDK officiel applique aussi sa fenêtre anti-rejeu de cinq minutes.
+- Seuls sept événements opérationnels sont acceptés; ouvertures et clics sont exclus. La sortie sûre omet destinataire, sujet, contenu et détail de bounce.
+- Les tests signent avec Svix et couvrent altération du corps, timestamp expiré, secret/en-têtes absents, Unicode surdimensionné, événement non nécessaire, mapping tenant absent et normalisation des statuts.
+- Aucune route publique, table, mise à jour métier, console fournisseur, credential ou activation n'est ajoutée dans ce checkpoint.
+- Vitest local déclenche l'installation de dépendances puis reproduit le blocage Node local connu; la CI sera l'arbitre exécutable.

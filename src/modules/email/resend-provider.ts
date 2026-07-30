@@ -48,6 +48,7 @@ export function createResendEmailProvider(
             subject: message.subject,
             text: message.text,
             html: message.html,
+            tags: resendTags(message),
           }),
           signal: controller.signal,
           redirect: "error",
@@ -100,9 +101,19 @@ function isBoundedMessage(message: EmailMessage) {
     message.subject.length <= 998 &&
     contentBytes <= maxContentBytes &&
     message.metadata.expiresAt.length <= 64 &&
-    (message.metadata.tenantId?.length ?? 0) <= 160 &&
+    (!message.metadata.tenantId ||
+      /^[A-Za-z0-9][A-Za-z0-9_-]{0,159}$/.test(message.metadata.tenantId)) &&
     (message.metadata.invitationId?.length ?? 0) <= 160
   );
+}
+
+function resendTags(message: EmailMessage) {
+  return [
+    { name: "tradikom_kind", value: message.kind },
+    ...(message.metadata.tenantId
+      ? [{ name: "tradikom_tenant", value: message.metadata.tenantId }]
+      : []),
+  ];
 }
 
 function classifyResponse(

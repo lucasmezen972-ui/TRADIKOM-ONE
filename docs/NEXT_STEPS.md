@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-Le contrat commun OS-2 est publié et sa CI est en cours. Le provider Email/Resend est maintenant extrait et durci sans sélection runtime. Valider ce second checkpoint en CI, puis préparer le webhook Resend signé et idempotent, toujours désactivé sans secret et sans mapping tenant prouvé.
+Le contrat commun et le provider Email/Resend préparé sont verts. Le vérificateur Svix officiel est maintenant écrit sans route publique. Valider ce checkpoint en CI, puis ajouter la persistance tenant/RLS de la livraison et de `svix-id` avant tout effet métier.
 
 ## Référence prompt maître
 
@@ -10,15 +10,16 @@ OS-1 satisfait désormais les pages 31, 32, 46, 48 et 69. Pour OS-2, relire les 
 
 ## Bloc de reprise exact
 
-Le head OS-1 `95da35e` est entièrement vert. Le contrat transversal OS-2 est publié sur `d181a97`; sa continuité, son lint et son typecheck sont verts, tandis que la suite complète poursuit son exécution. Le provider Resend préparé reste local jusqu'à ce verdict.
+Le contrat transversal `d181a97` et le provider préparé `f716b16` sont entièrement verts dans leurs CI et workflows de continuité. Le lot local suivant ajoute uniquement les tags sûrs et la vérification officielle du webhook; il ne crée ni route, ni table, ni activation.
 
 ```text
-1. Valider en CI le contrat commun et le provider Resend préparé.
-2. Définir le contrat du webhook Resend sur le corps brut et les trois en-têtes Svix.
-3. Vérifier la signature avec la bibliothèque officielle, puis dédupliquer `svix-id` avant tout effet.
-4. Persister uniquement les événements utiles avec tenant explicite, RLS, index tenant-leading et audit sûr.
-5. Tester signature invalide, rejeu, ordre tardif, payload trop grand et secret absent.
-6. Conserver WhatsApp, Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
+1. Valider en CI le vérificateur Svix, ses limites et sa dépendance épinglée.
+2. Créer les tables tenant-scoped de livraisons email et événements fournisseur avec relations composées.
+3. Ajouter index tenant-leading, unicité provider/email et `svix-id`, RLS et tests PostgreSQL d'isolation.
+4. Vérifier la correspondance tenant/email fournisseur après signature et avant mise à jour.
+5. Empêcher un événement tardif de faire régresser un statut plus avancé.
+6. Tester rejeu, ordre tardif, événement cross-tenant, payload trop grand et secret absent.
+7. Conserver WhatsApp, Teams et Slack en `awaiting_human_auth` jusqu'aux SDK, consentements et tests officiels.
 ```
 
 ## Critères du prochain checkpoint
@@ -38,6 +39,7 @@ Le head OS-1 `95da35e` est entièrement vert. Le contrat transversal OS-2 est pu
 2. OS-2 audit des préparations omnicanales. Terminé.
 3. Contrat d'adaptateur commun et provider states. Checkpoint actif.
 4. Email/Resend préparé avec refus runtime sûr. Checkpoint actif.
-5. Webhook Resend signé et idempotent.
-6. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
-7. Tests provider mocks, sécurité, intégration et Playwright pertinents.
+5. Webhook Resend signé et filtré. Checkpoint actif.
+6. Persistance tenant/RLS des livraisons et événements Resend.
+7. Adaptateurs WhatsApp, Teams et Slack derrière feature flags.
+8. Tests provider mocks, sécurité, intégration et Playwright pertinents.

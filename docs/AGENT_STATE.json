@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T15:33:45.000Z",
+  "updatedAt": "2026-07-30T15:51:37.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "d181a97976afafa0b4bdd4dec9d7e3d765452869",
+  "lastCommit": "f716b16b949e7d3087a3f635dbb4a1104e899c9c",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Valider le contrat transversal et le provider Email/Resend préparé, puis construire le webhook signé sans activation réelle.",
+  "currentObjective": "Valider le webhook Resend signé et minimisé, puis ajouter la persistance tenant/RLS de ses livraisons et rejeux sans route publique.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Audit, contrat commun, registre sans réseau et provider Resend borné/idempotent impossible à sélectionner, puis webhook signé sur corps brut et dédupliqué avant ingestion."
+      "evidenceExpected": "Verifier Svix officiel sur corps brut, tags tenant bornés, sortie sans données personnelles, tests de signature/rejeu, puis unicité svix-id et correspondance email fournisseur sous RLS."
     }
   },
-  "nextAction": "Valider le provider Resend préparé en CI, puis définir le webhook Resend sur corps brut avec signature officielle et déduplication svix-id.",
-  "nextFile": "src/modules/email/resend-webhook.ts",
+  "nextAction": "Valider le vérificateur Svix en CI, puis créer les migrations des livraisons email et événements Resend avec RLS et unicité svix-id.",
+  "nextFile": "src/db/migrations/0065_os2_email_provider_events.sql",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -101,7 +101,12 @@
     "contrat ChannelAdapter et registre des quatre fournisseurs sans accès réseau",
     "consultation des documentations officielles Resend d'envoi, idempotence, erreurs et webhooks",
     "extraction et durcissement du provider Resend sans sélection runtime",
-    "Vitest ciblé Email/Resend - tentative locale bornée"
+    "Vitest ciblé Email/Resend - tentative locale bornée",
+    "validation CI complète du provider Resend préparé",
+    "consultation officielle des événements, tags et garanties webhook Resend",
+    "pnpm view svix et ajout épinglé svix@1.99.1",
+    "pnpm audit --prod --audit-level high",
+    "vérificateur Svix sur corps brut et tests de signature/rejeu"
   ],
   "lastValidation": [
     {
@@ -267,6 +272,18 @@
     {
       "command": "Vitest ciblé provider Email/Resend et sélection runtime",
       "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "CI 30557617612 et continuité 30557617778 sur f716b16",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high après ajout Svix",
+      "status": "passed_one_preexisting_ignored_high_zero_active_advisories"
+    },
+    {
+      "command": "Vitest ciblé webhook Resend/Svix",
+      "status": "blocked_by_known_local_dependency_install_node_stall_ci_pending"
     }
   ],
   "humanBlockers": [

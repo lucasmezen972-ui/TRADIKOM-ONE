@@ -69,6 +69,12 @@ describe("provider email Resend préparé", () => {
     );
     expect(firstHeaders["idempotency-key"]).not.toContain(message.to);
     expect(firstHeaders["idempotency-key"].length).toBeLessThanOrEqual(256);
+
+    const body = JSON.parse(String(first.init.body));
+    expect(body.tags).toEqual([
+      { name: "tradikom_kind", value: "team_invitation" },
+      { name: "tradikom_tenant", value: "tenant-1" },
+    ]);
   });
 
   it("change la clé si le payload change pour éviter un conflit 409", async () => {
@@ -183,6 +189,17 @@ describe("provider email Resend préparé", () => {
       oversizedMessage.provider.send({
         ...message,
         html: "x".repeat(2 * 1024 * 1024 + 1),
+      }),
+    ).resolves.toMatchObject({
+      status: "permanent_failure",
+      errorCode: "message_invalid",
+    });
+    expect(oversizedMessage.captures).toHaveLength(0);
+
+    await expect(
+      oversizedMessage.provider.send({
+        ...message,
+        metadata: { ...message.metadata, tenantId: "tenant:non-tagable" },
       }),
     ).resolves.toMatchObject({
       status: "permanent_failure",
