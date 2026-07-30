@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T13:07:19.000Z",
+  "updatedAt": "2026-07-30T13:29:21.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "629ae13ec0004e4cd05bd9495273ee71379df77d",
+  "lastCommit": "2d30810b594667cbaee35f1b92e1411066b5ab96",
   "status": "in_progress",
   "currentPhase": "OS-1",
   "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
-  "nextAction": "Faire valider la persistance Conversation Hub par la CI PostgreSQL puis implémenter le repository et le service tenant-aware avec membership, idempotence et audit.",
-  "nextFile": "src/modules/conversation-hub/repository.ts",
+  "nextAction": "Faire valider le repository et le service Conversation Hub par la CI, puis ajouter l'adaptateur canal de test et le web chat minimal en français.",
+  "nextFile": "src/modules/conversation-hub/test-channel.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -40,7 +40,10 @@
     "tests Conversation Hub ciblés, nouvelle tentative locale bornée",
     "eslint ciblé, nouvelle tentative locale bornée",
     "comparaison exacte des migrations runtime 067/068 et miroirs SQL 0061/0062",
-    "git diff --check ciblé migrations et tests"
+    "git diff --check ciblé migrations et tests",
+    "gh pr checks 11 - runs 30546099003 et 30546098944 verts",
+    "revue statique du repository et du service Conversation Hub",
+    "ESLint ciblé service borné après blocage Node local silencieux"
   ],
   "lastValidation": [
     {
@@ -98,6 +101,10 @@
     {
       "command": "tests et ESLint ciblés après migration",
       "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30546099003 et continuité 30546098944",
+      "status": "passed_including_postgres_rls_migrations_lint_typecheck_tests_build_playwright"
     }
   ],
   "humanBlockers": [

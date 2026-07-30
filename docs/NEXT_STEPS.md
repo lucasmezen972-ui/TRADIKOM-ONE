@@ -2,25 +2,25 @@
 
 ## Prochaine action concrète
 
-Faire valider en CI la migration runtime `067`/`068` et ses miroirs SQL `0061`/`0062`. Ajouter ensuite `src/modules/conversation-hub/repository.ts` et un service tenant-aware : vérifier le membership côté serveur, ingérer un message dans une transaction idempotente, relire un fil ordonné et auditer uniquement les identifiants et statuts sûrs.
+Faire valider en CI `src/modules/conversation-hub/repository.ts`, le service tenant-aware et leurs tests. Ajouter ensuite un adaptateur `canal-test` sans réseau, une route publique bornée pour le web chat et une première interface française qui relit le fil canonique.
 
 ## Critères du prochain checkpoint
 
-- membership obligatoire avant lecture ou mutation;
-- toutes les requêtes incluent `tenant_id`;
-- replay de la même clé d'idempotence sans doublon;
-- relation inter-tenant refusée même avec un identifiant valide;
-- fil relu dans un ordre déterministe et borné;
-- audit sans texte de message, payload brut, secret, binaire ni URL signée;
-- aucun nom de fournisseur ou appel externe dans le coeur;
+- le canal de test n'effectue aucun appel réseau et produit une provenance canonique;
+- l'entrée publique est limitée en taille et protégée contre le rejeu;
+- le tenant est résolu côté serveur, jamais accepté depuis une sélection client arbitraire;
+- le web chat visible reste entièrement en français;
+- le même fil est lisible après un message web puis un message du canal test;
+- l'audit reste sans texte de message, payload brut, secret, binaire ni URL signée;
+- les erreurs publiques sont sûres et n'exposent ni structure SQL ni identifiant interne sensible;
 - état de reprise mis à jour avant l'arrêt.
 
 ## Ordre
 
 1. Contrats et tests du Conversation Hub. Terminé localement.
-2. Migration additive, relations tenant-composées, index tenant-leading et RLS. Implémentée, validation CI en attente.
-3. Repository et service tenant-aware. Prochain checkpoint après CI verte.
-4. Adaptateur canal de test et web chat minimal.
+2. Migration additive, relations tenant-composées, index tenant-leading et RLS. Terminée et validée par la CI.
+3. Repository et service tenant-aware. Implémentés, validation CI à lancer.
+4. Adaptateur canal de test et web chat minimal. Prochain checkpoint après CI verte.
 5. Plan structuré, validation unique et deux capacités mock explicites.
 6. Playwright web + canal test, reprise et preuve d'audit.
 

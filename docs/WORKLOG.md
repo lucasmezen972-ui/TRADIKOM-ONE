@@ -44,3 +44,13 @@ Ce fichier est append-only. Chaque entrée conserve les faits, commandes, décis
 - Le test PostgreSQL RLS existant couvre désormais l'absence de contexte, la lecture limitée au tenant, l'écriture cross-tenant et la relation fil/identité inter-tenant.
 - La parité runtime/SQL et `git diff --check` passent. Les nouvelles tentatives Vitest et ESLint restent bloquées sans diagnostic sur le runner Node local; la CI Linux/PostgreSQL devient l'arbitre.
 - Aucun écran, fournisseur, secret, payload brut, exécution externe, fusion ou déploiement n'est ajouté.
+
+## 2026-07-30 - Service tenant-aware du Conversation Hub
+
+- La CI de la persistance est verte sur les runs `30546099003` et `30546098944`, avec PostgreSQL/RLS, migrations, lint, typecheck, tests, build et Playwright.
+- Le repository impose `tenant_id` sur chaque lecture et mutation. Les listes de messages et données associées sont bornées et ordonnées de façon déterministe.
+- Le service vérifie le membership et les rôles d'écriture côté serveur, encapsule l'ingress dans une transaction tenant, réserve la clé d'idempotence et rejoue sans doublon.
+- Les identités externes sont stabilisées par tenant et adaptateur; une collision d'identité canonique est refusée. Les identités bloquées ou révoquées ne peuvent pas ingérer.
+- Les audits de réception et de replay ne contiennent que l'identifiant du fil, la direction, le statut, le nombre de pièces jointes et l'état d'idempotence, jamais le texte, le visiteur, le nom de fichier ni le stockage.
+- Les tests couvrent replay, restitution canonique, pièces jointes, provenance, membership absent, rôle lecture seule, isolation de lecture et conflit d'identité.
+- ESLint ciblé reste bloqué sans sortie sur le runtime Node local connu; le checkpoint est préparé pour validation par la CI de la PR.

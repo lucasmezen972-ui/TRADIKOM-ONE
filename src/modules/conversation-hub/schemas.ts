@@ -228,6 +228,13 @@ export const messageIngressSchema = z
     }
   });
 
+export const conversationThreadLookupSchema = z
+  .object({
+    threadId: boundedIdentifierSchema,
+    messageLimit: z.number().int().min(1).max(200).default(100),
+  })
+  .strict();
+
 export type ChannelKind = z.infer<typeof channelKindSchema>;
 export type ChannelIdentity = z.infer<typeof channelIdentitySchema>;
 export type CanonicalThread = z.infer<typeof canonicalThreadSchema>;
@@ -235,3 +242,6 @@ export type MessageAttachment = z.infer<typeof messageAttachmentSchema>;
 export type MessageProvenance = z.infer<typeof messageProvenanceSchema>;
 export type CanonicalMessage = z.infer<typeof canonicalMessageSchema>;
 export type MessageIngress = z.infer<typeof messageIngressSchema>;
+export type ConversationThreadLookup = z.infer<
+  typeof conversationThreadLookupSchema
+>;
