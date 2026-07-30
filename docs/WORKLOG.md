@@ -100,3 +100,19 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Un replay relit le même plan sans dupliquer étape, approbation, message ou audit. Le plan est projeté comme message canonique `plan` par l'identité système mock et place le fil en attente de validation.
 - La décision est réservée aux propriétaires, administrateurs et managers. Elle met à jour l'unique approbation, le plan et ses étapes atomiquement, projette un message `approval`, rouvre le fil et audite fingerprint, identifiants et statut sans conserver la raison dans l'audit.
 - Les tests couvrent absence de réseau, création/replay, deux capacités, fingerprint, projection, décision/replay/conflit, isolation tenant et refus du collaborateur.
+
+## 2026-07-30 - Diagnostic CI et checkpoint local du service de plan
+
+- `pnpm agent:continuity-check` a été exécuté sur le checkpoint local, puis interrompu après un blocage silencieux dans la chaîne Git/Node locale. La PR #11 reste ouverte, en brouillon et fusionnable; le workflow de continuité distant `30551055232` est vert sur le head publié.
+- Le diagnostic spécialisé du run CI `30551054764` confirme un unique échec TypeScript dans le fixture de schéma; migrations PostgreSQL, backup/restore et lint sont verts. Le fixture local est maintenant explicitement typé `ActionPlan`.
+- Le test d'intégration du service verrouille création et replay sans réseau, plan/étapes/approbation uniques, projection dans le fil, décision idempotente, conflit de décision, audit sans texte client ni raison, isolation tenant et contrôle des rôles.
+- Vitest ciblé, ESLint ciblé, `tsc --noEmit`, `agent:continuity-check` et `git diff --check` restent silencieux sur le runtime local et ont été interrompus proprement après des fenêtres bornées. La lecture JSON, l'absence de marqueurs de conflit et d'espaces terminaux passent par des contrôles indépendants; la prochaine CI publiée reste l'arbitre exécutable.
+- La revue statique confirme `tenant_id` dans chaque requête du repository, les transactions avec contexte tenant/acteur, les politiques RLS, le fingerprint audité, l'absence de transport fournisseur et le catalogue exclusivement mock à coût nul.
+- Le checkpoint a ensuite été publié dans `1dca742` conformément au mandat explicite de poursuivre le chantier. Aucun merge, déploiement, dépense, secret ou fournisseur réel n'a été utilisé.
+
+## 2026-07-30 - Interface de plan et validation unique
+
+- L'écran Conversation charge les plans par fil sous contrôle tenant, affiche le plan immuable, ses deux capacités mock, le risque, la confiance et le coût externe nul.
+- Les responsables, administrateurs et propriétaires disposent des commandes françaises Approuver/Refuser avec motif; les collaborateurs voient l'état mais ne peuvent pas décider.
+- La création du plan cible le dernier message texte entrant et les actions serveur passent par le service tenant-aware. Les messages internes de plan et de décision sont identifiés comme TRADIKOM ONE dans la chronologie.
+- Le listing de plans est testé pour l'isolation tenant. La prochaine tranche est l'exécution mock durable après validation CI de cette interface.

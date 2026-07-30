@@ -6,6 +6,7 @@ import {
   createConversationActionPlan,
   decideConversationActionPlan,
   getConversationActionPlan,
+  listConversationActionPlans,
 } from "../src/modules/orchestrator";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
@@ -74,6 +75,18 @@ describe("service des plans Conversation", () => {
       created.id,
     );
     expect(stored.plan).toEqual(created.plan);
+    const listed = await listConversationActionPlans(
+      context.db,
+      context.userId,
+      context.tenantId,
+      source.threadId,
+    );
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatchObject({
+      id: created.id,
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+    });
 
     const counts = await context.db.query<{
       plans: number;
@@ -259,6 +272,14 @@ describe("service des plans Conversation", () => {
         "plan_inconnu",
       ),
     ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+    await expect(
+      listConversationActionPlans(
+        ownerA.db,
+        ownerB.userId,
+        ownerA.tenantId,
+        source.threadId,
+      ),
+    ).rejects.toMatchObject({ code: "tenant_access_denied" });
 
     await ownerA.db.query(
       `insert into memberships (tenant_id, user_id, role, created_at)

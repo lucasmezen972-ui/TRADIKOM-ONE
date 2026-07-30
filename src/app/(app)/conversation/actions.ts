@@ -47,6 +47,44 @@ export async function sendTestChannelMessageAction(formData: FormData) {
   );
 }
 
+export async function createConversationPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction("conversation.plan_create", () =>
+    services.createPlan(
+      user.id,
+      tenant.id,
+      text(formData, "threadId"),
+      text(formData, "sourceMessageId"),
+    ),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    `/conversation?fil=${encodeURIComponent(result.threadId)}&plan=cree`,
+  );
+}
+
+export async function decideConversationPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const threadId = text(formData, "threadId");
+  const decision =
+    text(formData, "decision") === "approved" ? "approved" : "rejected";
+  await safeServerAction("conversation.plan_decide", () =>
+    services.decidePlan(
+      user.id,
+      tenant.id,
+      text(formData, "planId"),
+      decision,
+      text(formData, "reason"),
+    ),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    `/conversation?fil=${encodeURIComponent(threadId)}&plan=${decision}`,
+  );
+}
+
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";

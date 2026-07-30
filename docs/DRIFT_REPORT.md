@@ -44,7 +44,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - `git diff --check` ciblé migrations/tests : vert.
 - PR #11 : runs `30546099003` et `30546098944` verts, incluant PostgreSQL/RLS, migrations, lint, typecheck, tests, build et Playwright.
 
-Le run `30549936954` est entièrement vert sur `e561f57`. Le run `30551054764` sur `8288791` valide les migrations et le lint, puis s'arrête au typecheck sur un fixture de test trop étroit; le fixture est maintenant typé `ActionPlan`. La parité runtime/SQL reste verte et le service complet sera inclus au prochain push.
+Le run `30549936954` est entièrement vert sur `e561f57`. Le run `30551054764` sur `8288791` valide migrations PostgreSQL, backup/restore et lint, puis s'arrête au typecheck sur un fixture de test trop étroit. Le correctif et le service tenant-aware ont été publiés dans `1dca742`; le run `30552219390` a déjà validé migrations, backup/restore, lint et typecheck et poursuit les tests complets. Le workflow de continuité `30552219213` est vert.
 
 ## Ce qui reste simulé
 
@@ -56,4 +56,4 @@ Le run `30549936954` est entièrement vert sur `e561f57`. Le run `30551054764` s
 
 ## Prochaine action recommandée
 
-Faire valider le correctif et le service de plan tenant-aware, puis afficher et traiter la validation unique dans le fil avant l'exécution durable mock.
+Faire valider l'affichage exact du plan et les commandes françaises Approuver/Refuser, puis implémenter l'exécution durable mock et la projection multicanale de son résultat.

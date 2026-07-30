@@ -5,6 +5,11 @@ import {
 } from "@/modules/conversation-hub";
 import { createTestChannelAdapter } from "@/modules/channels/test-channel";
 import { createWebChannelAdapter } from "@/modules/channels/web-channel";
+import {
+  createConversationActionPlan,
+  decideConversationActionPlan,
+  listConversationActionPlans,
+} from "@/modules/orchestrator";
 
 export function createConversationChannelServices(db: DbClient) {
   return {
@@ -19,6 +24,31 @@ export function createConversationChannelServices(db: DbClient) {
       messageLimit?: number,
     ) =>
       getConversationThread(db, userId, tenantId, threadId, messageLimit),
+    createPlan: (
+      userId: string,
+      tenantId: string,
+      threadId: string,
+      sourceMessageId: string,
+    ) =>
+      createConversationActionPlan(db, userId, {
+        tenantId,
+        threadId,
+        sourceMessageId,
+      }),
+    listPlans: (userId: string, tenantId: string, threadId: string) =>
+      listConversationActionPlans(db, userId, tenantId, threadId),
+    decidePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+      decision: "approved" | "rejected",
+      reason: string,
+    ) =>
+      decideConversationActionPlan(db, userId, tenantId, {
+        planId,
+        decision,
+        reason,
+      }),
   };
 }
 

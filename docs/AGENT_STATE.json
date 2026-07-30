@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T14:26:23.000Z",
+  "updatedAt": "2026-07-30T14:39:56.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "828879122346bf116028274dff87e866dd1a4e45",
+  "lastCommit": "1dca7429e9d7d4144302468cfdc7e4259ffc1fc8",
   "status": "in_progress",
   "currentPhase": "OS-1",
   "currentObjective": "Construire la première tranche verticale du Conversation Hub canonique, du contrat au parcours E2E.",
-  "nextAction": "Publier le correctif de typage et le service tenant-aware des plans, corriger toute CI rouge, puis exposer la validation unique dans la conversation.",
+  "nextAction": "Faire valider par CI l’interface française de plan et de décision unique, puis implémenter l’exécution mock durable et la projection du résultat dans tous les canaux du fil.",
   "nextFile": "src/app/(app)/conversation/page.tsx",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -57,7 +57,12 @@
     "parité runtime/SQL 0063/0064",
     "gh run view 30551054764 --log-failed",
     "correction du fixture TypeScript ActionPlan",
-    "repository et service tenant-aware de création et décision des plans"
+    "repository et service tenant-aware de création et décision des plans",
+    "python3 inspect_pr_checks.py --repo . --pr 11 --json",
+    "pnpm vitest run tests/orchestrator-service.test.ts - tentative locale bornée",
+    "pnpm exec eslint orchestrateur/service - tentative locale bornée",
+    "tsc --noEmit --pretty false - tentative locale bornée",
+    "contrôle statique tenant, RLS, audit, idempotence et absence de transport externe"
   ],
   "lastValidation": [
     {
@@ -143,6 +148,18 @@
     {
       "command": "PR #11 - GitHub Actions 30551054764 sur 8288791",
       "status": "failed_typecheck_fixture_auth_property_fix_prepared_migrations_passed"
+    },
+    {
+      "command": "Vitest, ESLint et TypeScript ciblés du service de plan",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "pnpm agent:continuity-check sur le checkpoint local",
+      "status": "blocked_by_local_git_node_stall_workflow_30551055232_passed_on_published_head"
+    },
+    {
+      "command": "service de plan - tenant, RLS, audit, idempotence et fournisseurs",
+      "status": "static_checks_passed_executable_ci_pending"
     }
   ],
   "humanBlockers": [

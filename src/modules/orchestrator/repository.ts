@@ -91,6 +91,21 @@ export async function findActionPlanRow(
   return result.rows[0] ?? null;
 }
 
+export async function listActionPlanRowsByThread(
+  db: DbClient,
+  tenantId: string,
+  threadId: string,
+) {
+  const result = await db.query<ConversationActionPlanRow>(
+    `select *
+     from conversation_action_plans
+     where tenant_id = $1 and thread_id = $2
+     order by created_at desc, id desc`,
+    [tenantId, threadId],
+  );
+  return result.rows;
+}
+
 export async function insertActionPlan(
   db: DbClient,
   input: {

@@ -1,9 +1,20 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { Bot, MessageCircle, Radio, Send, ShieldCheck } from "lucide-react";
+import {
+  Bot,
+  CheckCircle2,
+  ListChecks,
+  MessageCircle,
+  Radio,
+  Send,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { requireTenantContext } from "@/lib/session";
 import { getConversationChannelServices } from "@/modules/channels";
 import {
+  createConversationPlanAction,
+  decideConversationPlanAction,
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
 } from "@/app/(app)/conversation/actions";
@@ -11,7 +22,11 @@ import {
 export const dynamic = "force-dynamic";
 
 type ConversationPageProps = {
-  searchParams: Promise<{ fil?: string; envoye?: "web" | "test" }>;
+  searchParams: Promise<{
+    fil?: string;
+    envoye?: "web" | "test";
+    plan?: "cree" | "approved" | "rejected";
+  }>;
 };
 
 export default async function ConversationPage({
@@ -26,6 +41,18 @@ export default async function ConversationPage({
   const thread = selectedThread
     ? await services.getThread(user.id, tenant.id, selectedThread.id)
     : null;
+  const plans = thread
+    ? await services.listPlans(user.id, tenant.id, thread.id)
+    : [];
+  const currentPlan = plans[0];
+  const sourceMessage = thread
+    ? [...thread.messages]
+        .reverse()
+        .find(
+          (message) =>
+            message.direction === "inbound" && message.kind === "text",
+        )
+    : undefined;
   const identities = new Map(
     thread?.identities.map((identity) => [identity.id, identity] as const),
   );
@@ -35,6 +62,9 @@ export default async function ConversationPage({
     "manager",
     "collaborator",
   ].includes(membership.role);
+  const canDecide = ["owner", "administrator", "manager"].includes(
+    membership.role,
+  );
 
   return (
     <div className="grid gap-6">
@@ -59,6 +89,16 @@ export default async function ConversationPage({
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-950">
           Message reçu depuis{" "}
           {params.envoye === "web" ? "le web" : "le canal de test"}.
+        </div>
+      ) : null}
+
+      {params.plan ? (
+        <div className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-950">
+          {params.plan === "cree"
+            ? "Plan déterministe créé et placé en attente de validation."
+            : params.plan === "approved"
+              ? "Plan approuvé. Il est prêt pour l’exécution mock."
+              : "Plan refusé. Aucune action n’a été exécutée."}
         </div>
       ) : null}
 
@@ -102,17 +142,27 @@ export default async function ConversationPage({
                   message.provenance.channelIdentityId,
                 );
                 const isWeb = identity?.channelKind === "web";
+                const isOrchestrator =
+                  message.provenance.adapterKey === "orchestrator-mock";
                 return (
                   <article
                     key={message.id}
                     className={`max-w-2xl rounded-xl px-4 py-3 ${
                       isWeb
                         ? "ml-auto bg-[#08111f] text-white"
-                        : "bg-teal-50 text-teal-950"
+                        : isOrchestrator
+                          ? "border border-violet-200 bg-violet-50 text-violet-950"
+                          : "bg-teal-50 text-teal-950"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.1em] opacity-70">
-                      <span>{isWeb ? "Web" : "Canal de test"}</span>
+                      <span>
+                        {isWeb
+                          ? "Web"
+                          : isOrchestrator
+                            ? "TRADIKOM ONE"
+                            : "Canal de test"}
+                      </span>
                       <time dateTime={message.occurredAt}>
                         {formatDate(message.occurredAt)}
                       </time>
@@ -136,6 +186,16 @@ export default async function ConversationPage({
               </div>
             )}
           </div>
+
+          {thread ? (
+            <PlanPanel
+              threadId={thread.id}
+              sourceMessageId={sourceMessage?.id}
+              plan={currentPlan}
+              canCreate={canWrite}
+              canDecide={canDecide}
+            />
+          ) : null}
 
           <div className="border-t border-slate-200 bg-slate-50 p-4 lg:p-5">
             {canWrite ? (
@@ -171,6 +231,188 @@ export default async function ConversationPage({
       </div>
     </div>
   );
+}
+
+type ConversationServices = Awaited<
+  ReturnType<typeof getConversationChannelServices>
+>;
+type ConversationPlan = Awaited<
+  ReturnType<ConversationServices["listPlans"]>
+>[number];
+
+function PlanPanel({
+  threadId,
+  sourceMessageId,
+  plan,
+  canCreate,
+  canDecide,
+}: {
+  threadId: string;
+  sourceMessageId?: string;
+  plan?: ConversationPlan;
+  canCreate: boolean;
+  canDecide: boolean;
+}) {
+  return (
+    <section className="border-t border-slate-200 bg-violet-50/50 p-4 lg:p-5" aria-label="Plan d’action">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 font-bold text-violet-950">
+            <ListChecks size={18} aria-hidden />
+            Plan d’action contrôlé
+          </div>
+          <p className="mt-1 text-xs text-slate-600">
+            Deux capacités locales, coût externe nul, une seule validation.
+          </p>
+        </div>
+        {sourceMessageId && canCreate ? (
+          <form action={createConversationPlanAction}>
+            <input type="hidden" name="threadId" value={threadId} />
+            <input
+              type="hidden"
+              name="sourceMessageId"
+              value={sourceMessageId}
+            />
+            <button className="min-h-11 rounded-md bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800">
+              {plan ? "Rejouer la génération" : "Préparer le plan"}
+            </button>
+          </form>
+        ) : null}
+      </div>
+
+      {plan ? (
+        <div className="mt-4 rounded-lg border border-violet-200 bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-slate-950">
+                {plan.plan.businessGoal}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {plan.plan.riskSummary}
+              </p>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${planStatusClass(plan.approvalStatus)}`}>
+              {planStatusLabel(plan.approvalStatus)}
+            </span>
+          </div>
+          <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+            <div>
+              <dt className="text-slate-500">Confiance</dt>
+              <dd className="mt-1 font-bold text-slate-900">
+                {Math.round(plan.plan.confidence * 100)} %
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Coût externe estimé</dt>
+              <dd className="mt-1 font-bold text-slate-900">0,00 €</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Environnement</dt>
+              <dd className="mt-1 font-bold text-slate-900">Mock local</dd>
+            </div>
+          </dl>
+          <ol className="mt-4 grid gap-3">
+            {plan.plan.steps.map((step, index) => (
+              <li key={step.stepId} className="rounded-md bg-slate-50 p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-bold text-slate-950">
+                    {index + 1}. {step.capability}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Risque {step.risk === "low" ? "faible" : "moyen"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  Preuve attendue : {step.evidenceRequired.join(" · ")}
+                </p>
+              </li>
+            ))}
+          </ol>
+
+          {plan.approvalStatus === "awaiting_approval" ? (
+            canDecide ? (
+              <div className="mt-4 grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-2">
+                <DecisionForm
+                  threadId={threadId}
+                  planId={plan.id}
+                  decision="approved"
+                />
+                <DecisionForm
+                  threadId={threadId}
+                  planId={plan.id}
+                  decision="rejected"
+                />
+              </div>
+            ) : (
+              <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                Un responsable, administrateur ou propriétaire doit valider ce plan.
+              </p>
+            )
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-md border border-dashed border-violet-300 bg-white p-4 text-sm text-slate-600">
+          {sourceMessageId
+            ? "Préparez un plan immuable à partir du dernier message entrant."
+            : "Un message entrant est requis avant de préparer un plan."}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function DecisionForm({
+  threadId,
+  planId,
+  decision,
+}: {
+  threadId: string;
+  planId: string;
+  decision: "approved" | "rejected";
+}) {
+  const approved = decision === "approved";
+  return (
+    <form action={decideConversationPlanAction} className="rounded-md border border-slate-200 p-3">
+      <input type="hidden" name="threadId" value={threadId} />
+      <input type="hidden" name="planId" value={planId} />
+      <input type="hidden" name="decision" value={decision} />
+      <label className="text-xs font-bold text-slate-700" htmlFor={`reason-${decision}`}>
+        Motif de {approved ? "validation" : "refus"}
+      </label>
+      <textarea
+        id={`reason-${decision}`}
+        name="reason"
+        required
+        minLength={3}
+        maxLength={500}
+        rows={2}
+        placeholder={approved ? "Plan vérifié et autorisé" : "Correction attendue"}
+        className="mt-2 w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      <button className={`mt-2 inline-flex min-h-11 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white ${approved ? "bg-emerald-700 hover:bg-emerald-800" : "bg-rose-700 hover:bg-rose-800"}`}>
+        {approved ? <CheckCircle2 size={16} aria-hidden /> : <XCircle size={16} aria-hidden />}
+        {approved ? "Approuver une fois" : "Refuser"}
+      </button>
+    </form>
+  );
+}
+
+function planStatusLabel(status: ConversationPlan["approvalStatus"]) {
+  return {
+    draft: "Brouillon",
+    awaiting_approval: "Validation requise",
+    approved: "Approuvé",
+    rejected: "Refusé",
+    executed: "Exécuté",
+  }[status];
+}
+
+function planStatusClass(status: ConversationPlan["approvalStatus"]) {
+  if (status === "approved" || status === "executed") {
+    return "bg-emerald-100 text-emerald-900";
+  }
+  if (status === "rejected") return "bg-rose-100 text-rose-900";
+  return "bg-amber-100 text-amber-950";
 }
 
 function MessageForm({

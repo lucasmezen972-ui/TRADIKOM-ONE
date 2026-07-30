@@ -30,6 +30,7 @@ import {
   insertActionPlan,
   insertActionPlanApproval,
   insertActionPlanStep,
+  listActionPlanRowsByThread,
   listActionPlanStepRows,
   updateActionPlanApprovalStatus,
   updateActionPlanStepStatuses,
@@ -38,6 +39,7 @@ import {
 import {
   actionPlanCreationSchema,
   actionPlanDecisionSchema,
+  actionPlanListSchema,
   actionPlanSchema,
   type ActionPlanCreation,
   type ActionPlanDecision,
@@ -291,6 +293,28 @@ export async function getConversationActionPlan(
       );
     }
     return mapPlanResult(transaction, plan, false);
+  });
+}
+
+export async function listConversationActionPlans(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  threadId: string,
+) {
+  const parsed = actionPlanListSchema.parse({ threadId });
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId);
+    const plans = await listActionPlanRowsByThread(
+      transaction,
+      tenantId,
+      parsed.threadId,
+    );
+    const results = [];
+    for (const plan of plans) {
+      results.push(await mapPlanResult(transaction, plan, false));
+    }
+    return results;
   });
 }
 
