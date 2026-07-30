@@ -17,6 +17,7 @@ import {
   insertConversationParticipantIfAbsent,
   insertConversationRouteHop,
   insertConversationThread,
+  insertConversationThreadIfAbsent,
   insertThreadParticipantIfAbsent,
   listConversationAttachmentRows,
   listConversationIdentityRows,
@@ -60,7 +61,7 @@ export async function ingestConversationMessage(
         parsed.tenantId,
         conversationWriteRoles,
       );
-      return persistConversationMessage(transaction, userId, parsed);
+      return persistConversationMessage(transaction, userId, parsed, false);
     },
   );
 }
@@ -78,7 +79,7 @@ export async function ingestSystemConversationMessage(
     );
   }
   return withSystemDbTransaction(db, (transaction) =>
-    persistConversationMessage(transaction, systemActorId, parsed),
+    persistConversationMessage(transaction, systemActorId, parsed, true),
   );
 }
 
@@ -86,6 +87,7 @@ async function persistConversationMessage(
   transaction: DbClient,
   actorId: string,
   parsed: MessageIngress,
+  createRequestedThreadIfMissing: boolean,
 ) {
   const replay = await findConversationMessageByIdempotencyKey(
     transaction,
@@ -103,6 +105,7 @@ async function persistConversationMessage(
     transaction,
     parsed.tenantId,
     parsed.threadId,
+    createRequestedThreadIfMissing,
   );
   const createdAt = nowIso();
   await insertThreadParticipantIfAbsent(transaction, {
@@ -404,6 +407,7 @@ async function ensureConversationThread(
   db: DbClient,
   tenantId: string,
   requestedThreadId?: string,
+  createRequestedThreadIfMissing = false,
 ) {
   if (requestedThreadId) {
     const existing = await findConversationThreadRow(
@@ -411,13 +415,35 @@ async function ensureConversationThread(
       tenantId,
       requestedThreadId,
     );
-    if (!existing) {
+    if (existing) return existing;
+    if (!createRequestedThreadIfMissing) {
       throw new ConversationHubError(
         "conversation_thread_not_found",
         "Conversation introuvable.",
       );
     }
-    return existing;
+
+    const now = nowIso();
+    await insertConversationThreadIfAbsent(db, {
+      id: requestedThreadId,
+      tenantId,
+      status: "open",
+      subject: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const created = await findConversationThreadRow(
+      db,
+      tenantId,
+      requestedThreadId,
+    );
+    if (!created) {
+      throw new ConversationHubError(
+        "conversation_thread_not_found",
+        "La conversation externe ne peut pas être créée.",
+      );
+    }
+    return created;
   }
 
   const now = nowIso();

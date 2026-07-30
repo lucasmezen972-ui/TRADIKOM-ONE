@@ -214,6 +214,33 @@ export async function insertConversationThread(
   );
 }
 
+export async function insertConversationThreadIfAbsent(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    status: ConversationThreadRow["status"];
+    subject: string | null;
+    createdAt: string;
+    updatedAt: string;
+  },
+) {
+  await db.query(
+    `insert into conversation_threads (
+       id, tenant_id, status, subject, created_at, updated_at
+     ) values ($1, $2, $3, $4, $5, $6)
+     on conflict (id) do nothing`,
+    [
+      input.id,
+      input.tenantId,
+      input.status,
+      input.subject,
+      input.createdAt,
+      input.updatedAt,
+    ],
+  );
+}
+
 export async function insertThreadParticipantIfAbsent(
   db: DbClient,
   input: {

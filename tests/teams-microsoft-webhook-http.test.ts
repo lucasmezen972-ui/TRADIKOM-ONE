@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import {
   handlePreparedTeamsWebhookRequest,
   type PreparedTeamsInboundMessage,
@@ -6,6 +7,9 @@ import {
 
 const clientId = "11111111-1111-4111-8111-111111111111";
 const tenantId = "22222222-2222-4222-8222-222222222222";
+const eventFingerprint = createHash("sha256")
+  .update("activity-123")
+  .digest("hex");
 const preparedMessage: PreparedTeamsInboundMessage = {
   provider: "teams_microsoft",
   adapterKey: "teams-microsoft",
@@ -16,8 +20,8 @@ const preparedMessage: PreparedTeamsInboundMessage = {
   conversationSubject: "19:conversation@thread.v2",
   text: "Bonjour",
   attachmentCount: 0,
-  idempotencyKey: "ingress:teams_microsoft:activity-123",
-  correlationId: "teams_activity-123",
+  idempotencyKey: `ingress:teams_microsoft:${eventFingerprint}`,
+  correlationId: `teams_${eventFingerprint}`,
   receivedAt: "2026-07-30T18:00:00.000Z",
 };
 
@@ -140,4 +144,3 @@ function request() {
     body: JSON.stringify({ type: "message" }),
   });
 }
-

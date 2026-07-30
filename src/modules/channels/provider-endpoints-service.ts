@@ -9,11 +9,12 @@ import { id, nowIso } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import { ChannelProviderEndpointError } from "@/modules/channels/provider-endpoints-errors";
 import {
-  findActiveWhatsAppEndpointByFingerprint,
+  findActiveChannelProviderEndpointByFingerprint,
   findChannelProviderEndpointById,
   reserveChannelProviderEndpoint,
   updateChannelProviderEndpointStatus,
 } from "@/modules/channels/provider-endpoints-repository";
+import type { ExternalChannelProvider } from "@/modules/channels/contracts";
 import { findMembershipRole } from "@/modules/tenants/repository";
 
 const boundedIdentifierSchema = z
@@ -23,13 +24,14 @@ const boundedIdentifierSchema = z
   .max(160)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 const twilioAccountSidSchema = z.string().regex(/^AC[a-fA-F0-9]{32}$/);
+const microsoftUuidSchema = z.string().uuid().transform((value) => value.toLowerCase());
 const whatsappAddressSchema = z
   .string()
   .trim()
   .regex(/^whatsapp:\+[1-9][0-9]{7,14}$/);
 const fingerprintSecretSchema = z.string().min(32).max(512);
 
-const registerEndpointSchema = z
+const registerWhatsAppEndpointSchema = z
   .object({
     tenantId: boundedIdentifierSchema,
     actorId: boundedIdentifierSchema,
@@ -49,20 +51,70 @@ const updateStatusSchema = z
   })
   .strict();
 
-const resolveEndpointSchema = z
+const resolveWhatsAppEndpointSchema = z
   .object({
     externalAccountId: twilioAccountSidSchema,
     destinationAddress: whatsappAddressSchema,
   })
   .strict();
 
+const registerTeamsEndpointSchema = z
+  .object({
+    tenantId: boundedIdentifierSchema,
+    actorId: boundedIdentifierSchema,
+    externalAccountId: microsoftUuidSchema,
+    microsoftTenantId: microsoftUuidSchema,
+    occurredAt: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict();
+
+const resolveTeamsEndpointSchema = z
+  .object({
+    externalAccountId: microsoftUuidSchema,
+    microsoftTenantId: microsoftUuidSchema,
+  })
+  .strict();
+
 export async function registerAuthorizedWhatsAppEndpoint(
   db: DbClient,
-  input: z.input<typeof registerEndpointSchema>,
+  input: z.input<typeof registerWhatsAppEndpointSchema>,
   fingerprintSecret: string | undefined,
 ) {
-  const parsed = registerEndpointSchema.parse(input);
+  const parsed = registerWhatsAppEndpointSchema.parse(input);
   const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return registerAuthorizedEndpoint(db, {
+    ...parsed,
+    provider: "whatsapp_twilio",
+    destinationValue: parsed.destinationAddress,
+  }, secret);
+}
+
+export async function registerAuthorizedTeamsEndpoint(
+  db: DbClient,
+  input: z.input<typeof registerTeamsEndpointSchema>,
+  fingerprintSecret: string | undefined,
+) {
+  const parsed = registerTeamsEndpointSchema.parse(input);
+  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return registerAuthorizedEndpoint(db, {
+    ...parsed,
+    provider: "teams_microsoft",
+    destinationValue: parsed.microsoftTenantId,
+  }, secret);
+}
+
+async function registerAuthorizedEndpoint(
+  db: DbClient,
+  parsed: {
+    tenantId: string;
+    actorId: string;
+    provider: ExternalChannelProvider;
+    externalAccountId: string;
+    destinationValue: string;
+    occurredAt?: string;
+  },
+  secret: string,
+) {
   return withTenantDbTransaction(
     db,
     parsed.tenantId,
@@ -76,10 +128,12 @@ export async function registerAuthorizedWhatsAppEndpoint(
       const reservation = await reserveChannelProviderEndpoint(transaction, {
         id: id("channel_endpoint"),
         tenantId: parsed.tenantId,
+        provider: parsed.provider,
         externalAccountId: parsed.externalAccountId,
         destinationFingerprint: endpointFingerprint(
+          parsed.provider,
           parsed.externalAccountId,
-          parsed.destinationAddress,
+          parsed.destinationValue,
           secret,
         ),
         actorId: parsed.actorId,
@@ -100,7 +154,7 @@ export async function registerAuthorizedWhatsAppEndpoint(
           targetType: "channel_provider_endpoint",
           targetId: reservation.row.id,
           metadata: {
-            provider: "whatsapp_twilio",
+            provider: parsed.provider,
             status: reservation.row.status,
           },
         });
@@ -120,6 +174,22 @@ export async function setAuthorizedWhatsAppEndpointStatus(
   input: z.input<typeof updateStatusSchema>,
 ) {
   const parsed = updateStatusSchema.parse(input);
+  return setAuthorizedEndpointStatus(db, parsed, "whatsapp_twilio");
+}
+
+export async function setAuthorizedTeamsEndpointStatus(
+  db: DbClient,
+  input: z.input<typeof updateStatusSchema>,
+) {
+  const parsed = updateStatusSchema.parse(input);
+  return setAuthorizedEndpointStatus(db, parsed, "teams_microsoft");
+}
+
+async function setAuthorizedEndpointStatus(
+  db: DbClient,
+  parsed: z.output<typeof updateStatusSchema>,
+  provider: ExternalChannelProvider,
+) {
   return withTenantDbTransaction(
     db,
     parsed.tenantId,
@@ -134,6 +204,7 @@ export async function setAuthorizedWhatsAppEndpointStatus(
         transaction,
         parsed.tenantId,
         parsed.endpointId,
+        provider,
       );
       if (!existing) {
         throw new ChannelProviderEndpointError(
@@ -152,6 +223,7 @@ export async function setAuthorizedWhatsAppEndpointStatus(
       const updated = await updateChannelProviderEndpointStatus(transaction, {
         tenantId: parsed.tenantId,
         endpointId: parsed.endpointId,
+        provider,
         status: parsed.status,
         updatedAt: parsed.occurredAt ?? nowIso(),
       });
@@ -168,7 +240,7 @@ export async function setAuthorizedWhatsAppEndpointStatus(
         targetType: "channel_provider_endpoint",
         targetId: updated.id,
         metadata: {
-          provider: "whatsapp_twilio",
+          provider,
           previousStatus: existing.status,
           status: updated.status,
         },
@@ -180,17 +252,49 @@ export async function setAuthorizedWhatsAppEndpointStatus(
 
 export async function resolveActiveWhatsAppEndpoint(
   db: DbClient,
-  input: z.input<typeof resolveEndpointSchema>,
+  input: z.input<typeof resolveWhatsAppEndpointSchema>,
   fingerprintSecret: string | undefined,
 ) {
-  const parsed = resolveEndpointSchema.parse(input);
+  const parsed = resolveWhatsAppEndpointSchema.parse(input);
   const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return resolveActiveEndpoint(db, {
+    provider: "whatsapp_twilio",
+    externalAccountId: parsed.externalAccountId,
+    destinationValue: parsed.destinationAddress,
+  }, secret);
+}
+
+export async function resolveActiveTeamsEndpoint(
+  db: DbClient,
+  input: z.input<typeof resolveTeamsEndpointSchema>,
+  fingerprintSecret: string | undefined,
+) {
+  const parsed = resolveTeamsEndpointSchema.parse(input);
+  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return resolveActiveEndpoint(db, {
+    provider: "teams_microsoft",
+    externalAccountId: parsed.externalAccountId,
+    destinationValue: parsed.microsoftTenantId,
+  }, secret);
+}
+
+async function resolveActiveEndpoint(
+  db: DbClient,
+  parsed: {
+    provider: ExternalChannelProvider;
+    externalAccountId: string;
+    destinationValue: string;
+  },
+  secret: string,
+) {
   return withSystemDbTransaction(db, async (transaction) => {
-    const endpoint = await findActiveWhatsAppEndpointByFingerprint(transaction, {
+    const endpoint = await findActiveChannelProviderEndpointByFingerprint(transaction, {
+      provider: parsed.provider,
       externalAccountId: parsed.externalAccountId,
       destinationFingerprint: endpointFingerprint(
+        parsed.provider,
         parsed.externalAccountId,
-        parsed.destinationAddress,
+        parsed.destinationValue,
         secret,
       ),
     });
@@ -214,11 +318,12 @@ async function requireEndpointAdministrator(
 }
 
 function endpointFingerprint(
+  provider: ExternalChannelProvider,
   externalAccountId: string,
-  destinationAddress: string,
+  destinationValue: string,
   secret: string,
 ) {
   return createHmac("sha256", secret)
-    .update(`v1:whatsapp_twilio:${externalAccountId}:${destinationAddress}`)
+    .update(`v1:${provider}:${externalAccountId}:${destinationValue}`)
     .digest("hex");
 }

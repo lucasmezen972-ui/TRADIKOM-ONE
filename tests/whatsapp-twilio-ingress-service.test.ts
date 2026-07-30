@@ -41,6 +41,16 @@ describe("ingestion WhatsApp/Twilio préparée", () => {
       fingerprintSecret,
       receivedAt,
     });
+    const secondMessageSid = `SM${"d".repeat(32)}`;
+    const second = await receivePreparedWhatsAppWebhook(
+      setup.db,
+      signedWebhook({
+        ...baseParameters(),
+        MessageSid: secondMessageSid,
+        Body: "Deuxième message WhatsApp",
+      }),
+      { authToken, fingerprintSecret, receivedAt: "2026-07-30T16:41:00.000Z" },
+    );
 
     expect(first).toMatchObject({
       accepted: true,
@@ -52,6 +62,11 @@ describe("ingestion WhatsApp/Twilio préparée", () => {
       replayed: true,
       messageId: first.accepted ? first.messageId : "",
     });
+    expect(second).toMatchObject({
+      accepted: true,
+      replayed: false,
+      threadId: first.accepted ? first.threadId : "",
+    });
     expect(networkCall).not.toHaveBeenCalled();
 
     if (!first.accepted) throw new Error("Webhook attendu comme accepté.");
@@ -61,12 +76,19 @@ describe("ingestion WhatsApp/Twilio préparée", () => {
       setup.tenant.id,
       first.threadId,
     );
-    expect(thread.messages).toHaveLength(1);
+    expect(thread.messages).toHaveLength(2);
     expect(thread.messages[0]).toMatchObject({
       text: "Bonjour depuis WhatsApp",
       provenance: {
         adapterKey: "whatsapp-twilio",
         externalMessageId: messageSid,
+      },
+    });
+    expect(thread.messages[1]).toMatchObject({
+      text: "Deuxième message WhatsApp",
+      provenance: {
+        adapterKey: "whatsapp-twilio",
+        externalMessageId: secondMessageSid,
       },
     });
     expect(thread.identities[0]).toMatchObject({
@@ -85,7 +107,7 @@ describe("ingestion WhatsApp/Twilio préparée", () => {
        where tenant_id = $1 and action like 'conversation.message_%'`,
       [setup.tenant.id],
     );
-    expect(audits.rows).toHaveLength(2);
+    expect(audits.rows).toHaveLength(3);
     expect(audits.rows.every((row) => row.actor_id === "system_whatsapp_twilio")).toBe(
       true,
     );

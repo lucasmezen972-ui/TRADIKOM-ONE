@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
 import {
   getPreparedChannelProvider,
   handlePreparedTeamsWebhookRequest,
+  ingestPreparedTeamsMessage,
 } from "@/modules/channels";
 import {
   logServerError,
@@ -21,10 +23,11 @@ export async function POST(request: Request) {
       state: manifest.state,
       clientId: process.env.MICROSOFT_CLIENT_ID,
       tenantId: process.env.MICROSOFT_TENANT_ID,
-      receive: async () => ({
-        accepted: false,
-        code: "channel_provider_endpoint_not_found",
-      }),
+      receive: async (message) =>
+        ingestPreparedTeamsMessage(await getDb(), message, {
+          clientId: process.env.MICROSOFT_CLIENT_ID,
+          fingerprintSecret: process.env.CONNECTOR_ENCRYPTION_KEY,
+        }),
     });
     response.headers.set("x-correlation-id", correlationId);
     return response;
@@ -46,4 +49,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

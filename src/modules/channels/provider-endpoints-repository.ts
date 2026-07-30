@@ -1,9 +1,10 @@
 import type { DbClient } from "@/lib/db";
+import type { ExternalChannelProvider } from "@/modules/channels/contracts";
 
 export type ChannelProviderEndpointRow = {
   id: string;
   tenant_id: string;
-  provider: "whatsapp_twilio";
+  provider: ExternalChannelProvider;
   external_account_id: string;
   destination_fingerprint: string;
   status: "active" | "disabled";
@@ -17,6 +18,7 @@ export async function reserveChannelProviderEndpoint(
   input: {
     id: string;
     tenantId: string;
+    provider: ExternalChannelProvider;
     externalAccountId: string;
     destinationFingerprint: string;
     actorId: string;
@@ -27,13 +29,14 @@ export async function reserveChannelProviderEndpoint(
     `insert into channel_provider_endpoints (
        id, tenant_id, provider, external_account_id,
        destination_fingerprint, status, created_by, created_at, updated_at
-     ) values ($1, $2, 'whatsapp_twilio', $3, $4, 'active', $5, $6, $6)
+     ) values ($1, $2, $3, $4, $5, 'active', $6, $7, $7)
      on conflict (provider, external_account_id, destination_fingerprint)
      do nothing
      returning *`,
     [
       input.id,
       input.tenantId,
+      input.provider,
       input.externalAccountId,
       input.destinationFingerprint,
       input.actorId,
@@ -47,10 +50,15 @@ export async function reserveChannelProviderEndpoint(
   const existing = await db.query<ChannelProviderEndpointRow>(
     `select * from channel_provider_endpoints
      where tenant_id = $1
-       and provider = 'whatsapp_twilio'
-       and external_account_id = $2
-       and destination_fingerprint = $3`,
-    [input.tenantId, input.externalAccountId, input.destinationFingerprint],
+       and provider = $2
+       and external_account_id = $3
+       and destination_fingerprint = $4`,
+    [
+      input.tenantId,
+      input.provider,
+      input.externalAccountId,
+      input.destinationFingerprint,
+    ],
   );
   return { row: existing.rows[0] ?? null, replayed: true };
 }
@@ -59,11 +67,12 @@ export async function findChannelProviderEndpointById(
   db: DbClient,
   tenantId: string,
   endpointId: string,
+  provider: ExternalChannelProvider,
 ) {
   const result = await db.query<ChannelProviderEndpointRow>(
     `select * from channel_provider_endpoints
-     where tenant_id = $1 and id = $2 and provider = 'whatsapp_twilio'`,
-    [tenantId, endpointId],
+     where tenant_id = $1 and id = $2 and provider = $3`,
+    [tenantId, endpointId, provider],
   );
   return result.rows[0] ?? null;
 }
@@ -73,6 +82,7 @@ export async function updateChannelProviderEndpointStatus(
   input: {
     tenantId: string;
     endpointId: string;
+    provider: ExternalChannelProvider;
     status: "active" | "disabled";
     updatedAt: string;
   },
@@ -80,27 +90,34 @@ export async function updateChannelProviderEndpointStatus(
   const result = await db.query<ChannelProviderEndpointRow>(
     `update channel_provider_endpoints
      set status = $1, updated_at = $2
-     where tenant_id = $3 and id = $4 and provider = 'whatsapp_twilio'
+     where tenant_id = $3 and id = $4 and provider = $5
      returning *`,
-    [input.status, input.updatedAt, input.tenantId, input.endpointId],
+    [
+      input.status,
+      input.updatedAt,
+      input.tenantId,
+      input.endpointId,
+      input.provider,
+    ],
   );
   return result.rows[0] ?? null;
 }
 
-export async function findActiveWhatsAppEndpointByFingerprint(
+export async function findActiveChannelProviderEndpointByFingerprint(
   db: DbClient,
   input: {
+    provider: ExternalChannelProvider;
     externalAccountId: string;
     destinationFingerprint: string;
   },
 ) {
   const result = await db.query<ChannelProviderEndpointRow>(
     `select * from channel_provider_endpoints
-     where provider = 'whatsapp_twilio'
-       and external_account_id = $1
-       and destination_fingerprint = $2
+     where provider = $1
+       and external_account_id = $2
+       and destination_fingerprint = $3
        and status = 'active'`,
-    [input.externalAccountId, input.destinationFingerprint],
+    [input.provider, input.externalAccountId, input.destinationFingerprint],
   );
   return result.rows[0] ?? null;
 }

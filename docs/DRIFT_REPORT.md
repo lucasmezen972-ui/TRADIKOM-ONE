@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : Resend et WhatsApp sont verts jusqu'à l'ingestion atomique; Teams refuse hors état prêt, borne le corps et utilise le validateur officiel avant de projeter une enveloppe sans payload brut, PII annexe ni URL de pièce jointe.
-- Écarts restants : Teams n'a encore ni mapping tenant ni ingestion canonique; Slack reste au contrat transversal. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
+- Preuve actuelle : Resend et WhatsApp sont verts jusqu'à l'ingestion atomique; Teams refuse hors état prêt, valide officiellement le JWT, résout un endpoint HMAC, pseudonymise identité et fil, rejoue l'Activity ID et ne télécharge aucune pièce jointe.
+- Écarts restants : la verticale Teams locale attend sa CI; Slack reste au contrat transversal. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
 
 ## Modules touchés
 
@@ -61,6 +61,8 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 L'ingestion WhatsApp `19ff401` est validée par la CI `30565079771` et la continuité `30565079790`. Le checkpoint Teams local épingle `@microsoft/teams.apps@2.0.14`; ses 12 tests ciblés, ESLint et le typecheck complet sont verts sans accès fournisseur.
 
+La frontière Teams `4ecda6f` est entièrement verte en CI et continuité. Le mapping et l'ingestion Teams locaux passent 333 tests complets et le build de production; la route reste fermée par défaut.
+
 ## Ce qui reste simulé
 
 - OAuth `mock_business`;
@@ -71,4 +73,4 @@ L'ingestion WhatsApp `19ff401` est validée par la CI `30565079771` et la contin
 
 ## Prochaine action recommandée
 
-Publier la frontière Teams, puis ajouter son mapping tenant et son ingestion canonique avant d'ouvrir Slack.
+Valider la verticale Teams en CI, puis ouvrir Slack avec signature et anti-rejeu avant le rapport OS-2.

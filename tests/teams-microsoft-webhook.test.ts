@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { verifyAndPrepareTeamsActivity } from "../src/modules/channels";
 
 const clientId = "11111111-1111-4111-8111-111111111111";
@@ -20,6 +21,9 @@ describe("vérification Microsoft Teams officielle préparée", () => {
       unknownPayload: { secret: "ne jamais propager" },
     });
     const rawBody = JSON.stringify(activity);
+    const eventFingerprint = createHash("sha256")
+      .update("activity-123")
+      .digest("hex");
 
     const result = await verifyAndPrepareTeamsActivity(
       { authorization: "Bearer header.payload.signature", rawBody },
@@ -43,8 +47,8 @@ describe("vérification Microsoft Teams officielle préparée", () => {
         conversationSubject: "19:conversation@thread.v2",
         text: "Bonjour depuis Teams",
         attachmentCount: 1,
-        idempotencyKey: "ingress:teams_microsoft:activity-123",
-        correlationId: "teams_activity-123",
+        idempotencyKey: `ingress:teams_microsoft:${eventFingerprint}`,
+        correlationId: `teams_${eventFingerprint}`,
         receivedAt: "2026-07-30T18:00:00.000Z",
       },
     });
@@ -136,4 +140,3 @@ function baseActivity(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-

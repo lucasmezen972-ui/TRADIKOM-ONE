@@ -210,6 +210,21 @@ describe("service du Conversation Hub", () => {
         }),
       ),
     ).rejects.toMatchObject({ code: "conversation_thread_not_found" });
+
+    await expect(
+      ingestConversationMessage(
+        ownerA.db,
+        ownerA.userId,
+        ingressFixture(ownerA.tenantId, {
+          threadId: "conversation_thread_external_missing",
+          idempotencyKey: "ingress:canal-test:missing-thread",
+          externalMessageId: "external_missing_thread",
+          channelIdentityId: "identity_service_missing_thread",
+          participantId: "participant_service_missing_thread",
+          externalSubjectId: "visitor_service_missing_thread",
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "conversation_thread_not_found" });
   });
 });
 

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T18:10:00.000Z",
+  "updatedAt": "2026-07-30T18:30:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "19ff401b3d580accb8af0e43aeec74de91b1eb3b",
+  "lastCommit": "4ecda6f2991ad0bc89b3780f3c5dc1a07eb68dfd",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Préparer la frontière HTTP Microsoft Teams avec le SDK officiel, sans consentement, credential, mapping réel ni transport actif.",
+  "currentObjective": "Valider le mapping tenant et l'ingestion canonique Microsoft Teams, sans consentement, credential ni transport actif.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Prouver refus avant lecture hors état prêt, validation JWT Microsoft officielle avant remise au métier, projection minimale sans payload brut ni URL de pièce jointe et absence d'activation implicite."
+      "evidenceExpected": "Prouver validation JWT avant base, endpoint HMAC tenant-aware, identité et fil pseudonymisés, replay Activity ID, continuité multi-message, audit sans PII et aucune pièce jointe téléchargée."
     }
   },
-  "nextAction": "Publier le checkpoint Teams fail-closed, puis ajouter mapping tenant et ingestion canonique Teams derrière le même endpoint HMAC/RLS sans activer le transport.",
-  "nextFile": "src/modules/channels/teams-microsoft-ingress-service.ts",
+  "nextAction": "Publier et valider en CI le mapping et l'ingestion Teams, puis ouvrir Slack par signature v0 anti-rejeu sans OAuth simulé.",
+  "nextFile": "src/modules/channels/slack-webhook.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -137,7 +137,13 @@
     "pnpm add @microsoft/teams.apps@2.0.14 et audit production sans nouvel advisory actif",
     "route Teams fail-closed, validateur JWT officiel et projection sans payload brut",
     "12 tests Teams ciblés, ESLint et typecheck complets",
-    "suite complète 328 tests verts et build de production avec route Teams"
+    "suite complète 328 tests verts et build de production avec route Teams",
+    "continuité de fil externe réservée aux ingestions système et appliquée à WhatsApp/Teams",
+    "mapping Teams HMAC sur tenant Microsoft avec conflit inter-tenant et statut",
+    "ingestion Teams vers Conversation Hub avec replay, pseudonymisation et pièces jointes non téléchargées",
+    "27 tests ciblés canaux/Conversation Hub et typecheck complet",
+    "CI 4ecda6f et continuité entièrement vertes pour la frontière Teams",
+    "suite complète 333 tests verts et build production après ingestion Teams"
   ],
   "lastValidation": [
     {
@@ -387,6 +393,18 @@
     {
       "command": "pnpm test et pnpm build après frontière Teams",
       "status": "passed_328_tests_13_skipped_build_lists_teams_route"
+    },
+    {
+      "command": "mapping et ingestion Teams, continuité de fil externe - tests ciblés et typecheck",
+      "status": "passed_27_tests_hmac_tenant_replay_thread_continuity_no_attachment_fetch"
+    },
+    {
+      "command": "CI et continuité sur 4ecda6f",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "pnpm test et pnpm build après ingestion Teams",
+      "status": "passed_333_tests_13_skipped_build_lists_teams_route"
     }
   ],
   "humanBlockers": [

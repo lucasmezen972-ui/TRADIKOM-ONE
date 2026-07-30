@@ -55,6 +55,7 @@ export async function receivePreparedWhatsAppWebhook(
       systemActorId,
       {
         tenantId: endpoint.tenantId,
+        threadId: `conversation_thread_whatsapp_${subjectFingerprint.slice(0, 32)}`,
         channelIdentity: {
           id: identityId,
           tenantId: endpoint.tenantId,

@@ -262,3 +262,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La route `/api/webhooks/microsoft/teams` refuse avant lecture dans les trois états actuels. Le registre reste incapable de produire `ready`; même le chemin futur vérifié retourne 503 tant qu'aucun endpoint n'est attribué à un tenant.
 - Les 12 tests ciblés couvrent refus avant lecture, validation avant consommation, rejet JWT, activité ignorée, taille réelle/déclarée, URL sûre et absence de propagation du payload. ESLint, typecheck, 328 tests complets et build de production passent; Next.js inventorie la route Teams.
 - Aucun tenant Microsoft, application Entra, consentement administrateur, secret, endpoint réel, transport sortant ou appel fournisseur n'est créé.
+
+## 2026-07-30 - Mapping et ingestion Microsoft Teams sans activation
+
+- Le repository endpoint devient générique par provider sans élargir la table : toutes les lectures et mutations portent explicitement `provider`, `tenant_id`, compte externe et empreinte. Le comportement WhatsApp existant reste couvert.
+- Un propriétaire ou administrateur peut réserver logiquement un couple application/tenant Microsoft. Seule l'application publique et une empreinte HMAC du tenant Microsoft sont stockées; l'unicité globale refuse sa réattribution à un autre tenant TRADIKOM.
+- La route ne remet à la base que l'enveloppe déjà validée par le SDK. La résolution endpoint, l'identité Teams et le fil externe utilisent des HMAC tenant-scoped différents; les références Microsoft brutes ne sont ni stockées dans les identités, ni auditées.
+- Le Conversation Hub permet désormais aux seules ingestions système de créer un identifiant de fil externe déterministe. Les mutations humaines conservent le refus d'un fil absent. Deux messages WhatsApp ou Teams d'une même conversation retrouvent donc le même fil canonique.
+- L'Activity ID est rejoué sans doublon; idempotence et corrélation utilisent une empreinte SHA-256 bornée. Les pièces jointes deviennent une notice française et restent sans contenu, URL, faux asset ni téléchargement.
+- Les 27 tests ciblés canaux/Conversation Hub, le typecheck, 333 tests complets et le build de production passent. Ils couvrent replay, continuité multi-message, mapping absent/désactivé, conflit inter-tenant, HMAC, absence de PII et absence de `fetch`.
+- La frontière Teams précédente `4ecda6f` est entièrement verte : CI migrations/backup/lint/typecheck/tests/build/Playwright et continuité réussies.
+- Aucun tenant Entra, application, consentement, credential, endpoint réel ou transport Microsoft n'est activé.

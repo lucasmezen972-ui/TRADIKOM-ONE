@@ -2,7 +2,7 @@
 
 ## Prochaine action concrète
 
-La verticale WhatsApp préparée jusqu'à l'ingestion `19ff401` est entièrement verte dans la CI et la continuité. La frontière Teams utilise maintenant le SDK officiel v2 épinglé : validation JWT Microsoft avant remise au métier, corps borné, projection sans payload brut et route inaccessible tant que le registre ne produit pas `ready`. Aucun consentement, credential ou endpoint Microsoft réel n'est créé.
+La verticale WhatsApp préparée jusqu'à l'ingestion `19ff401` est entièrement verte. La frontière Teams officielle `4ecda6f` est aussi entièrement verte. Localement, Teams possède maintenant mapping HMAC tenant-aware, replay, identité pseudonymisée et fil externe stable; la même continuité corrige aussi WhatsApp. Aucun consentement, credential ou endpoint réel n'est créé.
 
 ## Référence prompt maître
 
@@ -13,11 +13,11 @@ OS-1 satisfait désormais les pages 31, 32, 46, 48 et 69. Pour OS-2, relire les 
 Les checkpoints Resend et WhatsApp jusqu'à `19ff401` sont entièrement verts. La copie de travail active est `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, hors iCloud, et l'automation horaire la cible explicitement.
 
 ```text
-1. Publier le checkpoint de validation et route Teams fail-closed.
-2. Étendre le mapping endpoint à `teams_microsoft` sans PII et avec isolation tenant/RLS/audit.
-3. Ingérer les messages Teams vérifiés dans le Conversation Hub avec identité HMAC et replay de l'Activity ID.
-4. Garder pièces jointes et URLs fournisseur hors stockage; aucun téléchargement avant autorisation explicite.
-5. Ouvrir ensuite Slack avec signature v0, fenêtre anti-rejeu et OAuth humain non simulé.
+1. Publier le mapping et l'ingestion Teams avec continuité de fil externe.
+2. Laisser PostgreSQL/RLS, les tests complets, le build et Playwright arbitrer le checkpoint.
+3. Clore sa CI avant d'activer le prochain canal.
+4. Ouvrir Slack avec signature v0, fenêtre anti-rejeu et OAuth humain non simulé.
+5. Garder pièces jointes et URLs fournisseur hors stockage; aucun téléchargement avant autorisation explicite.
 6. Produire le rapport OS-2 confronté à la Definition of Done page 32 et à la matrice page 69.
 ```
 
@@ -47,7 +47,7 @@ Les checkpoints Resend et WhatsApp jusqu'à `19ff401` sont entièrement verts. L
 11. Enveloppe WhatsApp après signature, sans transport. Verte sur `f4e4816`.
 12. Mapping tenant WhatsApp avec HMAC/RLS/audit. Vert sur `01d8f61`.
 13. Ingestion canonique WhatsApp derrière feature flag. Verte sur `19ff401`.
-14. Validation JWT et route Teams fail-closed avec SDK officiel. Checkpoint local actif.
-15. Mapping et ingestion Teams sans activation.
+14. Validation JWT et route Teams fail-closed avec SDK officiel. Verte sur `4ecda6f`.
+15. Mapping et ingestion Teams sans activation. Checkpoint local actif.
 16. Adaptateur Slack derrière feature flag.
 17. Tests provider mocks, sécurité, intégration et Playwright pertinents.
