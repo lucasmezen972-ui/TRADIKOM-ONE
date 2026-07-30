@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T04:15:13.000Z",
+  "updatedAt": "2026-07-30T04:17:47.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
-  "pullRequest": null,
-  "lastCommit": "aa46bb1cf948ffdafd0c089608bc059516da7041",
+  "pullRequest": 11,
+  "lastCommit": "6bcb7001c61b48062542856f0178f297c1a82e93",
   "status": "in_progress",
   "currentPhase": "OS-0",
   "currentObjective": "Auditer et recadrer le dépôt, rendre la reprise automatique et préparer la première tranche Conversation Hub.",

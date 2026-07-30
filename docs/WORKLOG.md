@@ -20,3 +20,4 @@ Ce fichier est append-only. Chaque entrée conserve les faits, commandes, décis
 - Lint, typecheck et Vitest ne terminent pas localement et ne produisent aucun diagnostic exploitable; la CI est la validation de référence.
 - Après retrait du cache `.next` obsolète, l'erreur transitoire d'import du proxy disparaît. Le serveur et le build Turbopack restent toutefois bloqués pendant la compilation sans répondre à la requête HTTP.
 - Les onglets de vérification du navigateur intégré ont été fermés et les processus locaux arrêtés proprement.
+- Le commit `6bcb700` est publié sur `codex/tradikom-one-os` et la PR brouillon #11 est ouverte vers `main`; sa CI devient le checkpoint OS-0.

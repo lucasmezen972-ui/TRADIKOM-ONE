@@ -1,8 +1,8 @@
 # Drift report
 
-- Date : 2026-07-29
+- Date : 2026-07-30
 - Branche : `codex/tradikom-one-os`
-- PR : aucune
+- PR : brouillon #11
 - Travail effectué : audit OS-0, continuité native et repo-native, correction du verrou PostCSS de la CI.
 
 ## Impact north star
