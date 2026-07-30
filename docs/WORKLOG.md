@@ -282,3 +282,14 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Le challenge de configuration n'est retourné qu'après signature valide. La route `/api/webhooks/slack` refuse avant lecture dans les trois états actuels; aucun chemin ne peut produire `ready` sans décision humaine future.
 - Les 14 tests ciblés couvrent corps brut, altération, anti-rejeu, événement futur, bot, challenge, UTF-8 surdimensionné, refus avant lecture, remise après vérification et taille déclarée. ESLint, typecheck, 346 tests complets et build de production passent; Next.js inventorie la route Slack.
 - Aucun package obsolète Events API n'est ajouté, aucun workspace, application, OAuth, token, secret réel, endpoint ou transport Slack n'est créé.
+
+## 2026-07-30 - Mapping et ingestion Slack sans activation
+
+- La verticale Teams `9a4c659` est entièrement verte : CI `30568361952`, continuité `30568361182`, migrations, backup/restore, lint, typecheck, tests, build et Playwright.
+- Un propriétaire ou administrateur peut réserver logiquement une application publique et un workspace Slack. Seule l'application et une empreinte HMAC du workspace sont stockées; l'unicité globale refuse sa réattribution inter-tenant.
+- La route ne remet à la base qu'un événement déjà signé et dans la fenêtre anti-rejeu. Résolution workspace, identité utilisateur et conversation utilisent des HMAC tenant-scoped distincts; les identifiants Slack bruts ne sont ni stockés dans les identités, ni audités.
+- Un message direct conserve le fil du canal; un message de canal conserve le fil Slack racine. `event_id` porte le replay, l'idempotence et la corrélation sans créer de doublon.
+- Les fichiers deviennent une notice française bornée. URL privée, nom, contenu et payload inconnu restent hors base; aucun `fetch` n'est effectué.
+- Les 30 tests ciblés couvrent vérification, mapping, conflit inter-tenant, replay, continuité, mapping absent/désactivé, HMAC, absence de PII et absence de téléchargement. ESLint et typecheck complet passent.
+- La suite exhaustive locale passe 94 fichiers, 352 tests et en ignore explicitement 13; le build production inventorie la route Slack. Le contrôle de continuité retourne `ready` sans erreur ni avertissement.
+- Aucun workspace, application, consentement OAuth, token, credential, endpoint réel ou transport Slack n'est activé.

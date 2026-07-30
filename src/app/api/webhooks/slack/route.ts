@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
 import {
   getPreparedChannelProvider,
   handlePreparedSlackWebhookRequest,
+  ingestPreparedSlackMessage,
 } from "@/modules/channels";
 import {
   logServerError,
@@ -20,10 +22,12 @@ export async function POST(request: Request) {
     const response = await handlePreparedSlackWebhookRequest(request, {
       state: manifest.state,
       signingSecret: process.env.SLACK_SIGNING_SECRET,
-      receive: async () => ({
-        accepted: false,
-        code: "channel_provider_endpoint_not_found",
-      }),
+      receive: async (message) =>
+        ingestPreparedSlackMessage(
+          await getDb(),
+          message,
+          process.env.CONNECTOR_ENCRYPTION_KEY,
+        ),
     });
     response.headers.set("x-correlation-id", correlationId);
     return response;
@@ -45,4 +49,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

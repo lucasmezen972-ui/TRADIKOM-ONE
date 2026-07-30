@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T19:05:00.000Z",
+  "updatedAt": "2026-07-30T18:21:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "9a4c65906d0ea75a5c5b3fa049a1933a96a01734",
+  "lastCommit": "f888c0065e14c74d3af5bd7cde8dfd9d0cee4ed7",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Préparer la frontière HTTP Slack avec signature v0 et anti-rejeu, sans OAuth, credential ni transport actif.",
+  "currentObjective": "Publier le mapping workspace et l'ingestion canonique Slack, puis confronter OS-2 a la Definition of Done, sans OAuth, credential ni transport actif.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Tests, handoff et gouvernance"
       ],
       "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
-      "evidenceExpected": "Prouver HMAC-SHA256 v0 sur corps brut, fenêtre anti-rejeu de cinq minutes, comparaison constante avant parsing, challenge signé, anti-boucle bot et aucune remise au métier hors état prêt."
+      "evidenceExpected": "Prouver signature avant base, endpoint workspace HMAC, identité et fil pseudonymisés, replay event_id, continuité multi-message, audit sans PII et aucun fichier téléchargé."
     }
   },
-  "nextAction": "Publier et valider en CI la frontière Slack, puis ajouter mapping workspace et ingestion canonique sans OAuth simulé.",
-  "nextFile": "src/modules/channels/slack-ingress-service.ts",
+  "nextAction": "Publier et valider en CI le mapping et l'ingestion Slack, puis produire le rapport de validation OS-2 complet.",
+  "nextFile": "docs/OS2_VALIDATION_REPORT.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -147,7 +147,15 @@
     "consultation officielle Slack sur signature v0, corps brut et fenêtre anti-rejeu",
     "frontière Slack fail-closed avec challenge signé et anti-boucle bot",
     "14 tests Slack ciblés, ESLint et typecheck complet",
-    "suite complète 346 tests verts et build production avec route Slack"
+    "suite complète 346 tests verts et build production avec route Slack",
+    "CI 9a4c659 et continuité entièrement vertes pour mapping/ingestion Teams",
+    "mapping Slack HMAC sur workspace avec conflit inter-tenant et statut",
+    "ingestion Slack avec replay event_id, fil stable, pseudonymisation et fichiers non téléchargés",
+    "30 tests ciblés canaux et typecheck complet",
+    "pnpm lint et pnpm test : 94 fichiers verts, 352 tests verts, 13 ignores",
+    "pnpm build avec environnement CI : build production vert et route Slack inventoriee",
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement",
+    "git diff --check"
   ],
   "lastValidation": [
     {
@@ -417,6 +425,22 @@
     {
       "command": "pnpm lint, pnpm test et pnpm build après frontière Slack",
       "status": "passed_346_tests_13_skipped_build_lists_slack_route"
+    },
+    {
+      "command": "CI 30568361952 et continuité 30568361182 sur 9a4c659",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "mapping et ingestion Slack - tests ciblés, ESLint et typecheck",
+      "status": "passed_30_tests_hmac_tenant_replay_thread_continuity_no_file_fetch"
+    },
+    {
+      "command": "pnpm lint, pnpm test et pnpm build apres mapping/ingestion Slack",
+      "status": "passed_94_files_352_tests_13_skipped_production_build_lists_slack_route"
+    },
+    {
+      "command": "pnpm agent:continuity-check et git diff --check apres mapping/ingestion Slack",
+      "status": "passed_ready_zero_errors_zero_warnings"
     }
   ],
   "humanBlockers": [

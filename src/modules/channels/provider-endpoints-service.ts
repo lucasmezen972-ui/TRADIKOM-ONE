@@ -25,6 +25,8 @@ const boundedIdentifierSchema = z
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 const twilioAccountSidSchema = z.string().regex(/^AC[a-fA-F0-9]{32}$/);
 const microsoftUuidSchema = z.string().uuid().transform((value) => value.toLowerCase());
+const slackAppIdSchema = z.string().regex(/^A[A-Z0-9]{8,63}$/);
+const slackWorkspaceIdSchema = z.string().regex(/^T[A-Z0-9]{8,63}$/);
 const whatsappAddressSchema = z
   .string()
   .trim()
@@ -75,6 +77,23 @@ const resolveTeamsEndpointSchema = z
   })
   .strict();
 
+const registerSlackEndpointSchema = z
+  .object({
+    tenantId: boundedIdentifierSchema,
+    actorId: boundedIdentifierSchema,
+    externalAccountId: slackAppIdSchema,
+    workspaceId: slackWorkspaceIdSchema,
+    occurredAt: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict();
+
+const resolveSlackEndpointSchema = z
+  .object({
+    externalAccountId: slackAppIdSchema,
+    workspaceId: slackWorkspaceIdSchema,
+  })
+  .strict();
+
 export async function registerAuthorizedWhatsAppEndpoint(
   db: DbClient,
   input: z.input<typeof registerWhatsAppEndpointSchema>,
@@ -101,6 +120,24 @@ export async function registerAuthorizedTeamsEndpoint(
     provider: "teams_microsoft",
     destinationValue: parsed.microsoftTenantId,
   }, secret);
+}
+
+export async function registerAuthorizedSlackEndpoint(
+  db: DbClient,
+  input: z.input<typeof registerSlackEndpointSchema>,
+  fingerprintSecret: string | undefined,
+) {
+  const parsed = registerSlackEndpointSchema.parse(input);
+  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return registerAuthorizedEndpoint(
+    db,
+    {
+      ...parsed,
+      provider: "slack",
+      destinationValue: parsed.workspaceId,
+    },
+    secret,
+  );
 }
 
 async function registerAuthorizedEndpoint(
@@ -183,6 +220,14 @@ export async function setAuthorizedTeamsEndpointStatus(
 ) {
   const parsed = updateStatusSchema.parse(input);
   return setAuthorizedEndpointStatus(db, parsed, "teams_microsoft");
+}
+
+export async function setAuthorizedSlackEndpointStatus(
+  db: DbClient,
+  input: z.input<typeof updateStatusSchema>,
+) {
+  const parsed = updateStatusSchema.parse(input);
+  return setAuthorizedEndpointStatus(db, parsed, "slack");
 }
 
 async function setAuthorizedEndpointStatus(
@@ -276,6 +321,24 @@ export async function resolveActiveTeamsEndpoint(
     externalAccountId: parsed.externalAccountId,
     destinationValue: parsed.microsoftTenantId,
   }, secret);
+}
+
+export async function resolveActiveSlackEndpoint(
+  db: DbClient,
+  input: z.input<typeof resolveSlackEndpointSchema>,
+  fingerprintSecret: string | undefined,
+) {
+  const parsed = resolveSlackEndpointSchema.parse(input);
+  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return resolveActiveEndpoint(
+    db,
+    {
+      provider: "slack",
+      externalAccountId: parsed.externalAccountId,
+      destinationValue: parsed.workspaceId,
+    },
+    secret,
+  );
 }
 
 async function resolveActiveEndpoint(

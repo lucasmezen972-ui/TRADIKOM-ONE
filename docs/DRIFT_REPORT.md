@@ -13,8 +13,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 - Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
 - Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : Resend et WhatsApp sont verts; Teams valide officiellement le JWT et ingère via endpoint HMAC; Slack vérifie localement le corps brut par signature v0, timestamp anti-rejeu et comparaison constante avant parsing.
-- Écarts restants : la verticale Teams attend sa CI; Slack n'a encore ni mapping workspace ni ingestion canonique. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
+- Preuve actuelle : Resend, WhatsApp et Teams sont verts; Slack vérifie le corps brut par signature v0 puis résout localement un workspace HMAC, pseudonymise identité/fil et rejoue `event_id` sans télécharger les fichiers.
+- Écarts restants : la frontière Slack attend sa CI et son ingestion locale, entièrement validée, reste à publier. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
 
 ## Modules touchés
 
@@ -35,7 +35,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 ## Risques
 
 - la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
-- Teams et Slack n'ont pas encore de verticale tenant-aware complète ni de rapport OS-2 consolidé;
+- Slack attend encore la validation CI de sa verticale tenant-aware; le rapport OS-2 consolidé reste a produire;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -61,7 +61,7 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 L'ingestion WhatsApp `19ff401` est validée par la CI `30565079771` et la continuité `30565079790`. Le checkpoint Teams local épingle `@microsoft/teams.apps@2.0.14`; ses 12 tests ciblés, ESLint et le typecheck complet sont verts sans accès fournisseur.
 
-La frontière Teams `4ecda6f` est entièrement verte en CI et continuité. Le mapping et l'ingestion Teams locaux passent 333 tests complets et le build de production; la route reste fermée par défaut.
+La frontière Teams `4ecda6f` est entièrement verte en CI et continuité. Le mapping et l'ingestion Teams passent 333 tests complets et le build de production; la route reste fermée par défaut. La verticale Slack locale porte cette suite a 352 tests verts et passe aussi le build de production.
 
 ## Ce qui reste simulé
 
@@ -73,4 +73,4 @@ La frontière Teams `4ecda6f` est entièrement verte en CI et continuité. Le ma
 
 ## Prochaine action recommandée
 
-Valider Teams et publier la frontière Slack, puis ajouter son mapping/ingestion avant le rapport OS-2.
+Valider et publier la verticale Slack, puis produire le rapport OS-2 consolidé.

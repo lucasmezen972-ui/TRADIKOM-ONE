@@ -15,3 +15,4 @@ export * from "@/modules/channels/teams-microsoft-webhook-http";
 export * from "@/modules/channels/teams-microsoft-ingress-service";
 export * from "@/modules/channels/slack-webhook";
 export * from "@/modules/channels/slack-webhook-http";
+export * from "@/modules/channels/slack-ingress-service";
