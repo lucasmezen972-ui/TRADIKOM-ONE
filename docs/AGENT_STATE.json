@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-30T15:11:30.000Z",
+  "updatedAt": "2026-07-30T15:22:28.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "95da35e0da89bed9c60ea5b8b0d94a6c7c14d8ac",
+  "lastCommit": "20abfe264d5eae651e168e04664e70733619af9e",
   "status": "in_progress",
   "currentPhase": "OS-2",
-  "currentObjective": "Préparer les adaptateurs WhatsApp, Teams, Slack et email derrière des feature flags, avec signatures, états not_configured et erreurs normalisées sans fausse intégration.",
+  "currentObjective": "Valider le contrat transversal et le registre sûr des fournisseurs OS-2, puis extraire le provider Email/Resend sans fausse intégration.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 11, 12, 16, 17, 18, 22, 24, 31, 32, 33, 46, 48, 64, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18, 22, 24, 31, 32, 33, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "7 Conversation Hub canonique",
@@ -24,15 +24,16 @@
         "26-28 Roadmap, Definition of Done et reprise",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
-        "58 et 62 Provider runtime et WebChat sans clé",
+        "13-15 Identité omnicanale, ChannelAdapter et framework connecteur",
+        "58-62 Provider runtime, webhooks, Twilio, Resend et WebChat sans clé",
         "63-65 Tests, handoff et gouvernance"
       ],
-      "requirement": "Ouvrir OS-2 seulement après la CI verte d’OS-1, puis préparer les canaux réels sans clé derrière des états et feature flags explicites.",
-      "evidenceExpected": "Contrats d’adaptateurs, signatures, états not_configured/disabled, erreurs normalisées et tests sans transport réseau ni faux statut connecté."
+      "requirement": "Préparer les quatre canaux OS-2 derrière un ChannelAdapter sans logique métier, avec entrées bornées, signature avant ingestion, états honnêtes, consentement humain et aucun transport implicite.",
+      "evidenceExpected": "Audit des quatre canaux, contrat d’adaptateur, registre sans réseau, états disabled/not_configured/awaiting_human_auth, erreurs normalisées et tests interdisant un faux état prêt."
     }
   },
-  "nextAction": "Auditer le framework connecteur et les préparations WhatsApp, Teams, Slack et email existantes, puis définir le plus petit contrat OS-2 commun avant toute implémentation.",
-  "nextFile": "src/modules/channels",
+  "nextAction": "Valider le checkpoint transversal OS-2 en CI, puis extraire le provider Resend HTTP de la PR #10 derrière l'abstraction email existante.",
+  "nextFile": "src/modules/email/providers.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -93,7 +94,11 @@
     "node --experimental-strip-types scripts/agent/continuity-check.ts",
     "gh run view 30552219390 --log-failed",
     "pnpm vitest run tests/orchestrator-service.test.ts - tentative locale bornée",
-    "implémentation du workflow durable mock et de la projection multicanale"
+    "implémentation du workflow durable mock et de la projection multicanale",
+    "relecture des pages 13-15 et 64-68 du prompt maître",
+    "audit du framework connecteur, des webhooks, de l'email courant et des branches PR #10",
+    "revue des exigences Twilio de vérification officielle et d'idempotence",
+    "contrat ChannelAdapter et registre des quatre fournisseurs sans accès réseau"
   ],
   "lastValidation": [
     {
@@ -235,6 +240,18 @@
     {
       "command": "Continuité TRADIKOM ONE 30554462620 sur 95da35e",
       "status": "passed"
+    },
+    {
+      "command": "audit statique OS-2 des quatre canaux et contrat transversal",
+      "status": "prepared_local_validation_pending"
+    },
+    {
+      "command": "pnpm agent:continuity-check et git diff --check sur le checkpoint OS-2",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "Vitest et ESLint ciblés du registre OS-2",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
     }
   ],
   "humanBlockers": [

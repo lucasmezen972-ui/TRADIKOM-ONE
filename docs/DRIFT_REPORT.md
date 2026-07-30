@@ -11,10 +11,10 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 ## Alignement prompt maître
 
-- Pages consultées : pages 3-7, 11-12, 16-18, 22, 24, 31-33, 46, 48, 64, 68 et 69-71.
-- Exigence servie : suivre l'ordre exact de la page 48 et achever la verticale OS-1 de la page 31 sans dérive CRM.
-- Preuve actuelle : Conversation Hub web/test, plan structuré, validation unique, workflow durable avec deux actions mock, RLS, idempotence, audit, message résultat routé et scénario Playwright desktop/mobile piloté au clavier.
-- Écarts restants : aucun écart bloquant OS-1; les fournisseurs réels et les adaptateurs feature-flaggés restent hors de cette tranche et ouvrent OS-2.
+- Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
+- Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
+- Preuve actuelle : OS-1 vert; audit des quatre canaux; contrat commun; registre sans réseau; feature flags; état `not_configured` avec configuration manquante et `awaiting_human_auth` même si les noms de variables sont présents.
+- Écarts restants : le checkpoint OS-2 attend sa CI; aucun adaptateur fournisseur, webhook signé, transport, credential ni consentement réel n'est encore activé.
 
 ## Modules touchés
 
@@ -65,4 +65,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Auditer les préparations de canaux existantes et définir le contrat commun minimal d'OS-2 sans activer de fournisseur réel.
+Valider le contrat transversal OS-2 en CI, puis extraire et durcir le provider Email/Resend de la PR #10 sans activer de webhook ni de transport réel.

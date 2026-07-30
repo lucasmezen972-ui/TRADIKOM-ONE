@@ -151,3 +151,13 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Le parcours Conversation passe en desktop et mobile, au clavier, avec exactement un run durable, deux étapes mock, deux routes de résultat, un audit et aucune tâche CRM réelle.
 - `OS1_VALIDATION_REPORT.md` confronte la tranche à la Definition of Done de la page 32 et à chaque couche de la matrice page 69.
 - OS-1 passe à Terminé et OS-2 à En cours. Aucun merge, déploiement, fournisseur réel, secret ou dépense n'est engagé par ce passage.
+
+## 2026-07-30 - Audit et contrat transversal OS-2
+
+- Les pages 13 à 15 et 64 à 68 du prompt maître ont été relues pour l'identité volontaire, le contrat ChannelAdapter, le provider runtime et les quatre canaux demandés.
+- L'inventaire classe WhatsApp/Twilio, Teams et Slack comme absents du runtime; l'email possède un mode console/test sûr et un provider Resend HTTP extractible de la PR #10. Le lien `wa.me` de cette PR ne constitue pas un adaptateur entrant.
+- Le contrat commun borne manifeste, capacités, webhook brut, pièces jointes autorisées, envoi, résultat et erreurs normalisées. Il impose la vérification avant normalisation canonique.
+- Le registre des quatre fournisseurs n'effectue aucun appel réseau. Flag absent : `disabled`; configuration incomplète : `not_configured`; noms de variables présents : `awaiting_human_auth`. Il ne produit jamais `ready` et maintient tous les transports désactivés.
+- Les variables sont documentées sans valeur dans `.env.example`; aucun secret réel n'est manipulé. Les plugins externes Slack/Teams et les consoles fournisseurs ne sont pas ouverts.
+- Les tests couvrent l'absence de réseau, les quatre états désactivés, la configuration manquante, l'attente humaine, l'interdiction d'un faux état prêt et la limite du payload brut.
+- Le contrôle de continuité et `git diff --check` passent. Vitest et ESLint ciblés reproduisent le blocage Node local silencieux et sont interrompus proprement; la CI de la PR reste l'arbitre exécutable.
