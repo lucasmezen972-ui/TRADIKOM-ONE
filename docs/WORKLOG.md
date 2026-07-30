@@ -143,3 +143,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les trois commandes critiques de plan sont focalisées puis activées avec la touche Entrée pour prouver le parcours clavier.
 - Après chaque parcours, une requête SQL vérifie exactement un workflow run, deux étapes mock, deux routes de résultat, un audit d'exécution et zéro tâche CRM réelle.
 - Le scénario est prêt à être publié; la CI de `84d064c` a déjà validé migrations, backup/restore, lint et typecheck du moteur durable et poursuit les tests complets.
+
+## 2026-07-30 - OS-1 validé et clôturé
+
+- Le run CI `30554462472` est entièrement vert sur `95da35e` : migrations, backup/restore, lint, typecheck, 234 tests, build production et Playwright en 10 min 37 s.
+- Le run de continuité `30554462620` est vert en 22 s. Les deux checks de la PR #11 sont réussis, sans job en attente.
+- Le parcours Conversation passe en desktop et mobile, au clavier, avec exactement un run durable, deux étapes mock, deux routes de résultat, un audit et aucune tâche CRM réelle.
+- `OS1_VALIDATION_REPORT.md` confronte la tranche à la Definition of Done de la page 32 et à chaque couche de la matrice page 69.
+- OS-1 passe à Terminé et OS-2 à En cours. Aucun merge, déploiement, fournisseur réel, secret ou dépense n'est engagé par ce passage.

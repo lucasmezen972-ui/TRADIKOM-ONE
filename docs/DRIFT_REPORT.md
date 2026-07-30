@@ -14,7 +14,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - Pages consultées : pages 3-7, 11-12, 16-18, 22, 24, 31-33, 46, 48, 64, 68 et 69-71.
 - Exigence servie : suivre l'ordre exact de la page 48 et achever la verticale OS-1 de la page 31 sans dérive CRM.
 - Preuve actuelle : Conversation Hub web/test, plan structuré, validation unique, workflow durable avec deux actions mock, RLS, idempotence, audit, message résultat routé et scénario Playwright desktop/mobile piloté au clavier.
-- Écarts restants : validation CI complète du workflow et du nouveau Playwright, puis rapport final de la matrice page 69.
+- Écarts restants : aucun écart bloquant OS-1; les fournisseurs réels et les adaptateurs feature-flaggés restent hors de cette tranche et ouvrent OS-2.
 
 ## Modules touchés
 
@@ -34,8 +34,8 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 
 ## Risques
 
-- le parcours web n'a pas encore sa preuve Playwright Conversation mobile/desktop dédiée;
-- la CI complète de l'exécution durable est encore à obtenir;
+- le runtime Next.js local bloque avant ouverture du port; la preuve navigateur OS-1 vient de la CI verte;
+- OS-2 n'a pas encore son inventaire consolidé des quatre canaux;
 - la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
 - le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
 - les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
@@ -51,7 +51,7 @@ La tranche crée le premier langage, le stockage, le service et l'écran canoniq
 - `git diff --check` ciblé migrations/tests : vert.
 - PR #11 : runs `30546099003` et `30546098944` verts, incluant PostgreSQL/RLS, migrations, lint, typecheck, tests, build et Playwright.
 
-Le run `30549936954` est entièrement vert sur `e561f57`. Le run `30551054764` sur `8288791` valide migrations PostgreSQL, backup/restore et lint, puis s'arrête au typecheck sur un fixture de test trop étroit. Le run `30552219390` sur `1dca742` valide migrations, lint, typecheck et 233 tests; son unique échec est une liste attendue de tables Conversation restée limitée aux sept tables initiales. Cette attente inclut maintenant les deux tables de plan. Le run `30552994527` sur l'interface `ffe258e` a validé migrations, lint et typecheck et poursuit les tests.
+Le run `30549936954` est entièrement vert sur `e561f57`. Les échecs intermédiaires `30551054764`, `30552219390` et `30552994527` ont été corrigés dans les checkpoints suivants. Le run final `30554462472` sur `95da35e` valide migrations, backup/restore, lint, typecheck, 234 tests, build production et Playwright desktop/mobile en 10 min 37 s. Le run de continuité `30554462620` est vert en 22 s.
 
 Le contrôle de continuité renforcé pour le prompt maître retourne localement `ready`, sans erreur ni avertissement, en vérifiant le PDF de 71 pages et son empreinte. La commande exacte `pnpm agent:continuity-check` termine désormais en environ six secondes grâce au runtime TypeScript natif de Node 22. L'automation native lit directement les pages cœur et exige une preuve paginée avant de choisir une tâche.
 
@@ -65,4 +65,4 @@ Le contrôle de continuité renforcé pour le prompt maître retourne localement
 
 ## Prochaine action recommandée
 
-Faire valider le parcours Playwright desktop/mobile complet, corriger uniquement les causes observées, puis fermer OS-1 avec le rapport de preuve.
+Auditer les préparations de canaux existantes et définir le contrat commun minimal d'OS-2 sans activer de fournisseur réel.
