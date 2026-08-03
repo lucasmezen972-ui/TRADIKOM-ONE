@@ -293,3 +293,20 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les 30 tests ciblés couvrent vérification, mapping, conflit inter-tenant, replay, continuité, mapping absent/désactivé, HMAC, absence de PII et absence de téléchargement. ESLint et typecheck complet passent.
 - La suite exhaustive locale passe 94 fichiers, 352 tests et en ignore explicitement 13; le build production inventorie la route Slack. Le contrôle de continuité retourne `ready` sans erreur ni avertissement.
 - Aucun workspace, application, consentement OAuth, token, credential, endpoint réel ou transport Slack n'est activé.
+
+## 2026-08-01 - Clôture probante OS-2
+
+- Le prompt maître canonique est présent, conserve l'empreinte SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5` et compte exactement 71 pages.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71, ainsi que les pages OS-2 13-15 et 64-68, ont été relues directement depuis les rendus du PDF.
+- La PR brouillon #11 pointe sur `6c0c204` avec un état de fusion propre. La CI `30570073983` et la continuité `30570074023` sont entièrement vertes.
+- La CI valide l'audit production, les migrations, la sauvegarde/restauration, lint, typecheck, les tests unitaires et d'intégration, le build de production et Playwright.
+- `docs/OS2_VALIDATION_REPORT.md` confronte les quatre canaux à la Definition of Done page 32 et à la matrice page 69, en distinguant explicitement livré, réel préparé, sandbox, mock, bloqué humain et hors périmètre.
+- OS-2 est clos au sens « omnicanal réel préparé ». Aucun fournisseur n'est réellement connecté, aucune sandbox n'est configurée et aucun secret, consentement, transport, média distant, dépense, fusion ou déploiement n'a été déclenché.
+- La prochaine phase candidate est OS-3 Connector Runtime : auditer l'existant puis prouver deux capacités génériques exécutables en mock strict, conformément à la roadmap page 31.
+
+## 2026-08-02 - Confirmation de clôture OS-2
+
+- Le contrôle local retrouve le PDF maître canonique avec son SHA-256 exact et ses 71 pages; `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-2 13-15, 22 et 64-68 ont été relues depuis leurs rendus directs.
+- La PR brouillon #11 reste ouverte et fusionnable sur le head fonctionnel `6c0c204`; la CI `30570073983` et la continuité `30570074023` restent vertes.
+- Le rapport OS-2 et les quatre fichiers de reprise sont synchronisés. Aucune nouvelle tâche OS-3, mutation métier, connexion fournisseur, fusion, dépense ou mise en production n'a été engagée pendant cette confirmation.

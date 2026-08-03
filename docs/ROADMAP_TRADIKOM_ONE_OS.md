@@ -8,8 +8,8 @@ Source normative : prompt maître PDF, pages 31-32 et 46-48. La carte de navigat
 | --- | --- | --- | --- |
 | OS-0 | Audit, recadrage et continuité | Terminé | Audit, ADR, drift report, état de reprise, automations et suite verte |
 | OS-1 | Conversation Hub canonique | Terminé | Un fil visible sur le web et un canal de test, identité, idempotence, anti-boucle, plan, validation, deux capacités mock, audit et reprise |
-| OS-2 | Omnicanal réel préparé | En cours | Adaptateurs WhatsApp, Teams, Slack et email feature-flaggés, signatures et erreurs normalisées, sans fausse intégration |
-| OS-3 | Connector Runtime générique | Partiel | Deux capacités génériques exécutables sous policy, preuve, idempotence, quota et classification d'échec |
+| OS-2 | Omnicanal réel préparé | Terminé | Adaptateurs WhatsApp, Teams, Slack et email feature-flaggés, signatures et erreurs normalisées, sans fausse intégration |
+| OS-3 | Connector Runtime générique | En cours | Deux capacités génériques exécutables sous policy, preuve, idempotence, quota et classification d'échec |
 | OS-4 | Mission durable | Partiel | Plan confirmé, exécution multi-étapes, attente, retry, reprise et compensation |
 | OS-5 | Premier fournisseur réel | Bloqué fournisseur | Un fournisseur officiel activé en sandbox ou vrai read-only avec clés, consentement et parcours vérifié |
 | OS-6 | Goal and Watch Engine | À faire | Un objectif permanent surveillé et rapporté dans la conversation |

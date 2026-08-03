@@ -1,76 +1,56 @@
 # Drift report
 
-- Date : 2026-07-30
+- Date : 2 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Travail effectué : OS-1 vertical vert, Resend et WhatsApp préparés jusqu'à l'ingestion canonique, puis ouverture Teams par validation JWT SDK officielle sans activation.
+- Head fonctionnel : `6c0c204`
+- Travail effectué : clôture documentaire et probante d'OS-2 après publication du mapping et de l'ingestion Slack.
 
 ## Impact north star
 
-La tranche crée le premier langage, le stockage, le service et l'écran canonique de la conversation continue : un membre autorisé peut écrire depuis le web, projeter une réponse depuis le canal de test et relire le même fil borné sans dépendre d'un fournisseur.
+Les entrées WhatsApp, Teams et Slack vérifiées rejoignent désormais le même Conversation Hub sans dupliquer le modèle métier. Les identités et fils sont pseudonymisés, les replays sont idempotents et les fichiers distants restent hors stockage. Cette tranche rapproche une conversation continue sur plusieurs canaux sans exposer à l'utilisateur la complexité fournisseur.
 
 ## Alignement prompt maître
 
-- Pages consultées : pages 3-7, 11-18, 22, 24, 31-33, 46, 48, 64-71.
-- Exigence servie : après la verticale OS-1 verte, ouvrir OS-2 par un contrat ChannelAdapter sans logique métier, des entrées bornées, des signatures explicites et des états fournisseurs vrais.
-- Preuve actuelle : Resend, WhatsApp et Teams sont verts; Slack vérifie le corps brut par signature v0 puis résout localement un workspace HMAC, pseudonymise identité/fil et rejoue `event_id` sans télécharger les fichiers.
-- Écarts restants : la frontière Slack attend sa CI et son ingestion locale, entièrement validée, reste à publier. Aucun état `ready`, credential, consentement, envoi réel ou téléchargement média n'existe.
+- Pages consultées : pages 3-7, 13-15, 22, 31-33, 46, 48 et 64-71.
+- Exigence servie : clore OS-2 dans l'ordre de la page 48 par la documentation puis le rapport, confronter la tranche à la Definition of Done page 32 et à toutes les couches de test de la page 69, et distinguer une frontière réelle préparée d'une connexion réelle.
+- Preuve obtenue : PDF canonique vérifié à 71 pages avec SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; rapport OS-2 versionné; CI `30570073983` verte sur migrations, sauvegarde/restauration, lint, typecheck, tests, build et Playwright; continuité `30570074023` verte sur `6c0c204`.
+- Écarts restants : aucun fournisseur n'est connecté, aucune sandbox n'est configurée, aucun test contractuel ne vise un compte fournisseur et aucun audit a11y OS-2 distinct n'a été ajouté. Ces écarts ne sont pas masqués par le statut « réel préparé » et ne bloquent pas la sortie OS-2 définie page 31.
 
-## Modules touchés
+## Classification honnête
 
-- `src/modules/conversation-hub/schemas.ts`;
-- `tests/conversation-hub-schemas.test.ts`;
-- `src/lib/db.ts` et les migrations `0061`/`0062`;
-- `tests/conversation-hub-migrations.test.ts` et la couverture PostgreSQL RLS;
-- `src/modules/conversation-hub/repository.ts`, `service.ts`, `errors.ts` et `index.ts`;
-- `tests/conversation-hub-service.test.ts`;
-- `src/modules/channels/test-channel.ts` et `tests/test-channel-adapter.test.ts`;
-- `src/modules/channels/web-channel.ts`, `runtime.ts` et l'écran `/conversation`;
-- `src/components/app-shell.tsx` pour l'entrée de navigation Conversation;
-- `src/modules/orchestrator/` pour schémas, erreurs et catalogue des capacités;
-- `src/modules/orchestrator/repository.ts`, `generator.ts` et `service.ts`;
-- migrations runtime `069`/`070`, miroirs `0063`/`0064` et tests associés;
-- les quatre fichiers de continuité.
+- Livré : contrats, vérificateurs, routes fail-closed, mappings tenant, ingestions canoniques, migrations, tests et rapport OS-2.
+- Réel préparé : frontières protocolaires officielles et sécurité exécutable sans activation.
+- Réel connecté : aucun canal fournisseur.
+- Sandbox : aucune configurée ou appelée.
+- Mock : événements/signatures de test, canal test et exécution déterministe existante.
+- Bloqué humain : comptes, credentials, consentements, MFA, endpoints publics, quotas et dépenses.
+- Hors périmètre OS-2 : transports sortants WhatsApp/Teams/Slack, récupération média, rotation de secrets, activation production, DNS, fusion et déploiement.
+
+## Modules concernés
+
+- `src/modules/channels/` pour les contrats, registres, vérificateurs, mappings et ingestions;
+- `src/modules/email/` pour Resend et les événements fournisseur;
+- `src/modules/conversation-hub/` pour l'ingestion canonique système;
+- migrations runtime `071` à `074` et miroirs SQL `0065` à `0068`;
+- `docs/OS2_VALIDATION_REPORT.md` et les quatre fichiers de continuité.
 
 ## Risques
 
-- la copie iCloud est instable; le travail et l'automation utilisent désormais une copie locale hors iCloud;
-- Slack attend encore la validation CI de sa verticale tenant-aware; le rapport OS-2 consolidé reste a produire;
-- la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le coeur conversationnel;
-- le fournisseur `OpenAiProvider` ne réalise pas encore d'appel structuré réel;
-- les fournisseurs externes restent mock, manuels ou désactivés sans credentials.
+- la copie iCloud reste un secours instable; la copie active demeure `/Users/TRADIKOM/Developer/TRADIKOM-ONE`;
+- l'activation prématurée d'un fournisseur pourrait contourner consentement, gestion des secrets ou politiques de médias;
+- le dépôt contient plusieurs implémentations historiques de connecteurs; OS-3 doit auditer et réutiliser la bonne frontière au lieu d'ajouter une abstraction concurrente;
+- la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le cœur conversationnel.
 
 ## Validations
 
-- workflow Continuité de la PR #11 : run `30546098944` vert sur `2d30810`;
-- PR #11 : runs `30514520472` et `30514520487` verts sur `e2a092b`;
-- tests ciblés Conversation Hub : 5/5 verts;
-- ESLint ciblé : vert;
-- build Next.js local avec environnement CI factice : vert, TypeScript inclus.
-- parité exacte entre migrations runtime `067`/`068` et miroirs SQL `0061`/`0062` : verte;
-- `git diff --check` ciblé migrations/tests : vert.
-- PR #11 : runs `30546099003` et `30546098944` verts, incluant PostgreSQL/RLS, migrations, lint, typecheck, tests, build et Playwright.
-
-Le run `30549936954` est entièrement vert sur `e561f57`. Les échecs intermédiaires `30551054764`, `30552219390` et `30552994527` ont été corrigés dans les checkpoints suivants. Le run final `30554462472` sur `95da35e` valide migrations, backup/restore, lint, typecheck, 234 tests, build production et Playwright desktop/mobile en 10 min 37 s. Le run de continuité `30554462620` est vert en 22 s.
-
-Le premier checkpoint OS-2 `d181a97` est entièrement vert dans la CI `30556603463` : migrations, backup/restore, lint, typecheck, tests, build production et Playwright. La continuité `30556603427` est également verte.
-
-La route Resend `6dd61b5` est entièrement verte dans la CI `30562294162`, avec 268 tests, build et Playwright; sa continuité `30562294361` est verte. Le vérificateur Twilio `7609ad8` est entièrement vert dans la CI `30563781762` et la continuité `30563781851`.
-
-Le contrôle de continuité renforcé pour le prompt maître retourne localement `ready`, sans erreur ni avertissement, en vérifiant le PDF de 71 pages et son empreinte. La commande exacte `pnpm agent:continuity-check` termine désormais en environ six secondes grâce au runtime TypeScript natif de Node 22. L'automation native lit directement les pages cœur et exige une preuve paginée avant de choisir une tâche.
-
-L'ingestion WhatsApp `19ff401` est validée par la CI `30565079771` et la continuité `30565079790`. Le checkpoint Teams local épingle `@microsoft/teams.apps@2.0.14`; ses 12 tests ciblés, ESLint et le typecheck complet sont verts sans accès fournisseur.
-
-La frontière Teams `4ecda6f` est entièrement verte en CI et continuité. Le mapping et l'ingestion Teams passent 333 tests complets et le build de production; la route reste fermée par défaut. La verticale Slack locale porte cette suite a 352 tests verts et passe aussi le build de production.
-
-## Ce qui reste simulé
-
-- OAuth `mock_business`;
-- DNS et propagation `.test`;
-- exécution connecteur lecture seule sans réseau;
-- génération IA déterministe;
-- gains de temps et financiers non mesurés.
+- `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement;
+- prompt maître : empreinte exacte et 71 pages;
+- PR #11 : ouverte, brouillon, head `6c0c204`, état de fusion propre;
+- CI `30570073983` : audit production, migrations, sauvegarde/restauration, lint, typecheck, tests, build et Playwright verts;
+- continuité `30570074023` : verte;
+- rapport OS-2 : Definition of Done page 32 et matrice page 69 entièrement confrontées.
 
 ## Prochaine action recommandée
 
-Valider et publier la verticale Slack, puis produire le rapport OS-2 consolidé.
+Ouvrir OS-3 par un audit du Connector Runtime existant, puis prouver deux capacités génériques exécutables en mock strict et reliées au parcours conversationnel. Aucun fournisseur réel ne doit être branché pendant cette tranche.
