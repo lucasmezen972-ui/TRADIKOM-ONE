@@ -325,3 +325,16 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Lint, typecheck, build production et la suite locale passent : 95 fichiers, 357 tests verts et 13 ignores explicites. Le Playwright local ne peut pas partager PGlite entre le processus test et le serveur; aucun échec applicatif n'est revendiqué sur cette tentative.
 - La CI PostgreSQL `30782705428` valide audit, migrations, backup/restore, lint, typecheck, 357 tests, build et Playwright desktop/mobile. La continuité `30782705423` est verte sur `232bbb4`.
 - OS-3 est clos au sens strictement `mock`. Aucun fournisseur réel ou sandbox n'est configuré, aucun secret n'est demandé, aucun effet externe, dépense, fusion ou déploiement n'a eu lieu.
+
+## 2026-08-03 - Premier checkpoint OS-4 : snapshot et reprise de mission
+
+- Le PDF maître conserve son SHA-256 canonique et ses 71 pages. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-4 17-18, 28 et 35-36 ont été relues en texte et en rendu direct.
+- L'audit a isolé une lacune précise : les plans conversationnels construisaient leur workflow en mémoire, tandis que `resumeWorkflowRun` exigeait une définition active persistée. Une mission en échec ne pouvait donc pas reprendre ce plan exact.
+- La migration runtime `075` et son miroir SQL `0069` ajoutent à `workflow_runs` un snapshot borné et une version. La paire est cohérente par contrainte et immuable par trigger; la RLS existante de la ligne continue de porter l'isolation tenant.
+- Toute nouvelle exécution persiste sa définition validée. La reprise vérifie le schéma, la clé et la version puis utilise ce snapshot; le fallback vers la définition active est conservé uniquement pour les anciennes exécutions.
+- Le signal `manual_retry` devient idempotent tant que son événement est `pending` ou `processing` : un double clic ne crée ni second événement, ni second step de contrôle, ni second audit.
+- Le test vertical simule une interruption après la première capacité. Le worker reprend la seconde à la tentative 2; la première reste exécutée une seule fois et les entrées métier ne figurent pas dans `safe_metadata`.
+- Les 7 tests ciblés, ESLint, typecheck, lint complet, suite Vitest complète, build production, continuité et diff check passent localement.
+- Le parcours navigateur local a validé web, canal test, plan, validation unique et résultat mock. À 390×844, le résultat reste visible et aucun débordement horizontal n'est mesuré.
+- Commit `dea0eab` poussé sur `codex/tradikom-one-os`; CI `30784805475` et continuité `30784805450` entièrement vertes. La CI valide audit, migrations PostgreSQL, upgrade, backup/restore, RLS, lint, typecheck, 98 fichiers/373 tests, build et 20 scénarios Playwright.
+- OS-4 reste en cours : une reprise worker réussie doit encore réconcilier automatiquement le plan conversationnel et publier le résultat une seule fois dans le fil sans second appel d'exécution.

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-03T04:24:43.000Z",
+  "updatedAt": "2026-08-03T04:44:03.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "232bbb40358fad9542c18a3f2494ce049b606156",
+  "lastCommit": "dea0eab9d4c8052a90cc277bf59a4b02c6dc28bf",
   "status": "in_progress",
   "currentPhase": "OS-4",
-  "currentObjective": "Rendre la mission conversationnelle confirmée reprenable depuis une définition immuable après panne ou signal humain, sans rejouer une étape réussie et sans fournisseur réel.",
+  "currentObjective": "Finaliser la reprise OS-4 au niveau conversationnel : réconcilier le plan après reprise worker, publier le résultat une seule fois dans le fil et exposer le signal humain sans fournisseur réel.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,8 +29,8 @@
       "evidenceExpected": "Une migration additive tenant-scoped conserve un snapshot validé de la définition sur chaque nouvelle exécution; la reprise n'utilise pas une définition active mutable; un test multi-step provoque un échec après une première capacité réussie, envoie un retry humain idempotent, reprend la seconde étape via le worker et prouve une seule exécution de la première; parité migrations, RLS existante, audit sûr, lint, typecheck, tests, build, Playwright pertinent et continuité restent verts."
     }
   },
-  "nextAction": "Ajouter le snapshot immuable de définition aux exécutions workflow, faire reprendre le worker depuis ce snapshot et prouver qu'un retry humain ne rejoue pas l'étape conversationnelle déjà réussie.",
-  "nextFile": "src/modules/workflows/engine.ts",
+  "nextAction": "Extraire la finalisation de mission conversationnelle, l'appeler après une reprise worker réussie et prouver que plan, étapes et message résultat convergent une seule fois sans second clic d'exécution.",
+  "nextFile": "src/modules/orchestrator/service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -167,7 +167,17 @@
     "tests runtime pour schemas, absence de reseau, retry temporaire, echec permanent, policy, provider disabled et compensation",
     "tests conversation pour preuve durable, idempotence, audit sans entree metier et projection multicanale",
     "pnpm lint, pnpm typecheck, pnpm test et build production locaux",
-    "CI 30782705428 et continuite 30782705423 vertes sur 232bbb4"
+    "CI 30782705428 et continuite 30782705423 vertes sur 232bbb4",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant OS-4",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-4 17-18, 28, 35-36",
+    "audit du moteur, du worker, du repository et de l'execution conversationnelle",
+    "migration 075 et miroir SQL 0069 pour snapshots de definition workflow immuables",
+    "test multi-step interruption, double signal humain, reprise worker et non-rejeu de la premiere capacite",
+    "7 tests cibles, ESLint cible, typecheck, lint, suite complete et build production locaux",
+    "parcours navigateur web, canal test, plan, approbation et execution mock sur desktop et mobile 390x844",
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement",
+    "commit dea0eab pousse; CI 30784805475 et continuite 30784805450 entierement vertes"
   ],
   "lastValidation": [
     {
@@ -485,6 +495,26 @@
     {
       "command": "CI 30782705428 et continuité 30782705423 sur 232bbb4",
       "status": "passed_audit_migrations_backup_restore_lint_typecheck_357_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître et continuity-check OS-4 le 2026-08-03",
+      "status": "passed_sha256_exact_71_pages_core_and_os4_pages_reviewed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "tests ciblés snapshots et reprise",
+      "status": "passed_7_tests_mirror_immutability_double_signal_worker_resume_first_step_not_replayed"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed"
+    },
+    {
+      "command": "parcours Conversation dans le navigateur local",
+      "status": "passed_web_test_channel_single_approval_mock_result_mobile_390_no_horizontal_overflow"
+    },
+    {
+      "command": "CI 30784805475 et continuité 30784805450 sur dea0eab",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_98_files_373_tests_build_20_playwright_and_continuity"
     }
   ],
   "humanBlockers": [
