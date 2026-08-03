@@ -149,9 +149,9 @@ Le produit n’est pas encore le système conversationnel omnicanal décrit ci-d
 
 - Le module WhatsApp actuel prépare un message et ouvre `wa.me` ; il ne reçoit pas encore les messages WhatsApp dans un Conversation Hub.
 - Il n’existe pas encore de fil canonique partagé entre WhatsApp, Teams, Slack et le web.
-- Les connecteurs de production restent limités, simulés, en lecture seule ou désactivés selon le module.
+- Aucun connecteur n’exécute d’appel externe réel : le seul appel HTTP sortant de tout `src/` est le fournisseur email Resend, désactivé par défaut. Les autres sont simulés, en lecture seule, catalogués ou désactivés.
 - Les véritables connecteurs OAuth nécessitent encore leur configuration fournisseur et leurs tests de contrat.
-- Les moteurs IA restent majoritairement déterministes ou protégés par feature flags.
+- **Aucun moteur « IA » n’appelle un modèle.** Les quatorze modules concernés sont des moteurs de règles déterministes. `OpenAiProvider` (`src/modules/ai/provider.ts`) délègue intégralement au fournisseur déterministe tout en étiquetant sa sortie `provider: "openai"` — défaut connu, hérité de la Phase 2, corrigé en priorité (voir `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md`).
 - Les actions de production sensibles ne doivent pas être présentées comme exécutées lorsqu’elles sont seulement préparées ou simulées.
 - Le stockage d’images local doit être remplacé par un stockage objet persistant avant un déploiement serverless complet.
 - La checklist de production reste la source de vérité pour les éléments non finalisés.
@@ -275,6 +275,7 @@ pnpm db:verify
 pnpm db:seed
 pnpm db:reset
 pnpm db:generate
+pnpm agent:continuity-check
 pnpm worker
 pnpm maintenance
 ```
@@ -337,7 +338,16 @@ Elle reprend ensuite la prochaine action documentée sans recommencer le projet 
 
 ## Documentation
 
-Points d’entrée utiles :
+Commencer par ces quatre-là — ils décrivent l’état réel et ce qui vient ensuite :
+
+- `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md` — audit factuel d’entrée de la phase OS
+- `docs/ROADMAP_TRADIKOM_ONE_OS.md` — les tranches verticales OS-0 à OS-8
+- `docs/NEXT_STEPS.md` — l’action immédiate, pas une liste vague
+- `docs/RESUME_PROMPT.md` — comment reprendre après une interruption
+
+État de l’agent : `docs/AGENT_STATE.json`, `docs/WORKLOG.md`, `docs/DRIFT_REPORT.md`.
+
+Autres points d’entrée :
 
 - `docs/PHASE_2_IMPLEMENTATION.md`
 - `docs/PHASE_3_API_INTELLIGENCE.md`

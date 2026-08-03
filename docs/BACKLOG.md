@@ -22,10 +22,26 @@
 - Reordonnancement des cartes a l'interieur d'une colonne du pipeline (`docs/PIPELINE.md`).
 - Seed Garage Caraibes Auto.
 
-## Prochaines priorites
+## Ce backlog n'est plus le pilote
 
-- Gerer les webhooks de bounce du fournisseur email pour capter les rebonds asynchrones ; la liste de suppression alimentee par les echecs a l'envoi est livree (`docs/EMAIL_PROVIDER.md`).
-- Ajouter analyse antivirus et redimensionnement des fichiers envoyes ; la suppression est livree (`docs/ASSET_UPLOAD.md`).
-- Ajouter connecteurs OAuth reels.
-- Brancher les vrais appels OpenAI structures derriere l'abstraction.
-- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre.
+Depuis l'audit d'entree du 3 aout 2026, la priorite est fixee par
+`docs/ROADMAP_TRADIKOM_ONE_OS.md`, pas par ce fichier.
+
+La raison est ecrite dans `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md` : ce backlog est
+alimente par les manques du CRM. Chaque lot termine en revele un suivant, tout
+aussi legitime et tout aussi lateral. Vingt lots ont ete livres ainsi — tous
+corrects, testes et documentes, aucun au service du coeur conversationnel.
+
+**Regle** : ne rien prendre ici tant qu'une tranche OS est ouverte, sauf si
+l'element sert directement cette tranche.
+
+## Dette produit connue, en attente
+
+Prise en compte dans la roadmap OS, pas avant.
+
+- Webhooks de bounce du fournisseur email pour capter les rebonds asynchrones ; la liste de suppression alimentee par les echecs a l'envoi est livree (`docs/EMAIL_PROVIDER.md`). — arrive avec **OS-5**.
+- Antivirus et redimensionnement des fichiers envoyes ; la suppression est livree (`docs/ASSET_UPLOAD.md`). — arrive avec **OS-7** (multimodal).
+- Connecteurs OAuth reels. — **OS-5**.
+- Appels modele reels derriere l'abstraction, et correction de `OpenAiProvider` qui etiquette `openai` une sortie deterministe. — correctif d'etiquette immediat, appels reels en **OS-5**.
+- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre. — **OS-2**.
+- `testTimeout` global dans `vitest.config.ts`. — premier commit d'**OS-1**.

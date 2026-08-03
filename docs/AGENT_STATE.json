@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "northStar": "Construire le systeme d exploitation conversationnel de l entreprise : une seule conversation omnicanale, des connecteurs universels, des actions durables et prouvees, des objectifs permanents, des validations simples.",
+  "phase": "OS-0",
+  "phaseGoal": "Audit d entree et recadrage : documents d entree, drift report, automation de continuite.",
+  "updatedAt": "2026-08-03T00:00:00.000Z",
+  "branch": "claude/projet-doxqd8",
+  "pullRequest": {
+    "number": 10,
+    "state": "open",
+    "draft": true,
+    "mergeableState": "clean",
+    "url": "https://github.com/lucasmezen972-ui/TRADIKOM-ONE/pull/10"
+  },
+  "lastCommit": "d002e07",
+  "lastGreenCi": {
+    "commit": "d002e07",
+    "check": "Lint, test, build, and E2E",
+    "conclusion": "success",
+    "completedAt": "2026-07-30T04:13:44Z"
+  },
+  "repositoryFacts": {
+    "tables": 83,
+    "runtimeMigrations": 78,
+    "sqlMirrors": 72,
+    "modules": 46,
+    "testFiles": 77,
+    "playwrightSpecs": 2,
+    "conversationPrimitives": 0,
+    "realOutboundIntegrations": ["resend_email"]
+  },
+  "commandsRun": [
+    "git status --short",
+    "git branch --all",
+    "git log --oneline --decorate -n 40",
+    "git rev-list --left-right --count origin/main...HEAD",
+    "gh api pulls/10 (via MCP GitHub)",
+    "gh api pulls/10/check-runs (via MCP GitHub)",
+    "pnpm lint",
+    "pnpm typecheck",
+    "pnpm build",
+    "pnpm test"
+  ],
+  "commandsNotRun": [
+    "pnpm db:verify (aucun PostgreSQL en ecoute dans ce conteneur ; couverture RLS attestee par la CI verte sur d002e07)"
+  ],
+  "nextFileToTouch": "src/lib/db.ts",
+  "nextTask": "OS-1 : Conversation Hub canonique — tables conversation_threads et canonical_messages avec migration RLS dediee, identite omnicanale, idempotence, anti-boucle, adaptateur web reel + adaptateur test mock explicite.",
+  "openDecisions": [
+    "Fusionner la PR #10 telle quelle (recommande) ou detacher OS-0 dans une PR distincte.",
+    "Poser un testTimeout global dans vitest.config.ts avant les suites conversationnelles.",
+    "Etendre ou non la revision aux recommandations strategiques et a la veille concurrentielle (position actuelle : non, ce sont des analyses)."
+  ],
+  "knownRisks": [
+    "OpenAiProvider etiquette 'openai' une sortie 100% deterministe (src/modules/ai/provider.ts). Code mort aujourd hui, mensonge des qu il sera branche.",
+    "Zero connecteur production-ready ; le seul appel HTTP sortant de src/ est Resend.",
+    "Les 77 fichiers de test s appuient sur le delai vitest par defaut de 5 s et deviennent fragiles sous charge.",
+    "Le backlog CRM alimente une derive laterale : 20 lots livres, aucun ne sert le coeur conversationnel."
+  ]
+}
