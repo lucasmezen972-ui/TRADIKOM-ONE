@@ -1,35 +1,35 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-03T04:01:31.000Z",
+  "updatedAt": "2026-08-03T04:24:43.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "232bbb40358fad9542c18a3f2494ce049b606156",
   "status": "in_progress",
   "currentPhase": "OS-4",
-  "currentObjective": "Auditer la durabilité des missions existantes puis prouver reprise après panne, signal humain et idempotence multi-step sans fournisseur réel.",
+  "currentObjective": "Rendre la mission conversationnelle confirmée reprenable depuis une définition immuable après panne ou signal humain, sans rejouer une étape réussie et sans fournisseur réel.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 15, 16, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 46, 48, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 17, 18, 28, 31, 32, 33, 35, 36, 46, 48, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
-        "10-13 Connector Fabric, Capability Manifest, orchestrateur et workflows durables",
-        "21-25 CI/CD, observabilité, fournisseurs et SDK connecteurs",
+        "12-13 Planification structurée et workflows durables",
+        "23 Observabilité et classification sûre des erreurs",
         "26-28 Roadmap, Definition of Done et reprise",
-        "30-33 Shadow mode, compensation, données sensibles et entrées non fiables",
+        "30-31 Shadow mode, compensation et conséquences irréversibles",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Ouvrir OS-3 dans l'ordre de la page 48 en remplaçant les deux handlers conversationnels factices par un runtime de capacités génériques, versionné et strictement mock, validé par manifeste, sans réseau ni fournisseur réel.",
-      "evidenceExpected": "Les capacités crm.contacts.search et project.task.create sont résolues par manifeste, valident entrées et sorties, produisent une preuve mock sûre dans le workflow durable et restent idempotentes; les tests couvrent capacité absente, entrée invalide, succès des deux capacités, absence de fetch, audit sans contenu sensible et continuité tenant/RLS existante; lint, typecheck, tests, build, Playwright pertinent et continuité sont verts."
+      "requirement": "Ouvrir OS-4 dans l'ordre de la page 48 en rendant la définition du plan conversationnel confirmé immuable et durable avec son exécution, afin que le worker puisse reprendre exactement la mission après panne ou signal humain sans rejouer une étape déjà réussie.",
+      "evidenceExpected": "Une migration additive tenant-scoped conserve un snapshot validé de la définition sur chaque nouvelle exécution; la reprise n'utilise pas une définition active mutable; un test multi-step provoque un échec après une première capacité réussie, envoie un retry humain idempotent, reprend la seconde étape via le worker et prouve une seule exécution de la première; parité migrations, RLS existante, audit sûr, lint, typecheck, tests, build, Playwright pertinent et continuité restent verts."
     }
   },
-  "nextAction": "Relire les pages 17-18, 28, 31-33, 35-36, 46, 48 et 69, puis auditer la reprise et les signaux dans src/modules/workflows/engine.ts et worker.ts avant toute modification OS-4.",
+  "nextAction": "Ajouter le snapshot immuable de définition aux exécutions workflow, faire reprendre le worker depuis ce snapshot et prouver qu'un retry humain ne rejoue pas l'étape conversationnelle déjà réussie.",
   "nextFile": "src/modules/workflows/engine.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",

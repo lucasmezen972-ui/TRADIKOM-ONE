@@ -28,6 +28,8 @@ export type WorkflowRunRow = {
   summary: string;
   error: string | null;
   retry_count: number;
+  definition_snapshot: string | null;
+  definition_version: number | null;
   created_at: string;
 };
 
@@ -156,12 +158,15 @@ export async function insertWorkflowRun(
     summary: string;
     error?: string | null;
     retryCount?: number;
+    definition: WorkflowDefinition;
     createdAt: string;
   },
 ) {
   await db.query(
-    `insert into workflow_runs (id, tenant_id, workflow_key, trigger_name, status, summary, error, retry_count, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    `insert into workflow_runs (
+       id, tenant_id, workflow_key, trigger_name, status, summary, error,
+       retry_count, definition_snapshot, definition_version, created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       input.id,
       input.tenantId,
@@ -171,8 +176,34 @@ export async function insertWorkflowRun(
       input.summary,
       input.error ?? null,
       input.retryCount ?? 0,
+      toJson(input.definition),
+      input.definition.version,
       input.createdAt,
     ],
+  );
+}
+
+export async function findActiveManualResumeEvent(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  const result = await db.query<{ id: string; payload: string }>(
+    `select id, payload
+     from domain_events
+     where tenant_id = $1
+       and event_type = $2
+       and status in ('pending', 'processing')
+     order by created_at desc
+     limit 20`,
+    [tenantId, "workflow.resume"],
+  );
+
+  return (
+    result.rows.find((row) => {
+      const payload = safeJson<Record<string, unknown>>(row.payload, {});
+      return payload.runId === runId && payload.reason === "manual_retry";
+    }) ?? null
   );
 }
 

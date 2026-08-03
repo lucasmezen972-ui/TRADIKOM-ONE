@@ -22,6 +22,7 @@ import {
   findActiveDomainEventQueueRow,
   findLatestFailedWorkflowActionCursor,
   findFailedDomainEventRow,
+  findActiveManualResumeEvent,
   findPendingApprovalForRun,
   findWorkflowRunById,
   insertWorkflowRunStep,
@@ -245,6 +246,13 @@ export async function requestManualWorkflowRetry(
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
 
+    if (
+      run.status === "waiting" &&
+      (await findActiveManualResumeEvent(transaction, tenantId, run.id))
+    ) {
+      return { idempotentReplay: true as const };
+    }
+
     if (!["failed", "rejected", "cancelled"].includes(run.status)) {
       throw new WorkflowError(
         "workflow_run_not_actionable",
@@ -294,6 +302,7 @@ export async function requestManualWorkflowRetry(
       "workflow.manual_retry_requested",
       run.id,
     );
+    return { idempotentReplay: false as const };
   });
 }
 

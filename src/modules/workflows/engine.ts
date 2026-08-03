@@ -287,6 +287,7 @@ async function executeWorkflowDefinitionForEvent(
     summary: `Workflow v${parsedDefinition.version} en cours d'execution.`,
     error: null,
     retryCount: 0,
+    definition: parsedDefinition,
     createdAt: nowIso(),
   });
 
@@ -361,18 +362,7 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
     return null;
   }
 
-  const storedWorkflow = await findActiveWorkflowDefinition(
-    db,
-    event.tenantId,
-    run.workflow_key,
-  );
-
-  if (!storedWorkflow) {
-    throw new WorkflowError(
-      "workflow_not_found",
-      "Definition workflow introuvable pour la reprise.",
-    );
-  }
+  const definition = await resolveRunDefinition(db, event.tenantId, run);
 
   const sourceEvent = await findDomainEventById(
     db,
@@ -401,7 +391,7 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
     const terminal = await runWorkflowActions(db, {
       runId: run.id,
       event: sourceWorkflowEvent,
-      definition: storedWorkflow.definition,
+      definition,
       startActionIndex: payload.resumeFromActionIndex,
     });
     await updateWorkflowRunStatus(db, {
@@ -425,6 +415,42 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
     });
     throw error;
   }
+}
+
+async function resolveRunDefinition(
+  db: DbClient,
+  tenantId: string,
+  run: NonNullable<Awaited<ReturnType<typeof findWorkflowRunById>>>,
+) {
+  if (run.definition_snapshot) {
+    const definition = workflowDefinitionSchema.safeParse(
+      safeJson<Record<string, unknown>>(run.definition_snapshot, {}),
+    );
+    if (
+      !definition.success ||
+      definition.data.key !== run.workflow_key ||
+      definition.data.version !== run.definition_version
+    ) {
+      throw new WorkflowError(
+        "workflow_definition_invalid",
+        "Le snapshot durable de la mission est invalide.",
+      );
+    }
+    return definition.data;
+  }
+
+  const storedWorkflow = await findActiveWorkflowDefinition(
+    db,
+    tenantId,
+    run.workflow_key,
+  );
+  if (!storedWorkflow) {
+    throw new WorkflowError(
+      "workflow_not_found",
+      "Definition workflow introuvable pour la reprise.",
+    );
+  }
+  return storedWorkflow.definition;
 }
 
 export async function enqueueResumeForLatestWorkflowAction(
