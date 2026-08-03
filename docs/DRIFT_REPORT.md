@@ -1,56 +1,57 @@
 # Drift report
 
-- Date : 2 août 2026
+- Date : 3 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head fonctionnel : `6c0c204`
-- Travail effectué : clôture documentaire et probante d'OS-2 après publication du mapping et de l'ingestion Slack.
+- Head fonctionnel : `232bbb4`
+- Travail effectué : audit puis clôture probante d'OS-3 par un manifeste et un runtime de deux capacités génériques strictement mock.
 
 ## Impact north star
 
-Les entrées WhatsApp, Teams et Slack vérifiées rejoignent désormais le même Conversation Hub sans dupliquer le modèle métier. Les identités et fils sont pseudonymisés, les replays sont idempotents et les fichiers distants restent hors stockage. Cette tranche rapproche une conversation continue sur plusieurs canaux sans exposer à l'utilisateur la complexité fournisseur.
+Un plan confirmé dans la conversation exécute désormais réellement ses deux capacités génériques via le même runtime versionné, au lieu de handlers qui renvoyaient seulement des chaînes fixes. Le résultat reste visible sur web et canal test, durable, idempotent et explicitement mock, sans demander à l'utilisateur de connaître un fournisseur.
 
 ## Alignement prompt maître
 
-- Pages consultées : pages 3-7, 13-15, 22, 31-33, 46, 48 et 64-71.
-- Exigence servie : clore OS-2 dans l'ordre de la page 48 par la documentation puis le rapport, confronter la tranche à la Definition of Done page 32 et à toutes les couches de test de la page 69, et distinguer une frontière réelle préparée d'une connexion réelle.
-- Preuve obtenue : PDF canonique vérifié à 71 pages avec SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; rapport OS-2 versionné; CI `30570073983` verte sur migrations, sauvegarde/restauration, lint, typecheck, tests, build et Playwright; continuité `30570074023` verte sur `6c0c204`.
-- Écarts restants : aucun fournisseur n'est connecté, aucune sandbox n'est configurée, aucun test contractuel ne vise un compte fournisseur et aucun audit a11y OS-2 distinct n'a été ajouté. Ces écarts ne sont pas masqués par le statut « réel préparé » et ne bloquent pas la sortie OS-2 définie page 31.
+- Pages consultées : pages 3-7, 15-18, 26-33, 35-38, 46, 48 et 69-71.
+- Exigence servie : clore OS-3 au critère de la page 31, soit deux capacités génériques exécutables en mock strict, avec manifeste page 16, plan validé page 17, exécution durable page 18, Definition of Done page 32 et matrice page 69.
+- Preuve obtenue : PDF canonique vérifié à 71 pages avec SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; `crm.contacts.search` et `project.task.create` résolues par `tradikom_mock`; tests de validation, sortie, retry, erreurs, compensation, idempotence, absence de réseau et métadonnées sûres; CI `30782705428` et continuité `30782705423` entièrement vertes sur `232bbb4`.
+- Écarts restants : le retry du runtime mock est borné mais OS-4 doit encore prouver une reprise de mission après panne ou signal humain sans rejouer une étape réussie. Aucun provider réel ou sandbox n'est connecté; cet écart est explicite et ne bloque pas le critère OS-3 de la page 31.
 
 ## Classification honnête
 
-- Livré : contrats, vérificateurs, routes fail-closed, mappings tenant, ingestions canoniques, migrations, tests et rapport OS-2.
+- Livré : OS-1, OS-2 et le runtime OS-3 avec manifeste versionné, deux capacités, preuves workflow, tests et documentation de reprise.
 - Réel préparé : frontières protocolaires officielles et sécurité exécutable sans activation.
-- Réel connecté : aucun canal fournisseur.
-- Sandbox : aucune configurée ou appelée.
-- Mock : événements/signatures de test, canal test et exécution déterministe existante.
+- Réel connecté : aucun canal ni outil fournisseur.
+- Sandbox : aucune configurée, appelée ou revendiquée.
+- Mock : `tradikom_mock`, deux capacités génériques, compensation de tâche, canal test et événements/signatures de test.
 - Bloqué humain : comptes, credentials, consentements, MFA, endpoints publics, quotas et dépenses.
-- Hors périmètre OS-2 : transports sortants WhatsApp/Teams/Slack, récupération média, rotation de secrets, activation production, DNS, fusion et déploiement.
+- Hors périmètre OS-3 : fournisseur externe actif, Temporal réel, OS-5 à OS-8, fusion et déploiement.
 
 ## Modules concernés
 
-- `src/modules/channels/` pour les contrats, registres, vérificateurs, mappings et ingestions;
-- `src/modules/email/` pour Resend et les événements fournisseur;
-- `src/modules/conversation-hub/` pour l'ingestion canonique système;
-- migrations runtime `071` à `074` et miroirs SQL `0065` à `0068`;
-- `docs/OS2_VALIDATION_REPORT.md` et les quatre fichiers de continuité.
+- `src/modules/connector-execution/capabilities.ts` et `runtime.ts` pour le manifeste, le provider mock et les erreurs normalisées;
+- `src/modules/orchestrator/` pour la validation unique et le passage des entrées bornées au workflow;
+- `src/modules/workflows/` pour l'exécution, la persistance de preuve et l'omission des entrées métier dans les métadonnées;
+- `tests/capability-runtime.test.ts`, `tests/orchestrator-service.test.ts` et le parcours Conversation Playwright;
+- les quatre fichiers de continuité. Aucune migration ni nouvelle table n'a été nécessaire.
 
 ## Risques
 
 - la copie iCloud reste un secours instable; la copie active demeure `/Users/TRADIKOM/Developer/TRADIKOM-ONE`;
-- l'activation prématurée d'un fournisseur pourrait contourner consentement, gestion des secrets ou politiques de médias;
-- le dépôt contient plusieurs implémentations historiques de connecteurs; OS-3 doit auditer et réutiliser la bonne frontière au lieu d'ajouter une abstraction concurrente;
-- la PR #10 reste large et orientée CRM; sa fusion en bloc diluerait le cœur conversationnel.
+- `connector-execution/service.ts` conserve le chemin historique d'installation mock en lecture seule; le manifeste OS-3 est la source des capacités conversationnelles et toute convergence future doit éviter une rupture de compatibilité;
+- le runtime retente en mémoire mais la reprise durable après panne reste le sujet OS-4;
+- l'activation prématurée d'un fournisseur pourrait contourner validation, secrets ou policy; aucun chemin OS-3 ne l'autorise.
 
 ## Validations
 
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement;
-- prompt maître : empreinte exacte et 71 pages;
-- PR #11 : ouverte, brouillon, head `6c0c204`, état de fusion propre;
-- CI `30570073983` : audit production, migrations, sauvegarde/restauration, lint, typecheck, tests, build et Playwright verts;
-- continuité `30570074023` : verte;
-- rapport OS-2 : Definition of Done page 32 et matrice page 69 entièrement confrontées.
+- prompt maître : empreinte exacte et 71 pages, pages cœur et OS-3 relues visuellement et textuellement;
+- tests ciblés : 12 tests verts sur manifeste, deux capacités, retry temporaire, échec permanent, policy, provider désactivé, compensation, absence de réseau et preuve sûre;
+- local : lint, typecheck, build et 95 fichiers/357 tests verts, 13 ignores explicites;
+- CI `30782705428` : audit production, migrations PostgreSQL, sauvegarde/restauration, RLS, lint, typecheck, 357 tests, build et Playwright desktop/mobile verts;
+- continuité `30782705423` : verte sur `232bbb4`;
+- Playwright local : bloqué avant login par deux processus PGlite non partagés; la preuve PostgreSQL CI est passée et fait autorité.
 
 ## Prochaine action recommandée
 
-Ouvrir OS-3 par un audit du Connector Runtime existant, puis prouver deux capacités génériques exécutables en mock strict et reliées au parcours conversationnel. Aucun fournisseur réel ne doit être branché pendant cette tranche.
+Ouvrir OS-4 par l'audit de la reprise, des signaux, de l'annulation et de l'idempotence dans le moteur et le worker existants, puis choisir une seule lacune durable à prouver sur le plan conversationnel. Aucun fournisseur réel ne doit être branché.

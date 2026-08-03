@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-03T03:30:00.000Z",
+  "updatedAt": "2026-08-03T04:01:31.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "6c0c204850e13d37319bb2296ca2a9592d282823",
+  "lastCommit": "232bbb40358fad9542c18a3f2494ce049b606156",
   "status": "in_progress",
-  "currentPhase": "OS-3",
-  "currentObjective": "Auditer le Connector Runtime existant puis démontrer deux capacités génériques exécutables en mock strict, sans transport externe ni fausse connexion.",
+  "currentPhase": "OS-4",
+  "currentObjective": "Auditer la durabilité des missions existantes puis prouver reprise après panne, signal humain et idempotence multi-step sans fournisseur réel.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,8 +29,8 @@
       "evidenceExpected": "Les capacités crm.contacts.search et project.task.create sont résolues par manifeste, valident entrées et sorties, produisent une preuve mock sûre dans le workflow durable et restent idempotentes; les tests couvrent capacité absente, entrée invalide, succès des deux capacités, absence de fetch, audit sans contenu sensible et continuité tenant/RLS existante; lint, typecheck, tests, build, Playwright pertinent et continuité sont verts."
     }
   },
-  "nextAction": "Relire les pages 15-18, 26-30, 35-38 et 69, puis auditer src/modules/connector-execution et choisir la plus petite tranche OS-3 prouvant deux capacités génériques en mock strict.",
-  "nextFile": "src/modules/connector-execution/service.ts",
+  "nextAction": "Relire les pages 17-18, 28, 31-33, 35-36, 46, 48 et 69, puis auditer la reprise et les signaux dans src/modules/workflows/engine.ts et worker.ts avant toute modification OS-4.",
+  "nextFile": "src/modules/workflows/engine.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -158,7 +158,16 @@
     "relecture visuelle des pages OS-2 13-15 et 64-68",
     "gh pr view 11, gh pr checks 11 et gh run list sur codex/tradikom-one-os",
     "rapport de validation OS-2 confronte aux pages 32 et 69",
-    "pnpm agent:continuity-check le 2026-08-02 : ready, zero erreur et zero avertissement"
+    "pnpm agent:continuity-check le 2026-08-02 : ready, zero erreur et zero avertissement",
+    "verification SHA-256 exacte et 71 pages du prompt maitre le 2026-08-03",
+    "relecture visuelle et textuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture visuelle et textuelle des pages OS-3 15-18, 26-30 et 35-38",
+    "audit de connector-execution, connectors, orchestrator et workflows",
+    "manifeste versionne et runtime strict tradikom_mock pour crm.contacts.search et project.task.create",
+    "tests runtime pour schemas, absence de reseau, retry temporaire, echec permanent, policy, provider disabled et compensation",
+    "tests conversation pour preuve durable, idempotence, audit sans entree metier et projection multicanale",
+    "pnpm lint, pnpm typecheck, pnpm test et build production locaux",
+    "CI 30782705428 et continuite 30782705423 vertes sur 232bbb4"
   ],
   "lastValidation": [
     {
@@ -456,6 +465,26 @@
     {
       "command": "pnpm agent:continuity-check le 2026-08-02 avec PDF canonique",
       "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "prompt maître le 2026-08-03",
+      "status": "passed_sha256_exact_71_pages_core_and_os3_pages_visually_reviewed"
+    },
+    {
+      "command": "tests ciblés runtime, catalogue et orchestrateur",
+      "status": "passed_12_tests_two_capabilities_no_fetch_retry_temporary_permanent_compensation_evidence"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed_95_files_357_tests_13_skipped_lint_typecheck_build"
+    },
+    {
+      "command": "Playwright conversation local PGlite",
+      "status": "blocked_by_separate_pglite_processes_before_login_ci_postgres_authoritative"
+    },
+    {
+      "command": "CI 30782705428 et continuité 30782705423 sur 232bbb4",
+      "status": "passed_audit_migrations_backup_restore_lint_typecheck_357_tests_build_playwright_and_continuity"
     }
   ],
   "humanBlockers": [

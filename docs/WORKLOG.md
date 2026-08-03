@@ -310,3 +310,18 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-2 13-15, 22 et 64-68 ont été relues depuis leurs rendus directs.
 - La PR brouillon #11 reste ouverte et fusionnable sur le head fonctionnel `6c0c204`; la CI `30570073983` et la continuité `30570074023` restent vertes.
 - Le rapport OS-2 et les quatre fichiers de reprise sont synchronisés. Aucune nouvelle tâche OS-3, mutation métier, connexion fournisseur, fusion, dépense ou mise en production n'a été engagée pendant cette confirmation.
+
+## 2026-08-03 - Clôture probante OS-3 Connector Runtime
+
+- Le PDF maître conserve le SHA-256 canonique `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5` et ses 71 pages. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-3 15-18, 26-30 et 35-38 ont été relues directement.
+- L'audit des quatre modules a confirmé deux chemins incomplets : `connector-execution` savait exécuter une seule lecture historique, tandis que l'orchestrateur exposait deux capacités mais utilisait des handlers qui ne faisaient que retourner des chaînes fixes.
+- Le manifeste versionné `tradikom_mock` devient la source unique pour `crm.contacts.search` et `project.task.create`. Il déclare schémas bornés, risque, approbation, scopes, idempotence, coût nul, réversibilité et compensation.
+- Le runtime refuse tout environnement autre que `mock`, tout provider désactivé/non configuré, et toute version ou identité provider différente. Il valide entrée et sortie sans appel réseau.
+- Les erreurs sont classées `temporary`, `permanent`, `rate_limit`, `policy`, `validation` ou `not_configured`. Les erreurs temporaires sont retentées au plus trois fois; les permanentes s'arrêtent dès la première tentative.
+- La création de tâche mock produit une référence déterministe et une compensation `project.task.archive`, toutes deux sans effet externe. Un replay conserve la même preuve.
+- Les deux étapes du plan conversationnel passent désormais par ce runtime. Les preuves versionnées sont persistées dans `workflow_run_steps`, reliées au plan et au fil, tandis que la requête et le titre métier ne sont pas recopiés dans `safe_metadata`.
+- Aucune table ni migration n'a été ajoutée : les tables durables existantes, leurs relations tenant et leurs policies RLS restent l'unique stockage. La CI PostgreSQL vérifie migrations, upgrade, sauvegarde/restauration et RLS.
+- Les 12 tests ciblés couvrent manifeste, deux succès, absence de `fetch`, déterminisme, validation, environnement interdit, provider désactivé, retry temporaire, échec permanent, compensation et preuve conversationnelle sûre.
+- Lint, typecheck, build production et la suite locale passent : 95 fichiers, 357 tests verts et 13 ignores explicites. Le Playwright local ne peut pas partager PGlite entre le processus test et le serveur; aucun échec applicatif n'est revendiqué sur cette tentative.
+- La CI PostgreSQL `30782705428` valide audit, migrations, backup/restore, lint, typecheck, 357 tests, build et Playwright desktop/mobile. La continuité `30782705423` est verte sur `232bbb4`.
+- OS-3 est clos au sens strictement `mock`. Aucun fournisseur réel ou sandbox n'est configuré, aucun secret n'est demandé, aucun effet externe, dépense, fusion ou déploiement n'a eu lieu.
