@@ -37,6 +37,7 @@ export type WorkflowRunStepRow = {
   workflow_run_id: string;
   action_name: string;
   status: string;
+  safe_metadata: string;
   attempts: number;
   scheduled_at: string | null;
   started_at: string | null;
@@ -209,6 +210,7 @@ export async function listWorkflowRunStepRows(
             workflow_run_id,
             action_name,
             status,
+            safe_metadata,
             attempts,
             scheduled_at,
             started_at,

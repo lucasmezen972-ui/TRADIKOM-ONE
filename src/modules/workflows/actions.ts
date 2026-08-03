@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { id, safeJson, toJson } from "@/lib/security";
+import { executeGenericCapability } from "@/modules/connector-execution/runtime";
 import { queueWorkflowNotification } from "@/modules/notifications";
 import { WorkflowError } from "@/modules/workflows/errors";
 import { queueWorkflowWebhook } from "@/modules/workflows/webhook";
@@ -79,17 +80,34 @@ function mockConversationCapability(
   capability: "crm.contacts.search" | "project.task.create",
   summary: string,
 ): WorkflowActionHandler {
-  return async ({ action }) => ({
-    status: "succeeded",
-    summary,
-    metadata: {
+  return async ({ action, event, definition, actionIdempotencyKey }) => {
+    const execution = await executeGenericCapability({
+      tenantId: event.tenantId,
       capability,
-      executionEnvironment: "mock",
-      planStepId: stringInput(action.input.planStepId, "unknown"),
-      evidence: "mock_execution_recorded",
-      externalSideEffect: false,
-    },
-  });
+      environment: "mock",
+      input: action.input.capabilityInput,
+      idempotencyKey: actionIdempotencyKey,
+      maxAttempts: definition.retryPolicy.maxAttempts,
+    });
+    return {
+      status: "succeeded",
+      summary,
+      metadata: {
+        capability,
+        providerKey: execution.providerKey,
+        providerVersion: execution.providerVersion,
+        manifestVersion: execution.manifestVersion,
+        executionEnvironment: execution.environment,
+        planStepId: stringInput(action.input.planStepId, "unknown"),
+        attempts: execution.attempts,
+        output: execution.output,
+        evidence: execution.evidence,
+        compensation: execution.compensation,
+        externalSideEffect: execution.evidence.externalSideEffect,
+        inputStored: false,
+      },
+    };
+  };
 }
 
 async function createTaskAction({

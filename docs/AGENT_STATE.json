@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-03T01:56:19.000Z",
+  "updatedAt": "2026-08-03T03:30:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
@@ -14,19 +14,19 @@
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 13, 14, 15, 22, 31, 32, 33, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 15, 16, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 46, 48, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
-        "8-10 Identité omnicanale, ChannelAdapter et Connector Fabric",
-        "17 PostgreSQL/RLS",
+        "10-13 Connector Fabric, Capability Manifest, orchestrateur et workflows durables",
+        "21-25 CI/CD, observabilité, fournisseurs et SDK connecteurs",
         "26-28 Roadmap, Definition of Done et reprise",
+        "30-33 Shadow mode, compensation, données sensibles et entrées non fiables",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
-        "58-62 Provider runtime, webhooks, Twilio, Resend et WebChat sans clé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Clore OS-2 dans l'ordre exact de la page 48 par une documentation et un rapport qui confrontent les quatre canaux préparés à la Definition of Done de la page 32 et à la matrice de la page 69, sans présenter une préparation comme une connexion réelle.",
-      "evidenceExpected": "CI et continuité vertes sur le head Slack 6c0c204; rapport OS-2 versionné distinguant livré, réel préparé, sandbox, mock, blocage humain et hors périmètre; fichiers de reprise synchronisés et contrôle de continuité final sans erreur."
+      "requirement": "Ouvrir OS-3 dans l'ordre de la page 48 en remplaçant les deux handlers conversationnels factices par un runtime de capacités génériques, versionné et strictement mock, validé par manifeste, sans réseau ni fournisseur réel.",
+      "evidenceExpected": "Les capacités crm.contacts.search et project.task.create sont résolues par manifeste, valident entrées et sorties, produisent une preuve mock sûre dans le workflow durable et restent idempotentes; les tests couvrent capacité absente, entrée invalide, succès des deux capacités, absence de fetch, audit sans contenu sensible et continuité tenant/RLS existante; lint, typecheck, tests, build, Playwright pertinent et continuité sont verts."
     }
   },
   "nextAction": "Relire les pages 15-18, 26-30, 35-38 et 69, puis auditer src/modules/connector-execution et choisir la plus petite tranche OS-3 prouvant deux capacités génériques en mock strict.",

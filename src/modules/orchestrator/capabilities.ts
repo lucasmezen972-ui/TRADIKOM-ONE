@@ -1,84 +1,18 @@
-import { z } from "zod";
 import type { Role } from "@/lib/types";
+import {
+  os3MockCapabilityCatalog,
+  type GenericCapabilityDefinition,
+} from "@/modules/connector-execution/capabilities";
 import { OrchestratorError } from "@/modules/orchestrator/errors";
 import {
   actionPlanSchema,
   type ActionPlan,
-  type CapabilityRisk,
 } from "@/modules/orchestrator/schemas";
 
-export type ApprovalMode = "none" | "single";
+export type MockCapabilityDefinition = GenericCapabilityDefinition;
 
-export type MockCapabilityDefinition = {
-  name: string;
-  description: string;
-  mode: "read" | "write";
-  executionEnvironment: "mock";
-  risk: CapabilityRisk;
-  approval: ApprovalMode;
-  reversible: boolean | "compensation_only";
-  compensation: string | null;
-  inputSchema: z.ZodType;
-  outputSchema: z.ZodType;
-  requiredScopes: string[];
-  idempotency: "required";
-  maxBatchSize: number;
-  dataCategories: string[];
-  costModel: { unit: "request"; estimate: 0 };
-};
-
-const contactSearchInputSchema = z
-  .object({ query: z.string().trim().min(1).max(200) })
-  .strict();
-const contactSearchOutputSchema = z
-  .object({ matchCount: z.number().int().nonnegative().max(20) })
-  .strict();
-const taskCreateInputSchema = z
-  .object({
-    title: z.string().trim().min(1).max(200),
-    dueAt: z.string().datetime({ offset: true }).optional(),
-  })
-  .strict();
-const taskCreateOutputSchema = z
-  .object({ taskReference: z.string().trim().min(1).max(160) })
-  .strict();
-
-export const os1MockCapabilityCatalog = [
-  {
-    name: "crm.contacts.search",
-    description: "Recherche déterministe de contacts de démonstration.",
-    mode: "read",
-    executionEnvironment: "mock",
-    risk: "low",
-    approval: "none",
-    reversible: true,
-    compensation: null,
-    inputSchema: contactSearchInputSchema,
-    outputSchema: contactSearchOutputSchema,
-    requiredScopes: ["crm.contacts.read"],
-    idempotency: "required",
-    maxBatchSize: 20,
-    dataCategories: ["contacts"],
-    costModel: { unit: "request", estimate: 0 },
-  },
-  {
-    name: "project.task.create",
-    description: "Création déterministe d'une tâche de démonstration.",
-    mode: "write",
-    executionEnvironment: "mock",
-    risk: "medium",
-    approval: "single",
-    reversible: true,
-    compensation: "project.task.archive",
-    inputSchema: taskCreateInputSchema,
-    outputSchema: taskCreateOutputSchema,
-    requiredScopes: ["project.tasks.write"],
-    idempotency: "required",
-    maxBatchSize: 1,
-    dataCategories: ["operational_tasks"],
-    costModel: { unit: "request", estimate: 0 },
-  },
-] satisfies MockCapabilityDefinition[];
+// Alias de compatibilité pour les plans OS-1 déjà persistés.
+export const os1MockCapabilityCatalog = os3MockCapabilityCatalog;
 
 const planRoles: Role[] = [
   "owner",
@@ -115,7 +49,7 @@ export function validateActionPlan(
     );
   }
 
-  const catalog = context.catalog ?? os1MockCapabilityCatalog;
+  const catalog = context.catalog ?? os3MockCapabilityCatalog;
   const validatedSteps = plan.steps.map((step) => {
     const capability = catalog.find((entry) => entry.name === step.capability);
     if (!capability) {

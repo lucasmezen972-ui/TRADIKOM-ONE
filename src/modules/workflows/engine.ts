@@ -623,7 +623,7 @@ async function executeAction(
         actionIndex: input.actionIndex,
         idempotencyKey,
         attempt: attemptNumber,
-        input: input.action.input,
+        ...safeActionInputMetadata(input.action),
         ...result.metadata,
       },
       attempts: attemptNumber,
@@ -649,7 +649,7 @@ async function executeAction(
         actionIndex: input.actionIndex,
         idempotencyKey,
         attempt: attemptNumber,
-        input: input.action.input,
+        ...safeActionInputMetadata(input.action),
         error: message,
         retryPolicy: input.definition.retryPolicy,
       },
@@ -662,6 +662,16 @@ async function executeAction(
     });
     throw error;
   }
+}
+
+function safeActionInputMetadata(action: WorkflowAction) {
+  if (
+    action.type === "mock_search_contact" ||
+    action.type === "mock_create_task"
+  ) {
+    return { inputStored: false };
+  }
+  return { input: action.input };
 }
 
 async function markDomainEventSucceeded(db: DbClient, event: WorkflowEvent) {

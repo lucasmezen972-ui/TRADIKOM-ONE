@@ -1131,6 +1131,8 @@ async function runConversationJourney(
     const evidence = await db.query<{
       runs: number;
       steps: number;
+      runtime_evidence: number;
+      leaked_inputs: number;
       routes: number;
       audits: number;
       tasks: number;
@@ -1140,6 +1142,11 @@ async function runConversationJourney(
            and workflow_key like 'conversation_plan:%') as runs,
          (select count(*)::int from workflow_run_steps where tenant_id = $1
            and action_name in ('mock_search_contact', 'mock_create_task')) as steps,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1
+           and action_name in ('mock_search_contact', 'mock_create_task')
+           and safe_metadata like '%"providerKey":"tradikom_mock"%') as runtime_evidence,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1
+           and safe_metadata like '%Relancer le contact de la conversation%') as leaked_inputs,
          (select count(*)::int
             from conversation_message_route_hops as routes
             join conversation_messages as messages
@@ -1154,6 +1161,8 @@ async function runConversationJourney(
     expect(evidence.rows[0]).toEqual({
       runs: 1,
       steps: 2,
+      runtime_evidence: 2,
+      leaked_inputs: 0,
       routes: 2,
       audits: 1,
       tasks: 0,

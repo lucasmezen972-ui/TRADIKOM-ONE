@@ -719,7 +719,11 @@ function buildConversationPlanWorkflow(
       }
       return {
         type,
-        input: { planStepId: step.step_id, capability: step.capability },
+        input: {
+          planStepId: step.step_id,
+          capability: step.capability,
+          capabilityInput: safeJson(step.input_json, {}),
+        },
         idempotencyKey: step.idempotency_key,
       };
     }),
@@ -753,6 +757,7 @@ async function mapExecutionResult(
         action: step.action_name,
         status: step.status,
         attempts: Number(step.attempts),
+        evidence: safeJson<Record<string, unknown>>(step.safe_metadata, {}),
       })),
     },
   };

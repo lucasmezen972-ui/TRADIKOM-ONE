@@ -323,6 +323,34 @@ describe("service des plans Conversation", () => {
       idempotentReplay: true,
       execution: { workflowRunId: executed.execution.workflowRunId },
     });
+    expect(executed.execution.steps).toEqual([
+      expect.objectContaining({
+        evidence: expect.objectContaining({
+          capability: "crm.contacts.search",
+          providerKey: "tradikom_mock",
+          executionEnvironment: "mock",
+          output: { matchCount: 1 },
+          externalSideEffect: false,
+          inputStored: false,
+        }),
+      }),
+      expect.objectContaining({
+        evidence: expect.objectContaining({
+          capability: "project.task.create",
+          providerKey: "tradikom_mock",
+          executionEnvironment: "mock",
+          output: {
+            taskReference: expect.stringMatching(/^tache_mock_[a-f0-9]{24}$/),
+          },
+          compensation: {
+            available: true,
+            capability: "project.task.archive",
+          },
+          externalSideEffect: false,
+          inputStored: false,
+        }),
+      }),
+    ]);
 
     const counts = await context.db.query<{
       runs: number;
@@ -387,6 +415,17 @@ describe("service des plans Conversation", () => {
     expect(audit.rows[2]?.safe_metadata).toContain('"externalSideEffect":false');
     expect(audit.rows[2]?.safe_metadata).not.toContain(
       "Plan mock vérifié avant exécution",
+    );
+    const stepEvidence = await context.db.query<{ safe_metadata: string }>(
+      `select safe_metadata from workflow_run_steps
+       where tenant_id = $1 order by created_at asc, id asc`,
+      [context.tenantId],
+    );
+    expect(stepEvidence.rows).toHaveLength(2);
+    expect(stepEvidence.rows[0]?.safe_metadata).toContain("tradikom_mock");
+    expect(stepEvidence.rows[1]?.safe_metadata).toContain("project.task.archive");
+    expect(stepEvidence.rows.map((row) => row.safe_metadata).join(" ")).not.toContain(
+      "Relancer le contact de la conversation",
     );
   });
 
