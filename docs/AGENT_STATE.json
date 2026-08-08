@@ -1,36 +1,38 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T05:50:00.000Z",
+  "updatedAt": "2026-08-08T06:50:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "d27e3cfc7e8f8343e54b6530d59b13f2b8cabd2d",
+  "lastCommit": "6dae5db0b1f4cdaecf7cb563cd48653826033cea",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 ouvert sans activation externe : WhatsApp via Twilio Sandbox est le candidat unique documenté; le prochain checkpoint implémente le transport sortant fail-closed avec doubles avant toute autorisation fournisseur.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : le transport WhatsApp sortant est désormais préparé derrière ChannelAdapter, policy, réservation durable tenant/RLS et audit sûr avec doubles uniquement; le prochain checkpoint doit rendre les reprises temporary/rate_limit durables sans double envoi.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 13, 14, 15, 26, 27, 28, 29, 30, 31, 32, 33, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 13, 14, 15, 16, 17, 18, 22, 26, 27, 28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
-        "8-10 Identité omnicanale, adaptateurs et Connector Fabric",
+        "8-13 Identité omnicanale, adaptateurs, Connector Fabric, policy et missions durables",
+        "17 PostgreSQL, RLS et chiffrement des credentials",
         "21-25 Environnements, gouvernance, observabilité et comptes fournisseurs",
         "26-28 Roadmap, Definition of Done et reprise",
+        "30-33 Shadow mode, irréversibilité, données sensibles et entrées non fiables",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
         "58-62 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Ouvrir OS-5 selon la roadmap page 31 par un audit comparatif repository-grounded de Resend, WhatsApp/Twilio, Teams et Slack, puis sélectionner un seul provider capable de prouver une conversation réelle en sandbox ou essai officiel à coût nul. Le choix doit minimiser autorisations et intervention humaine, conserver les états disabled/not_configured/awaiting_human_auth avant consentement, et ne jamais présenter une préparation ou un mock comme un provider actif.",
-      "evidenceExpected": "Un rapport versionné confronte les quatre frontières au code et aux documentations officielles actuelles, recommande WhatsApp via Twilio Sandbox avec justification conversation-first, décrit coût et limites d'essai, scopes/consentements, webhook, idempotence, audit, désactivation et écarts de transport sortant. Le rapport fournit l'intervention humaine minimale exacte mais ne crée aucun compte, credential, endpoint, tunnel, consentement ni dépense. Le registre reste fail-closed, le PDF garde son SHA-256 et ses 71 pages, la CI du head est vérifiée et le contrôle de continuité reste vert."
+      "requirement": "Poursuivre OS-5 selon la roadmap page 31 avec le seul candidat WhatsApp via Twilio Sandbox : implémenter le transport sortant derrière ChannelAdapter et le runtime commun, sans logique métier ni accès direct depuis l'interface. Toute tentative doit vérifier membership et policy côté serveur, réserver une idempotence tenant-aware, auditer sans numéro, corps, credential ni payload brut, classifier les erreurs temporary/permanent/auth/rate_limit/policy/validation/not_configured et rester fail-closed tant que le provider est disabled, not_configured ou awaiting_human_auth. Cette tranche de préparation utilise uniquement des doubles et ne doit être présentée ni comme sandbox ni comme provider réel actif.",
+      "evidenceExpected": "Une preuve verticale testée appelle ChannelAdapter.sendMessage via un service borné, avec client injecté et aucun réseau réel : permission refusée, tenant croisé refusé, policy refusée, provider désactivé/non configuré refusé avant le client, succès mock réservé une seule fois malgré un double envoi, replay stable, classifications temporary/permanent/auth/rate_limit/validation et audit sûr sans PII ni secret. Le registre reste non ready, aucun credential n'est lu, aucun compte, endpoint, message externe, dépense, fusion ou déploiement n'est créé; lint, typecheck, tests pertinents, suite complète, build, continuité et CI doivent être verts avant de revendiquer le checkpoint."
     }
   },
-  "nextAction": "Implémenter le transport WhatsApp sortant derrière ChannelAdapter, policy, idempotence tenant-aware et audit sûr avec doubles uniquement; conserver le provider disabled et ne lire aucun credential réel.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-outbound.ts",
+  "nextAction": "Ajouter une reprise worker durable des livraisons WhatsApp reserved/temporary/rate_limit, avec lease borné, nombre maximal de tentatives, même clé d'idempotence, réconciliation du message canonique et doubles uniquement; conserver le provider réel disabled.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-outbound-worker.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -200,7 +202,19 @@
     "pnpm lint, pnpm typecheck et pnpm test : 96 fichiers verts, 361 tests verts, 13 ignores",
     "build production local vert avec configuration CI factice",
     "CI 31240778430 et continuite 31240778429 entierement vertes sur 3109221",
-    "commit d27e3cf pousse; CI 31242028098 et continuite 31242028100 entierement vertes"
+    "commit d27e3cf pousse; CI 31242028098 et continuite 31242028100 entierement vertes",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant le transport OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31242530450 / 31242530461 verts sur 6dae5db",
+    "migration runtime 076 et RLS 077 avec miroirs SQL 0070/0071 pour les livraisons fournisseur",
+    "adaptateur sortant WhatsApp/Twilio fail-closed et etat mock explicite avec transport injecte",
+    "service tenant-aware avec membership, policy, reservation durable, replay, classification, audit sur et reconciliation du message canonique",
+    "19 tests nouveaux puis 66 tests canaux cibles verts, ESLint cible et typecheck verts",
+    "pnpm audit production sans vulnerabilite connue et pnpm lint vert",
+    "build production local vert avec configuration CI factice",
+    "pnpm test et seconde suite Vitest complete bornes apres blocage local silencieux sans assertion en echec",
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement"
   ],
   "lastValidation": [
     {
@@ -578,6 +592,22 @@
     {
       "command": "CI 31242028098 et continuité 31242028100 sur d27e3cf",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître et continuity-check du transport OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "tests ciblés outbound puis régression complète canaux WhatsApp",
+      "status": "passed_3_files_19_tests_then_10_files_66_tests_migrations_policy_tenant_idempotency_fail_closed_classification_safe_audit"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck et build production",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_with_ci_placeholders"
+    },
+    {
+      "command": "pnpm test et pnpm vitest run --maxWorkers=4",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_pending"
     }
   ],
   "humanBlockers": [

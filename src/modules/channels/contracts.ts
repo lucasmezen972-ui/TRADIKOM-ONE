@@ -15,6 +15,7 @@ export const channelAdapterStateSchema = z.enum([
   "disabled",
   "not_configured",
   "awaiting_human_auth",
+  "mock",
   "ready",
 ]);
 
@@ -27,7 +28,20 @@ export const channelProviderErrorCodeSchema = z.enum([
   "unsupported_content_type",
   "temporary_provider_failure",
   "permanent_provider_failure",
+  "authentication_failed",
+  "rate_limited",
   "policy_denied",
+  "validation_failed",
+]);
+
+export const channelProviderFailureClassificationSchema = z.enum([
+  "temporary",
+  "permanent",
+  "auth",
+  "rate_limit",
+  "policy",
+  "validation",
+  "not_configured",
 ]);
 
 export const channelAdapterCapabilitiesSchema = z
@@ -87,18 +101,27 @@ export const channelAdapterManifestSchema = z
         message: "Seul un canal non configuré peut déclarer des variables manquantes.",
       });
     }
-    if (manifest.state === "ready" && !manifest.transportEnabled) {
+    if (
+      (manifest.state === "ready" || manifest.state === "mock") &&
+      !manifest.transportEnabled
+    ) {
       context.addIssue({
         code: "custom",
         path: ["transportEnabled"],
-        message: "Un canal prêt doit avoir un transport explicitement activé.",
+        message:
+          "Un canal prêt ou mock doit avoir un transport explicitement activé.",
       });
     }
-    if (manifest.state !== "ready" && manifest.transportEnabled) {
+    if (
+      manifest.state !== "ready" &&
+      manifest.state !== "mock" &&
+      manifest.transportEnabled
+    ) {
       context.addIssue({
         code: "custom",
         path: ["transportEnabled"],
-        message: "Un transport ne peut être activé que lorsque le canal est prêt.",
+        message:
+          "Un transport ne peut être activé que lorsque le canal est prêt ou explicitement mock.",
       });
     }
   });
@@ -165,6 +188,7 @@ export const channelDeliveryResultSchema = z
     provider: externalChannelProviderSchema,
     externalMessageId: z.string().trim().min(1).max(256).optional(),
     errorCode: channelProviderErrorCodeSchema.optional(),
+    classification: channelProviderFailureClassificationSchema.optional(),
     retryable: z.boolean(),
   })
   .strict();
@@ -173,6 +197,7 @@ export const normalizedChannelProviderErrorSchema = z
   .object({
     provider: externalChannelProviderSchema,
     code: channelProviderErrorCodeSchema,
+    classification: channelProviderFailureClassificationSchema,
     safeMessage: z.string().trim().min(1).max(240),
     retryable: z.boolean(),
     statusCode: z.number().int().min(400).max(599).optional(),
@@ -185,6 +210,9 @@ export type ExternalChannelProvider = z.infer<
 export type ChannelAdapterState = z.infer<typeof channelAdapterStateSchema>;
 export type ChannelProviderErrorCode = z.infer<
   typeof channelProviderErrorCodeSchema
+>;
+export type ChannelProviderFailureClassification = z.infer<
+  typeof channelProviderFailureClassificationSchema
 >;
 export type ChannelAdapterManifest = z.infer<
   typeof channelAdapterManifestSchema
