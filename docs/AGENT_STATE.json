@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T21:25:07.000Z",
+  "updatedAt": "2026-08-08T21:58:31.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "423c9d1cbadde775c586fc8dae57d3b75f15c009",
+  "lastCommit": "1bdc5c468f3e53b1b3993961438d2ddaa06da197",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : ajouter une vérification de santé/readiness WhatsApp/Twilio et une composition d'activation explicite qui contrôlent uniquement les métadonnées sûres du manifeste, du keyring, de l'endpoint et des URLs HTTPS. Les états réels restent disabled/not_configured/awaiting_human_auth et aucun secret, client, réseau fournisseur ni promotion vers ready n'est autorisé dans ce checkpoint.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : la readiness WhatsApp/Twilio et la composition d'activation fail-closed sont livrées. Les états disabled, not_configured, awaiting_human_auth et degraded sont distingués sans secret ni réseau; le registre préparé reste incapable de produire ready. La prochaine tranche non bloquée doit rendre la preuve d'autorisation humaine durable, tenant-aware et auditée avant toute future promotion explicite.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Module whatsapp-twilio-readiness.ts avec schémas stricts, checks déclaratifs sûrs et fonction de composition qui refuse les providers disabled/not_configured/awaiting_human_auth avant tout resolver/client; sortie française bornée distinguant configuration absente, références invalides, checkpoint humain et état dégradé, avec activationAllowed toujours false pour le registre actuel. Tests unitaires/provider/sécurité prouvant zéro appel au gestionnaire de secrets, zéro construction de keyring ou client et zéro fetch dans tous les états non autorisés, ainsi que validation endpoint/tenant, URLs HTTPS, références versionnées uniques et preuve humaine structurée sans donnée sensible. Documentation d'activation réversible et mise à jour du rapport de dérive. Régression canaux, audit, lint, typecheck, suite complète, build, continuité et CI/Playwright doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Ajouter une vérification bornée de santé/readiness WhatsApp/Twilio et une composition d'activation explicite qui valident manifeste, références du keyring, endpoint et callback sans résoudre de secret ni construire de client en état non autorisé; documenter ensuite la procédure humaine réversible.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-readiness.ts",
+  "nextAction": "Ajouter une autorisation d'activation WhatsApp/Twilio durable, tenant-aware, expirante et auditée, émise uniquement par un propriétaire ou administrateur après le checkpoint humain; la readiness devra la charger par référence interne au lieu d'accepter une preuve libre, sans activer le registre ni appeler Twilio.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-activation-authorization-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -777,6 +777,26 @@
     {
       "command": "CI 31259897751 et continuité 31259897728 sur 423c9d1",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_111_files_454_tests_build_20_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant readiness OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean_ci_31260509720_continuity_31260509739"
+    },
+    {
+      "command": "tests readiness ciblés et régression canaux WhatsApp",
+      "status": "passed_5_files_45_tests_then_19_files_133_tests_2_postgres_tests_skipped_without_database_url_zero_secret_resolver_client_or_fetch_before_ready"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI=true pnpm vitest run --maxWorkers=1",
+      "status": "passed_108_files_447_tests_4_files_and_15_tests_skipped_without_database_url"
+    },
+    {
+      "command": "CI et continuité sur 1bdc5c4",
+      "status": "passed_ci_31279987333_audit_migrations_backup_restore_rls_lint_typecheck_112_files_463_tests_build_20_playwright_and_continuity_31279987339"
     }
   ],
   "humanBlockers": [

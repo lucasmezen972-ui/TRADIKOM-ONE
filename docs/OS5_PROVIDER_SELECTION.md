@@ -19,7 +19,7 @@ Resend demande moins d'autorisations mais ne constitue pas le meilleur premier p
 
 | Candidat | Preuve conversationnelle possible | Coût nul officiel | Intervention humaine | État réel du dépôt | Décision |
 | --- | --- | --- | --- | --- | --- |
-| WhatsApp / Twilio | Bidirectionnel : message téléphone -> webhook -> fil web, puis réponse web -> WhatsApp | Sandbox d'essai; 100 messages inclus dans les unités gratuites, sans WABA ni sender enregistré | Compte/login, vérification du téléphone, acceptation Sandbox, `join`, credentials et URL HTTPS | Inbound, outbound durable, callbacks, coffre chiffré, bootstrap keyring géré et fabrique officielle livrés avec doubles; readiness et promotion runtime absentes | **Retenu** |
+| WhatsApp / Twilio | Bidirectionnel : message téléphone -> webhook -> fil web, puis réponse web -> WhatsApp | Sandbox d'essai; 100 messages inclus dans les unités gratuites, sans WABA ni sender enregistré | Compte/login, vérification du téléphone, acceptation Sandbox, `join`, credentials et URL HTTPS | Inbound, outbound durable, callbacks, coffre, bootstrap keyring, fabrique officielle, readiness et composition fail-closed livrés avec doubles; promotion runtime absente | **Retenu** |
 | Email / Resend | Outbound applicatif et événements de livraison; une vraie réponse email n'entre pas encore dans le fil | Plan gratuit; `resend.dev` envoie seulement à l'adresse du compte sans domaine | Compte/login, clé, webhook; domaine/DNS seulement pour d'autres destinataires | Provider d'envoi borné et webhooks de livraison livrés, mais runtime réel refusé et `email.received` non supporté | Rejeté pour la première preuve conversationnelle |
 | Slack | Bidirectionnel possible via Events API et Web API | Workspace gratuit possible, sous limite d'apps | Création d'app, installation workspace, OAuth/scopes, token, signing secret et endpoint ou Socket Mode | Inbound signé et fil canonique livrés; OAuth, stockage token et outbound absents | Différé : surface d'autorisation supérieure |
 | Microsoft Teams | Bidirectionnel possible avec agent/bot dans Teams | Playground local gratuit, mais ce serait une simulation; le test Teams réel demande tenant/app/tunnel | Compte Microsoft, tenant, application, endpoint et consentements potentiellement administrateur | Validation JWT et inbound canonique livrés; provisioning, consentement, token et outbound absents | Différé : intervention humaine la plus forte |
@@ -74,7 +74,7 @@ Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
 7. Confirmer l'envoi d'au plus deux messages de preuve vers le seul téléphone de test, puis la désactivation de l'endpoint et la révocation du tunnel à la fin.
 ```
 
-Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant, son worker durable, les callbacks de statut, le coffre, les résolveurs éphémères, le bootstrap keyring et la fabrique officielle sont maintenant prouvés avec doubles. Le travail non bloqué suivant est la vérification de santé/readiness et la composition d'activation explicite, sans activer le provider runtime ni effectuer d'appel réseau réel.
+Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant, son worker durable, les callbacks de statut, le coffre, les résolveurs éphémères, le bootstrap keyring, la fabrique officielle, la readiness et la composition fail-closed sont maintenant prouvés avec doubles. Le travail non bloqué suivant est la persistance tenant-aware et auditée de l'autorisation d'activation, sans activer le provider runtime ni effectuer d'appel réseau réel.
 
 ## Classification honnête
 
@@ -90,7 +90,6 @@ Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, 
 
 ## Écarts restants avant activation
 
-- ajouter une vérification de santé/readiness et une composition d'activation explicite sans résolution de secret ni client en état non autorisé;
-- créer une procédure d'activation, santé, rotation, révocation et désactivation explicite;
+- persister une autorisation d'activation tenant-aware, expirante et auditée, émise par un propriétaire ou administrateur après le checkpoint humain;
 - ajouter la preuve Playwright web + WhatsApp sandbox, plus les pires cas de la matrice page 69;
 - obtenir l'intervention humaine ci-dessus avant toute mutation externe.
