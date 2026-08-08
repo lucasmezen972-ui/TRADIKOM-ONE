@@ -71,7 +71,7 @@ Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
 7. Confirmer l'envoi d'au plus deux messages de preuve vers le seul téléphone de test, puis la désactivation de l'endpoint et la révocation du tunnel à la fin.
 ```
 
-Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le travail non bloqué suivant consiste à implémenter et tester le transport sortant WhatsApp fail-closed avec doubles de test, sans sélectionner le provider runtime ni effectuer d'appel réseau réel.
+Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant et son worker durable sont maintenant prouvés avec doubles; le travail non bloqué suivant est l'ingestion signée et dédupliquée des callbacks de statut Twilio, sans sélectionner le provider runtime ni effectuer d'appel réseau réel.
 
 ## Classification honnête
 
@@ -87,7 +87,7 @@ Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, 
 
 ## Écarts restants avant activation
 
-- implémenter l'envoi WhatsApp sortant derrière `ChannelAdapter`, le runtime commun, la policy et une réservation idempotente tenant-scoped;
+- implémenter les callbacks de statut Twilio signés, dédupliqués et monotones vers la livraison et le message canoniques;
 - conserver les credentials par référence chiffrée ou secret manager, jamais comme valeur en base ou audit;
 - ajouter les callbacks de livraison Twilio et leur déduplication sans PII;
 - créer une procédure d'activation, santé, rotation, révocation et désactivation explicite;

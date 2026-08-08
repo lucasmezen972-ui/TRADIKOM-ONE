@@ -3,57 +3,54 @@
 - Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head fonctionnel audité : `d5cad7e`
-- Travail effectué : transport WhatsApp sortant fail-closed, durable et tenant-aware avec doubles uniquement, sans activation externe.
+- Head initial audité : `fe46bf5`
+- Travail effectué : worker durable des livraisons WhatsApp sortantes, avec doubles uniquement et sans activation externe.
 
 ## Impact north star
 
-Une réponse conversationnelle canonique peut maintenant traverser une policy, être réservée durablement, passer par `ChannelAdapter.sendMessage`, converger vers un statut métier et être rejouée sans second envoi. La complexité fournisseur reste derrière l'adaptateur et le service borné; aucune interface CRM, Kanban ou dashboard secondaire n'a été ajoutée.
+Une réponse issue de la conversation peut maintenant survivre à une interruption ou une erreur temporaire sans perdre son identité, sa policy ni sa preuve. La reprise reste derrière le service borné et `ChannelAdapter`; aucune interface CRM, Kanban ou dashboard secondaire n'a été ajoutée.
 
 ## Alignement prompt maître
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues textuellement et dans les rendus directs du PDF canonique.
-- Exigence servie : poursuivre OS-5 page 31 avec WhatsApp/Twilio comme candidat unique, conformément aux pages 14, 18, 22, 28-29, 32, 64, 66 et 69 : adaptateur sans logique métier, policy obligatoire, action durable, tenant/RLS, idempotence, états fournisseur honnêtes, erreurs normalisées et audit sans secret ni PII.
-- Preuve obtenue : PDF de 71 pages au SHA-256 exact; état `mock` explicite distinct de `ready`; adapter fail-closed avant le client; migrations runtime `076`/`077` et miroirs SQL `0070`/`0071`; réservation et fingerprint tenant-aware; double envoi dédupliqué; rôles et acteur inter-tenant refusés; classifications `temporary`, `permanent`, `auth`, `rate_limit`, `policy`, `validation`, `not_configured`; message canonique réconcilié; audits sans corps, numéro ou SID; 19 nouveaux tests puis 66 tests canaux locaux verts; CI PostgreSQL `31244919362` verte avec 101 fichiers / 393 tests, build et 20 Playwright; continuité `31244919353` verte.
-- Écarts restants : le worker de reprise `reserved`/`temporary`/`rate_limit`, le callback de livraison Twilio, le secret manager, la résolution réversible et chiffrée du destinataire, la sandbox, l'endpoint public et la preuve web + WhatsApp réelle restent absents. La suite Vitest complète locale bloque silencieusement malgré les suites ciblées vertes; la CI Linux/PostgreSQL complète est verte et constitue la preuve autoritative. OS-5 reste `in_progress` et ne satisfait pas encore le critère de succès page 31.
+- Exigence servie : pages 18, 22, 28-29, 31-32, 64, 66 et 69 : action externe durable, idempotence stable, retry borné, lease, tenant/RLS, policy et membership réévalués, erreurs normalisées, fournisseur honnêtement désactivé et audit sans secret ni PII.
+- Preuve obtenue : PDF de 71 pages au SHA-256 exact; migration runtime `078` et miroir SQL `0072`; maximum immuable, lease concurrente et expirée, backoff exponentiel borné; sélection exclusive `reserved`/`temporary`/`rate_limit`; même clé d'idempotence et un seul effet mock après réponse perdue; non-rejeu terminal; message canonique réconcilié; audits sûrs; 26 tests ciblés puis 15 fichiers/83 tests canaux-conversation verts; audit, lint, typecheck et build verts; test PostgreSQL/RLS dédié prêt pour la CI.
+- Écarts restants : la CI du commit doit encore confirmer migrations propres/upgrade, backup/restauration, RLS restreinte, suite complète et Playwright. Le callback de statut Twilio, le secret manager, la résolution chiffrée du destinataire, la sandbox, l'endpoint public et la preuve réelle web + WhatsApp restent absents. OS-5 reste `in_progress` et ne satisfait pas encore le succès page 31.
 
 ## Classification honnête
 
-- Livré : contrat outbound, adapter fail-closed, policy obligatoire, persistance tenant/RLS, audit sûr, réconciliation canonique et tests avec doubles.
-- Réel préparé : inbound WhatsApp signé et tenant-mappé; outbound prêt à recevoir un transport réel après les garde-fous durables restants.
+- Livré : réservation outbound, worker avec lease/backoff/tentatives, policy/membership, audit sûr, réconciliation et tests mock.
+- Réel préparé : inbound WhatsApp signé et tenant-mappé; outbound durable prêt à recevoir un transport réel après les garde-fous restants.
 - Réel connecté : aucun fournisseur.
 - Sandbox : aucune configurée ou appelée.
-- Mock : client outbound injecté, canal test, `tradikom_mock` et événements provider de tests.
-- Bloqué humain : compte Twilio, téléphone vérifié, conditions Sandbox, credentials stockés uniquement dans un gestionnaire de secrets, endpoint HTTPS temporaire et autorisation d'au plus deux messages si les unités gratuites sont visibles.
+- Mock : transport outbound injecté, réponses perdues et retries simulés, canal test et `tradikom_mock`.
+- Bloqué humain : compte Twilio, téléphone vérifié, conditions Sandbox, credentials dans un gestionnaire de secrets, endpoint HTTPS temporaire et autorisation d'au plus deux messages gratuits.
 - Hors périmètre : sender WhatsApp production, WABA, paiement, Meta direct, activation Resend/Teams/Slack, OS-6 à OS-8, fusion et déploiement.
 
-## Modules et documents concernés
+## Modules concernés
 
-- `src/modules/channels/contracts.ts` : état `mock` explicite et classifications d'échec;
-- `src/modules/channels/whatsapp-twilio-outbound.ts` : frontière `ChannelAdapter.sendMessage` et normalisation sûre;
-- `src/modules/channels/whatsapp-twilio-outbound-service.ts` : membership, policy, réservation, replay, audit et réconciliation;
-- `src/modules/channels/whatsapp-twilio-outbound-repository.ts` : requêtes tenant-scoped et transitions durables;
-- `src/lib/db.ts` et `src/db/migrations/0070*`/`0071*` : table, contraintes, immutabilité et RLS;
-- les tests migration, adapter et service, puis les quatre fichiers de continuité.
+- `src/db/migrations/0072_os5_channel_provider_delivery_retries.sql` et `src/lib/db.ts` : lease, tentatives, échéance, contraintes et index tenant-leading;
+- `src/modules/channels/whatsapp-twilio-outbound-repository.ts` : sélection due, claim atomique et finalisation sous lease;
+- `src/modules/channels/whatsapp-twilio-outbound-service.ts` : tentative durable, policy, backoff, audit et réconciliation;
+- `src/modules/channels/whatsapp-twilio-outbound-worker.ts` : boucle tenant-aware bornée;
+- tests migration, PostgreSQL/RLS, service et worker, plus les quatre fichiers de continuité.
 
 ## Risques
 
-- Une réservation peut rester `reserved` après interruption entre le transport et la finalisation; le prochain worker doit la reprendre avec lease sans double effet.
-- Les erreurs `temporary` et `rate_limit` sont classées et persistées mais pas encore réessayées automatiquement.
-- La destination WhatsApp n'est volontairement pas stockée en clair; une activation réelle exigera une résolution chiffrée/révocable dans un gestionnaire de secrets, jamais une colonne téléphone.
-- Les unités d'essai Twilio ne sont pas une gratuité illimitée; tout envoi réel doit être refusé si le solde gratuit n'est pas explicitement visible.
-- Aucun SID, token, numéro, texte métier ou payload brut ne doit entrer dans les audits ou logs; le SID technique reste limité à la ligne de livraison.
+- La garantie d'un seul effet après une réponse fournisseur ambiguë est prouvée avec un double idempotent. Une activation Twilio réelle devra borner le timeout sous la lease et documenter la stratégie de réconciliation, car le provider ne doit jamais être présenté comme exactement-once sans preuve officielle.
+- Les callbacks de livraison ne sont pas encore ingérés; `delivered` ne peut donc pas être confirmé par Twilio.
+- La destination n'est volontairement pas stockée en clair; l'activation exigera une résolution chiffrée et révocable dans un gestionnaire de secrets.
+- La suite Vitest complète bloque silencieusement localement. Playwright local sans PostgreSQL partagé ne partage pas les fixtures avec le serveur; la CI Linux/PostgreSQL reste l'autorité exhaustive.
 
 ## Validations
 
-- `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement;
-- prompt maître : empreinte exacte `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5` et 71 pages;
-- inspection textuelle et visuelle : pages cœur et OS-5 attendues;
-- GitHub : PR #11 ouverte, brouillon et `CLEAN`; CI `31244919362` et continuité `31244919353` vertes sur `d5cad7e`;
-- local ciblé : 3 fichiers / 19 tests nouveaux, puis 10 fichiers / 66 tests WhatsApp/canaux verts;
-- local statique : audit production sans vulnérabilité connue, lint, typecheck, build production, continuity-check et diff check verts;
-- CI exhaustive : 101 fichiers / 393 tests, build production et 20 Playwright verts; migrations propres/upgrade, backup/restauration et contrôle PostgreSQL/RLS verts.
+- `pnpm agent:continuity-check` initial : `ready`, zéro erreur et zéro avertissement;
+- prompt maître : empreinte `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`, 71 pages, inspection textuelle et visuelle des pages cœur et OS-5;
+- GitHub initial : PR #11 ouverte, brouillon, fusionnable et `CLEAN`; CI `31245459338` et continuité `31245459354` vertes sur `fe46bf5`;
+- local ciblé : 26 tests, puis 15 fichiers/83 tests verts et 1 test PostgreSQL/RLS ignoré sans `DATABASE_URL`;
+- local statique : audit production sans vulnérabilité connue, lint, typecheck, build production et diff check verts;
+- local exhaustif : Vitest complet bloqué silencieusement; Playwright non probant sans base PostgreSQL partagée, CI du commit requise.
 
 ## Prochaine action recommandée
 
-Implémenter le worker durable des livraisons `reserved`, `temporary` et `rate_limit` avec lease tenant-aware, backoff et tentatives bornées, même clé d'idempotence et doubles uniquement. Ne créer ni sandbox, credential, endpoint public ni message réel avant l'autorisation humaine définie dans `docs/OS5_PROVIDER_SELECTION.md`.
+Implémenter les callbacks de statut Twilio signés, dédupliqués et monotones vers la livraison et le message canoniques avec doubles uniquement. Ne créer ni sandbox, credential, endpoint public ni message réel avant l'autorisation humaine de `docs/OS5_PROVIDER_SELECTION.md`.

@@ -9,8 +9,10 @@ import type {
   ChannelProviderFailureClassification,
 } from "@/modules/channels/contracts";
 import {
-  finalizeWhatsAppOutboundDelivery,
+  claimWhatsAppOutboundDeliveryAttempt,
+  finalizeClaimedWhatsAppOutboundDelivery,
   findWhatsAppOutboundContext,
+  findWhatsAppOutboundDeliveryById,
   findWhatsAppOutboundDeliveryByIdempotency,
   reserveWhatsAppOutboundDelivery,
   updateWhatsAppOutboundMessageState,
@@ -37,6 +39,13 @@ const whatsappOutboundRequestSchema = z
   })
   .strict();
 
+const whatsappOutboundAttemptSchema = z
+  .object({
+    tenantId: boundedIdentifierSchema,
+    deliveryId: boundedIdentifierSchema,
+  })
+  .strict();
+
 const policyDecisionSchema = z.discriminatedUnion("allowed", [
   z.object({ allowed: z.literal(true) }).strict(),
   z
@@ -58,6 +67,9 @@ const outboundRoles: Role[] = [
   "manager",
   "collaborator",
 ];
+const defaultMaxAttempts = 3;
+const defaultLeaseMs = 60_000;
+const defaultBaseBackoffMs = 1_000;
 
 export type WhatsAppOutboundPolicyContext = {
   tenantId: string;
@@ -75,6 +87,18 @@ export type WhatsAppOutboundPolicyEvaluator = (
   | { allowed: true }
   | { allowed: false; code: string }
   | Promise<{ allowed: true } | { allowed: false; code: string }>;
+
+export type WhatsAppOutboundDependencies = {
+  adapter: WhatsAppTwilioOutboundAdapter;
+  evaluatePolicy: WhatsAppOutboundPolicyEvaluator;
+};
+
+export type WhatsAppOutboundAttemptOptions = {
+  now?: Date;
+  leaseMs?: number;
+  baseBackoffMs?: number;
+  maxAttempts?: number;
+};
 
 export class WhatsAppOutboundError extends Error {
   constructor(
@@ -94,23 +118,22 @@ export async function sendPreparedWhatsAppOutbound(
   db: DbClient,
   actorId: string,
   input: z.input<typeof whatsappOutboundRequestSchema>,
-  dependencies: {
-    adapter: WhatsAppTwilioOutboundAdapter;
-    evaluatePolicy: WhatsAppOutboundPolicyEvaluator;
-  },
+  dependencies: WhatsAppOutboundDependencies,
+  options: WhatsAppOutboundAttemptOptions = {},
 ) {
   const parsed = whatsappOutboundRequestSchema.parse(input);
+  const occurredAt = (options.now ?? new Date(nowIso())).toISOString();
+  const maxAttempts = boundedPositiveInteger(
+    options.maxAttempts,
+    defaultMaxAttempts,
+    10,
+  );
   const prepared = await withTenantDbTransaction(
     db,
     parsed.tenantId,
     actorId,
     async (transaction) => {
-      await assertTenantAccess(
-        transaction,
-        actorId,
-        parsed.tenantId,
-        outboundRoles,
-      );
+      await assertOutboundAccess(transaction, actorId, parsed.tenantId);
       const requestFingerprint = hashToken(
         JSON.stringify([
           "whatsapp_twilio",
@@ -128,11 +151,11 @@ export async function sendPreparedWhatsAppOutbound(
       );
       if (existing) {
         assertMatchingFingerprint(existing, requestFingerprint);
-        return { row: existing, replayed: true as const, request: null };
+        return existing;
       }
 
       const context = await findWhatsAppOutboundContext(transaction, parsed);
-      assertValidContext(context);
+      assertValidContext(context, false);
       const reservation = await reserveWhatsAppOutboundDelivery(transaction, {
         id: id("channel_delivery"),
         tenantId: parsed.tenantId,
@@ -142,63 +165,132 @@ export async function sendPreparedWhatsAppOutbound(
         idempotencyKey: parsed.idempotencyKey,
         requestFingerprint,
         actorId,
-        occurredAt: nowIso(),
+        occurredAt,
+        maxAttempts,
       });
       if (!reservation.row) throw deliveryNotFound();
       assertMatchingFingerprint(reservation.row, requestFingerprint);
-      if (reservation.replayed) {
-        return { row: reservation.row, replayed: true as const, request: null };
+      if (!reservation.replayed) {
+        await recordAuditLog(transaction, {
+          tenantId: parsed.tenantId,
+          actorId,
+          action: "channel.whatsapp_outbound_reserved",
+          targetType: "channel_provider_delivery",
+          targetId: reservation.row.id,
+          metadata: {
+            provider: "whatsapp_twilio",
+            messageId: parsed.messageId,
+            transportState: dependencies.adapter.manifest.state,
+            contentStoredInAudit: false,
+          },
+        });
+      }
+      return reservation.row;
+    },
+  );
+
+  return attemptPreparedWhatsAppOutboundDelivery(
+    db,
+    actorId,
+    { tenantId: parsed.tenantId, deliveryId: prepared.id },
+    dependencies,
+    options,
+  );
+}
+
+export async function attemptPreparedWhatsAppOutboundDelivery(
+  db: DbClient,
+  actorId: string,
+  input: z.input<typeof whatsappOutboundAttemptSchema>,
+  dependencies: WhatsAppOutboundDependencies,
+  options: WhatsAppOutboundAttemptOptions = {},
+) {
+  const parsed = whatsappOutboundAttemptSchema.parse(input);
+  const attemptedAt = options.now ?? new Date(nowIso());
+  const attemptedAtIso = attemptedAt.toISOString();
+  const leaseMs = boundedPositiveInteger(options.leaseMs, defaultLeaseMs, 600_000);
+  const leaseId = id("channel_delivery_lease");
+  const leaseExpiresAt = new Date(attemptedAt.getTime() + leaseMs).toISOString();
+
+  const prepared = await withTenantDbTransaction(
+    db,
+    parsed.tenantId,
+    actorId,
+    async (transaction) => {
+      await assertOutboundAccess(transaction, actorId, parsed.tenantId);
+      const beforeClaim = await findWhatsAppOutboundDeliveryById(transaction, {
+        tenantId: parsed.tenantId,
+        deliveryId: parsed.deliveryId,
+      });
+      if (!beforeClaim) throw deliveryNotFound();
+      const claimed = await claimWhatsAppOutboundDeliveryAttempt(transaction, {
+        tenantId: parsed.tenantId,
+        deliveryId: parsed.deliveryId,
+        leaseId,
+        attemptedAt: attemptedAtIso,
+        leaseExpiresAt,
+      });
+      if (!claimed) {
+        return { row: beforeClaim, replayed: true as const, request: null };
       }
 
-      await recordAuditLog(transaction, {
-        tenantId: parsed.tenantId,
+      await recordAttemptAudit(
+        transaction,
         actorId,
-        action: "channel.whatsapp_outbound_reserved",
-        targetType: "channel_provider_delivery",
-        targetId: reservation.row.id,
-        metadata: {
-          provider: "whatsapp_twilio",
-          messageId: parsed.messageId,
-          transportState: dependencies.adapter.manifest.state,
-          contentStoredInAudit: false,
-        },
+        claimed,
+        dependencies.adapter.manifest.state,
+      );
+      const context = await findWhatsAppOutboundContext(transaction, {
+        tenantId: claimed.tenant_id,
+        endpointId: claimed.endpoint_id,
+        messageId: claimed.message_id,
+        channelIdentityId: claimed.channel_identity_id,
       });
+      if (!isValidContext(context, claimed.status === "failed")) {
+        const invalid = await finalizeClaimedWhatsAppOutboundDelivery(
+          transaction,
+          terminalOutcome(claimed, leaseId, attemptedAtIso, "validation"),
+        );
+        if (!invalid) throw deliveryNotFound();
+        await updateWhatsAppOutboundMessageState(transaction, {
+          tenantId: invalid.tenant_id,
+          messageId: invalid.message_id,
+          status: "failed",
+          safeErrorCode: invalid.safe_error_code,
+        });
+        await recordCompletionAudit(transaction, actorId, invalid);
+        return { row: invalid, replayed: false as const, request: null };
+      }
 
       const policy = await evaluatePolicySafely(dependencies.evaluatePolicy, {
-        tenantId: parsed.tenantId,
+        tenantId: claimed.tenant_id,
         actorId,
-        endpointId: parsed.endpointId,
-        messageId: parsed.messageId,
-        channelIdentityId: parsed.channelIdentityId,
+        endpointId: claimed.endpoint_id,
+        messageId: claimed.message_id,
+        channelIdentityId: claimed.channel_identity_id,
         messageKind: context.message_kind,
         providerState: dependencies.adapter.manifest.state,
       });
       if (!policy.allowed) {
-        const denied = await finalizeWhatsAppOutboundDelivery(transaction, {
-          tenantId: parsed.tenantId,
-          deliveryId: reservation.row.id,
-          status: "denied",
-          externalMessageId: null,
-          failureClassification: "policy",
-          safeErrorCode: "policy_denied",
-          retryable: false,
-          updatedAt: nowIso(),
-        });
+        const denied = await finalizeClaimedWhatsAppOutboundDelivery(
+          transaction,
+          terminalOutcome(claimed, leaseId, attemptedAtIso, "policy"),
+        );
         if (!denied) throw deliveryNotFound();
-        await requireMessageStateUpdate(transaction, denied);
+        await requireMessageStateUpdate(transaction, denied, "failed");
         await recordCompletionAudit(transaction, actorId, denied, policy.code);
         return { row: denied, replayed: false as const, request: null };
       }
 
       return {
-        row: reservation.row,
+        row: claimed,
         replayed: false as const,
         request: {
-          tenantId: parsed.tenantId,
-          channelIdentityId: parsed.channelIdentityId,
-          messageId: parsed.messageId,
-          idempotencyKey: parsed.idempotencyKey,
-          text: context.text_content!,
+          tenantId: claimed.tenant_id,
+          channelIdentityId: claimed.channel_identity_id,
+          messageId: claimed.message_id,
+          idempotencyKey: claimed.idempotency_key,
+          text: context.text_content,
         },
       };
     },
@@ -208,42 +300,80 @@ export async function sendPreparedWhatsAppOutbound(
     return mapDelivery(prepared.row, prepared.replayed);
   }
 
-  const outcome = await dependencies.adapter.sendMessage(prepared.request);
-  const normalized = normalizeDeliveryOutcome(outcome);
+  const outcome = normalizeDeliveryOutcome(
+    await dependencies.adapter.sendMessage(prepared.request),
+  );
+  const baseBackoffMs = boundedPositiveInteger(
+    options.baseBackoffMs,
+    defaultBaseBackoffMs,
+    60_000,
+  );
+  const completedAt = options.now ?? new Date(nowIso());
+  const completedAtIso = completedAt.toISOString();
+  const retryScheduled =
+    outcome.retryable && prepared.row.attempts < prepared.row.max_attempts;
+  const nextAttemptAt = retryScheduled
+    ? new Date(
+        completedAt.getTime() +
+          baseBackoffMs * 2 ** Math.max(0, prepared.row.attempts - 1),
+      ).toISOString()
+    : completedAtIso;
+  const finalOutcome = retryScheduled
+    ? outcome
+    : outcome.retryable
+      ? {
+          ...outcome,
+          retryable: false,
+          safeErrorCode: "max_attempts_exceeded",
+        }
+      : outcome;
 
   return withTenantDbTransaction(
     db,
     parsed.tenantId,
     actorId,
     async (transaction) => {
-      await assertTenantAccess(
+      await assertOutboundAccess(transaction, actorId, parsed.tenantId);
+      const finalized = await finalizeClaimedWhatsAppOutboundDelivery(
         transaction,
-        actorId,
-        parsed.tenantId,
-        outboundRoles,
+        {
+          tenantId: parsed.tenantId,
+          deliveryId: prepared.row.id,
+          ...finalOutcome,
+          nextAttemptAt,
+          leaseId,
+          updatedAt: completedAtIso,
+        },
       );
-      const finalized = await finalizeWhatsAppOutboundDelivery(transaction, {
-        tenantId: parsed.tenantId,
-        deliveryId: prepared.row.id,
-        ...normalized,
-        updatedAt: nowIso(),
-      });
       if (!finalized) {
-        const replay = await findWhatsAppOutboundDeliveryByIdempotency(
-          transaction,
-          {
-            tenantId: parsed.tenantId,
-            idempotencyKey: parsed.idempotencyKey,
-          },
-        );
+        const replay = await findWhatsAppOutboundDeliveryById(transaction, {
+          tenantId: parsed.tenantId,
+          deliveryId: prepared.row.id,
+        });
         if (!replay) throw deliveryNotFound();
         return mapDelivery(replay, true);
       }
-      await requireMessageStateUpdate(transaction, finalized);
+
+      const messageStatus = retryScheduled
+        ? "pending"
+        : finalized.status === "accepted"
+          ? "sent"
+          : finalized.status === "delivered"
+            ? "delivered"
+            : "failed";
+      await requireMessageStateUpdate(transaction, finalized, messageStatus);
       await recordCompletionAudit(transaction, actorId, finalized);
       return mapDelivery(finalized, false);
     },
   );
+}
+
+async function assertOutboundAccess(
+  db: DbClient,
+  actorId: string,
+  tenantId: string,
+) {
+  await assertTenantAccess(db, actorId, tenantId, outboundRoles);
 }
 
 async function evaluatePolicySafely(
@@ -259,6 +389,7 @@ async function evaluatePolicySafely(
 
 function assertValidContext(
   context: WhatsAppOutboundContextRow | null,
+  allowFailedMessage: boolean,
 ): asserts context is WhatsAppOutboundContextRow & { text_content: string } {
   if (!context) {
     throw new WhatsAppOutboundError(
@@ -266,21 +397,30 @@ function assertValidContext(
       "Le contexte de livraison WhatsApp est introuvable.",
     );
   }
-  if (
-    context.endpoint_status !== "active" ||
-    context.message_direction !== "outbound" ||
-    context.message_status !== "pending" ||
-    !context.text_content ||
-    context.identity_adapter_key !== "whatsapp-twilio" ||
-    context.identity_state !== "active" ||
-    context.identity_role !== "customer" ||
-    !Boolean(context.target_in_thread)
-  ) {
+  if (!isValidContext(context, allowFailedMessage)) {
     throw new WhatsAppOutboundError(
       "whatsapp_outbound_context_invalid",
       "Le contexte de livraison WhatsApp n'est pas autorisé.",
     );
   }
+}
+
+function isValidContext(
+  context: WhatsAppOutboundContextRow | null,
+  allowFailedMessage: boolean,
+): context is WhatsAppOutboundContextRow & { text_content: string } {
+  return Boolean(
+    context &&
+      context.endpoint_status === "active" &&
+      context.message_direction === "outbound" &&
+      (context.message_status === "pending" ||
+        (allowFailedMessage && context.message_status === "failed")) &&
+      context.text_content &&
+      context.identity_adapter_key === "whatsapp-twilio" &&
+      context.identity_state === "active" &&
+      context.identity_role === "customer" &&
+      context.target_in_thread,
+  );
 }
 
 function normalizeDeliveryOutcome(outcome: ChannelDeliveryResult): {
@@ -316,6 +456,50 @@ function normalizeDeliveryOutcome(outcome: ChannelDeliveryResult): {
   };
 }
 
+function terminalOutcome(
+  delivery: ChannelProviderDeliveryRow,
+  leaseId: string,
+  updatedAt: string,
+  classification: "policy" | "validation",
+) {
+  return {
+    tenantId: delivery.tenant_id,
+    deliveryId: delivery.id,
+    status: classification === "policy" ? ("denied" as const) : ("failed" as const),
+    externalMessageId: null,
+    failureClassification: classification,
+    safeErrorCode:
+      classification === "policy" ? "policy_denied" : "validation_failed",
+    retryable: false,
+    nextAttemptAt: updatedAt,
+    leaseId,
+    updatedAt,
+  };
+}
+
+async function recordAttemptAudit(
+  db: DbClient,
+  actorId: string,
+  delivery: ChannelProviderDeliveryRow,
+  transportState: WhatsAppTwilioOutboundAdapter["manifest"]["state"],
+) {
+  await recordAuditLog(db, {
+    tenantId: delivery.tenant_id,
+    actorId,
+    action: "channel.whatsapp_outbound_attempted",
+    targetType: "channel_provider_delivery",
+    targetId: delivery.id,
+    metadata: {
+      provider: delivery.provider,
+      attempt: delivery.attempts,
+      maxAttempts: delivery.max_attempts,
+      transportState,
+      contentStoredInAudit: false,
+      providerReferenceStoredInAudit: false,
+    },
+  });
+}
+
 async function recordCompletionAudit(
   db: DbClient,
   actorId: string,
@@ -325,9 +509,11 @@ async function recordCompletionAudit(
   const action =
     delivery.status === "accepted" || delivery.status === "delivered"
       ? "channel.whatsapp_outbound_succeeded"
-      : delivery.status === "denied"
-        ? "channel.whatsapp_outbound_denied"
-        : "channel.whatsapp_outbound_failed";
+      : delivery.retryable
+        ? "channel.whatsapp_outbound_retry_scheduled"
+        : delivery.status === "denied"
+          ? "channel.whatsapp_outbound_denied"
+          : "channel.whatsapp_outbound_failed";
   await recordAuditLog(db, {
     tenantId: delivery.tenant_id,
     actorId,
@@ -339,6 +525,8 @@ async function recordCompletionAudit(
       status: delivery.status,
       classification: delivery.failure_classification,
       retryable: Boolean(delivery.retryable),
+      attempt: delivery.attempts,
+      maxAttempts: delivery.max_attempts,
       ...(policyCode ? { policyCode } : {}),
       contentStoredInAudit: false,
       providerReferenceStoredInAudit: false,
@@ -353,6 +541,9 @@ function mapDelivery(row: ChannelProviderDeliveryRow, replayed: boolean) {
     classification: row.failure_classification,
     safeErrorCode: row.safe_error_code,
     retryable: row.retryable === null ? null : Boolean(row.retryable),
+    attempts: Number(row.attempts),
+    maxAttempts: Number(row.max_attempts),
+    nextAttemptAt: row.next_attempt_at,
     idempotentReplay: replayed,
   };
 }
@@ -372,13 +563,8 @@ function assertMatchingFingerprint(
 async function requireMessageStateUpdate(
   db: DbClient,
   delivery: ChannelProviderDeliveryRow,
+  status: "pending" | "sent" | "delivered" | "failed",
 ) {
-  const status =
-    delivery.status === "accepted"
-      ? "sent"
-      : delivery.status === "delivered"
-        ? "delivered"
-        : "failed";
   const updated = await updateWhatsAppOutboundMessageState(db, {
     tenantId: delivery.tenant_id,
     messageId: delivery.message_id,
@@ -391,6 +577,16 @@ async function requireMessageStateUpdate(
       "Le message WhatsApp ne peut pas être réconcilié.",
     );
   }
+}
+
+function boundedPositiveInteger(
+  value: number | undefined,
+  fallback: number,
+  maximum: number,
+) {
+  return Number.isInteger(value) && value !== undefined && value > 0 && value <= maximum
+    ? value
+    : fallback;
 }
 
 function deliveryNotFound() {

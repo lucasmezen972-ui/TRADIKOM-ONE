@@ -24,6 +24,10 @@ describe("migrations des livraisons fournisseur OS-5", () => {
         "os5ChannelProviderDeliveriesRlsMigrationSql",
         "../src/db/migrations/0071_os5_channel_provider_deliveries_rls.sql",
       ],
+      [
+        "os5ChannelProviderDeliveryRetriesMigrationSql",
+        "../src/db/migrations/0072_os5_channel_provider_delivery_retries.sql",
+      ],
     ] as const;
 
     for (const [constant, mirrorPath] of definitions) {
@@ -33,6 +37,9 @@ describe("migrations des livraisons fournisseur OS-5", () => {
     expect(getMigrationIds()).toContain("076_os5_channel_provider_deliveries");
     expect(getMigrationIds(true)).toContain(
       "077_os5_channel_provider_deliveries_rls",
+    );
+    expect(getMigrationIds()).toContain(
+      "078_os5_channel_provider_delivery_retries",
     );
   });
 
@@ -69,19 +76,40 @@ describe("migrations des livraisons fournisseur OS-5", () => {
     ).rejects.toThrow(/immutable/i);
     await expect(
       db.query(
+        `update channel_provider_deliveries
+         set status = 'failed', failure_classification = 'permanent',
+             safe_error_code = 'permanent_provider_failure', retryable = true,
+             updated_at = $1
+         where tenant_id = 'tenant_a' and id = 'delivery_a'`,
+        [timestamp],
+      ),
+    ).rejects.toThrow(/constraint|violates/i);
+    await expect(
+      db.query(
         `insert into channel_provider_deliveries (
            id, tenant_id, provider, endpoint_id, message_id,
            channel_identity_id, idempotency_key, request_fingerprint, status,
            external_message_id, failure_classification, safe_error_code,
-           retryable, created_by, created_at, updated_at
+           retryable, attempts, max_attempts, next_attempt_at,
+           last_attempted_at, lease_id, lease_expires_at,
+           created_by, created_at, updated_at
          ) values (
            'delivery_cross', 'tenant_a', 'whatsapp_twilio', 'endpoint_b',
            'message_a', 'identity_a', 'delivery-cross-tenant', $1, 'reserved',
-           null, null, null, null, 'user_a', $2, $2
+           null, null, null, null, 0, 3, $2, null, null, null,
+           'user_a', $2, $2
          )`,
         ["c".repeat(64), timestamp],
       ),
     ).rejects.toThrow(/foreign key|violates/i);
+    await expect(
+      db.query(
+        `update channel_provider_deliveries
+         set max_attempts = 4, updated_at = $1
+         where tenant_id = 'tenant_a' and id = 'delivery_a'`,
+        [timestamp],
+      ),
+    ).rejects.toThrow(/immutable/i);
   });
 });
 
@@ -165,11 +193,12 @@ async function seedDelivery(db: TestDb, suffix: "a" | "b") {
     `insert into channel_provider_deliveries (
        id, tenant_id, provider, endpoint_id, message_id, channel_identity_id,
        idempotency_key, request_fingerprint, status, external_message_id,
-       failure_classification, safe_error_code, retryable, created_by,
-       created_at, updated_at
+       failure_classification, safe_error_code, retryable, attempts,
+       max_attempts, next_attempt_at, last_attempted_at, lease_id,
+       lease_expires_at, created_by, created_at, updated_at
      ) values (
        $1, $2, 'whatsapp_twilio', $3, $4, $5, $6, $7, 'reserved', null,
-       null, null, null, $8, $9, $9
+       null, null, null, 0, 3, $9, null, null, null, $8, $9, $9
      )`,
     [
       `delivery_${suffix}`,

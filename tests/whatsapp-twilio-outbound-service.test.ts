@@ -97,6 +97,7 @@ describe("service sortant WhatsApp/Twilio tenant-aware", () => {
       [setup.tenant.id],
     );
     expect(audits.rows.map((row) => row.action).sort()).toEqual([
+      "channel.whatsapp_outbound_attempted",
       "channel.whatsapp_outbound_reserved",
       "channel.whatsapp_outbound_succeeded",
     ]);
