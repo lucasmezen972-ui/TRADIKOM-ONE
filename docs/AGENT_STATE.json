@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T23:24:00.000Z",
+  "updatedAt": "2026-08-09T00:02:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "d9afa82a55f7a60ce6b0f8a48476d5c2b97ca3b2",
+  "lastCommit": "720db0efc1811add5ea897ed797d727c3887aa85",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : la readiness WhatsApp/Twilio et la composition d'activation fail-closed sont livrées. Les états disabled, not_configured, awaiting_human_auth et degraded sont distingués sans secret ni réseau; le registre préparé reste incapable de produire ready. La prochaine tranche non bloquée doit rendre la preuve d'autorisation humaine durable, tenant-aware et auditée avant toute future promotion explicite.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : l'autorisation WhatsApp/Twilio est désormais durable, tenant-aware, expirante, révocable, idempotente et auditée. La readiness ne reçoit plus de preuve libre et charge uniquement une référence interne liée au tenant et à l'endpoint; le registre préparé reste incapable de produire ready. La prochaine tranche non bloquée doit rendre le plafond d'un ou deux messages durablement consommable et le lier à chaque livraison avant toute future promotion explicite.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Migrations additive et RLS avec miroir SQL pour les autorisations d'activation; repository et service bornés sous src/modules/channels avec membership owner/administrator, idempotence, expiration et audit sûr; readiness asynchrone alimentée par une référence interne et non par une preuve navigateur libre. Tests migration vide/upgrade et parité, PostgreSQL restricted-role, service multi-tenant, replay, révocation monotone, audit sans données sensibles, refus provider/tenant/expiration et zéro secret manager, keyring, client ou réseau. Le registre doit conserver transportEnabled false et l'état maximal degraded. Tests ciblés puis régression canaux, audit, lint, typecheck, suite complète, build, continuity-check et CI/Playwright doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Ajouter une autorisation d'activation WhatsApp/Twilio durable, tenant-aware, expirante et auditée, émise uniquement par un propriétaire ou administrateur après le checkpoint humain; la readiness devra la charger par référence interne au lieu d'accepter une preuve libre, sans activer le registre ni appeler Twilio.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-activation-authorization-service.ts",
+  "nextAction": "Ajouter une consommation durable et atomique du budget d'autorisation WhatsApp/Twilio : chaque livraison de preuve devra réserver exactement une unité sous tenant, endpoint et authorization_id, refuser le dépassement de max_messages et rejouer sans double consommation avec la clé d'idempotence existante; ne toujours pas activer le registre ni appeler Twilio.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-activation-budget-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -259,7 +259,21 @@
     "bootstrap keyring strictement serveur depuis versions et references opaques injectees, sans fallback",
     "62 tests cibles provider/securite verts, lint, typecheck, audit production, build et continuity-check verts",
     "pnpm test local borne apres blocage Vitest silencieux sans assertion en echec; CI PostgreSQL requise",
-    "commit fonctionnel 423c9d1 pousse; continuite 31259897728 et CI PostgreSQL 31259897751 entierement vertes avec 111 fichiers/454 tests et 20 Playwright"
+    "commit fonctionnel 423c9d1 pousse; continuite 31259897728 et CI PostgreSQL 31259897751 entierement vertes avec 111 fichiers/454 tests et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant autorisation durable OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "pnpm agent:continuity-check initial ready, zero erreur et zero avertissement",
+    "verification GitHub PR #11 et runs 31280628366 / 31280628367 verts sur d9afa82",
+    "alignement prompt maitre actualise avant code pour l'autorisation durable tenant-aware",
+    "migrations runtime 083/084 et miroirs SQL 0077/0078 pour autorisations d'activation immuables, revocables et RLS",
+    "service owner/administrator avec idempotence hashee, expiration, revocation monotone, audit sur et loader systeme tenant/endpoint-scoped",
+    "readiness asynchrone par authorization_id interne; refus absence, autre tenant, autre endpoint, expiration, revocation et loader indisponible sans resolver, client ou reseau",
+    "21 tests cibles puis 24 fichiers/148 tests canaux dont 145 verts et 3 PostgreSQL ignores sans DATABASE_URL",
+    "suite complete mono-worker 110 fichiers/459 tests verts, 5 fichiers et 16 tests ignores sans PostgreSQL",
+    "audit production sans vulnerabilite connue, lint, typecheck, build production et diff check verts",
+    "Playwright local non probant par abort PGlite; CI PostgreSQL/Playwright requise sans changement d'interface",
+    "commit fonctionnel 720db0e cree sans activation externe"
   ],
   "lastValidation": [
     {
@@ -797,6 +811,30 @@
     {
       "command": "CI et continuité sur 1bdc5c4",
       "status": "passed_ci_31279987333_audit_migrations_backup_restore_rls_lint_typecheck_112_files_463_tests_build_20_playwright_and_continuity_31279987339"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant autorisation durable OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean_ci_31280628366_continuity_31280628367"
+    },
+    {
+      "command": "tests migrations, service et readiness des autorisations d'activation",
+      "status": "passed_3_files_21_tests_empty_upgrade_mirror_tenant_idempotency_revocation_safe_audit_fail_closed"
+    },
+    {
+      "command": "régression canaux et WhatsApp",
+      "status": "passed_24_files_145_tests_3_postgres_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm vitest run --no-file-parallelism --maxWorkers=1",
+      "status": "passed_110_files_459_tests_5_files_and_16_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_and_diff"
+    },
+    {
+      "command": "pnpm test parallèle et Playwright local PGlite",
+      "status": "blocked_by_known_local_pglite_stall_and_runtime_abort_without_failed_business_assertion_ci_postgres_authoritative"
     }
   ],
   "humanBlockers": [

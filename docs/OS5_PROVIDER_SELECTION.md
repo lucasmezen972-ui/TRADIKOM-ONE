@@ -74,7 +74,7 @@ Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
 7. Confirmer l'envoi d'au plus deux messages de preuve vers le seul téléphone de test, puis la désactivation de l'endpoint et la révocation du tunnel à la fin.
 ```
 
-Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant, son worker durable, les callbacks de statut, le coffre, les résolveurs éphémères, le bootstrap keyring, la fabrique officielle, la readiness et la composition fail-closed sont maintenant prouvés avec doubles. Le travail non bloqué suivant est la persistance tenant-aware et auditée de l'autorisation d'activation, sans activer le provider runtime ni effectuer d'appel réseau réel.
+Sans cette autorisation humaine externe, aucun compte, credential, tunnel, webhook fournisseur ou message réel ne doit être créé. Le transport sortant, son worker durable, les callbacks de statut, le coffre, les résolveurs éphémères, le bootstrap keyring, la fabrique officielle, la readiness, la composition fail-closed et la preuve d'autorisation persistée sont maintenant prouvés avec doubles. Le travail non bloqué suivant est la consommation durable et atomique du plafond d'un ou deux messages, sans activer le provider runtime ni effectuer d'appel réseau réel.
 
 ## Classification honnête
 
@@ -90,6 +90,6 @@ Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, 
 
 ## Écarts restants avant activation
 
-- persister une autorisation d'activation tenant-aware, expirante et auditée, émise par un propriétaire ou administrateur après le checkpoint humain;
+- consommer durablement le plafond d'autorisation par livraison et refuser atomiquement tout dépassement ou replay double;
 - ajouter la preuve Playwright web + WhatsApp sandbox, plus les pires cas de la matrice page 69;
 - obtenir l'intervention humaine ci-dessus avant toute mutation externe.
