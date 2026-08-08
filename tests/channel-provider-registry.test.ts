@@ -42,6 +42,8 @@ describe("registre des canaux fournisseurs OS-2", () => {
       missingEnvironment: [
         "TWILIO_AUTH_TOKEN",
         "TWILIO_WHATSAPP_SENDER",
+        "CHANNEL_PROVIDER_SECRET_ACTIVE_KEY_VERSION",
+        "CHANNEL_PROVIDER_SECRET_KEY_REFERENCES",
         "TWILIO_WHATSAPP_WEBHOOK_URL",
         "TWILIO_WHATSAPP_STATUS_CALLBACK_URL",
       ],
@@ -55,6 +57,9 @@ describe("registre des canaux fournisseurs OS-2", () => {
       TWILIO_ACCOUNT_SID: "AC_test",
       TWILIO_AUTH_TOKEN: "token_test",
       TWILIO_WHATSAPP_SENDER: "whatsapp:+15005550006",
+      CHANNEL_PROVIDER_SECRET_ACTIVE_KEY_VERSION: "test-v1",
+      CHANNEL_PROVIDER_SECRET_KEY_REFERENCES:
+        '[{"version":"test-v1","reference":"test-secret://channel-key/test-v1"}]',
       TWILIO_WHATSAPP_WEBHOOK_URL:
         "https://app.example.test/api/webhooks/twilio/whatsapp",
       TWILIO_WHATSAPP_STATUS_CALLBACK_URL:
