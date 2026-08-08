@@ -1,36 +1,36 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T04:59:13.000Z",
+  "updatedAt": "2026-08-08T05:38:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "d2f920efb3192d1c556494f0473ffc089fd111f6",
-  "status": "completed",
-  "currentPhase": "OS-4",
-  "currentObjective": "OS-4 clôturé : plan confirmé, exécution multi-step, snapshot immuable, reprise worker, idempotence, convergence automatique dans le fil et signal humain visible sont prouvés sans fournisseur réel.",
+  "lastCommit": "3109221f6e7018e93597c3fa88696801417f0a9d",
+  "status": "in_progress",
+  "currentPhase": "OS-5",
+  "currentObjective": "OS-5 ouvert sans activation externe : WhatsApp via Twilio Sandbox est le candidat unique documenté; le prochain checkpoint implémente le transport sortant fail-closed avec doubles avant toute autorisation fournisseur.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 17, 18, 28, 31, 32, 33, 35, 36, 46, 48, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 13, 14, 15, 26, 27, 28, 29, 30, 31, 32, 33, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
-        "12-13 Planification structurée et workflows durables",
-        "23 Observabilité et classification sûre des erreurs",
+        "8-10 Identité omnicanale, adaptateurs et Connector Fabric",
+        "21-25 Environnements, gouvernance, observabilité et comptes fournisseurs",
         "26-28 Roadmap, Definition of Done et reprise",
-        "30-31 Shadow mode, compensation et conséquences irréversibles",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
+        "58-62 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Poursuivre OS-4 dans l'ordre de la page 48 en finalisant automatiquement, après une reprise worker, le plan conversationnel confirmé : réconcilier chaque étape avec sa preuve workflow, publier exactement un résultat miroir dans le fil web et canal test, et permettre un retry humain idempotent depuis l'expérience Conversation sans second clic d'exécution.",
-      "evidenceExpected": "Un test vertical part d'un vrai plan Conversation approuvé, provoque un échec après la première capacité, demande deux fois le retry depuis le service conversationnel, laisse le worker reprendre la seconde étape depuis le snapshot puis prouve : plan exécuté, deux étapes réconciliées, première capacité non rejouée, un seul message résultat et ses deux routes, un seul audit de finalisation sans contenu métier, aucun second appel à executeConversationActionPlan et aucun réseau. L'interface française expose l'état de mission et le retry; lint, typecheck, tests, build, Playwright pertinent et continuité restent verts."
+      "requirement": "Ouvrir OS-5 selon la roadmap page 31 par un audit comparatif repository-grounded de Resend, WhatsApp/Twilio, Teams et Slack, puis sélectionner un seul provider capable de prouver une conversation réelle en sandbox ou essai officiel à coût nul. Le choix doit minimiser autorisations et intervention humaine, conserver les états disabled/not_configured/awaiting_human_auth avant consentement, et ne jamais présenter une préparation ou un mock comme un provider actif.",
+      "evidenceExpected": "Un rapport versionné confronte les quatre frontières au code et aux documentations officielles actuelles, recommande WhatsApp via Twilio Sandbox avec justification conversation-first, décrit coût et limites d'essai, scopes/consentements, webhook, idempotence, audit, désactivation et écarts de transport sortant. Le rapport fournit l'intervention humaine minimale exacte mais ne crée aucun compte, credential, endpoint, tunnel, consentement ni dépense. Le registre reste fail-closed, le PDF garde son SHA-256 et ses 71 pages, la CI du head est vérifiée et le contrôle de continuité reste vert."
     }
   },
-  "nextAction": "Ouvrir OS-5 par un audit comparatif des frontières Resend, WhatsApp/Twilio, Teams et Slack déjà préparées, puis sélectionner un seul premier provider sandbox selon preuve conversationnelle, coût nul et intervention humaine minimale; ne rien activer sans clé ou consentement officiel.",
-  "nextFile": "src/modules/channels/provider-registry.ts",
+  "nextAction": "Implémenter le transport WhatsApp sortant derrière ChannelAdapter, policy, idempotence tenant-aware et audit sûr avec doubles uniquement; conserver le provider disabled et ne lire aucun credential réel.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-outbound.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -190,7 +190,16 @@
     "build production local vert avec configuration CI factice",
     "parcours Chromium mobile compte vers conversation, deux etapes reussies, resultat visible, zero debordement",
     "correctifs transitifs brace-expansion et nanoid; audit production sans vulnerabilite connue",
-    "commits f9c66dd et d2f920e pousses; CI 31240188121 et continuite 31240188120 entierement vertes"
+    "commits f9c66dd et d2f920e pousses; CI 31240188121 et continuite 31240188120 entierement vertes",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-15, 26-30 et 64-68",
+    "audit comparatif repository-grounded Resend, WhatsApp/Twilio, Teams et Slack",
+    "consultation des documentations officielles actuelles Twilio, Resend, Slack et Microsoft",
+    "selection WhatsApp via Twilio Sandbox et checkpoint humain exact sans activation",
+    "pnpm lint, pnpm typecheck et pnpm test : 96 fichiers verts, 361 tests verts, 13 ignores",
+    "build production local vert avec configuration CI factice",
+    "CI 31240778430 et continuite 31240778429 entierement vertes sur 3109221"
   ],
   "lastValidation": [
     {
@@ -552,10 +561,24 @@
     {
       "command": "CI 31240188121 et continuité 31240188120 sur d2f920e",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_13_skipped_build_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître, continuity-check et audit de sélection OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_zero_errors_zero_warnings_single_twilio_candidate_no_external_mutation"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed_96_files_361_tests_13_skipped_lint_typecheck_build_with_ci_placeholders"
+    },
+    {
+      "command": "CI 31240778430 et continuité 31240778429 sur 3109221",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_build_playwright_and_continuity"
     }
   ],
   "humanBlockers": [
-    "Credentials et consentements des fournisseurs réels",
+    "Compte Twilio d'essai, vérification du téléphone et acceptation des conditions Sandbox",
+    "Credentials Twilio, sender Sandbox et endpoint HTTPS temporaire stockés uniquement dans un gestionnaire de secrets",
+    "Autorisation d'au plus deux messages de preuve si les unités gratuites sont visibles",
     "Toute dépense, ressource payante ou dépassement de quota",
     "Fusion, déploiement de production et changement DNS réel"
   ]

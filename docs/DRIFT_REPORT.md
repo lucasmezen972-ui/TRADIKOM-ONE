@@ -2,58 +2,56 @@
 
 - Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
-- PR : brouillon #11, état `CLEAN`
-- Head fonctionnel : `d2f920e`
-- Travail effectué : clôture OS-4 avec convergence automatique de la reprise worker dans la conversation et correction des advisories transitifs bloquant la CI.
+- PR : brouillon #11
+- Head audité : `3109221`
+- Travail effectué : ouverture OS-5 par audit comparatif des quatre frontières préparées et sélection de WhatsApp via Twilio Sandbox, sans activation externe.
 
 ## Impact north star
 
-Une mission interrompue peut désormais être reprise depuis la Conversation par un signal humain idempotent. Le worker repart du snapshot exact, ne rejoue pas la capacité déjà réussie, réconcilie le plan avec les preuves durables puis publie le résultat une seule fois dans le fil web et canal test. L'utilisateur n'a ni second clic d'exécution, ni écran workflow séparé à comprendre.
+La décision privilégie le premier parcours réellement conversationnel : un message WhatsApp signé rejoint le fil canonique web, puis une réponse approuvée repart vers le même téléphone. Resend est plus simple à envoyer mais ne fournit pas encore un fil entrant dans le code; Slack et Teams ajoutent davantage de consentements. La complexité fournisseur reste derrière l'adaptateur et le runtime commun.
 
 ## Alignement prompt maître
 
-- Pages consultées : pages 3-7, 17-18, 28, 31-33, 35-36, 46, 48 et 69-71, relues textuellement et dans le rendu direct du PDF.
-- Exigence servie : clôturer OS-4 selon la page 31 (« plan confirmé, exécution multi-step, reprise, idempotence »), rendre l'état et le signal humain visibles dans la conversation selon la page 18, satisfaire la Definition of Done page 32, le parcours démontrable page 46 et la matrice workflow/Playwright page 69.
-- Preuve obtenue : PDF canonique de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; finalisation atomique commune au chemin synchrone et au worker; test vertical sur vrai plan Conversation avec interruption de la seconde capacité, double retry dédupliqué, reprise à la tentative 2, première capacité exécutée une fois, deux étapes réconciliées, un résultat, deux routes, audits uniques sans contenu métier et aucun réseau; parcours Chromium mobile sans débordement; CI PostgreSQL `31240188121` et continuité `31240188120` vertes.
-- Écarts restants : les anciennes exécutions antérieures au snapshot gardent leur fallback compatible; aucun provider réel ou sandbox n'est encore connecté; Temporal réel n'est pas déployé. Ces écarts relèvent d'OS-5 ou d'une évolution ultérieure, pas du critère OS-4 prouvé.
+- Pages consultées : pages 3-7, 13-15, 26-33, 46, 48 et 64-71, relues textuellement et dans les rendus directs du PDF canonique.
+- Exigence servie : ouvrir OS-5 page 31 avec un seul provider capable d'être activé en sandbox, sans enfreindre l'interdiction des pages 5, 6, 29, 32 et 48 de présenter une préparation comme réelle, d'utiliser un provider sans clé/consentement ou de déployer en production.
+- Preuve obtenue : PDF de 71 pages au SHA-256 exact; audit du registre, des quatre routes, des ingestions et transports; documentation officielle actuelle de Twilio, Resend, Slack et Microsoft; matrice comparative; sélection unique Twilio Sandbox; contrat de preuve web + WhatsApp; checkpoint humain exact; zéro mutation externe.
+- Écarts restants : aucun transport WhatsApp sortant réel, callback de livraison, secret manager provider, sandbox, endpoint public, compte ou message externe. OS-5 reste `in_progress` et ne satisfait pas encore le critère de succès page 31 ni toute la Definition of Done page 32.
 
 ## Classification honnête
 
-- Livré : OS-4 complet, incluant snapshot immuable, reprise worker, signal de retry conversationnel, réconciliation, résultat miroir et audit idempotent.
-- Réel préparé : moteur PostgreSQL/PGlite et frontières Resend, WhatsApp/Twilio, Teams et Slack, toutes fail-closed.
+- Livré : audit comparatif, recommandation unique et bloc de reprise humain.
+- Réel préparé : Resend outbound/livraison et inbound canonique WhatsApp, Teams et Slack, tous fail-closed.
 - Réel connecté : aucun fournisseur.
-- Sandbox : aucune configurée, appelée ou revendiquée.
-- Mock : `tradikom_mock`, deux capacités, compensation, canal test et interruption/reprise simulée.
-- Bloqué humain : comptes fournisseurs, credentials, MFA, consentements OAuth, domaines/endpoints publics, quotas et dépenses.
-- Hors périmètre : OS-6 à OS-8, fusion, déploiement et tout effet externe irréversible.
+- Sandbox : aucune configurée ou appelée.
+- Mock : événements provider en tests, canal test et `tradikom_mock`.
+- Bloqué humain : compte Twilio, téléphone, conditions Sandbox, credentials, URL HTTPS et autorisation des messages gratuits.
+- Hors périmètre : sender WhatsApp production, WABA, paiement, Meta direct, activation des trois autres providers, OS-6 à OS-8, fusion et déploiement.
 
-## Modules concernés
+## Modules et documents concernés
 
-- `src/modules/orchestrator/service.ts` et `repository.ts` : finalisation atomique, réconciliation et retry tenant-aware;
-- `src/modules/workflows/worker.ts` : convergence après `workflow.resume`;
-- `src/modules/channels/runtime.ts` et `src/app/(app)/conversation/*` : signal et états visibles en français;
-- `tests/orchestrator-service.test.ts` et `tests/e2e/vertical.spec.ts` : preuve verticale et visibilité mobile;
-- `pnpm-workspace.yaml` et `pnpm-lock.yaml` : versions transitives corrigées;
+- `src/modules/channels/provider-registry.ts` : quatre états préparés, aucun chemin vers `ready`;
+- `src/modules/channels/whatsapp-twilio-*` et `provider-endpoints-*` : signature, projection, mapping tenant et replay déjà livrés;
+- `src/modules/email/*`, routes Teams et Slack : base de comparaison repository-grounded;
+- `docs/OS5_PROVIDER_SELECTION.md` : décision, preuves, sources, checkpoint humain et écarts;
 - les quatre fichiers de continuité.
 
 ## Risques
 
-- le worker et la finalisation utilisent deux transactions successives; si la seconde échoue, le retry de l'événement terminal relance uniquement la finalisation idempotente, comportement couvert par la sélection du `runId` dans le payload;
-- l'interface de retry n'est visible que pour une mission réellement `failed`; elle ne fabrique aucun état d'échec et le parcours navigateur heureux ne simule pas une panne;
-- `exceljs` conserve des sous-dépendances historiques dépréciées, mais les versions vulnérables de `brace-expansion` sont remplacées par des backports compatibles et l'audit actif est propre;
-- aucun provider ne doit passer à `ready` tant qu'OS-5 n'a pas prouvé sandbox/réel, clés, consentement, webhook, santé et désactivation.
+- les unités d'essai Twilio ne sont pas une gratuité illimitée; tout envoi doit être refusé si le solde gratuit n'est pas explicitement visible;
+- la Sandbox impose un `join`, un téléphone autorisé, des templates hors fenêtre de service et un endpoint HTTPS; ces contraintes doivent rester visibles dans la preuve;
+- le transport sortant absent ne doit pas être contourné par un appel direct depuis React ou une server action;
+- aucun SID, token, numéro, texte métier ou payload brut ne doit entrer dans les audits ou logs;
+- le futur test sandbox reste tributaire d'un endpoint HTTPS temporaire et doit inclure sa révocation au handoff.
 
 ## Validations
 
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement;
-- prompt maître : empreinte exacte, 71 pages, pages cœur et OS-4 relues textuellement et visuellement;
-- ciblé : 10 tests orchestrateur/reprise verts, ESLint ciblé et typecheck;
-- local complet : lint, 96 fichiers / 361 tests verts / 13 ignores, build production;
-- sécurité : `pnpm audit --prod --audit-level high` retourne « No known vulnerabilities found » après les overrides exacts;
-- navigateur local : parcours compte → organisation → web → canal test → plan → validation → résultat mock à 390x844, deux étapes « Réussie », zéro débordement horizontal;
-- CI `31240188121` : audit, migrations PostgreSQL, upgrade, backup/restauration, RLS, lint, typecheck, 361 tests, build et Playwright verts;
-- continuité `31240188120` verte sur `d2f920e`; PR #11 propre.
+- prompt maître : empreinte exacte et 71 pages;
+- inspection textuelle et visuelle : pages cœur et OS-5 attendues;
+- local : lint, typecheck, 96 fichiers / 361 tests verts / 13 ignores et build production avec configuration CI factice;
+- GitHub : PR #11 ouverte, brouillon et `CLEAN`; continuité `31240778429` et CI `31240778430` vertes, incluant audit, migrations, backup/restauration, RLS, tests, build et Playwright;
+- code : aucune mutation runtime, aucun réseau fournisseur et aucun secret.
 
 ## Prochaine action recommandée
 
-Ouvrir OS-5 par un audit sans activation des quatre frontières préparées et sélectionner un seul provider sandbox à coût nul. Produire le bloc humain exact si compte, MFA, consentement, clé, domaine ou endpoint public est requis; ne jamais présenter `mock` ou `not_configured` comme réel.
+Implémenter le transport WhatsApp sortant fail-closed derrière `ChannelAdapter`, policy, idempotence tenant-aware et audit sûr avec doubles de test. Ne créer ni sandbox, credential, endpoint public ni message réel avant l'autorisation humaine définie dans `docs/OS5_PROVIDER_SELECTION.md`.

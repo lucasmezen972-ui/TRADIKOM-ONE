@@ -354,3 +354,16 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La première CI `31240042979` a été arrêtée par trois advisories transitifs nouvellement publiés avant toute étape de code. Des overrides exacts portent `brace-expansion` sur 1.1.18 / 2.1.4 / 5.0.9 et `nanoid` sur 3.3.17; `pnpm audit --prod --audit-level high` ne trouve plus de vulnérabilité connue.
 - Les commits `f9c66dd` et `d2f920e` sont poussés. La CI PostgreSQL `31240188121` valide audit, migrations, backup/restauration, RLS, lint, typecheck, 361 tests, build et Playwright; la continuité `31240188120` est verte. La PR #11 reste brouillon et `CLEAN`.
 - OS-4 satisfait désormais le critère page 31 « plan confirmé, exécution multi-step, reprise, idempotence » et la Definition of Done page 32. Aucun fournisseur réel ou sandbox, secret, dépense, fusion ou déploiement n'a été engagé.
+
+## 2026-08-08 - Sélection probante du candidat OS-5
+
+- La copie active reste `/Users/TRADIKOM/Developer/TRADIKOM-ONE`. `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement. Le PDF maître conserve exactement 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-15, 26-30 et 64-68 ont été relues textuellement et visuellement depuis le PDF canonique.
+- La PR #11 reste brouillon et `CLEAN`. Sur le head `3109221`, la continuité `31240778429` et la CI `31240778430` sont vertes; cette dernière couvre audit, migrations, backup/restauration, RLS, lint, typecheck, 361 tests, build et Playwright.
+- L'audit repository-grounded compare Resend, WhatsApp/Twilio, Teams et Slack. Toutes les frontières restent fail-closed et aucune configuration actuelle ne peut produire `ready`.
+- WhatsApp via Twilio Sandbox est retenu comme candidat unique : l'inbound signé, le mapping tenant HMAC, le fil canonique et le replay `MessageSid` sont déjà livrés; la sandbox officielle permet une preuve bidirectionnelle sans WABA ni sender enregistré et inclut 100 messages WhatsApp dans les unités d'essai.
+- Resend est écarté pour la première preuve conversationnelle car le code ne projette pas `email.received` vers le Conversation Hub. Slack et Teams sont différés car leurs installations, scopes et consentements ont une surface humaine plus grande.
+- `docs/OS5_PROVIDER_SELECTION.md` consigne sources officielles, matrice de choix, preuve verticale attendue, coût borné, webhook, idempotence, audit, désactivation, écarts et checkpoint humain exact.
+- Aucun compte, login, MFA, credential, téléphone vérifié, tunnel, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé ou demandé pendant cet audit.
+- La validation locale passe lint, typecheck, 96 fichiers / 361 tests et 13 ignores explicites. Le build production passe avec les valeurs factices non secrètes de la CI; son premier refus sans `APP_URL`, `DATABASE_URL` et `CONNECTOR_ENCRYPTION_KEY` confirme la garde fail-closed attendue.
+- OS-5 reste `in_progress` et bloqué humain pour l'activation réelle. Le prochain travail non bloqué est le transport WhatsApp sortant fail-closed sous runtime commun, policy, idempotence tenant-aware et audit sûr, testé uniquement avec doubles.
