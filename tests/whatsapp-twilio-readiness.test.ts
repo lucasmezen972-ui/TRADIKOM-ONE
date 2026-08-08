@@ -6,7 +6,7 @@ import {
   inspectWhatsAppTwilioReadiness,
   type ChannelProviderSecretKeyring,
   type WhatsAppTwilioActivationDependencies,
-  type WhatsAppTwilioHumanAuthorization,
+  type WhatsAppTwilioStoredActivationAuthorization,
 } from "../src/modules/channels";
 
 const now = "2026-08-08T17:30:00.000-04:00";
@@ -37,13 +37,16 @@ const endpoint = {
 const authorization = {
   authorizationId: "authorization_readiness",
   tenantId,
+  endpointId: endpoint.endpointId,
+  provider: "whatsapp_twilio" as const,
   authorizedBy: "user_readiness",
   authorizedAt: "2026-08-08T17:25:00.000-04:00",
   expiresAt: "2026-08-08T18:00:00.000-04:00",
   scope: "twilio_whatsapp_sandbox" as const,
   maxMessages: 2,
   freeUnitsConfirmed: true as const,
-};
+  revokedAt: null,
+} satisfies WhatsAppTwilioStoredActivationAuthorization;
 
 describe("readiness WhatsApp/Twilio OS-5", () => {
   it("refuse le canal désactivé avant toute composition ou résolution", async () => {
@@ -55,7 +58,7 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
         manifest: getPreparedChannelProvider("whatsapp_twilio", {}),
         environment,
         endpoint,
-        humanAuthorization: authorization,
+        authorizationId: authorization.authorizationId,
         now,
       },
       dependencies,
@@ -70,26 +73,31 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
       transport: null,
     });
     expectNoActivation(dependencies);
+    expect(dependencies.loadAuthorization).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("distingue références invalides, endpoint d'un autre tenant et URLs non sûres", () => {
+  it("distingue références invalides, endpoint d'un autre tenant et URLs non sûres", async () => {
     const manifest = getPreparedChannelProvider("whatsapp_twilio", environment);
-    const readiness = inspectWhatsAppTwilioReadiness({
-      tenantId,
-      manifest,
-      environment: {
-        ...environment,
-        CHANNEL_PROVIDER_SECRET_KEY_REFERENCES:
-          '[{"version":"managed-v2","reference":"valeur-en-clair"}]',
-        TWILIO_WHATSAPP_WEBHOOK_URL: "http://localhost/webhook",
-        TWILIO_WHATSAPP_STATUS_CALLBACK_URL:
-          "https://user:password@app.example.test/status",
+    const loadAuthorization = vi.fn();
+    const readiness = await inspectWhatsAppTwilioReadiness(
+      {
+        tenantId,
+        manifest,
+        environment: {
+          ...environment,
+          CHANNEL_PROVIDER_SECRET_KEY_REFERENCES:
+            '[{"version":"managed-v2","reference":"valeur-en-clair"}]',
+          TWILIO_WHATSAPP_WEBHOOK_URL: "http://localhost/webhook",
+          TWILIO_WHATSAPP_STATUS_CALLBACK_URL:
+            "https://user:password@app.example.test/status",
+        },
+        endpoint: { ...endpoint, tenantId: "tenant_outsider" },
+        authorizationId: authorization.authorizationId,
+        now,
       },
-      endpoint: { ...endpoint, tenantId: "tenant_outsider" },
-      humanAuthorization: authorization,
-      now,
-    });
+      loadAuthorization,
+    );
 
     expect(readiness).toMatchObject({
       state: "not_configured",
@@ -103,6 +111,7 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
     });
     expect(JSON.stringify(readiness)).not.toContain("valeur-en-clair");
     expect(JSON.stringify(readiness)).not.toContain("password");
+    expect(loadAuthorization).not.toHaveBeenCalled();
   });
 
   it("demande une autorisation humaine bornée sans construire le runtime", async () => {
@@ -132,6 +141,7 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
     });
     expect(result.transport).toBeNull();
     expectNoActivation(dependencies);
+    expect(dependencies.loadAuthorization).not.toHaveBeenCalled();
   });
 
   it("reste dégradé après autorisation tant que le registre ne produit pas ready", async () => {
@@ -142,7 +152,7 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
         manifest: getPreparedChannelProvider("whatsapp_twilio", environment),
         environment,
         endpoint,
-        humanAuthorization: authorization,
+        authorizationId: authorization.authorizationId,
         now,
       },
       dependencies,
@@ -155,6 +165,40 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
     });
     expect(result.transport).toBeNull();
     expectNoActivation(dependencies);
+    expect(dependencies.loadAuthorization).toHaveBeenCalledWith({
+      tenantId,
+      endpointId: endpoint.endpointId,
+      authorizationId: authorization.authorizationId,
+    });
+  });
+
+  it("échoue fermé en état dégradé si le chargement interne est indisponible", async () => {
+    const dependencies = blockedDependencies();
+    dependencies.loadAuthorization.mockRejectedValue(
+      new Error("détail base non exposable"),
+    );
+    const result = await composeWhatsAppTwilioActivation(
+      {
+        tenantId,
+        manifest: getPreparedChannelProvider("whatsapp_twilio", environment),
+        environment,
+        endpoint,
+        authorizationId: authorization.authorizationId,
+        now,
+      },
+      dependencies,
+    );
+
+    expect(result).toMatchObject({
+      readiness: {
+        state: "degraded",
+        activationAllowed: false,
+        checks: { humanAuthorization: "unavailable" },
+      },
+      transport: null,
+    });
+    expect(JSON.stringify(result)).not.toContain("détail base non exposable");
+    expectNoActivation(dependencies);
   });
 
   it.each(
@@ -163,19 +207,25 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
       { ...authorization, tenantId: "tenant_outsider" },
       { ...authorization, maxMessages: 3 },
       { ...authorization, freeUnitsConfirmed: false },
-    ] as unknown as WhatsAppTwilioHumanAuthorization[],
-  )("refuse une preuve humaine expirée ou hors contrat", (humanAuthorization) => {
-    const readiness = inspectWhatsAppTwilioReadiness({
-      tenantId,
-      manifest: getPreparedChannelProvider("whatsapp_twilio", environment),
-      environment,
-      endpoint,
-      humanAuthorization,
-      now,
-    });
+      { ...authorization, revokedAt: "2026-08-08T17:28:00.000-04:00" },
+      { ...authorization, endpointId: "endpoint_outsider" },
+      { ...authorization, provider: "slack" },
+    ] as unknown as WhatsAppTwilioStoredActivationAuthorization[],
+  )("refuse une autorisation persistée expirée ou hors contrat", async (stored) => {
+    const readiness = await inspectWhatsAppTwilioReadiness(
+      {
+        tenantId,
+        manifest: getPreparedChannelProvider("whatsapp_twilio", environment),
+        environment,
+        endpoint,
+        authorizationId: authorization.authorizationId,
+        now,
+      },
+      vi.fn().mockResolvedValue(stored),
+    );
 
     expect(readiness.state).toBe("awaiting_human_auth");
-    expect(["expired", "invalid"]).toContain(
+    expect(["expired", "invalid", "revoked"]).toContain(
       readiness.checks.humanAuthorization,
     );
     expect(readiness.activationAllowed).toBe(false);
@@ -205,10 +255,11 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
         manifest: readyManifest,
         environment,
         endpoint,
-        humanAuthorization: authorization,
+        authorizationId: authorization.authorizationId,
         now,
       },
       {
+        loadAuthorization: vi.fn().mockResolvedValue(authorization),
         bootstrapKeyring,
         secretManager: { resolveSecret: vi.fn() },
         createSecretResolvers,
@@ -232,6 +283,7 @@ describe("readiness WhatsApp/Twilio OS-5", () => {
 
 function blockedDependencies() {
   return {
+    loadAuthorization: vi.fn().mockResolvedValue(authorization),
     bootstrapKeyring:
       vi.fn<WhatsAppTwilioActivationDependencies["bootstrapKeyring"]>(),
     secretManager: {

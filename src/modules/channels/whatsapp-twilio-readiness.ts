@@ -8,6 +8,10 @@ import {
   type ChannelProviderSecretReferenceResolver,
 } from "@/modules/channels/channel-provider-secrets-bootstrap";
 import type { ChannelProviderSecretKeyring } from "@/modules/channels/channel-provider-secrets-crypto";
+import type {
+  WhatsAppTwilioActivationAuthorizationLoader,
+  WhatsAppTwilioStoredActivationAuthorization,
+} from "@/modules/channels/whatsapp-twilio-activation-authorization-service";
 import { createWhatsAppTwilioTransport } from "@/modules/channels/whatsapp-twilio-transport";
 import type {
   WhatsAppTwilioClientFactory,
@@ -30,16 +34,19 @@ const endpointSchema = z
     status: z.enum(["active", "disabled"]),
   })
   .strict();
-const humanAuthorizationSchema = z
+const storedAuthorizationSchema = z
   .object({
     authorizationId: boundedIdentifierSchema,
     tenantId: boundedIdentifierSchema,
+    endpointId: boundedIdentifierSchema,
+    provider: z.literal("whatsapp_twilio"),
     authorizedBy: boundedIdentifierSchema,
     authorizedAt: z.string().datetime({ offset: true }),
     expiresAt: z.string().datetime({ offset: true }),
     scope: z.literal("twilio_whatsapp_sandbox"),
     maxMessages: z.number().int().min(1).max(2),
     freeUnitsConfirmed: z.literal(true),
+    revokedAt: z.string().datetime({ offset: true }).nullable(),
   })
   .strict()
   .superRefine((authorization, context) => {
@@ -52,11 +59,17 @@ const humanAuthorizationSchema = z
         message: "L'autorisation doit expirer après sa création.",
       });
     }
+    if (
+      authorization.revokedAt &&
+      Date.parse(authorization.revokedAt) < Date.parse(authorization.authorizedAt)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["revokedAt"],
+        message: "La révocation ne peut pas précéder l'autorisation.",
+      });
+    }
   });
-
-export type WhatsAppTwilioHumanAuthorization = z.input<
-  typeof humanAuthorizationSchema
->;
 
 export type WhatsAppTwilioReadinessState =
   | "disabled"
@@ -86,6 +99,8 @@ export type WhatsAppTwilioReadiness = {
       | "required"
       | "invalid"
       | "expired"
+      | "revoked"
+      | "unavailable"
       | "valid";
   };
 };
@@ -95,11 +110,12 @@ export type WhatsAppTwilioActivationInput = {
   manifest: ChannelAdapterManifest;
   environment?: Environment;
   endpoint?: z.input<typeof endpointSchema> | null;
-  humanAuthorization?: WhatsAppTwilioHumanAuthorization | null;
+  authorizationId?: string | null;
   now: string;
 };
 
 export type WhatsAppTwilioActivationDependencies = {
+  loadAuthorization: WhatsAppTwilioActivationAuthorizationLoader;
   bootstrapKeyring(input: {
     environment: Environment;
     secretManager: ChannelProviderSecretReferenceResolver;
@@ -114,17 +130,21 @@ export type WhatsAppTwilioActivationDependencies = {
   createClientFactory(): WhatsAppTwilioClientFactory;
 };
 
-export function inspectWhatsAppTwilioReadiness(
+export async function inspectWhatsAppTwilioReadiness(
   input: WhatsAppTwilioActivationInput,
-): WhatsAppTwilioReadiness {
-  return evaluateReadiness(input).readiness;
+  loadAuthorization: WhatsAppTwilioActivationAuthorizationLoader,
+): Promise<WhatsAppTwilioReadiness> {
+  return (await resolveReadiness(input, loadAuthorization)).readiness;
 }
 
 export async function composeWhatsAppTwilioActivation(
   input: WhatsAppTwilioActivationInput,
   dependencies: WhatsAppTwilioActivationDependencies,
 ) {
-  const evaluation = evaluateReadiness(input);
+  const evaluation = await resolveReadiness(
+    input,
+    dependencies.loadAuthorization,
+  );
   if (!evaluation.readiness.activationAllowed || !evaluation.statusCallbackUrl) {
     return { readiness: evaluation.readiness, transport: null };
   }
@@ -147,7 +167,46 @@ export async function composeWhatsAppTwilioActivation(
   };
 }
 
-function evaluateReadiness(input: WhatsAppTwilioActivationInput): {
+async function resolveReadiness(
+  input: WhatsAppTwilioActivationInput,
+  loadAuthorization: WhatsAppTwilioActivationAuthorizationLoader,
+) {
+  const technical = evaluateReadiness(input, undefined);
+  if (
+    technical.readiness.state === "disabled" ||
+    technical.readiness.state === "not_configured" ||
+    !input.authorizationId
+  ) {
+    return technical;
+  }
+
+  const authorizationId = boundedIdentifierSchema.safeParse(
+    input.authorizationId,
+  );
+  const endpoint = endpointSchema.safeParse(input.endpoint);
+  if (!authorizationId.success || !endpoint.success) {
+    return evaluateReadiness(input, null);
+  }
+  try {
+    const authorization = await loadAuthorization({
+      tenantId: input.tenantId,
+      endpointId: endpoint.data.endpointId,
+      authorizationId: authorizationId.data,
+    });
+    return evaluateReadiness(input, authorization);
+  } catch {
+    return evaluateReadiness(input, "unavailable");
+  }
+}
+
+function evaluateReadiness(
+  input: WhatsAppTwilioActivationInput,
+  authorization:
+    | WhatsAppTwilioStoredActivationAuthorization
+    | null
+    | undefined
+    | "unavailable",
+): {
   readiness: WhatsAppTwilioReadiness;
   statusCallbackUrl: string | null;
 } {
@@ -183,14 +242,16 @@ function evaluateReadiness(input: WhatsAppTwilioActivationInput): {
 
   const environment = input.environment ?? process.env;
   const keyReferences = inspectKeyReferences(environment);
+  const parsedEndpoint = endpointSchema.safeParse(input.endpoint);
   const endpoint = inspectEndpoint(input.endpoint, tenantId.data);
   const webhookUrl = inspectHttpsUrl(environment.TWILIO_WHATSAPP_WEBHOOK_URL);
   const statusCallbackUrl = inspectHttpsUrl(
     environment.TWILIO_WHATSAPP_STATUS_CALLBACK_URL,
   );
   const humanAuthorization = inspectHumanAuthorization(
-    input.humanAuthorization,
+    authorization,
     tenantId.data,
+    parsedEndpoint.success ? parsedEndpoint.data.endpointId : undefined,
     now.data,
   );
   const checks: WhatsAppTwilioReadiness["checks"] = {
@@ -221,6 +282,13 @@ function evaluateReadiness(input: WhatsAppTwilioActivationInput): {
     );
   }
   if (humanAuthorization !== "valid") {
+    if (humanAuthorization === "unavailable") {
+      return result(
+        "degraded",
+        "La vérification de l'autorisation est momentanément indisponible.",
+        checks,
+      );
+    }
     return result(
       "awaiting_human_auth",
       "Une autorisation humaine bornée est requise avant l'activation.",
@@ -299,14 +367,28 @@ function inspectHttpsUrl(value: string | undefined): {
 }
 
 function inspectHumanAuthorization(
-  authorization: WhatsAppTwilioActivationInput["humanAuthorization"],
+  authorization:
+    | WhatsAppTwilioStoredActivationAuthorization
+    | null
+    | undefined
+    | "unavailable",
   tenantId: string,
+  endpointId: string | undefined,
   now: string,
 ): WhatsAppTwilioReadiness["checks"]["humanAuthorization"] {
-  if (!authorization) return "required";
-  const parsed = humanAuthorizationSchema.safeParse(authorization);
+  if (authorization === undefined) return "required";
+  if (authorization === null) return "invalid";
+  if (authorization === "unavailable") return "unavailable";
+  const parsed = storedAuthorizationSchema.safeParse(authorization);
   if (!parsed.success) return "invalid";
-  if (parsed.data.tenantId !== tenantId) return "invalid";
+  if (
+    parsed.data.tenantId !== tenantId ||
+    !endpointId ||
+    parsed.data.endpointId !== endpointId
+  ) {
+    return "invalid";
+  }
+  if (parsed.data.revokedAt) return "revoked";
   if (Date.parse(parsed.data.expiresAt) <= Date.parse(now)) return "expired";
   return "valid";
 }
