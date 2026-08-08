@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T13:26:00.000Z",
+  "updatedAt": "2026-08-08T13:50:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "9c7e4dba8f46882908c799840c3f7e1dede970e9",
+  "lastCommit": "423c9d1cbadde775c586fc8dae57d3b75f15c009",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : le coffre chiffré, versionné, rotatif et révocable alimente désormais éphémèrement les résolveurs Twilio après les gardes existantes. Le prochain checkpoint non bloqué doit ajouter la fabrique du client Twilio officiel et le bootstrap serveur du keyring depuis des références de secret manager, tout en conservant le registre réel fail-closed et sans appel fournisseur.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : la fabrique bornée du client Twilio officiel et le bootstrap serveur du keyring depuis des références opaques de gestionnaire de secrets complètent désormais le coffre et les résolveurs éphémères. Le prochain checkpoint non bloqué doit ajouter une vérification de santé/readiness et une composition d'activation explicite, toujours incapables de promouvoir le registre vers ready sans checkpoint humain et sans appel fournisseur.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Module whatsapp-twilio-client.ts adaptant le SDK officiel derrière le contrat WhatsAppTwilioClient, avec options bornées, validation des credentials, absence d'état global et tests prouvant zéro construction en état non autorisé ainsi que zéro réseau avant l'appel explicite du transport. Module de bootstrap serveur du keyring consommant une configuration versionnée de références opaques, un resolver injecté et des clés encodées strictement sur 32 octets; échec fermé sur navigateur, version active absente, référence dupliquée/manquante, clé invalide ou résolution en erreur, sans fuite dans erreurs et sorties. Intégration compositionnelle conservant le registre réel fail-closed et les résolveurs tenant-aware existants; aucun env secret historique ne devient une source implicite. Tests unitaires, intégration, provider et sécurité couvrant états disabled/not_configured/awaiting_human_auth, doubles, absence de fetch/log/audit sensible et régressions coffre/transport; lint, typecheck, suite complète, build, continuité et CI/Playwright doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Ajouter une fabrique bornée du client Twilio officiel et un bootstrap serveur du keyring versionné depuis des références de secret manager : aucune construction avant état autorisé, aucune lecture côté navigateur, aucun appel réseau en test et aucun état ready réel avant le checkpoint humain.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-client.ts",
+  "nextAction": "Ajouter une vérification bornée de santé/readiness WhatsApp/Twilio et une composition d'activation explicite qui valident manifeste, références du keyring, endpoint et callback sans résoudre de secret ni construire de client en état non autorisé; documenter ensuite la procédure humaine réversible.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-readiness.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -249,7 +249,17 @@
     "42 tests cibles puis 99 tests de regression en lots verts; un test PostgreSQL RLS ignore sans DATABASE_URL",
     "pnpm audit production sans vulnerabilite, pnpm lint, pnpm typecheck, build et continuity-check verts",
     "pnpm test et regression monolithique bloques silencieusement localement sans assertion; CI PostgreSQL requise",
-    "commit fonctionnel 3b96716 pousse; continuite 31250907674 et CI PostgreSQL 31250907675 entierement vertes avec 105 fichiers/427 tests et 20 Playwright"
+    "commit fonctionnel 3b96716 pousse; continuite 31250907674 et CI PostgreSQL 31250907675 entierement vertes avec 105 fichiers/427 tests et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant la fabrique officielle OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31258560475 / 31258560449 verts sur 8d80ec3",
+    "alignement prompt maitre actualise avant code pour la fabrique Twilio et le bootstrap keyring",
+    "fabrique officielle Twilio a options bornees, sans configuration globale ni reseau a la construction",
+    "bootstrap keyring strictement serveur depuis versions et references opaques injectees, sans fallback",
+    "62 tests cibles provider/securite verts, lint, typecheck, audit production, build et continuity-check verts",
+    "pnpm test local borne apres blocage Vitest silencieux sans assertion en echec; CI PostgreSQL requise",
+    "commit fonctionnel 423c9d1 pousse; continuite 31259897728 et CI PostgreSQL 31259897751 entierement vertes avec 111 fichiers/454 tests et 20 Playwright"
   ],
   "lastValidation": [
     {
@@ -747,6 +757,26 @@
     {
       "command": "CI 31257937598 sur 9c7e4db",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_109_files_439_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant fabrique officielle OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean"
+    },
+    {
+      "command": "tests fabrique Twilio, bootstrap keyring et régressions provider",
+      "status": "passed_8_files_62_tests_official_sdk_no_network_server_guard_managed_references_fail_closed_safe_errors"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_postgres_authoritative"
+    },
+    {
+      "command": "CI 31259897751 et continuité 31259897728 sur 423c9d1",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_111_files_454_tests_build_20_playwright_and_continuity"
     }
   ],
   "humanBlockers": [
