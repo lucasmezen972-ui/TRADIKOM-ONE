@@ -1,57 +1,59 @@
 # Drift report
 
-- Date : 3 août 2026
+- Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
-- PR : brouillon #11
-- Head fonctionnel : `dea0eab`
-- Travail effectué : premier checkpoint OS-4 avec snapshot immuable de mission, reprise worker et signal de retry dédupliqué.
+- PR : brouillon #11, état `CLEAN`
+- Head fonctionnel : `d2f920e`
+- Travail effectué : clôture OS-4 avec convergence automatique de la reprise worker dans la conversation et correction des advisories transitifs bloquant la CI.
 
 ## Impact north star
 
-Une mission issue de la conversation ne dépend plus d'une définition reconstruite en mémoire ou d'une version active devenue différente. Son exécution conserve la définition exacte validée; après interruption et signal humain, le worker reprend l'étape en échec sans rejouer la capacité déjà réussie. La preuve reste tenant-scoped, auditée et explicitement mock.
+Une mission interrompue peut désormais être reprise depuis la Conversation par un signal humain idempotent. Le worker repart du snapshot exact, ne rejoue pas la capacité déjà réussie, réconcilie le plan avec les preuves durables puis publie le résultat une seule fois dans le fil web et canal test. L'utilisateur n'a ni second clic d'exécution, ni écran workflow séparé à comprendre.
 
 ## Alignement prompt maître
 
-- Pages consultées : pages 3-7, 17-18, 28, 31-33, 35-36, 46, 48 et 69-71.
-- Exigence servie : ouvrir OS-4 au critère de la page 31 (« plan confirmé, exécution multi-step, reprise, idempotence »), avec définition déterministe et signaux humains page 18, Definition of Done page 32, parcours démontrable page 46 et couche workflow obligatoire page 69.
-- Preuve obtenue : PDF canonique à 71 pages et SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; migration runtime `075` et miroir SQL `0069`; snapshot borné/immuable sur `workflow_runs`; test d'interruption après la première capacité, double retry humain dédupliqué, reprise worker de la seconde à la tentative 2, une seule première capacité et aucun contenu métier dans `safe_metadata`; parcours navigateur web + canal test + validation + résultat mock sur desktop et mobile.
-- Écarts restants : après une reprise worker réussie, le plan conversationnel n'est pas encore automatiquement réconcilié et le message résultat n'est pas encore ajouté sans second appel d'exécution. L'interface Conversation n'expose pas encore ce retry de mission. OS-4 reste donc `in_progress`.
+- Pages consultées : pages 3-7, 17-18, 28, 31-33, 35-36, 46, 48 et 69-71, relues textuellement et dans le rendu direct du PDF.
+- Exigence servie : clôturer OS-4 selon la page 31 (« plan confirmé, exécution multi-step, reprise, idempotence »), rendre l'état et le signal humain visibles dans la conversation selon la page 18, satisfaire la Definition of Done page 32, le parcours démontrable page 46 et la matrice workflow/Playwright page 69.
+- Preuve obtenue : PDF canonique de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; finalisation atomique commune au chemin synchrone et au worker; test vertical sur vrai plan Conversation avec interruption de la seconde capacité, double retry dédupliqué, reprise à la tentative 2, première capacité exécutée une fois, deux étapes réconciliées, un résultat, deux routes, audits uniques sans contenu métier et aucun réseau; parcours Chromium mobile sans débordement; CI PostgreSQL `31240188121` et continuité `31240188120` vertes.
+- Écarts restants : les anciennes exécutions antérieures au snapshot gardent leur fallback compatible; aucun provider réel ou sandbox n'est encore connecté; Temporal réel n'est pas déployé. Ces écarts relèvent d'OS-5 ou d'une évolution ultérieure, pas du critère OS-4 prouvé.
 
 ## Classification honnête
 
-- Livré : stockage immuable de la définition pour chaque nouvelle exécution, reprise depuis ce snapshot et déduplication du signal manuel en file.
-- Réel préparé : moteur, worker PostgreSQL/PGlite et frontières protocolaires sans activation fournisseur.
-- Réel connecté : aucun canal ni outil fournisseur.
+- Livré : OS-4 complet, incluant snapshot immuable, reprise worker, signal de retry conversationnel, réconciliation, résultat miroir et audit idempotent.
+- Réel préparé : moteur PostgreSQL/PGlite et frontières Resend, WhatsApp/Twilio, Teams et Slack, toutes fail-closed.
+- Réel connecté : aucun fournisseur.
 - Sandbox : aucune configurée, appelée ou revendiquée.
-- Mock : `tradikom_mock`, deux capacités, interruption simulée, reprise worker, canal test et compensation de tâche.
-- Bloqué humain : comptes, credentials, consentements, MFA, endpoints publics, quotas et dépenses.
-- Hors périmètre du checkpoint : Temporal réel, activation fournisseur, OS-5 à OS-8, fusion et déploiement.
+- Mock : `tradikom_mock`, deux capacités, compensation, canal test et interruption/reprise simulée.
+- Bloqué humain : comptes fournisseurs, credentials, MFA, consentements OAuth, domaines/endpoints publics, quotas et dépenses.
+- Hors périmètre : OS-6 à OS-8, fusion, déploiement et tout effet externe irréversible.
 
 ## Modules concernés
 
-- `src/lib/db.ts`, `src/db/migrations/0069_os4_workflow_definition_snapshots.sql` et `src/db/schema/index.ts` pour la migration additive et le snapshot immuable;
-- `src/modules/workflows/engine.ts` et `repository.ts` pour la persistance et la résolution de la définition exacte;
-- `src/modules/workflows/service.ts` pour le replay idempotent du signal humain;
-- `tests/workflow-definition-snapshots-migrations.test.ts` et `tests/workflow-resume.test.ts` pour migration, interruption, reprise et non-rejeu;
+- `src/modules/orchestrator/service.ts` et `repository.ts` : finalisation atomique, réconciliation et retry tenant-aware;
+- `src/modules/workflows/worker.ts` : convergence après `workflow.resume`;
+- `src/modules/channels/runtime.ts` et `src/app/(app)/conversation/*` : signal et états visibles en français;
+- `tests/orchestrator-service.test.ts` et `tests/e2e/vertical.spec.ts` : preuve verticale et visibilité mobile;
+- `pnpm-workspace.yaml` et `pnpm-lock.yaml` : versions transitives corrigées;
 - les quatre fichiers de continuité.
 
 ## Risques
 
-- les anciennes exécutions sans snapshot gardent le fallback compatible vers la définition active; seules les nouvelles exécutions ont la garantie forte OS-4;
-- le snapshot contient les entrées validées de la mission dans la ligne tenant-scoped, mais elles ne sont pas recopiées dans les audits ni dans `safe_metadata`;
-- l'état du workflow converge après reprise, mais la projection du plan et du fil doit encore être finalisée automatiquement;
-- aucun provider réel ne doit être activé avant que cette convergence, les compensations et la classification des échecs soient prouvées.
+- le worker et la finalisation utilisent deux transactions successives; si la seconde échoue, le retry de l'événement terminal relance uniquement la finalisation idempotente, comportement couvert par la sélection du `runId` dans le payload;
+- l'interface de retry n'est visible que pour une mission réellement `failed`; elle ne fabrique aucun état d'échec et le parcours navigateur heureux ne simule pas une panne;
+- `exceljs` conserve des sous-dépendances historiques dépréciées, mais les versions vulnérables de `brace-expansion` sont remplacées par des backports compatibles et l'audit actif est propre;
+- aucun provider ne doit passer à `ready` tant qu'OS-5 n'a pas prouvé sandbox/réel, clés, consentement, webhook, santé et désactivation.
 
 ## Validations
 
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement;
 - prompt maître : empreinte exacte, 71 pages, pages cœur et OS-4 relues textuellement et visuellement;
-- tests ciblés : 7 tests verts sur parité SQL, paire snapshot/version, immutabilité, reprise, double signal, non-rejeu et métadonnées sûres;
-- local : ESLint ciblé, lint complet, typecheck, suite Vitest complète et build production verts;
-- sécurité dépendances : deux alertes hautes préexistantes restent explicitement ignorées par la politique du lockfile; aucune nouvelle dépendance;
-- navigateur local : parcours Conversation complet, résultat mock visible, mobile 390×844 sans débordement horizontal;
-- CI `30784805475` : audit, migrations PostgreSQL, upgrade, backup/restore, RLS, lint, typecheck, 98 fichiers/373 tests, build et 20 scénarios Playwright verts; continuité `30784805450` verte sur `dea0eab`.
+- ciblé : 10 tests orchestrateur/reprise verts, ESLint ciblé et typecheck;
+- local complet : lint, 96 fichiers / 361 tests verts / 13 ignores, build production;
+- sécurité : `pnpm audit --prod --audit-level high` retourne « No known vulnerabilities found » après les overrides exacts;
+- navigateur local : parcours compte → organisation → web → canal test → plan → validation → résultat mock à 390x844, deux étapes « Réussie », zéro débordement horizontal;
+- CI `31240188121` : audit, migrations PostgreSQL, upgrade, backup/restauration, RLS, lint, typecheck, 361 tests, build et Playwright verts;
+- continuité `31240188120` verte sur `d2f920e`; PR #11 propre.
 
 ## Prochaine action recommandée
 
-Rendre la finalisation de mission conversationnelle réutilisable depuis le worker, réconcilier les statuts du plan avec les étapes workflow et publier exactement un message résultat après reprise. Ne brancher aucun fournisseur réel.
+Ouvrir OS-5 par un audit sans activation des quatre frontières préparées et sélectionner un seul provider sandbox à coût nul. Produire le bloc humain exact si compte, MFA, consentement, clé, domaine ou endpoint public est requis; ne jamais présenter `mock` ou `not_configured` comme réel.

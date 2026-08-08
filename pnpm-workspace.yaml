@@ -10,14 +10,6 @@ overrides:
   "postcss": ">=8.5.18"
   "sharp": ">=0.35.0"
 
-# GHSA-mh99-v99m-4gvg concerne une expansion de glob non bornee. Les deux
-# chaines concernees ici (eslint et exceljs/archiver) utilisent uniquement des
-# motifs statiques du depot. La version corrigee change l'API CJS et casse
-# minimatch 3; retirer cette exception des qu'un correctif compatible existe.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-mh99-v99m-4gvg
-
 allowBuilds:
   esbuild: true
   sharp: true
