@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T08:01:11.000Z",
+  "updatedAt": "2026-08-08T08:49:23.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "9241b88f29742df171439abd31834ed6b5f5527a",
+  "lastCommit": "65176fb3b1ce1c9d4714041193fbb3c58fdb0643",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : les livraisons WhatsApp reserved/temporary/rate_limit ont désormais un worker durable tenant-aware avec lease, backoff, tentatives bornées, policy réévaluée et même idempotence; le prochain checkpoint doit ingérer les callbacks de statut Twilio signés et dédupliqués avec doubles uniquement.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : inbound, outbound durable, worker lease/backoff et callbacks de statut Twilio signés, dédupliqués et monotones sont prouvés avec doubles; le prochain checkpoint doit préparer la frontière de transport Twilio réelle avec résolution éphémère des credentials et de la destination, toujours fail-closed et sans état ready.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Une migration additive et son miroir runtime ajoutent un journal d'événements immuable sans PII, une unicité de référence fournisseur et les contraintes tenant/RLS nécessaires. Des tests verticaux prouvent : signature valide avant accès base, signature invalide et payload trop grand refusés, statuts connus normalisés et statut inconnu refusé, référence absente ou ambiguë sans mutation, replay sans second événement ni second audit, callbacks hors ordre sans régression, delivered terminal face à accepted/failed tardifs, failed puis delivered convergent, message canonique unique, isolation inter-tenant et audits/logs sans texte, numéro, SID, token, ErrorCode fournisseur ni payload. La route reste fail-closed tant que le provider n'est pas ready; toutes les preuves utilisent des doubles, sans réseau, credential, compte, sandbox, endpoint public, message externe, dépense, fusion ni déploiement. Lint, typecheck, tests ciblés et complets, migrations PostgreSQL/RLS, build, continuité, Playwright pertinent et CI doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Ajouter l'ingestion fail-closed des callbacks de statut Twilio signés, avec replay dédupliqué, transitions monotones accepted/delivered/failed, tenant/RLS et audit sans SID, numéro, corps ni payload; utiliser uniquement des doubles et conserver le provider réel disabled.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-delivery-status-service.ts",
+  "nextAction": "Préparer un transport Twilio à client injecté qui résout credentials et destination uniquement par références sûres après les gardes service/policy, transmet TWILIO_WHATSAPP_STATUS_CALLBACK_URL, refuse avant le client hors état autorisé et ne persiste, ne retourne ni ne logge aucune valeur sensible; doubles uniquement, aucun état ready réel.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-transport.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -227,7 +227,19 @@
     "pnpm test bloque silencieusement localement sans assertion; Playwright local non probant sans PostgreSQL partage et CI requise",
     "commit fonctionnel 9241b88 pousse sur codex/tradikom-one-os",
     "continuite 31247035021 verte sur 9241b88",
-    "CI PostgreSQL 31247035022 verte : audit, migrations, backup/restauration, lint, typecheck, 103 fichiers/401 tests, build et 20 Playwright"
+    "CI PostgreSQL 31247035022 verte : audit, migrations, backup/restauration, lint, typecheck, 103 fichiers/401 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant les callbacks OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31247502526 / 31247502516 verts sur 45a912d",
+    "consultation officielle Twilio des statuts outbound, callbacks hors ordre et verification de signature",
+    "migrations runtime 079/080 et miroirs SQL 0073/0074 pour evenements immuables, reference unique et RLS",
+    "callbacks Twilio signes, dedupliques et monotones avec reconciliation livraison/message et audit sans PII",
+    "92 tests cibles/regression verts; test PostgreSQL RLS dedie ignore localement sans DATABASE_URL",
+    "pnpm audit production sans vulnerabilite, pnpm lint, pnpm typecheck, build et continuity-check verts",
+    "pnpm test bloque silencieusement localement sans assertion; CI PostgreSQL requise",
+    "commit fonctionnel 65176fb pousse sur codex/tradikom-one-os",
+    "continuite 31248824055 verte sur 65176fb; CI PostgreSQL 31248824059 verte avec migrations, backup/restauration, RLS, lint, typecheck, 104 fichiers/408 tests, build et 20 Playwright"
   ],
   "lastValidation": [
     {
@@ -649,6 +661,30 @@
     {
       "command": "CI 31247035022 sur 9241b88",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_103_files_401_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant callbacks OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_pr11_clean_ci_31247502526_continuity_31247502516"
+    },
+    {
+      "command": "tests ciblés callbacks puis régressions WhatsApp/canaux/conversation",
+      "status": "passed_7_files_52_tests_then_8_files_40_tests_one_postgres_rls_test_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production et continuity-check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31248824055 sur 65176fb",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31248824059 sur 65176fb",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_104_files_408_tests_build_20_playwright"
     }
   ],
   "humanBlockers": [

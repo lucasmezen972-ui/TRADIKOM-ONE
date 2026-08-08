@@ -26,13 +26,14 @@ Resend demande moins d'autorisations mais ne constitue pas le meilleur premier p
 
 ## Preuves repository-grounded
 
-- `src/modules/channels/provider-registry.ts` garde les quatre providers dans `disabled`, `not_configured` ou `awaiting_human_auth`; `transportEnabled` reste toujours `false`.
+- `src/modules/channels/provider-registry.ts` garde les quatre providers dans `disabled`, `not_configured` ou `awaiting_human_auth`; `transportEnabled` reste toujours `false` et l'URL de callback de statut est désormais une configuration obligatoire distincte.
 - `src/app/api/webhooks/twilio/whatsapp/route.ts` refuse avant lecture tant que le registre ne produit pas `ready` et exige une URL publique HTTPS configurée.
 - `src/modules/channels/whatsapp-twilio-webhook.ts` vérifie la signature avec le SDK Twilio officiel sur l'URL exacte et borne le payload.
 - `src/modules/channels/whatsapp-twilio-ingress-service.ts` résout un endpoint actif sous transaction système, pseudonymise l'identité avec HMAC tenant-scoped et ingère dans le Conversation Hub.
 - `src/modules/channels/provider-endpoints-service.ts` réserve et désactive les endpoints avec contrôle de rôle, unicité inter-tenant et audit sans numéro ni secret.
-- Le contrat `ChannelAdapter.sendMessage` existe, mais aucun adaptateur WhatsApp sortant réel n'est encore branché. C'est le premier écart de code après autorisation de poursuivre OS-5.
-- Les tests actuels prouvent signature, replay, mapping absent/désactivé, isolation tenant et absence de téléchargement; ils ne prouvent aucune requête contre la sandbox.
+- Le contrat `ChannelAdapter.sendMessage`, la réservation durable, le worker avec lease/backoff et la réconciliation canonique sont livrés avec un transport mock injecté; aucun client Twilio réel n'est branché.
+- Le callback de statut vérifie la signature Twilio officielle sur l'URL exacte, normalise `queued/sent`, `delivered/read` et `failed/undelivered`, déduplique sans stocker le SID dans le journal d'événements et refuse toute régression après `delivered`.
+- Les tests actuels prouvent signature, replay, ordre tardif, mapping absent/désactivé, isolation tenant/RLS, audit sans PII et absence d'accès réseau; ils ne prouvent aucune requête contre la sandbox.
 
 ## Sources officielles vérifiées le 8 août 2026
 
@@ -71,14 +72,14 @@ Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
 7. Confirmer l'envoi d'au plus deux messages de preuve vers le seul téléphone de test, puis la désactivation de l'endpoint et la révocation du tunnel à la fin.
 ```
 
-Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant et son worker durable sont maintenant prouvés avec doubles; le travail non bloqué suivant est l'ingestion signée et dédupliquée des callbacks de statut Twilio, sans sélectionner le provider runtime ni effectuer d'appel réseau réel.
+Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant, son worker durable et les callbacks de statut sont maintenant prouvés avec doubles. Le travail non bloqué suivant est la frontière de transport Twilio fail-closed avec résolution éphémère des credentials et de la destination par références sûres, sans sélectionner le provider runtime ni effectuer d'appel réseau réel.
 
 ## Classification honnête
 
 | Qualification | État après cet audit |
 | --- | --- |
 | Livré | audit comparatif, sélection unique, contrat de preuve et checkpoint humain exact |
-| Réel préparé | frontières protocolaires Resend, WhatsApp/Twilio, Teams et Slack; WhatsApp inbound canonique |
+| Réel préparé | frontières protocolaires Resend, WhatsApp/Twilio, Teams et Slack; WhatsApp inbound, outbound durable et callbacks de statut canoniques |
 | Réel connecté | aucun provider |
 | Sandbox | aucune sandbox créée, configurée ou appelée |
 | Mock | événements provider des tests, `tradikom_mock` et canal test |
@@ -87,9 +88,8 @@ Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, 
 
 ## Écarts restants avant activation
 
-- implémenter les callbacks de statut Twilio signés, dédupliqués et monotones vers la livraison et le message canoniques;
 - conserver les credentials par référence chiffrée ou secret manager, jamais comme valeur en base ou audit;
-- ajouter les callbacks de livraison Twilio et leur déduplication sans PII;
+- résoudre la destination WhatsApp de façon éphémère et brancher un client Twilio réel derrière la frontière fail-closed, sans stockage clair;
 - créer une procédure d'activation, santé, rotation, révocation et désactivation explicite;
 - ajouter la preuve Playwright web + WhatsApp sandbox, plus les pires cas de la matrice page 69;
 - obtenir l'intervention humaine ci-dessus avant toute mutation externe.
