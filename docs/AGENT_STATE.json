@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-03T04:44:03.000Z",
+  "updatedAt": "2026-08-08T04:18:33.693Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
@@ -25,8 +25,8 @@
         "43 Ordre exact de la prochaine exécution",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Ouvrir OS-4 dans l'ordre de la page 48 en rendant la définition du plan conversationnel confirmé immuable et durable avec son exécution, afin que le worker puisse reprendre exactement la mission après panne ou signal humain sans rejouer une étape déjà réussie.",
-      "evidenceExpected": "Une migration additive tenant-scoped conserve un snapshot validé de la définition sur chaque nouvelle exécution; la reprise n'utilise pas une définition active mutable; un test multi-step provoque un échec après une première capacité réussie, envoie un retry humain idempotent, reprend la seconde étape via le worker et prouve une seule exécution de la première; parité migrations, RLS existante, audit sûr, lint, typecheck, tests, build, Playwright pertinent et continuité restent verts."
+      "requirement": "Poursuivre OS-4 dans l'ordre de la page 48 en finalisant automatiquement, après une reprise worker, le plan conversationnel confirmé : réconcilier chaque étape avec sa preuve workflow, publier exactement un résultat miroir dans le fil web et canal test, et permettre un retry humain idempotent depuis l'expérience Conversation sans second clic d'exécution.",
+      "evidenceExpected": "Un test vertical part d'un vrai plan Conversation approuvé, provoque un échec après la première capacité, demande deux fois le retry depuis le service conversationnel, laisse le worker reprendre la seconde étape depuis le snapshot puis prouve : plan exécuté, deux étapes réconciliées, première capacité non rejouée, un seul message résultat et ses deux routes, un seul audit de finalisation sans contenu métier, aucun second appel à executeConversationActionPlan et aucun réseau. L'interface française expose l'état de mission et le retry; lint, typecheck, tests, build, Playwright pertinent et continuité restent verts."
     }
   },
   "nextAction": "Extraire la finalisation de mission conversationnelle, l'appeler après une reprise worker réussie et prouver que plan, étapes et message résultat convergent une seule fois sans second clic d'exécution.",

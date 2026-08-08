@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { executeMockConnectorOperation } from "@/modules/connector-execution";
+import { finalizeConversationActionPlanWorkflow } from "@/modules/orchestrator/service";
 import {
   domainVerificationRequestedEventType,
   processDomainVerificationJob,
@@ -138,10 +139,18 @@ export async function processPendingDomainEvents(
       db: DbClient;
       event: DomainEvent;
     }) => {
-      await resumeWorkflowRun(handlerDb, {
+      const resumedRunId = await resumeWorkflowRun(handlerDb, {
         ...event,
         causationId: event.causationId ?? undefined,
       });
+      const workflowRunId = resumedRunId ?? stringPayload(event.payload.runId);
+      if (workflowRunId) {
+        await finalizeConversationActionPlanWorkflow(handlerDb, {
+          tenantId: event.tenantId,
+          actorId: event.actorId,
+          workflowRunId,
+        });
+      }
     },
     [connectorSyncRequestedEventType]: async ({ db: handlerDb, event }) => {
       if (stringPayload(event.payload.connectorKey) !== "mock_business") {

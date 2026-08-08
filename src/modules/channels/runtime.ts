@@ -10,6 +10,7 @@ import {
   decideConversationActionPlan,
   executeConversationActionPlan,
   listConversationActionPlans,
+  requestConversationActionPlanRetry,
 } from "@/modules/orchestrator";
 
 export function createConversationChannelServices(db: DbClient) {
@@ -52,6 +53,8 @@ export function createConversationChannelServices(db: DbClient) {
       }),
     executePlan: (userId: string, tenantId: string, planId: string) =>
       executeConversationActionPlan(db, userId, tenantId, planId),
+    retryPlan: (userId: string, tenantId: string, planId: string) =>
+      requestConversationActionPlanRetry(db, userId, tenantId, planId),
   };
 }
 

@@ -346,6 +346,24 @@ export async function updateActionPlanExecutionStatus(
   );
 }
 
+export async function updateActionPlanStepStatusByPosition(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    planId: string;
+    position: number;
+    status: "succeeded" | "failed";
+  },
+) {
+  await db.query(
+    `update conversation_action_plan_steps
+     set status = $1
+     where tenant_id = $2 and plan_id = $3 and position = $4
+       and status <> 'cancelled'`,
+    [input.status, input.tenantId, input.planId, input.position],
+  );
+}
+
 export async function markActionPlanExecuted(
   db: DbClient,
   tenantId: string,

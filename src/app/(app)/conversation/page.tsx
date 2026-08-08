@@ -6,6 +6,7 @@ import {
   ListChecks,
   MessageCircle,
   Radio,
+  RotateCcw,
   Send,
   ShieldCheck,
   XCircle,
@@ -16,6 +17,7 @@ import {
   createConversationPlanAction,
   decideConversationPlanAction,
   executeConversationPlanAction,
+  retryConversationPlanAction,
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
 } from "@/app/(app)/conversation/actions";
@@ -27,6 +29,7 @@ type ConversationPageProps = {
     fil?: string;
     envoye?: "web" | "test";
     plan?: "cree" | "approved" | "rejected" | "executed";
+    reprise?: "demandee";
   }>;
 };
 
@@ -102,6 +105,13 @@ export default async function ConversationPage({
               : params.plan === "executed"
                 ? "Exécution mock terminée et preuve durable enregistrée."
                 : "Plan refusé. Aucune action n’a été exécutée."}
+        </div>
+      ) : null}
+
+      {params.reprise === "demandee" ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+          Reprise demandée une seule fois. Le worker continuera la mission sans
+          rejouer une étape déjà réussie.
         </div>
       ) : null}
 
@@ -322,7 +332,8 @@ function PlanPanel({
                     {index + 1}. {step.capability}
                   </span>
                   <span className="text-xs font-semibold text-slate-500">
-                    Risque {step.risk === "low" ? "faible" : "moyen"}
+                    {planStepStatusLabel(plan.steps[index]?.status)} · Risque{" "}
+                    {step.risk === "low" ? "faible" : "moyen"}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
@@ -352,7 +363,30 @@ function PlanPanel({
               </p>
             )
           ) : null}
-          {plan.approvalStatus === "approved" && canDecide ? (
+          {plan.approvalStatus === "approved" &&
+          plan.mission?.status === "failed" &&
+          canDecide ? (
+            <form
+              action={retryConversationPlanAction}
+              className="mt-4 border-t border-slate-200 pt-4"
+            >
+              <input type="hidden" name="threadId" value={threadId} />
+              <input type="hidden" name="planId" value={plan.id} />
+              <p className="text-sm font-semibold text-rose-900">
+                Mission interrompue. Les preuves déjà acquises sont conservées.
+              </p>
+              <button className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800">
+                <RotateCcw size={16} aria-hidden />
+                Reprendre la mission
+              </button>
+              <p className="mt-2 text-xs text-slate-500">
+                Le signal est idempotent et la reprise utilise le snapshot validé.
+              </p>
+            </form>
+          ) : null}
+          {plan.approvalStatus === "approved" &&
+          !plan.mission &&
+          canDecide ? (
             <form
               action={executeConversationPlanAction}
               className="mt-4 border-t border-slate-200 pt-4"
@@ -367,6 +401,13 @@ function PlanPanel({
                 L’exécution est durable et idempotente, sans appel ni effet externe.
               </p>
             </form>
+          ) : null}
+          {plan.approvalStatus === "approved" &&
+          plan.mission &&
+          plan.mission.status !== "failed" ? (
+            <p className="mt-4 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">
+              Mission durable : {missionStatusLabel(plan.mission.status)}.
+            </p>
           ) : null}
         </div>
       ) : (
@@ -432,6 +473,30 @@ function planStatusClass(status: ConversationPlan["approvalStatus"]) {
   }
   if (status === "rejected") return "bg-rose-100 text-rose-900";
   return "bg-amber-100 text-amber-950";
+}
+
+function planStepStatusLabel(status?: ConversationPlan["steps"][number]["status"]) {
+  return {
+    planned: "Planifiée",
+    approved: "Approuvée",
+    running: "En cours",
+    succeeded: "Réussie",
+    failed: "Échec",
+    cancelled: "Annulée",
+  }[status ?? "planned"];
+}
+
+function missionStatusLabel(status: string) {
+  return {
+    pending: "planifiée",
+    running: "en cours",
+    waiting: "reprise en attente",
+    approval_required: "validation requise",
+    succeeded: "terminée",
+    failed: "interrompue",
+    rejected: "refusée",
+    cancelled: "annulée",
+  }[status] ?? "état contrôlé";
 }
 
 function MessageForm({

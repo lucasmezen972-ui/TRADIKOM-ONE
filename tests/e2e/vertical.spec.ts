@@ -1127,6 +1127,7 @@ async function runConversationJourney(
       ),
     ).toBeVisible();
     await expect(page.getByText("Exécuté", { exact: true })).toBeVisible();
+    await expect(page.getByText("Réussie", { exact: false })).toHaveCount(2);
 
     const evidence = await db.query<{
       runs: number;

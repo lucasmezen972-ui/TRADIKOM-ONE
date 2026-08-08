@@ -102,6 +102,19 @@ export async function executeConversationPlanAction(formData: FormData) {
   );
 }
 
+export async function retryConversationPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const threadId = text(formData, "threadId");
+  await safeServerAction("conversation.plan_retry", () =>
+    services.retryPlan(user.id, tenant.id, text(formData, "planId")),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    `/conversation?fil=${encodeURIComponent(threadId)}&reprise=demandee`,
+  );
+}
+
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";

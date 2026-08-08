@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createMemoryDb } from "../src/lib/db";
+import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import { ingestConversationMessage } from "../src/modules/conversation-hub";
 import {
@@ -8,7 +8,9 @@ import {
   executeConversationActionPlan,
   getConversationActionPlan,
   listConversationActionPlans,
+  requestConversationActionPlanRetry,
 } from "../src/modules/orchestrator";
+import { processPendingDomainEvents } from "../src/modules/workflows/worker";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const occurredAt = "2026-07-30T10:00:00.000Z";
@@ -429,6 +431,178 @@ describe("service des plans Conversation", () => {
     );
   });
 
+  it("finalise une reprise worker dans le fil sans second clic d'exécution", async () => {
+    const context = await createTenantContext("resume-plan-owner@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    await ingestConversationMessage(context.db, context.userId, {
+      ...testChannelIngressFixture(context.tenantId),
+      threadId: source.threadId,
+    });
+    const plan = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    await decideConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      {
+        planId: plan.id,
+        decision: "approved",
+        reason: "Reprise durable autorisée.",
+      },
+    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("Aucun transport externe attendu."));
+
+    let interruptionInjected = false;
+    const interruptedDb: DbClient = {
+      query: async <T>(sql: string, params?: unknown[]) => {
+        if (
+          !interruptionInjected &&
+          sql.includes("insert into workflow_run_steps") &&
+          params?.[4] === "succeeded" &&
+          String(params?.[5]).includes('"actionIndex":1')
+        ) {
+          interruptionInjected = true;
+          throw new Error("Interruption simulée avant la preuve de la seconde étape.");
+        }
+        return context.db.query<T>(sql, params);
+      },
+    };
+
+    await expect(
+      executeConversationActionPlan(
+        interruptedDb,
+        context.userId,
+        context.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_execution_failed" });
+    const interrupted = await getConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      plan.id,
+    );
+    expect(interrupted).toMatchObject({
+      approvalStatus: "approved",
+      steps: [{ status: "failed" }, { status: "failed" }],
+      mission: { status: "failed" },
+    });
+
+    const firstSignal = await requestConversationActionPlanRetry(
+      context.db,
+      context.userId,
+      context.tenantId,
+      plan.id,
+    );
+    const replayedSignal = await requestConversationActionPlanRetry(
+      context.db,
+      context.userId,
+      context.tenantId,
+      plan.id,
+    );
+    expect(firstSignal).toEqual({ idempotentReplay: false });
+    expect(replayedSignal).toEqual({ idempotentReplay: true });
+
+    const worker = await processPendingDomainEvents(context.db, {
+      now: new Date("2999-01-01T00:00:00.000Z"),
+    });
+    expect(worker).toMatchObject({ succeeded: 1, failed: 0 });
+
+    const finalized = await getConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      plan.id,
+    );
+    expect(finalized).toMatchObject({
+      approvalStatus: "executed",
+      steps: [{ status: "succeeded" }, { status: "succeeded" }],
+      mission: { status: "succeeded" },
+    });
+
+    const evidence = await context.db.query<{
+      action_name: string;
+      status: string;
+      attempts: number;
+    }>(
+      `select action_name, status, attempts
+       from workflow_run_steps
+       where tenant_id = $1
+         and action_name in ('mock_search_contact', 'mock_create_task')
+       order by created_at asc, id asc`,
+      [context.tenantId],
+    );
+    expect(evidence.rows).toMatchObject([
+      { action_name: "mock_search_contact", status: "succeeded", attempts: 1 },
+      { action_name: "mock_create_task", status: "failed", attempts: 1 },
+      { action_name: "mock_create_task", status: "succeeded", attempts: 2 },
+    ]);
+    expect(
+      evidence.rows.filter(
+        (step) =>
+          step.action_name === "mock_search_contact" &&
+          step.status === "succeeded",
+      ),
+    ).toHaveLength(1);
+
+    const projection = await context.db.query<{
+      results: number;
+      routes: number;
+      planAudits: number;
+      retryAudits: number;
+    }>(
+      `select
+         (select count(*)::int from conversation_messages
+          where tenant_id = $1 and thread_id = $2 and kind = 'result') as results,
+         (select count(*)::int
+          from conversation_message_route_hops as routes
+          join conversation_messages as messages
+            on messages.tenant_id = routes.tenant_id
+           and messages.id = routes.message_id
+          where messages.tenant_id = $1 and messages.thread_id = $2
+            and messages.kind = 'result') as routes,
+         (select count(*)::int from audit_logs
+          where tenant_id = $1 and action = 'conversation.plan_executed'
+            and target_id = $3) as "planAudits",
+         (select count(*)::int from audit_logs
+          where tenant_id = $1 and action = 'workflow.manual_retry_requested') as "retryAudits"`,
+      [context.tenantId, source.threadId, plan.id],
+    );
+    expect(projection.rows[0]).toEqual({
+      results: 1,
+      routes: 2,
+      planAudits: 1,
+      retryAudits: 1,
+    });
+
+    const finalAudit = await context.db.query<{ safe_metadata: string }>(
+      `select safe_metadata from audit_logs
+       where tenant_id = $1 and action = 'conversation.plan_executed'
+         and target_id = $2`,
+      [context.tenantId, plan.id],
+    );
+    expect(finalAudit.rows[0]?.safe_metadata).toContain(
+      '"externalSideEffect":false',
+    );
+    expect(finalAudit.rows[0]?.safe_metadata).not.toContain(
+      "Relancer le contact de la conversation",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("isole les tenants et réserve la décision aux rôles autorisés", async () => {
     const ownerA = await createTenantContext("tenant-plan-a@example.com");
     const ownerB = await createSecondUserAndTenant(
@@ -493,6 +667,14 @@ describe("service des plans Conversation", () => {
     ).rejects.toMatchObject({ code: "tenant_access_denied" });
     await expect(
       executeConversationActionPlan(
+        ownerA.db,
+        ownerB.userId,
+        ownerA.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "tenant_access_denied" });
+    await expect(
+      requestConversationActionPlanRetry(
         ownerA.db,
         ownerB.userId,
         ownerA.tenantId,
