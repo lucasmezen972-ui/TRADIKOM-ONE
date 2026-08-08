@@ -3,7 +3,7 @@
 - Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head initial audité : `6dae5db`
+- Head fonctionnel audité : `d5cad7e`
 - Travail effectué : transport WhatsApp sortant fail-closed, durable et tenant-aware avec doubles uniquement, sans activation externe.
 
 ## Impact north star
@@ -14,8 +14,8 @@ Une réponse conversationnelle canonique peut maintenant traverser une policy, �
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues textuellement et dans les rendus directs du PDF canonique.
 - Exigence servie : poursuivre OS-5 page 31 avec WhatsApp/Twilio comme candidat unique, conformément aux pages 14, 18, 22, 28-29, 32, 64, 66 et 69 : adaptateur sans logique métier, policy obligatoire, action durable, tenant/RLS, idempotence, états fournisseur honnêtes, erreurs normalisées et audit sans secret ni PII.
-- Preuve obtenue : PDF de 71 pages au SHA-256 exact; PR/CI du head initial vertes; état `mock` explicite distinct de `ready`; adapter fail-closed avant le client; migrations runtime `076`/`077` et miroirs SQL `0070`/`0071`; réservation et fingerprint tenant-aware; double envoi dédupliqué; rôles et acteur inter-tenant refusés; classifications `temporary`, `permanent`, `auth`, `rate_limit`, `policy`, `validation`, `not_configured`; message canonique réconcilié; audits sans corps, numéro ou SID; 19 nouveaux tests puis 66 tests canaux verts; lint, typecheck, audit production, build et continuité verts.
-- Écarts restants : le worker de reprise `reserved`/`temporary`/`rate_limit`, le callback de livraison Twilio, le secret manager, la résolution réversible et chiffrée du destinataire, la sandbox, l'endpoint public et la preuve web + WhatsApp réelle restent absents. La suite Vitest complète locale bloque silencieusement malgré les suites ciblées vertes; la CI PostgreSQL du commit publié doit confirmer migrations, RLS, suite complète, build et Playwright. OS-5 reste `in_progress` et ne satisfait pas encore le critère de succès page 31.
+- Preuve obtenue : PDF de 71 pages au SHA-256 exact; état `mock` explicite distinct de `ready`; adapter fail-closed avant le client; migrations runtime `076`/`077` et miroirs SQL `0070`/`0071`; réservation et fingerprint tenant-aware; double envoi dédupliqué; rôles et acteur inter-tenant refusés; classifications `temporary`, `permanent`, `auth`, `rate_limit`, `policy`, `validation`, `not_configured`; message canonique réconcilié; audits sans corps, numéro ou SID; 19 nouveaux tests puis 66 tests canaux locaux verts; CI PostgreSQL `31244919362` verte avec 101 fichiers / 393 tests, build et 20 Playwright; continuité `31244919353` verte.
+- Écarts restants : le worker de reprise `reserved`/`temporary`/`rate_limit`, le callback de livraison Twilio, le secret manager, la résolution réversible et chiffrée du destinataire, la sandbox, l'endpoint public et la preuve web + WhatsApp réelle restent absents. La suite Vitest complète locale bloque silencieusement malgré les suites ciblées vertes; la CI Linux/PostgreSQL complète est verte et constitue la preuve autoritative. OS-5 reste `in_progress` et ne satisfait pas encore le critère de succès page 31.
 
 ## Classification honnête
 
@@ -49,10 +49,10 @@ Une réponse conversationnelle canonique peut maintenant traverser une policy, �
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement;
 - prompt maître : empreinte exacte `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5` et 71 pages;
 - inspection textuelle et visuelle : pages cœur et OS-5 attendues;
-- GitHub initial : PR #11 ouverte, brouillon et `CLEAN`; CI `31242530450` et continuité `31242530461` vertes sur `6dae5db`;
+- GitHub : PR #11 ouverte, brouillon et `CLEAN`; CI `31244919362` et continuité `31244919353` vertes sur `d5cad7e`;
 - local ciblé : 3 fichiers / 19 tests nouveaux, puis 10 fichiers / 66 tests WhatsApp/canaux verts;
 - local statique : audit production sans vulnérabilité connue, lint, typecheck, build production, continuity-check et diff check verts;
-- local exhaustif : deux tentatives Vitest complètes interrompues après blocage silencieux sans assertion en échec; CI du commit à publier requise comme arbitre.
+- CI exhaustive : 101 fichiers / 393 tests, build production et 20 Playwright verts; migrations propres/upgrade, backup/restauration et contrôle PostgreSQL/RLS verts.
 
 ## Prochaine action recommandée
 

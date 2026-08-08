@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T06:50:00.000Z",
+  "updatedAt": "2026-08-08T07:07:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "6dae5db0b1f4cdaecf7cb563cd48653826033cea",
+  "lastCommit": "d5cad7efb0df78a89006a96102a210d81181192c",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 reste en cours sans activation externe : le transport WhatsApp sortant est désormais préparé derrière ChannelAdapter, policy, réservation durable tenant/RLS et audit sûr avec doubles uniquement; le prochain checkpoint doit rendre les reprises temporary/rate_limit durables sans double envoi.",
@@ -214,7 +214,8 @@
     "pnpm audit production sans vulnerabilite connue et pnpm lint vert",
     "build production local vert avec configuration CI factice",
     "pnpm test et seconde suite Vitest complete bornes apres blocage local silencieux sans assertion en echec",
-    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement"
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement",
+    "commit d5cad7e pousse; CI 31244919362 et continuite 31244919353 entierement vertes"
   ],
   "lastValidation": [
     {
@@ -608,6 +609,10 @@
     {
       "command": "pnpm test et pnpm vitest run --maxWorkers=4",
       "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_pending"
+    },
+    {
+      "command": "CI 31244919362 et continuité 31244919353 sur d5cad7e",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_101_files_393_tests_build_20_playwright_and_continuity"
     }
   ],
   "humanBlockers": [

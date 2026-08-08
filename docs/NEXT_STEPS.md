@@ -15,7 +15,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Vérifier la PR #11 et les checks du commit publiant le transport outbound OS-5.
+3. Confirmer le commit `d5cad7e` et les runs verts CI `31244919362` / continuité `31244919353` de la PR #11.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et conserver WhatsApp/Twilio comme seul candidat actif du chantier.
 5. Auditer channel_provider_deliveries et ajouter un worker de reprise avec lease, tentatives bornées et doubles uniquement.
 6. Prouver interruption après réservation, reprise temporary/rate_limit, non-rejeu après succès, tenant/RLS, policy et audit sans PII.
