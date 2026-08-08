@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T05:38:00.000Z",
+  "updatedAt": "2026-08-08T05:50:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "3109221f6e7018e93597c3fa88696801417f0a9d",
+  "lastCommit": "d27e3cfc7e8f8343e54b6530d59b13f2b8cabd2d",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 ouvert sans activation externe : WhatsApp via Twilio Sandbox est le candidat unique documenté; le prochain checkpoint implémente le transport sortant fail-closed avec doubles avant toute autorisation fournisseur.",
@@ -199,7 +199,8 @@
     "selection WhatsApp via Twilio Sandbox et checkpoint humain exact sans activation",
     "pnpm lint, pnpm typecheck et pnpm test : 96 fichiers verts, 361 tests verts, 13 ignores",
     "build production local vert avec configuration CI factice",
-    "CI 31240778430 et continuite 31240778429 entierement vertes sur 3109221"
+    "CI 31240778430 et continuite 31240778429 entierement vertes sur 3109221",
+    "commit d27e3cf pousse; CI 31242028098 et continuite 31242028100 entierement vertes"
   ],
   "lastValidation": [
     {
@@ -572,6 +573,10 @@
     },
     {
       "command": "CI 31240778430 et continuité 31240778429 sur 3109221",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "CI 31242028098 et continuité 31242028100 sur d27e3cf",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_build_playwright_and_continuity"
     }
   ],

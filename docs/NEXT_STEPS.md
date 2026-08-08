@@ -15,7 +15,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-15, 26-30 et 64
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Confirmer la PR #11 et l'état final des runs du head contenant le rapport de sélection OS-5.
+3. Confirmer la PR #11 et les runs verts `31242028098` / `31242028100` du commit `d27e3cf` contenant le rapport de sélection OS-5.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et conserver WhatsApp/Twilio comme seul candidat actif du chantier.
 5. Implémenter l'outbound fail-closed avec un client injecté et des doubles; aucun fetch réel, credential ou état ready.
 6. Prouver permission, tenant, idempotence, double envoi, erreurs temporary/permanent/auth/rate_limit/policy/not_configured et audit sans PII.

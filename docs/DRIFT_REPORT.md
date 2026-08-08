@@ -3,7 +3,7 @@
 - Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head audité : `3109221`
+- Head fonctionnel audité : `d27e3cf`
 - Travail effectué : ouverture OS-5 par audit comparatif des quatre frontières préparées et sélection de WhatsApp via Twilio Sandbox, sans activation externe.
 
 ## Impact north star
@@ -49,7 +49,7 @@ La décision privilégie le premier parcours réellement conversationnel : un me
 - prompt maître : empreinte exacte et 71 pages;
 - inspection textuelle et visuelle : pages cœur et OS-5 attendues;
 - local : lint, typecheck, 96 fichiers / 361 tests verts / 13 ignores et build production avec configuration CI factice;
-- GitHub : PR #11 ouverte, brouillon et `CLEAN`; continuité `31240778429` et CI `31240778430` vertes, incluant audit, migrations, backup/restauration, RLS, tests, build et Playwright;
+- GitHub : PR #11 ouverte, brouillon et `CLEAN`; continuité `31242028100` et CI `31242028098` vertes sur `d27e3cf`, incluant audit, migrations, backup/restauration, RLS, lint, typecheck, 361 tests, build et Playwright;
 - code : aucune mutation runtime, aucun réseau fournisseur et aucun secret.
 
 ## Prochaine action recommandée
