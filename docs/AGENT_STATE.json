@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T12:20:48.000Z",
+  "updatedAt": "2026-08-08T12:48:14.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "3b96716667ca7780a36f690206556488686a5abe",
+  "lastCommit": "9c7e4dba8f46882908c799840c3f7e1dede970e9",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : inbound, outbound durable, worker, callbacks monotones et frontière Twilio à client/résolveurs injectés sont prouvés avec doubles. Le prochain checkpoint doit fournir le coffre chiffré et rotatif tenant-aware qui alimente éphémèrement credentials, sender et destination, toujours sans état ready ni appel fournisseur.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : le coffre chiffré, versionné, rotatif et révocable alimente désormais éphémèrement les résolveurs Twilio après les gardes existantes. Le prochain checkpoint non bloqué doit ajouter la fabrique du client Twilio officiel et le bootstrap serveur du keyring depuis des références de secret manager, tout en conservant le registre réel fail-closed et sans appel fournisseur.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Migrations runtime 081/082 et miroirs SQL 0075/0076 créant un coffre tenant-owned avec relations composées vers endpoint et identité, index tenant-leading, versions bornées, unicité de la version active, identité/ciphertext immuables, révocation monotone et RLS. Modules bornés crypto, repository et service prouvant AES-256-GCM avec données associées tenant/provider/référence/version, clé active injectée, rotation créant une nouvelle version et révoquant l'ancienne, révocation idempotente, refus des rôles non administrateurs et des références inter-tenant/inactives, résolution éphémère uniquement des versions actives et échec fermé sur clé absente, ciphertext altéré ou version révoquée. Les résolveurs Twilio concrets doivent retourner credentials/sender/destination sans les persister ailleurs ni les exposer dans audits/réponses/logs; transport et provider runtime restent mock/disabled sans fetch. Tests unitaires, intégration, provider, sécurité et PostgreSQL/RLS couvrant select/insert/update/delete inter-tenant, parité des migrations et absence de colonnes claires; régressions canaux, audit, lint, typecheck, build, continuité et CI/Playwright doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Implémenter derrière les résolveurs Twilio un coffre chiffré et rotatif tenant-aware pour credentials, sender et destination : migration additive, relations composées, RLS, rotation/révocation, résolution éphémère après membership/policy et audit sans valeur sensible; doubles et clé factice uniquement, aucun état ready réel.",
-  "nextFile": "src/modules/channels/channel-provider-secrets-service.ts",
+  "nextAction": "Ajouter une fabrique bornée du client Twilio officiel et un bootstrap serveur du keyring versionné depuis des références de secret manager : aucune construction avant état autorisé, aucune lecture côté navigateur, aucun appel réseau en test et aucun état ready réel avant le checkpoint humain.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-client.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -719,6 +719,34 @@
     {
       "command": "CI 31250907675 sur 3b96716",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_105_files_427_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant coffre fournisseur OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean"
+    },
+    {
+      "command": "tests coffre ciblés et intégration transport mock",
+      "status": "passed_3_files_11_tests_aes_gcm_aad_rotation_revocation_idempotency_safe_audit_no_network"
+    },
+    {
+      "command": "régression canaux, WhatsApp et Conversation Hub",
+      "status": "passed_20_files_120_tests_2_postgres_rls_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local puis reprise ciblée",
+      "status": "blocked_by_known_local_pglite_timeouts_under_contention_email_target_passed_worker_passed_alone_with_15s_ci_postgres_authoritative"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31257937592 sur 9c7e4db",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31257937598 sur 9c7e4db",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_109_files_439_tests_build_20_playwright"
     }
   ],
   "humanBlockers": [
