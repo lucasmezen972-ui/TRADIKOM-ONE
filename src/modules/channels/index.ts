@@ -9,6 +9,7 @@ export * from "@/modules/channels/whatsapp-twilio-adapter";
 export * from "@/modules/channels/whatsapp-twilio-outbound";
 export * from "@/modules/channels/whatsapp-twilio-transport";
 export * from "@/modules/channels/whatsapp-twilio-client";
+export * from "@/modules/channels/whatsapp-twilio-readiness";
 export * from "@/modules/channels/whatsapp-twilio-outbound-repository";
 export * from "@/modules/channels/whatsapp-twilio-outbound-service";
 export * from "@/modules/channels/whatsapp-twilio-outbound-worker";

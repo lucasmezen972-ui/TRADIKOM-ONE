@@ -70,6 +70,20 @@ export type ChannelProviderSecretReferenceResolver = {
   resolveSecret(reference: string): string | null | Promise<string | null>;
 };
 
+export function inspectChannelProviderSecretKeyReferences(
+  environment: Environment = process.env,
+) {
+  try {
+    const configuration = parseConfiguration(environment);
+    return {
+      activeKeyVersion: configuration.activeKeyVersion,
+      keyVersions: configuration.keys.map((key) => key.version),
+    };
+  } catch {
+    throw bootstrapError();
+  }
+}
+
 export async function bootstrapChannelProviderSecretKeyring(input: {
   environment?: Environment;
   secretManager: ChannelProviderSecretReferenceResolver;
