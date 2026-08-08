@@ -2,9 +2,9 @@
 
 ## Prochaine action concrète
 
-Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. Sont maintenant livrés avec doubles : inbound signé, mapping tenant HMAC, transport sortant derrière `ChannelAdapter`, réservation/idempotence, worker avec lease/backoff et callbacks de statut signés, dédupliqués et monotones. Aucun provider réel ou Sandbox n'est connecté.
+Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. Sont maintenant livrés avec doubles : inbound signé, mapping tenant HMAC, transport sortant derrière `ChannelAdapter`, réservation/idempotence, worker avec lease/backoff, callbacks de statut signés/dédupliqués/monotones et frontière Twilio à client injecté avec résolutions éphémères. Aucun provider réel ou Sandbox n'est connecté.
 
-La prochaine action non bloquée est de préparer la frontière de transport Twilio réelle sans l'activer : résoudre les credentials et la destination uniquement par références sûres et de façon éphémère après les gardes service/policy, transmettre l'URL HTTPS de callback de statut configurée, classer les erreurs et refuser avant le client dans les états `disabled`, `not_configured` et `awaiting_human_auth`. Les tests doivent injecter tous les doubles; aucun secret, numéro, appel réseau ou état `ready` réel.
+La prochaine action non bloquée est d'implémenter le coffre chiffré et rotatif derrière les résolveurs déjà définis : une référence endpoint tenant-aware fournit éphémèrement Account SID/Auth Token/sender, une référence d'identité active fournit éphémèrement la destination, avec migrations additives, RLS, relations composées, rotation/révocation et audit sans valeur sensible. Les tests doivent utiliser une clé factice et des doubles; aucun secret réel, numéro réel, appel réseau ou état `ready` réel.
 
 ## Référence prompt maître
 
@@ -15,27 +15,27 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Partir du commit fonctionnel `65176fb`, confirmé par la CI PostgreSQL `31248824059` et la continuité `31248824055` vertes sur la PR brouillon #11.
+3. Partir du commit fonctionnel `3b96716`, confirmé par la continuité `31250907674` et la CI PostgreSQL `31250907675` entièrement vertes sur la PR brouillon #11.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et conserver WhatsApp/Twilio comme seul candidat actif du chantier.
-5. Ajouter une frontière de transport Twilio à client injecté, avec résolveurs de credentials et destination par références; ne jamais persister ni retourner leur valeur.
-6. Transmettre l'URL TWILIO_WHATSAPP_STATUS_CALLBACK_URL et prouver fail-closed, policy préalable, idempotence, classification, absence de réseau et audit sans PII avec doubles uniquement.
+5. Ajouter un stockage chiffré tenant-aware et rotatif pour les références de credentials/sender et de destination, sans réutiliser une colonne de brouillon ou exposer la valeur claire.
+6. Brancher des résolveurs sur ce coffre derrière membership, contexte et policy; prouver RLS, rotation, révocation, résolution éphémère, absence de réseau et audit sans PII avec doubles uniquement.
 7. Ne créer la Sandbox, saisir les credentials ou promouvoir l'état qu'après autorisation explicite du checkpoint humain du rapport.
 ```
 
 ## Critères du prochain checkpoint
 
-- aucun client Twilio n'est construit ou appelé sans état autorisé, credentials résolus, destination résolue et URL HTTPS de callback;
-- credentials, token, sender, numéro destinataire, SID et contenu ne sont jamais retournés, audités ou loggés;
-- la destination est résolue éphémèrement depuis l'identité tenant-scoped après membership et policy, jamais depuis une entrée frontend seule;
-- le même identifiant d'envoi et la même URL de callback traversent le transport; erreurs temporary/permanent/auth/rate_limit restent normalisées;
+- credentials, sender et destination sont chiffrés au repos, versionnés, rotatifs, révocables et isolés par tenant/RLS;
+- aucune valeur claire, token, numéro, SID ou contenu n'est retourné, audité ou loggé;
+- les résolveurs exigent endpoint et identité tenant-scoped actifs après membership et policy, jamais une entrée frontend seule;
+- la clé d'envoi durable et l'URL de callback restent inchangées; erreurs temporary/permanent/auth/rate_limit restent normalisées;
 - les états réels restent `disabled`, `not_configured` ou `awaiting_human_auth`; seul un client double explicitement injecté est utilisable en test;
 - tests unitaires, intégration, PostgreSQL/RLS, provider et sécurité, plus lint, typecheck, build, continuité et CI;
 - aucun paiement, message externe, endpoint public, déploiement, fusion ou effet irréversible sans autorisation.
 
 ## État de vérité
 
-- Livré : OS-1 à OS-4; sélection OS-5; outbound durable; worker; callbacks Twilio signés/dédupliqués/monotones.
-- Réel préparé : inbound WhatsApp signé et tenant-mappé; outbound durable et convergence de statut, sans client réel.
+- Livré : OS-1 à OS-4; sélection OS-5; outbound durable; worker; callbacks Twilio signés/dédupliqués/monotones; transport à client et résolveurs injectés.
+- Réel préparé : inbound WhatsApp signé et tenant-mappé; outbound durable, convergence de statut et frontière Twilio éphémère, sans coffre ni client officiel branché.
 - Réel connecté : aucun fournisseur.
 - Sandbox : aucune configurée ou appelée.
 - Mock : canal test, `tradikom_mock`, missions durables et transports/callbacks WhatsApp simulés par doubles.

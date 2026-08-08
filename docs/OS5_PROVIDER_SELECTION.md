@@ -19,7 +19,7 @@ Resend demande moins d'autorisations mais ne constitue pas le meilleur premier p
 
 | Candidat | Preuve conversationnelle possible | Coût nul officiel | Intervention humaine | État réel du dépôt | Décision |
 | --- | --- | --- | --- | --- | --- |
-| WhatsApp / Twilio | Bidirectionnel : message téléphone -> webhook -> fil web, puis réponse web -> WhatsApp | Sandbox d'essai; 100 messages inclus dans les unités gratuites, sans WABA ni sender enregistré | Compte/login, vérification du téléphone, acceptation Sandbox, `join`, credentials et URL HTTPS | Inbound signé, mapping tenant HMAC, fil canonique et replay `MessageSid` livrés; transport sortant et promotion runtime absents | **Retenu** |
+| WhatsApp / Twilio | Bidirectionnel : message téléphone -> webhook -> fil web, puis réponse web -> WhatsApp | Sandbox d'essai; 100 messages inclus dans les unités gratuites, sans WABA ni sender enregistré | Compte/login, vérification du téléphone, acceptation Sandbox, `join`, credentials et URL HTTPS | Inbound, outbound durable, callbacks et frontière client injectée livrés avec doubles; coffre chiffré, client officiel et promotion runtime absents | **Retenu** |
 | Email / Resend | Outbound applicatif et événements de livraison; une vraie réponse email n'entre pas encore dans le fil | Plan gratuit; `resend.dev` envoie seulement à l'adresse du compte sans domaine | Compte/login, clé, webhook; domaine/DNS seulement pour d'autres destinataires | Provider d'envoi borné et webhooks de livraison livrés, mais runtime réel refusé et `email.received` non supporté | Rejeté pour la première preuve conversationnelle |
 | Slack | Bidirectionnel possible via Events API et Web API | Workspace gratuit possible, sous limite d'apps | Création d'app, installation workspace, OAuth/scopes, token, signing secret et endpoint ou Socket Mode | Inbound signé et fil canonique livrés; OAuth, stockage token et outbound absents | Différé : surface d'autorisation supérieure |
 | Microsoft Teams | Bidirectionnel possible avec agent/bot dans Teams | Playground local gratuit, mais ce serait une simulation; le test Teams réel demande tenant/app/tunnel | Compte Microsoft, tenant, application, endpoint et consentements potentiellement administrateur | Validation JWT et inbound canonique livrés; provisioning, consentement, token et outbound absents | Différé : intervention humaine la plus forte |
@@ -31,7 +31,8 @@ Resend demande moins d'autorisations mais ne constitue pas le meilleur premier p
 - `src/modules/channels/whatsapp-twilio-webhook.ts` vérifie la signature avec le SDK Twilio officiel sur l'URL exacte et borne le payload.
 - `src/modules/channels/whatsapp-twilio-ingress-service.ts` résout un endpoint actif sous transaction système, pseudonymise l'identité avec HMAC tenant-scoped et ingère dans le Conversation Hub.
 - `src/modules/channels/provider-endpoints-service.ts` réserve et désactive les endpoints avec contrôle de rôle, unicité inter-tenant et audit sans numéro ni secret.
-- Le contrat `ChannelAdapter.sendMessage`, la réservation durable, le worker avec lease/backoff et la réconciliation canonique sont livrés avec un transport mock injecté; aucun client Twilio réel n'est branché.
+- Le contrat `ChannelAdapter.sendMessage`, la réservation durable, le worker avec lease/backoff et la réconciliation canonique sont livrés avec un transport mock injecté.
+- `src/modules/channels/whatsapp-twilio-transport.ts` reçoit uniquement les références sûres tenant/endpoint/identité après membership et policy, résout credentials et adresses éphémèrement, exige l'URL HTTPS de callback et construit uniquement un client injecté. Aucun résolveur de secrets réel ni client Twilio officiel n'est branché.
 - Le callback de statut vérifie la signature Twilio officielle sur l'URL exacte, normalise `queued/sent`, `delivered/read` et `failed/undelivered`, déduplique sans stocker le SID dans le journal d'événements et refuse toute régression après `delivered`.
 - Les tests actuels prouvent signature, replay, ordre tardif, mapping absent/désactivé, isolation tenant/RLS, audit sans PII et absence d'accès réseau; ils ne prouvent aucune requête contre la sandbox.
 
@@ -72,14 +73,14 @@ Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
 7. Confirmer l'envoi d'au plus deux messages de preuve vers le seul téléphone de test, puis la désactivation de l'endpoint et la révocation du tunnel à la fin.
 ```
 
-Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant, son worker durable et les callbacks de statut sont maintenant prouvés avec doubles. Le travail non bloqué suivant est la frontière de transport Twilio fail-closed avec résolution éphémère des credentials et de la destination par références sûres, sans sélectionner le provider runtime ni effectuer d'appel réseau réel.
+Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, endpoint actif ou message réel ne doit être créé. Le transport sortant, son worker durable, les callbacks de statut et la frontière client/résolveurs éphémères sont maintenant prouvés avec doubles. Le travail non bloqué suivant est le coffre chiffré et rotatif tenant-aware qui alimentera ces résolveurs sans activer le provider runtime ni effectuer d'appel réseau réel.
 
 ## Classification honnête
 
 | Qualification | État après cet audit |
 | --- | --- |
 | Livré | audit comparatif, sélection unique, contrat de preuve et checkpoint humain exact |
-| Réel préparé | frontières protocolaires Resend, WhatsApp/Twilio, Teams et Slack; WhatsApp inbound, outbound durable et callbacks de statut canoniques |
+| Réel préparé | frontières protocolaires Resend, WhatsApp/Twilio, Teams et Slack; WhatsApp inbound, outbound durable, callbacks canoniques et transport à client injecté |
 | Réel connecté | aucun provider |
 | Sandbox | aucune sandbox créée, configurée ou appelée |
 | Mock | événements provider des tests, `tradikom_mock` et canal test |
@@ -88,8 +89,8 @@ Sans cette autorisation, aucun compte, credential, tunnel, webhook fournisseur, 
 
 ## Écarts restants avant activation
 
-- conserver les credentials par référence chiffrée ou secret manager, jamais comme valeur en base ou audit;
-- résoudre la destination WhatsApp de façon éphémère et brancher un client Twilio réel derrière la frontière fail-closed, sans stockage clair;
+- conserver credentials, sender et destination dans un coffre chiffré et rotatif tenant-aware, puis brancher les résolveurs par références, jamais comme valeurs claires en base ou audit;
+- instancier le client Twilio officiel derrière la fabrique injectée uniquement après configuration et autorisation explicites;
 - créer une procédure d'activation, santé, rotation, révocation et désactivation explicite;
 - ajouter la preuve Playwright web + WhatsApp sandbox, plus les pires cas de la matrice page 69;
 - obtenir l'intervention humaine ci-dessus avant toute mutation externe.
