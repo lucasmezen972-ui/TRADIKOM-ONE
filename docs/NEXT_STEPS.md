@@ -15,7 +15,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Confirmer le commit publiant le worker OS-5 et ses runs CI/continuité verts sur la PR #11.
+3. Partir du commit fonctionnel `9241b88`, confirmé par la continuité `31247035021` et la CI PostgreSQL `31247035022` vertes sur la PR #11.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et conserver WhatsApp/Twilio comme seul candidat actif du chantier.
 5. Auditer les statuts Twilio officiels et ajouter le callback signé/dédupliqué avec transitions monotones et doubles uniquement.
 6. Prouver replay, ordre tardif, tenant/RLS, statut canonique, désactivation et audit sans PII.

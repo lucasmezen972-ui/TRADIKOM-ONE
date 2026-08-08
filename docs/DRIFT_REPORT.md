@@ -4,6 +4,7 @@
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
 - Head initial audité : `fe46bf5`
+- Commit fonctionnel audité : `9241b88`
 - Travail effectué : worker durable des livraisons WhatsApp sortantes, avec doubles uniquement et sans activation externe.
 
 ## Impact north star
@@ -14,8 +15,8 @@ Une réponse issue de la conversation peut maintenant survivre à une interrupti
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues textuellement et dans les rendus directs du PDF canonique.
 - Exigence servie : pages 18, 22, 28-29, 31-32, 64, 66 et 69 : action externe durable, idempotence stable, retry borné, lease, tenant/RLS, policy et membership réévalués, erreurs normalisées, fournisseur honnêtement désactivé et audit sans secret ni PII.
-- Preuve obtenue : PDF de 71 pages au SHA-256 exact; migration runtime `078` et miroir SQL `0072`; maximum immuable, lease concurrente et expirée, backoff exponentiel borné; sélection exclusive `reserved`/`temporary`/`rate_limit`; même clé d'idempotence et un seul effet mock après réponse perdue; non-rejeu terminal; message canonique réconcilié; audits sûrs; 26 tests ciblés puis 15 fichiers/83 tests canaux-conversation verts; audit, lint, typecheck et build verts; test PostgreSQL/RLS dédié prêt pour la CI.
-- Écarts restants : la CI du commit doit encore confirmer migrations propres/upgrade, backup/restauration, RLS restreinte, suite complète et Playwright. Le callback de statut Twilio, le secret manager, la résolution chiffrée du destinataire, la sandbox, l'endpoint public et la preuve réelle web + WhatsApp restent absents. OS-5 reste `in_progress` et ne satisfait pas encore le succès page 31.
+- Preuve obtenue : PDF de 71 pages au SHA-256 exact; migration runtime `078` et miroir SQL `0072`; maximum immuable, lease concurrente et expirée, backoff exponentiel borné; sélection exclusive `reserved`/`temporary`/`rate_limit`; même clé d'idempotence et un seul effet mock après réponse perdue; non-rejeu terminal; message canonique réconcilié; audits sûrs; 26 tests ciblés puis 15 fichiers/83 tests canaux-conversation verts; audit, lint, typecheck et build locaux verts; continuité `31247035021` et CI PostgreSQL `31247035022` vertes avec migrations, backup/restauration, RLS, 103 fichiers/401 tests, build et 20 Playwright.
+- Écarts restants : le callback de statut Twilio, le secret manager, la résolution chiffrée du destinataire, la sandbox, l'endpoint public et la preuve réelle web + WhatsApp restent absents. OS-5 reste `in_progress` et ne satisfait pas encore le succès page 31.
 
 ## Classification honnête
 
@@ -49,7 +50,8 @@ Une réponse issue de la conversation peut maintenant survivre à une interrupti
 - GitHub initial : PR #11 ouverte, brouillon, fusionnable et `CLEAN`; CI `31245459338` et continuité `31245459354` vertes sur `fe46bf5`;
 - local ciblé : 26 tests, puis 15 fichiers/83 tests verts et 1 test PostgreSQL/RLS ignoré sans `DATABASE_URL`;
 - local statique : audit production sans vulnérabilité connue, lint, typecheck, build production et diff check verts;
-- local exhaustif : Vitest complet bloqué silencieusement; Playwright non probant sans base PostgreSQL partagée, CI du commit requise.
+- local exhaustif : Vitest complet bloqué silencieusement et Playwright non probant sans base PostgreSQL partagée; cette limite locale est compensée par la CI PostgreSQL `31247035022`, verte sur 103 fichiers/401 tests, build production et 20/20 scénarios Playwright;
+- GitHub final du commit fonctionnel : continuité `31247035021` verte et CI `31247035022` verte en 10 min 41 s sur `9241b88`.
 
 ## Prochaine action recommandée
 

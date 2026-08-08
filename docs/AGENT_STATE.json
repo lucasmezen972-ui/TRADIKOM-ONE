@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-08T07:47:00.000Z",
+  "updatedAt": "2026-08-08T08:01:11.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "fe46bf581ce25efe43f124d2ccd44f65962a6f46",
+  "lastCommit": "9241b88f29742df171439abd31834ed6b5f5527a",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 reste en cours sans activation externe : les livraisons WhatsApp reserved/temporary/rate_limit ont désormais un worker durable tenant-aware avec lease, backoff, tentatives bornées, policy réévaluée et même idempotence; le prochain checkpoint doit ingérer les callbacks de statut Twilio signés et dédupliqués avec doubles uniquement.",
@@ -224,7 +224,10 @@
     "worker WhatsApp tenant-aware avec claim concurrent, lease expiree, meme idempotence, policy et membership reevalues",
     "26 tests cibles puis 83 tests canaux/conversation verts; test PostgreSQL RLS dedie prepare et ignore sans DATABASE_URL local",
     "pnpm audit production sans vulnerabilite, pnpm lint, pnpm typecheck et build production verts",
-    "pnpm test bloque silencieusement localement sans assertion; Playwright local non probant sans PostgreSQL partage et CI requise"
+    "pnpm test bloque silencieusement localement sans assertion; Playwright local non probant sans PostgreSQL partage et CI requise",
+    "commit fonctionnel 9241b88 pousse sur codex/tradikom-one-os",
+    "continuite 31247035021 verte sur 9241b88",
+    "CI PostgreSQL 31247035022 verte : audit, migrations, backup/restauration, lint, typecheck, 103 fichiers/401 tests, build et 20 Playwright"
   ],
   "lastValidation": [
     {
@@ -638,6 +641,14 @@
     {
       "command": "pnpm test et pnpm test:e2e locaux",
       "status": "blocked_by_known_local_vitest_stall_and_playwright_process_isolation_without_shared_postgres_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31247035021 sur 9241b88",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31247035022 sur 9241b88",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_103_files_401_tests_build_20_playwright"
     }
   ],
   "humanBlockers": [
