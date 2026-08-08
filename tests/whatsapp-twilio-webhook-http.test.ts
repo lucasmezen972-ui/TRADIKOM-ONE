@@ -101,6 +101,8 @@ describe("point d'entrée HTTP WhatsApp/Twilio préparé", () => {
     ["payload_invalid", 400],
     ["not_configured", 503],
     ["channel_provider_endpoint_not_found", 503],
+    ["channel_provider_delivery_not_found", 503],
+    ["channel_provider_delivery_event_conflict", 409],
   ] as const)("normalise %s sans exposer le code interne", async (code, status) => {
     const response = await handlePreparedTwilioWebhookRequest(
       request("Body=contenu-prive"),

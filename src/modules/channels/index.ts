@@ -10,6 +10,8 @@ export * from "@/modules/channels/whatsapp-twilio-outbound";
 export * from "@/modules/channels/whatsapp-twilio-outbound-repository";
 export * from "@/modules/channels/whatsapp-twilio-outbound-service";
 export * from "@/modules/channels/whatsapp-twilio-outbound-worker";
+export * from "@/modules/channels/whatsapp-twilio-delivery-status";
+export * from "@/modules/channels/whatsapp-twilio-delivery-status-service";
 export * from "@/modules/channels/provider-endpoints-errors";
 export * from "@/modules/channels/provider-endpoints-repository";
 export * from "@/modules/channels/provider-endpoints-service";

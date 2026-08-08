@@ -28,6 +28,14 @@ describe("migrations des livraisons fournisseur OS-5", () => {
         "os5ChannelProviderDeliveryRetriesMigrationSql",
         "../src/db/migrations/0072_os5_channel_provider_delivery_retries.sql",
       ],
+      [
+        "os5ChannelProviderDeliveryEventsMigrationSql",
+        "../src/db/migrations/0073_os5_channel_provider_delivery_events.sql",
+      ],
+      [
+        "os5ChannelProviderDeliveryEventsRlsMigrationSql",
+        "../src/db/migrations/0074_os5_channel_provider_delivery_events_rls.sql",
+      ],
     ] as const;
 
     for (const [constant, mirrorPath] of definitions) {
@@ -40,6 +48,12 @@ describe("migrations des livraisons fournisseur OS-5", () => {
     );
     expect(getMigrationIds()).toContain(
       "078_os5_channel_provider_delivery_retries",
+    );
+    expect(getMigrationIds()).toContain(
+      "079_os5_channel_provider_delivery_events",
+    );
+    expect(getMigrationIds(true)).toContain(
+      "080_os5_channel_provider_delivery_events_rls",
     );
   });
 
@@ -57,6 +71,19 @@ describe("migrations des livraisons fournisseur OS-5", () => {
          )`,
     );
     expect(unsafe.rows).toEqual([]);
+
+    const unsafeEvents = await db.query<{ column_name: string }>(
+      `select column_name
+       from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'channel_provider_delivery_events'
+         and column_name in (
+           'external_message_id', 'address', 'destination', 'phone_number',
+           'text', 'body', 'raw_body', 'payload', 'credential', 'auth_token',
+           'provider_error_code'
+         )`,
+    );
+    expect(unsafeEvents.rows).toEqual([]);
   });
 
   it("impose les relations tenant composées et l'identité immuable", async () => {
@@ -110,6 +137,62 @@ describe("migrations des livraisons fournisseur OS-5", () => {
         [timestamp],
       ),
     ).rejects.toThrow(/immutable/i);
+  });
+
+  it("rend les événements immuables et empêche une référence fournisseur ambiguë", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    await seedContext(db, "a");
+    await seedContext(db, "b");
+    await seedDelivery(db, "a");
+    await seedDelivery(db, "b");
+    const providerMessageId = `SM${"d".repeat(32)}`;
+    await db.query(
+      `update channel_provider_deliveries
+       set status = 'accepted', external_message_id = $1, retryable = false,
+           updated_at = $2
+       where tenant_id = 'tenant_a' and id = 'delivery_a'`,
+      [providerMessageId, timestamp],
+    );
+    await expect(
+      db.query(
+        `update channel_provider_deliveries
+         set status = 'accepted', external_message_id = $1, retryable = false,
+             updated_at = $2
+         where tenant_id = 'tenant_b' and id = 'delivery_b'`,
+        [providerMessageId, timestamp],
+      ),
+    ).rejects.toThrow(/unique|duplicate/i);
+
+    await db.query(
+      `insert into channel_provider_delivery_events (
+         id, tenant_id, delivery_id, provider, event_key, status,
+         safe_error_code, received_at
+       ) values (
+         'event_a', 'tenant_a', 'delivery_a', 'whatsapp_twilio', $1,
+         'accepted', null, $2
+       )`,
+      ["e".repeat(64), timestamp],
+    );
+    await expect(
+      db.query(
+        `update channel_provider_delivery_events
+         set status = 'delivered'
+         where tenant_id = 'tenant_a' and id = 'event_a'`,
+      ),
+    ).rejects.toThrow(/immutable/i);
+    await expect(
+      db.query(
+        `insert into channel_provider_delivery_events (
+           id, tenant_id, delivery_id, provider, event_key, status,
+           safe_error_code, received_at
+         ) values (
+           'event_cross', 'tenant_a', 'delivery_b', 'whatsapp_twilio', $1,
+           'accepted', null, $2
+         )`,
+        ["f".repeat(64), timestamp],
+      ),
+    ).rejects.toThrow(/foreign key|violates/i);
   });
 });
 

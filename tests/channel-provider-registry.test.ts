@@ -43,6 +43,7 @@ describe("registre des canaux fournisseurs OS-2", () => {
         "TWILIO_AUTH_TOKEN",
         "TWILIO_WHATSAPP_SENDER",
         "TWILIO_WHATSAPP_WEBHOOK_URL",
+        "TWILIO_WHATSAPP_STATUS_CALLBACK_URL",
       ],
       signatureScheme: "twilio_sdk",
     });
@@ -56,6 +57,8 @@ describe("registre des canaux fournisseurs OS-2", () => {
       TWILIO_WHATSAPP_SENDER: "whatsapp:+15005550006",
       TWILIO_WHATSAPP_WEBHOOK_URL:
         "https://app.example.test/api/webhooks/twilio/whatsapp",
+      TWILIO_WHATSAPP_STATUS_CALLBACK_URL:
+        "https://app.example.test/api/webhooks/twilio/whatsapp/status",
       FEATURE_CHANNEL_TEAMS: "true",
       MICROSOFT_TENANT_ID: "tenant_test",
       MICROSOFT_CLIENT_ID: "client_test",

@@ -42,6 +42,17 @@ export type ChannelProviderDeliveryRow = {
   updated_at: string;
 };
 
+export type ChannelProviderDeliveryEventRow = {
+  id: string;
+  tenant_id: string;
+  delivery_id: string;
+  provider: "whatsapp_twilio";
+  event_key: string;
+  status: "accepted" | "delivered" | "failed";
+  safe_error_code: string | null;
+  received_at: string;
+};
+
 export async function findWhatsAppOutboundContext(
   db: DbClient,
   input: {
@@ -300,6 +311,137 @@ export async function updateWhatsAppOutboundMessageState(
      where tenant_id = $3 and id = $4
        and direction = 'outbound'
        and status in ('pending', 'failed')
+     returning id`,
+    [
+      input.status,
+      input.safeErrorCode,
+      input.tenantId,
+      input.messageId,
+    ],
+  );
+  return Boolean(result.rows[0]);
+}
+
+export async function findWhatsAppOutboundDeliveryForStatusUpdate(
+  db: DbClient,
+  input: { externalMessageId: string },
+) {
+  const result = await db.query<ChannelProviderDeliveryRow>(
+    `select *
+     from channel_provider_deliveries
+     where provider = 'whatsapp_twilio'
+       and external_message_id = $1
+     for update`,
+    [input.externalMessageId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function reserveWhatsAppOutboundDeliveryEvent(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    deliveryId: string;
+    eventKey: string;
+    status: ChannelProviderDeliveryEventRow["status"];
+    safeErrorCode: string | null;
+    receivedAt: string;
+  },
+) {
+  const inserted = await db.query<ChannelProviderDeliveryEventRow>(
+    `insert into channel_provider_delivery_events (
+       id, tenant_id, delivery_id, provider, event_key, status,
+       safe_error_code, received_at
+     ) values ($1, $2, $3, 'whatsapp_twilio', $4, $5, $6, $7)
+     on conflict (provider, event_key) do nothing
+     returning *`,
+    [
+      input.id,
+      input.tenantId,
+      input.deliveryId,
+      input.eventKey,
+      input.status,
+      input.safeErrorCode,
+      input.receivedAt,
+    ],
+  );
+  if (inserted.rows[0]) {
+    return { row: inserted.rows[0], replayed: false };
+  }
+
+  const existing = await db.query<ChannelProviderDeliveryEventRow>(
+    `select *
+     from channel_provider_delivery_events
+     where tenant_id = $1
+       and delivery_id = $2
+       and provider = 'whatsapp_twilio'
+       and event_key = $3`,
+    [input.tenantId, input.deliveryId, input.eventKey],
+  );
+  return { row: existing.rows[0] ?? null, replayed: true };
+}
+
+export async function updateWhatsAppOutboundDeliveryFromStatus(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    deliveryId: string;
+    externalMessageId: string;
+    status: "accepted" | "delivered" | "failed";
+    safeErrorCode: string | null;
+    updatedAt: string;
+  },
+) {
+  const failed = input.status === "failed";
+  const result = await db.query<ChannelProviderDeliveryRow>(
+    `update channel_provider_deliveries
+     set status = $1,
+         failure_classification = $2,
+         safe_error_code = $3,
+         retryable = false,
+         next_attempt_at = $4,
+         lease_id = null,
+         lease_expires_at = null,
+         updated_at = $4
+     where tenant_id = $5
+       and id = $6
+       and provider = 'whatsapp_twilio'
+       and external_message_id = $7
+     returning *`,
+    [
+      input.status,
+      failed ? "permanent" : null,
+      input.safeErrorCode,
+      input.updatedAt,
+      input.tenantId,
+      input.deliveryId,
+      input.externalMessageId,
+    ],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function updateWhatsAppOutboundMessageFromStatus(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    messageId: string;
+    status: "sent" | "delivered" | "failed";
+    safeErrorCode: string | null;
+  },
+) {
+  const result = await db.query<{ id: string }>(
+    `update conversation_messages
+     set status = $1, safe_error_code = $2
+     where tenant_id = $3
+       and id = $4
+       and direction = 'outbound'
+       and (
+         ($1 = 'sent' and status = 'pending')
+         or ($1 = 'delivered' and status in ('pending', 'sent', 'failed'))
+         or ($1 = 'failed' and status in ('pending', 'sent'))
+       )
      returning id`,
     [
       input.status,

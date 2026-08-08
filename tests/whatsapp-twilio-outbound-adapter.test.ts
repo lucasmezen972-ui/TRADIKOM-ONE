@@ -32,6 +32,8 @@ describe("adaptateur sortant WhatsApp/Twilio préparé", () => {
         TWILIO_WHATSAPP_SENDER: "whatsapp:+15005550006",
         TWILIO_WHATSAPP_WEBHOOK_URL:
           "https://app.example.test/api/webhooks/twilio/whatsapp",
+        TWILIO_WHATSAPP_STATUS_CALLBACK_URL:
+          "https://app.example.test/api/webhooks/twilio/whatsapp/status",
       },
       "awaiting_human_auth",
     ],

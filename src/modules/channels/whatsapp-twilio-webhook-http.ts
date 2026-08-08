@@ -123,6 +123,18 @@ function rejectedResponse(code: string) {
       { status: 503, headers: { "Retry-After": "60" } },
     );
   }
+  if (code === "channel_provider_delivery_not_found") {
+    return jsonResponse(
+      { ok: false, error: "Statut temporairement non attribué." },
+      { status: 503, headers: { "Retry-After": "60" } },
+    );
+  }
+  if (code === "channel_provider_delivery_event_conflict") {
+    return jsonResponse(
+      { ok: false, error: "Événement de statut en conflit." },
+      { status: 409 },
+    );
+  }
   if (code === "payload_too_large") {
     return jsonResponse(
       { ok: false, error: "Webhook trop volumineux." },

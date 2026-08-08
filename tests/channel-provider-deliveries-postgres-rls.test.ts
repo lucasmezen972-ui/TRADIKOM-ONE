@@ -56,6 +56,46 @@ describeIfPostgres("RLS PostgreSQL des reprises WhatsApp", () => {
     );
     expect(visibleA.rows).toEqual([{ id: fixtureA.deliveryId }]);
 
+    await withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
+      client.query(
+        `insert into channel_provider_delivery_events (
+           id, tenant_id, delivery_id, provider, event_key, status,
+           safe_error_code, received_at
+         ) values ($1, $2, $3, 'whatsapp_twilio', $4, 'accepted', null, $5)`,
+        [
+          "event_rls_a",
+          fixtureA.tenantId,
+          fixtureA.deliveryId,
+          "a".repeat(64),
+          timestamp,
+        ],
+      ),
+    );
+    expect(
+      await withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
+        client.query<{ id: string }>(
+          "select id from channel_provider_delivery_events order by id",
+        ),
+      ),
+    ).toMatchObject({ rows: [{ id: "event_rls_a" }] });
+    await expect(
+      withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
+        client.query(
+          `insert into channel_provider_delivery_events (
+             id, tenant_id, delivery_id, provider, event_key, status,
+             safe_error_code, received_at
+           ) values ($1, $2, $3, 'whatsapp_twilio', $4, 'accepted', null, $5)`,
+          [
+            "event_rls_cross",
+            fixtureB.tenantId,
+            fixtureB.deliveryId,
+            "b".repeat(64),
+            timestamp,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+
     const crossTenantClaim = await withTenantContext(
       restrictedPool,
       fixtureA.tenantId,
@@ -107,6 +147,29 @@ describeIfPostgres("RLS PostgreSQL des reprises WhatsApp", () => {
         ),
     );
     expect(crossTenantDelete.rows).toEqual([]);
+    const crossTenantEventUpdate = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) =>
+        client.query<{ id: string }>(
+          `update channel_provider_delivery_events
+           set status = 'delivered'
+           where tenant_id = $1 and delivery_id = $2 returning id`,
+          [fixtureB.tenantId, fixtureB.deliveryId],
+        ),
+    );
+    expect(crossTenantEventUpdate.rows).toEqual([]);
+    const crossTenantEventDelete = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) =>
+        client.query<{ id: string }>(
+          `delete from channel_provider_delivery_events
+           where tenant_id = $1 and delivery_id = $2 returning id`,
+          [fixtureB.tenantId, fixtureB.deliveryId],
+        ),
+    );
+    expect(crossTenantEventDelete.rows).toEqual([]);
   });
 });
 
