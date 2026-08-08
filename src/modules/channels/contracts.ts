@@ -157,6 +157,7 @@ export const verifiedChannelWebhookSchema = incomingChannelWebhookSchema.extend(
 export const sendCanonicalMessageRequestSchema = z
   .object({
     tenantId: z.string().trim().min(1).max(160),
+    endpointId: z.string().trim().min(1).max(160).optional(),
     channelIdentityId: z.string().trim().min(1).max(160),
     messageId: z.string().trim().min(1).max(160),
     idempotencyKey: z.string().trim().min(8).max(160),

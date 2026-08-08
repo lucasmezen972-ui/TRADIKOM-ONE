@@ -4,6 +4,7 @@ import { createServices } from "../src/lib/services";
 import {
   channelAdapterManifestSchema,
   createWhatsAppTwilioOutboundAdapter,
+  createWhatsAppTwilioTransport,
   getPreparedChannelProvider,
   registerAuthorizedWhatsAppEndpoint,
   sendPreparedWhatsAppOutbound,
@@ -59,6 +60,7 @@ describe("service sortant WhatsApp/Twilio tenant-aware", () => {
     expect(sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: setup.tenant.id,
+        endpointId: setup.endpointId,
         channelIdentityId: setup.customerIdentityId,
         messageId: setup.messageId,
         text: messageText,
@@ -150,6 +152,66 @@ describe("service sortant WhatsApp/Twilio tenant-aware", () => {
     expect(audit.rows).toHaveLength(1);
     expect(audit.rows[0]?.safe_metadata).toContain("approval_required");
     expect(audit.rows[0]?.safe_metadata).not.toContain(messageText);
+  });
+
+  it("résout credentials et destination seulement après les gardes et sans fuite publique", async () => {
+    const setup = await createSetup();
+    const order: string[] = [];
+    const secretToken = "credential-only-in-memory";
+    const createMessage = vi.fn(async () => {
+      order.push("message");
+      return { sid: providerMessageSid, status: "queued" };
+    });
+    const transport = createWhatsAppTwilioTransport({
+      state: "mock",
+      statusCallbackUrl:
+        "https://app.example.test/api/webhooks/twilio/whatsapp/status",
+      resolveCredentials: vi.fn(async () => {
+        order.push("credentials");
+        return { accountSid, authToken: secretToken };
+      }),
+      resolveDestination: vi.fn(async () => {
+        order.push("destination");
+        return {
+          senderAddress: "whatsapp:+15005550006",
+          recipientAddress: destinationAddress,
+        };
+      }),
+      createClient: vi.fn(() => {
+        order.push("client");
+        return { messages: { create: createMessage } };
+      }),
+    });
+    const adapter = createWhatsAppTwilioOutboundAdapter({
+      manifest: mockManifest(),
+      transport,
+    });
+
+    const result = await sendPreparedWhatsAppOutbound(
+      setup.db,
+      setup.owner.id,
+      deliveryInput(setup, "whatsapp-outbound-ephemeral"),
+      {
+        adapter,
+        evaluatePolicy: () => {
+          order.push("policy");
+          return { allowed: true };
+        },
+      },
+    );
+    const serialized = JSON.stringify(result);
+
+    expect(order).toEqual([
+      "policy",
+      "credentials",
+      "destination",
+      "client",
+      "message",
+    ]);
+    expect(serialized).not.toContain(secretToken);
+    expect(serialized).not.toContain(destinationAddress);
+    expect(serialized).not.toContain(messageText);
+    expect(serialized).not.toContain(providerMessageSid);
   });
 
   it.each([
@@ -416,18 +478,21 @@ function deliveryInput(
 }
 
 function mockAdapter(sendMessage: ReturnType<typeof vi.fn>) {
-  const base = getPreparedChannelProvider("whatsapp_twilio", {});
-  const manifest = channelAdapterManifestSchema.parse({
-    ...base,
-    state: "mock",
-    missingEnvironment: [],
-    transportEnabled: true,
-  });
   return createWhatsAppTwilioOutboundAdapter({
-    manifest,
+    manifest: mockManifest(),
     transport: {
       sendMessage:
         sendMessage as WhatsAppTwilioOutboundTransport["sendMessage"],
     },
+  });
+}
+
+function mockManifest() {
+  const base = getPreparedChannelProvider("whatsapp_twilio", {});
+  return channelAdapterManifestSchema.parse({
+    ...base,
+    state: "mock",
+    missingEnvironment: [],
+    transportEnabled: true,
   });
 }

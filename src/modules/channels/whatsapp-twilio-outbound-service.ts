@@ -287,6 +287,7 @@ export async function attemptPreparedWhatsAppOutboundDelivery(
         replayed: false as const,
         request: {
           tenantId: claimed.tenant_id,
+          endpointId: claimed.endpoint_id,
           channelIdentityId: claimed.channel_identity_id,
           messageId: claimed.message_id,
           idempotencyKey: claimed.idempotency_key,

@@ -27,7 +27,7 @@ export class WhatsAppTwilioTransportError extends Error {
   constructor(
     public readonly classification: Exclude<
       ChannelProviderFailureClassification,
-      "policy" | "validation" | "not_configured"
+      "policy" | "not_configured"
     >,
   ) {
     super("Le transport WhatsApp a échoué.");

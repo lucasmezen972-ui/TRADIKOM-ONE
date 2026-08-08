@@ -61,6 +61,7 @@ describe("worker durable WhatsApp/Twilio", () => {
     expect(sendMessage).toHaveBeenCalledOnce();
     expect(sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
+        endpointId: setup.endpointId,
         idempotencyKey: "worker-reserved",
         text: messageText,
       }),
