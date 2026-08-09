@@ -16,7 +16,7 @@ Le chemin Conversation -> WhatsApp ne dépend plus d'un objet d'autorisation fou
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues textuellement et dans les rendus directs du PDF canonique.
 - Exigence servie : pages 14, 18, 22, 26, 28-29, 31-32, 35-37, 64, 66 et 69 : provider sans logique métier, preuve humaine durable, endpoint tenant-aware, relations composites/RLS, idempotence, audit sans PII, expiration/révocation, états honnêtes et zéro réseau avant les gardes.
 - Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; migrations runtime `083`/`084` identiques aux miroirs SQL `0077`/`0078`; table sans secret avec RLS et révocation monotone; service owner/administrator, replay et collision; loader tenant/endpoint-scoped; readiness par `authorizationId` uniquement; état maximal `degraded`; 3 fichiers/21 tests ciblés, 24 fichiers/145 tests canaux et suite complète mono-worker 110 fichiers/459 tests; audit, lint, typecheck, build et diff check verts.
-- Écarts restants : consommation atomique du plafond par livraison, gestionnaire de secrets concret, promotion runtime explicitement autorisée, Sandbox, endpoint public et preuve réelle web + WhatsApp. Les tests PostgreSQL/RLS et Playwright locaux restent non exécutables sans PostgreSQL partagé; la CI du commit publié doit les confirmer. OS-5 reste `in_progress` et ne satisfait pas encore le succès page 31.
+- Écarts restants : consommation atomique du plafond par livraison, gestionnaire de secrets concret, promotion runtime explicitement autorisée, Sandbox, endpoint public et preuve réelle web + WhatsApp. OS-5 reste `in_progress` et ne satisfait pas encore le succès page 31.
 
 ## Classification honnête
 
@@ -50,8 +50,8 @@ Le chemin Conversation -> WhatsApp ne dépend plus d'un objet d'autorisation fou
 - local ciblé : 3 fichiers/21 tests verts; régression canaux/WhatsApp 24 fichiers/145 tests, 3 tests PostgreSQL ignorés sans `DATABASE_URL`;
 - local exhaustif : 110 fichiers/459 tests verts en mono-worker, 5 fichiers et 16 tests PostgreSQL ignorés; le mode parallèle reproduit le silence PGlite connu sans assertion en échec;
 - statique : audit production sans vulnérabilité connue, lint, typecheck, build production et diff check verts;
-- navigateur local : non probant, abort PGlite pendant la migration du serveur de développement; aucune interface visible modifiée et Playwright PostgreSQL CI requis;
-- distant fonctionnel : en attente de publication et de CI pour `720db0e`.
+- navigateur local : non probant, abort PGlite pendant la migration du serveur de développement; aucune interface visible modifiée;
+- distant fonctionnel : commits `720db0e` et `1597cc5` poussés; continuité `31285026232` verte; CI PostgreSQL `31285026228` verte en 13 min 42 s avec audit, migrations, backup/restauration, RLS, lint, typecheck, 115 fichiers/476 tests, build production et 20/20 Playwright.
 
 ## Prochaine action recommandée
 

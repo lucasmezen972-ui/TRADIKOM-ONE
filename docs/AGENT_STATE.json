@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-09T00:02:00.000Z",
+  "updatedAt": "2026-08-09T00:10:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
@@ -273,7 +273,10 @@
     "suite complete mono-worker 110 fichiers/459 tests verts, 5 fichiers et 16 tests ignores sans PostgreSQL",
     "audit production sans vulnerabilite connue, lint, typecheck, build production et diff check verts",
     "Playwright local non probant par abort PGlite; CI PostgreSQL/Playwright requise sans changement d'interface",
-    "commit fonctionnel 720db0e cree sans activation externe"
+    "commit fonctionnel 720db0e cree sans activation externe",
+    "commits 720db0e et 1597cc5 pousses sur codex/tradikom-one-os",
+    "continuite 31285026232 verte sur 1597cc5",
+    "CI PostgreSQL 31285026228 verte : audit, migrations, backup/restauration, RLS, lint, typecheck, 115 fichiers/476 tests, build et 20 Playwright"
   ],
   "lastValidation": [
     {
@@ -835,6 +838,14 @@
     {
       "command": "pnpm test parallèle et Playwright local PGlite",
       "status": "blocked_by_known_local_pglite_stall_and_runtime_abort_without_failed_business_assertion_ci_postgres_authoritative"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31285026232 sur 1597cc5",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI PostgreSQL 31285026228 sur 1597cc5",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_115_files_476_tests_build_20_playwright"
     }
   ],
   "humanBlockers": [
