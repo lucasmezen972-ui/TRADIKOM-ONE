@@ -3,20 +3,20 @@
 - Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head initial audité : `fa9a0e5`
+- Head initial audité : `f5a6c2b`
 - Commit fonctionnel : `f0acdfb`
-- Travail effectué : garde outbound qui impose la consommation durable du budget d'autorisation avant tout futur transport WhatsApp `ready`, sans activation externe.
+- Travail effectué : confirmation probante du checkpoint humain OS-5 et de la CI du head documentaire, sans nouvelle mutation applicative ni activation externe.
 
 ## Impact north star
 
-Le chemin Conversation -> WhatsApp applique désormais réellement le plafond humain : policy d'abord, consommation durable ensuite, transport enfin. Le professionnel n'a pas à retransmettre l'autorisation lors d'une reprise; le worker la retrouve par la livraison, sans double unité ni double audit. Une autorisation absente, expirée ou révoquée arrête l'action avant toute I/O. Aucun CRM, Kanban ou dashboard secondaire n'a été ajouté.
+Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à la frontière I/O. Le checkpoint respecte la north star en refusant une nouvelle tranche secondaire lorsque le seul résultat métier manquant est la preuve Sandbox réelle. Aucun CRM, Kanban, dashboard ou OS-6 n'a été ouvert pour contourner l'intervention humaine.
 
 ## Alignement prompt maître
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues directement dans le PDF canonique en texte et en rendu.
-- Exigence servie : pages 14, 18, 22, 26, 28-29, 31-32, 35-37, 64, 66 et 69 : provider borné sans logique métier, policy avant action, effet durable/idempotent, tenant/RLS, quota humain, erreurs classifiées, audit sans PII, états honnêtes et preuve provider/sécurité/Playwright.
-- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; le manifeste `ready` synthétique consomme après policy et avant `adapter.sendMessage`; l'`authorization_id` initial reste interne puis est retrouvé par `delivery_id`; retry worker sans seconde unité ni second audit; absence, expiration et révocation finalisées en refus policy avant transport; mock inchangé et registre réel incapable de produire `ready`. Les tests ciblés passent 2 fichiers/16 tests, la régression canaux 41 fichiers/192 tests, et l'exhaustif local en lots 118 fichiers/471 tests avec 17 tests PostgreSQL ignorés sans base locale. Audit, lint, typecheck, build, continuity-check et diff check sont verts. La continuité `31289096474` et la CI PostgreSQL `31289096477` sont vertes; la CI valide 118 fichiers/488 tests et 20/20 Playwright.
-- Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par autorisation humaine.
+- Exigence servie : pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : arrêter l'autonomie uniquement à l'étape humaine indispensable, conserver secrets et credentials hors chat/dépôt, ne pas présenter un mock comme réel, laisser les providers fail-closed sans clés, et ne déclarer OS-5 terminé qu'après un outil externe actif en sandbox ou vrai avec preuves provider, sécurité, RLS et Playwright.
+- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; pages cœur et OS-5 relues en texte et pages déterminantes inspectées visuellement; `pnpm agent:continuity-check` `ready` sans erreur ni avertissement; dépôt propre et synchronisé au head `f5a6c2b`; PR #11 brouillon, fusionnable et `CLEAN`; continuité `31289691498` verte; CI PostgreSQL `31289691502` verte avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright. Aucun code ni effet externe n'a été produit pendant cette confirmation.
+- Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; il n'existe aucune autre tranche locale non bloquée alignée.
 
 ## Classification honnête
 
@@ -47,13 +47,13 @@ Le chemin Conversation -> WhatsApp applique désormais réellement le plafond hu
 
 - `pnpm agent:continuity-check` initial et final : `ready`, zéro erreur et zéro avertissement;
 - prompt maître : empreinte exacte, 71 pages, inspection textuelle et visuelle des pages cœur et OS-5;
-- GitHub initial : PR #11 ouverte, brouillon, fusionnable et `CLEAN`; CI `31287278806` et continuité `31287278798` vertes sur `fa9a0e5`;
+- GitHub : PR #11 ouverte, brouillon, fusionnable et `CLEAN` au head `f5a6c2b`; CI `31289691502` et continuité `31289691498` vertes;
 - local ciblé : 2 fichiers/16 tests verts, avec ordre policy -> consommation -> transport et reprise worker;
 - local canaux : 41 fichiers/192 tests verts, 5 suites PostgreSQL ignorées sans `DATABASE_URL`;
 - local exhaustif : 118 fichiers/471 tests verts en six lots mono-worker, 6 fichiers et 17 tests PostgreSQL ignorés faute de base locale;
 - statique : audit production sans vulnérabilité connue, lint, typecheck, build production et diff check verts;
 - navigateur local : aucune interface visible modifiée; la preuve Playwright PostgreSQL du nouveau head est confiée à la CI distante, le runtime local PGlite ne partageant pas les fixtures entre Playwright et le serveur;
-- distant fonctionnel : commit `f0acdfb` poussé; continuité `31289096474` verte; CI PostgreSQL `31289096477` verte en 15 min 25 s avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build production et 20/20 Playwright; PR #11 `CLEAN`.
+- distant fonctionnel : commit fonctionnel `f0acdfb` et handoff `f5a6c2b` poussés; continuité `31289691498` verte; CI PostgreSQL `31289691502` verte en 14 min 58 s avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build production et 20/20 Playwright; PR #11 `CLEAN`.
 
 ## Prochaine action recommandée
 
