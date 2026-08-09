@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-09T00:24:00.000Z",
+  "updatedAt": "2026-08-09T00:56:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "720db0efc1811add5ea897ed797d727c3887aa85",
+  "lastCommit": "b561ac00e93d669301444921fc5e4b04450d8e74",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : l'autorisation WhatsApp/Twilio est désormais durable, tenant-aware, expirante, révocable, idempotente et auditée. La readiness ne reçoit plus de preuve libre et charge uniquement une référence interne liée au tenant et à l'endpoint; le registre préparé reste incapable de produire ready. La prochaine tranche non bloquée doit rendre le plafond d'un ou deux messages durablement consommable et le lier à chaque livraison avant toute future promotion explicite.",
+  "currentObjective": "OS-5 reste en cours sans activation externe : le plafond d'un ou deux messages de l'autorisation WhatsApp/Twilio est désormais consommable atomiquement par livraison, tenant-aware, RLS, idempotent sous retry et audité sans contenu sensible. La consommation verrouille l'autorisation, refuse expiration, révocation, endpoint désactivé, autre tenant/provider/livraison et dépassement concurrent. Le registre reste incapable de produire ready et aucun transport Twilio n'est appelé. La prochaine tranche non bloquée doit imposer cette réservation durable dans le chemin outbound juste avant tout futur transport ready, tout en conservant les états réels désactivés.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Migration additive et RLS avec miroir SQL pour les consommations du budget; repository et service bornés sous src/modules/channels avec réservation transactionnelle, unicité par livraison, comptage atomique, replay idempotent et audit sûr. Tests migration vide/upgrade et parité, PostgreSQL restricted-role, service multi-tenant, budget 1/2, concurrence, replay/retry, expiration, révocation, mauvais endpoint/provider et audit sans données sensibles. Preuve explicite que le registre reste incapable de produire ready et qu'aucun secret manager, keyring, client ou réseau n'est appelé. Tests ciblés puis régression canaux, audit, lint, typecheck, suite complète, build, continuity-check et CI PostgreSQL/Playwright doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Ajouter une consommation durable et atomique du budget d'autorisation WhatsApp/Twilio : chaque livraison de preuve devra réserver exactement une unité sous tenant, endpoint et authorization_id, refuser le dépassement de max_messages et rejouer sans double consommation avec la clé d'idempotence existante; ne toujours pas activer le registre ni appeler Twilio.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-activation-budget-service.ts",
+  "nextAction": "Brancher la réservation de budget d'activation sur le service outbound WhatsApp juste avant le premier appel transport d'une livraison future ready : persister/récupérer l'authorization_id via la consommation liée au delivery_id, refuser tout envoi sans consommation valide et rejouer les retries sans seconde unité; conserver le registre réel transportEnabled false et n'appeler aucun fournisseur.",
+  "nextFile": "src/modules/channels/whatsapp-twilio-outbound-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -276,7 +276,22 @@
     "commit fonctionnel 720db0e cree sans activation externe",
     "commits 720db0e et 1597cc5 pousses sur codex/tradikom-one-os",
     "continuite 31285026232 verte sur 1597cc5",
-    "CI PostgreSQL 31285026228 verte : audit, migrations, backup/restauration, RLS, lint, typecheck, 115 fichiers/476 tests, build et 20 Playwright"
+    "CI PostgreSQL 31285026228 verte : audit, migrations, backup/restauration, RLS, lint, typecheck, 115 fichiers/476 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant consommation atomique OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle directe des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 avec rendus cibles 14, 17-18, 22, 26, 28-29, 35-37, 64 et 66",
+    "pnpm agent:continuity-check initial ready, zero erreur et zero avertissement",
+    "verification GitHub PR #11 et CI 31285823091 / continuite 31285823086 vertes sur 08abdbd",
+    "alignement prompt maitre actualise avant code pour la consommation atomique du budget d'activation",
+    "migrations runtime 085/086 et miroirs SQL 0079/0080 pour consommations tenant-owned, relations composites, verrou budget, immutabilite et RLS",
+    "repository et service bornes avec membership, endpoint actif, expiration, revocation, plafond 1/2, replay par delivery_id et audit sans contenu",
+    "15 tests cibles migrations/service/autorisation verts; test PostgreSQL concurrence/RLS prepare et ignore localement sans DATABASE_URL",
+    "regression canaux mono-worker 34 fichiers/198 tests verts et 4 tests PostgreSQL ignores sans DATABASE_URL",
+    "suite complete mono-worker 112 fichiers/467 tests verts et 17 tests ignores sans DATABASE_URL",
+    "audit production sans vulnerabilite connue, lint, typecheck, build production, continuity-check et diff check verts",
+    "pnpm db:verify local bloque proprement faute de DATABASE_URL; CI PostgreSQL autoritative requise",
+    "commit fonctionnel b561ac0 pousse sans activation externe",
+    "continuite 31286816855 et CI PostgreSQL 31286816871 entierement vertes sur b561ac0 avec migrations, backup/restauration, RLS, 118 fichiers/484 tests, build et 20 Playwright"
   ],
   "lastValidation": [
     {
@@ -846,6 +861,30 @@
     {
       "command": "CI PostgreSQL 31285026228 sur 1597cc5",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_115_files_476_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant consommation atomique OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_key_pages_visually_reviewed_ready_pr11_mergeable_previous_ci_green"
+    },
+    {
+      "command": "tests migrations, service et régression canaux du budget d'activation",
+      "status": "passed_15_targeted_then_34_files_198_tests_4_postgres_skipped_without_database_url_budget_1_2_replay_expiry_revocation_endpoint_tenant_safe_audit"
+    },
+    {
+      "command": "pnpm vitest run --maxWorkers=1",
+      "status": "passed_112_files_467_tests_6_files_and_17_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31286816855 sur b561ac0",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI PostgreSQL 31286816871 sur b561ac0",
+      "status": "passed_audit_migrations_backup_restore_rls_concurrency_lint_typecheck_118_files_484_tests_build_20_playwright"
     }
   ],
   "humanBlockers": [
