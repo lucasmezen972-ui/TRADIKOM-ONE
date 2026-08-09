@@ -6,7 +6,10 @@ import {
   createWhatsAppTwilioOutboundAdapter,
   createWhatsAppTwilioTransport,
   getPreparedChannelProvider,
+  issueWhatsAppTwilioActivationAuthorization,
+  processWhatsAppOutboundDeliveryWorker,
   registerAuthorizedWhatsAppEndpoint,
+  revokeWhatsAppTwilioActivationAuthorization,
   sendPreparedWhatsAppOutbound,
   type WhatsAppTwilioOutboundTransport,
 } from "../src/modules/channels";
@@ -343,6 +346,172 @@ describe("service sortant WhatsApp/Twilio tenant-aware", () => {
     });
     expect(sendMessage).toHaveBeenCalledOnce();
   });
+
+  it("consomme le budget ready après la policy et le retrouve au retry worker", async () => {
+    const setup = await createSetup();
+    const now = new Date(timestamp);
+    const authorization = await issueActivationAuthorization(
+      setup,
+      new Date(now.getTime() + 60_000).toISOString(),
+    );
+    let policyChecks = 0;
+    let transportCalls = 0;
+    const evaluatePolicy = vi.fn(async () => {
+      const consumptionCount = await countActivationConsumptions(setup.db);
+      expect(consumptionCount).toBe(policyChecks === 0 ? 0 : 1);
+      policyChecks += 1;
+      return { allowed: true as const };
+    });
+    const sendMessage = vi.fn(async () => {
+      expect(await countActivationConsumptions(setup.db)).toBe(1);
+      transportCalls += 1;
+      if (transportCalls === 1) {
+        return {
+          status: "failed" as const,
+          provider: "whatsapp_twilio" as const,
+          errorCode: "temporary_provider_failure" as const,
+          classification: "temporary" as const,
+          retryable: true,
+        };
+      }
+      return {
+        status: "accepted" as const,
+        provider: "whatsapp_twilio" as const,
+        externalMessageId: providerMessageSid,
+        retryable: false,
+      };
+    });
+    const dependencies = {
+      adapter: readyAdapter(sendMessage),
+      evaluatePolicy,
+    };
+
+    const initial = await sendPreparedWhatsAppOutbound(
+      setup.db,
+      setup.owner.id,
+      deliveryInput(setup, "whatsapp-ready-budget-retry"),
+      dependencies,
+      {
+        now,
+        baseBackoffMs: 1_000,
+        activationAuthorizationId: authorization.authorizationId,
+      },
+    );
+    const resumed = await processWhatsAppOutboundDeliveryWorker(
+      setup.db,
+      setup.owner.id,
+      setup.tenant.id,
+      dependencies,
+      { now: new Date(now.getTime() + 1_000), baseBackoffMs: 1_000 },
+    );
+
+    expect(initial).toMatchObject({
+      status: "failed",
+      classification: "temporary",
+      retryable: true,
+    });
+    expect(resumed).toMatchObject({ processed: 1, succeeded: 1 });
+    expect(evaluatePolicy).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(await countActivationConsumptions(setup.db)).toBe(1);
+    expect(await countActivationConsumptionAudits(setup.db)).toBe(1);
+  });
+
+  it("refuse un transport ready sans autorisation avant toute I/O", async () => {
+    const setup = await createSetup();
+    const sendMessage = vi.fn();
+    const evaluatePolicy = vi.fn().mockReturnValue({ allowed: true });
+
+    const result = await sendPreparedWhatsAppOutbound(
+      setup.db,
+      setup.owner.id,
+      deliveryInput(setup, "whatsapp-ready-budget-missing"),
+      { adapter: readyAdapter(sendMessage), evaluatePolicy },
+      { now: new Date(timestamp) },
+    );
+
+    expect(result).toMatchObject({
+      status: "denied",
+      classification: "policy",
+      safeErrorCode: "channel_provider_activation_budget_invalid",
+      retryable: false,
+    });
+    expect(evaluatePolicy).toHaveBeenCalledOnce();
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(await countActivationConsumptions(setup.db)).toBe(0);
+  });
+
+  it.each(["expired", "revoked"] as const)(
+    "refuse au retry worker un budget %s sans seconde consommation",
+    async (mode) => {
+      const setup = await createSetup();
+      const now = new Date(timestamp);
+      const authorization = await issueActivationAuthorization(
+        setup,
+        new Date(
+          now.getTime() + (mode === "expired" ? 500 : 60_000),
+        ).toISOString(),
+      );
+      const sendMessage = vi.fn().mockResolvedValue({
+        status: "failed",
+        provider: "whatsapp_twilio",
+        errorCode: "temporary_provider_failure",
+        classification: "temporary",
+        retryable: true,
+      });
+      const dependencies = {
+        adapter: readyAdapter(sendMessage),
+        evaluatePolicy: vi.fn().mockReturnValue({ allowed: true }),
+      };
+      const initial = await sendPreparedWhatsAppOutbound(
+        setup.db,
+        setup.owner.id,
+        deliveryInput(setup, `whatsapp-ready-budget-${mode}`),
+        dependencies,
+        {
+          now,
+          baseBackoffMs: 1_000,
+          activationAuthorizationId: authorization.authorizationId,
+        },
+      );
+      if (mode === "revoked") {
+        await revokeWhatsAppTwilioActivationAuthorization(setup.db, {
+          tenantId: setup.tenant.id,
+          actorId: setup.owner.id,
+          authorizationId: authorization.authorizationId,
+          occurredAt: new Date(now.getTime() + 500).toISOString(),
+        });
+      }
+
+      const resumed = await processWhatsAppOutboundDeliveryWorker(
+        setup.db,
+        setup.owner.id,
+        setup.tenant.id,
+        dependencies,
+        { now: new Date(now.getTime() + 1_000), baseBackoffMs: 1_000 },
+      );
+      const delivery = await setup.db.query<{
+        status: string;
+        safe_error_code: string | null;
+      }>(
+        `select status, safe_error_code
+         from channel_provider_deliveries
+         where tenant_id = $1 and id = $2`,
+        [setup.tenant.id, initial.deliveryId],
+      );
+
+      expect(resumed).toMatchObject({ processed: 1, failed: 1 });
+      expect(sendMessage).toHaveBeenCalledOnce();
+      expect(delivery.rows).toEqual([
+        {
+          status: "denied",
+          safe_error_code: "channel_provider_activation_budget_invalid",
+        },
+      ]);
+      expect(await countActivationConsumptions(setup.db)).toBe(1);
+      expect(await countActivationConsumptionAudits(setup.db)).toBe(1);
+    },
+  );
 });
 
 type TestDb = Awaited<ReturnType<typeof createMemoryDb>>;
@@ -488,6 +657,55 @@ function mockAdapter(sendMessage: ReturnType<typeof vi.fn>) {
         sendMessage as WhatsAppTwilioOutboundTransport["sendMessage"],
     },
   });
+}
+
+function readyAdapter(sendMessage: ReturnType<typeof vi.fn>) {
+  const base = getPreparedChannelProvider("whatsapp_twilio", {});
+  return createWhatsAppTwilioOutboundAdapter({
+    manifest: channelAdapterManifestSchema.parse({
+      ...base,
+      state: "ready",
+      missingEnvironment: [],
+      transportEnabled: true,
+    }),
+    transport: {
+      sendMessage:
+        sendMessage as WhatsAppTwilioOutboundTransport["sendMessage"],
+    },
+  });
+}
+
+async function issueActivationAuthorization(
+  setup: Awaited<ReturnType<typeof createSetup>>,
+  expiresAt: string,
+) {
+  return issueWhatsAppTwilioActivationAuthorization(setup.db, {
+    tenantId: setup.tenant.id,
+    actorId: setup.owner.id,
+    endpointId: setup.endpointId,
+    idempotencyKey: "whatsapp-ready-activation-budget",
+    maxMessages: 1,
+    freeUnitsConfirmed: true,
+    expiresAt,
+    occurredAt: timestamp,
+  });
+}
+
+async function countActivationConsumptions(db: TestDb) {
+  const result = await db.query<{ count: number }>(
+    `select count(*)::integer as count
+     from channel_provider_activation_consumptions`,
+  );
+  return result.rows[0]?.count ?? 0;
+}
+
+async function countActivationConsumptionAudits(db: TestDb) {
+  const result = await db.query<{ count: number }>(
+    `select count(*)::integer as count
+     from audit_logs
+     where action = 'channel.provider_activation_budget_consumed'`,
+  );
+  return result.rows[0]?.count ?? 0;
 }
 
 function mockManifest() {

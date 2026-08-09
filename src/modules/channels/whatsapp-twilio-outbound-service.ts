@@ -4,6 +4,8 @@ import type { DbClient } from "@/lib/db";
 import { hashToken, id, nowIso } from "@/lib/security";
 import type { Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
+import { WhatsAppTwilioActivationBudgetError } from "@/modules/channels/whatsapp-twilio-activation-budget-errors";
+import { reserveWhatsAppTwilioActivationBudget } from "@/modules/channels/whatsapp-twilio-activation-budget-service";
 import type {
   ChannelDeliveryResult,
   ChannelProviderFailureClassification,
@@ -98,6 +100,7 @@ export type WhatsAppOutboundAttemptOptions = {
   leaseMs?: number;
   baseBackoffMs?: number;
   maxAttempts?: number;
+  activationAuthorizationId?: string;
 };
 
 export class WhatsAppOutboundError extends Error {
@@ -301,6 +304,28 @@ export async function attemptPreparedWhatsAppOutboundDelivery(
     return mapDelivery(prepared.row, prepared.replayed);
   }
 
+  if (dependencies.adapter.manifest.state === "ready") {
+    try {
+      await reserveWhatsAppTwilioActivationBudget(db, actorId, {
+        tenantId: parsed.tenantId,
+        endpointId: prepared.row.endpoint_id,
+        authorizationId: options.activationAuthorizationId,
+        deliveryId: prepared.row.id,
+        occurredAt: attemptedAtIso,
+      });
+    } catch (error) {
+      if (!(error instanceof WhatsAppTwilioActivationBudgetError)) throw error;
+      return finalizeActivationBudgetDenial(
+        db,
+        actorId,
+        prepared.row,
+        leaseId,
+        attemptedAtIso,
+        error.code,
+      );
+    }
+  }
+
   const outcome = normalizeDeliveryOutcome(
     await dependencies.adapter.sendMessage(prepared.request),
   );
@@ -462,6 +487,7 @@ function terminalOutcome(
   leaseId: string,
   updatedAt: string,
   classification: "policy" | "validation",
+  safeErrorCode?: string,
 ) {
   return {
     tenantId: delivery.tenant_id,
@@ -470,12 +496,52 @@ function terminalOutcome(
     externalMessageId: null,
     failureClassification: classification,
     safeErrorCode:
-      classification === "policy" ? "policy_denied" : "validation_failed",
+      safeErrorCode ??
+      (classification === "policy" ? "policy_denied" : "validation_failed"),
     retryable: false,
     nextAttemptAt: updatedAt,
     leaseId,
     updatedAt,
   };
+}
+
+async function finalizeActivationBudgetDenial(
+  db: DbClient,
+  actorId: string,
+  delivery: ChannelProviderDeliveryRow,
+  leaseId: string,
+  updatedAt: string,
+  safeErrorCode: WhatsAppTwilioActivationBudgetError["code"],
+) {
+  return withTenantDbTransaction(
+    db,
+    delivery.tenant_id,
+    actorId,
+    async (transaction) => {
+      await assertOutboundAccess(transaction, actorId, delivery.tenant_id);
+      const denied = await finalizeClaimedWhatsAppOutboundDelivery(
+        transaction,
+        terminalOutcome(
+          delivery,
+          leaseId,
+          updatedAt,
+          "policy",
+          safeErrorCode,
+        ),
+      );
+      if (!denied) {
+        const replay = await findWhatsAppOutboundDeliveryById(transaction, {
+          tenantId: delivery.tenant_id,
+          deliveryId: delivery.id,
+        });
+        if (!replay) throw deliveryNotFound();
+        return mapDelivery(replay, true);
+      }
+      await requireMessageStateUpdate(transaction, denied, "failed");
+      await recordCompletionAudit(transaction, actorId, denied, safeErrorCode);
+      return mapDelivery(denied, false);
+    },
+  );
 }
 
 async function recordAttemptAudit(

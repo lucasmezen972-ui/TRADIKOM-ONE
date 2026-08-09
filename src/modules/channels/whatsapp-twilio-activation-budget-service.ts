@@ -24,7 +24,7 @@ const reservationSchema = z
   .object({
     tenantId: boundedIdentifierSchema,
     endpointId: boundedIdentifierSchema,
-    authorizationId: boundedIdentifierSchema,
+    authorizationId: boundedIdentifierSchema.optional(),
     deliveryId: boundedIdentifierSchema,
     occurredAt: z.string().datetime({ offset: true }).optional(),
   })
@@ -50,10 +50,18 @@ export async function reserveWhatsAppTwilioActivationBudget(
     actorId,
     async (transaction) => {
       await assertConsumptionAccess(transaction, actorId, parsed.tenantId);
+      const existingConsumption =
+        await findWhatsAppActivationConsumptionByDelivery(transaction, {
+          tenantId: parsed.tenantId,
+          deliveryId: parsed.deliveryId,
+        });
+      const authorizationId =
+        parsed.authorizationId ?? existingConsumption?.authorization_id;
+      if (!authorizationId) throw invalidBudget();
       const context = await lockWhatsAppActivationBudgetContext(transaction, {
         tenantId: parsed.tenantId,
         endpointId: parsed.endpointId,
-        authorizationId: parsed.authorizationId,
+        authorizationId,
         deliveryId: parsed.deliveryId,
       });
       if (!context || context.delivery_created_by !== actorId) {
@@ -67,17 +75,18 @@ export async function reserveWhatsAppTwilioActivationBudget(
         throw invalidBudget();
       }
 
-      const replay = await findWhatsAppActivationConsumptionByDelivery(
-        transaction,
-        { tenantId: parsed.tenantId, deliveryId: parsed.deliveryId },
-      );
+      const replay = existingConsumption;
       if (replay) {
-        assertMatchingConsumption(replay, parsed, actorId);
+        assertMatchingConsumption(
+          replay,
+          { ...parsed, authorizationId },
+          actorId,
+        );
         const usedMessages = await countWhatsAppActivationConsumptions(
           transaction,
           {
             tenantId: parsed.tenantId,
-            authorizationId: parsed.authorizationId,
+            authorizationId,
           },
         );
         return consumptionResult(
@@ -93,7 +102,7 @@ export async function reserveWhatsAppTwilioActivationBudget(
         transaction,
         {
           tenantId: parsed.tenantId,
-          authorizationId: parsed.authorizationId,
+          authorizationId,
         },
       );
       if (usedMessages >= context.max_messages) throw exhaustedBudget();
@@ -103,7 +112,7 @@ export async function reserveWhatsAppTwilioActivationBudget(
         tenant_id: parsed.tenantId,
         provider: "whatsapp_twilio",
         endpoint_id: parsed.endpointId,
-        authorization_id: parsed.authorizationId,
+        authorization_id: authorizationId,
         delivery_id: parsed.deliveryId,
         consumed_by: actorId,
         consumed_at: consumedAt,
