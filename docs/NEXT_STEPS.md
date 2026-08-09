@@ -2,9 +2,9 @@
 
 ## Prochaine action concrète
 
-Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. La preuve d'autorisation et son plafond d'un ou deux messages sont désormais persistés, tenant-aware, expirants, révocables et consommables atomiquement par livraison. La readiness ne reçoit plus de preuve libre et le registre reste incapable de produire `ready`; aucun provider réel ou Sandbox n'est connecté.
+Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. La chaîne locale non bloquée est désormais complète jusqu'à la frontière I/O : un futur manifeste `ready` doit consommer l'autorisation durable après membership, contexte, claim et policy, immédiatement avant le transport. Le retry worker retrouve l'`authorization_id` par la consommation liée au `delivery_id` sans seconde unité ni second audit; absence, expiration ou révocation refusent avant adaptateur, credentials, destination, client ou réseau.
 
-La prochaine action non bloquée est de brancher `reserveWhatsAppTwilioActivationBudget` dans `src/modules/channels/whatsapp-twilio-outbound-service.ts` juste avant le premier appel d'un transport futur `ready`. L'`authorization_id` doit rester récupérable par la consommation liée au `delivery_id`; tout retry doit retrouver la même unité, et tout envoi sans consommation active doit échouer avant résolveurs, client ou réseau. Le registre réel conserve `transportEnabled: false` et aucun appel Twilio ne sera effectué.
+La prochaine action est le **checkpoint humain OS-5** décrit ci-dessous. Sans autorisation explicite, ne créer aucun compte, secret, Sandbox, endpoint public ou message réel et ne sélectionner aucune tâche CRM, Kanban, dashboard, OS-6 ou fournisseur alternatif. Le registre réel conserve `transportEnabled: false`; aucun provider réel n'est connecté.
 
 ## Référence prompt maître
 
@@ -15,24 +15,24 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Partir du commit fonctionnel b561ac0 et confirmer la CI PostgreSQL/Playwright du lot de consommation atomique.
+3. Partir du commit fonctionnel f0acdfb; la CI PostgreSQL/Playwright 31289096477 et la continuité 31289096474 sont vertes.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md.
-5. Ajouter l'autorisation d'activation au contrat interne du premier envoi futur ready, sans l'exposer au navigateur ni au message canonique.
-6. Appeler la réservation de budget après membership/contexte/policy et immédiatement avant tout transport; aucun resolver ou client ne doit être atteint si elle échoue.
-7. Sur retry worker, retrouver la consommation par delivery_id et conserver le même authorization_id sans seconde unité ni second audit d'effet.
-8. Prouver ordre des gardes, expiration/révocation après consommation, retry, concurrence et zéro réseau dans les états réels désactivés.
-9. Ne promouvoir aucun manifeste vers ready et ne créer aucune Sandbox, credential, URL publique ou message réel sans l'autorisation humaine externe.
+5. Ne modifier le registre ou la configuration réelle qu'après autorisation explicite du checkpoint humain; saisir les secrets uniquement dans un gestionnaire officiel.
+6. Émettre une autorisation durable d'au plus deux messages seulement si les unités gratuites sont visibles et la Sandbox acceptée.
+7. Exécuter la preuve verticale Conversation web -> WhatsApp Sandbox -> retour signé, avec la même livraison/idempotence sous retry.
+8. Vérifier PostgreSQL/RLS, provider, sécurité et Playwright, puis désactiver endpoint/transport, révoquer autorisation et credentials temporaires.
+9. Documenter séparément livré, réel, Sandbox, mock et irréversible; ne fusionner ni déployer sans autorisation.
 ```
 
 ## Critères du prochain checkpoint
 
-- réservation du budget obligatoire avant tout futur transport `ready` et après policy;
-- association durable `delivery_id` -> `authorization_id` récupérable par le worker;
+- CI PostgreSQL/Playwright du commit `f0acdfb` entièrement verte : 118 fichiers/488 tests et 20/20 Playwright;
+- autorisation humaine explicite, unités gratuites confirmées et plafond d'au plus deux messages;
+- endpoint HTTPS temporaire, sender Sandbox et credentials uniquement dans un gestionnaire de secrets;
+- preuve bidirectionnelle réelle marquée Sandbox, avec signature, mapping tenant, idempotence, callback et audit sans contenu sensible;
 - expiration, révocation, endpoint désactivé et budget épuisé refusés avant secrets/client/réseau;
-- retry/replay sans seconde unité ni second audit d'effet, y compris après reprise worker;
-- aucun secret, numéro, URL, message, SID, ciphertext ou référence complète en base, réponse ou audit;
-- tests unitaires, intégration, migrations, PostgreSQL/RLS, provider et sécurité, plus lint, typecheck, build, continuité et CI;
-- aucun compte, paiement, message externe, endpoint public, déploiement, fusion ou effet irréversible sans autorisation.
+- désactivation et révocation vérifiées après preuve; limites irréversibles d'un message déjà remis documentées;
+- aucun paiement, dépassement, fusion, production ou changement DNS sans nouvelle autorisation.
 
 ## Intervention humaine indispensable pour la preuve réelle
 
@@ -49,10 +49,10 @@ Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
 
 ## État de vérité
 
-- Livré : OS-1 à OS-4; sélection OS-5; chaîne WhatsApp préparée; readiness; autorisation durable; consommation atomique du plafond; runbook.
+- Livré : OS-1 à OS-4; sélection OS-5; chaîne WhatsApp préparée; readiness; autorisation durable; consommation atomique et garde outbound obligatoire du plafond; runbook.
 - Réel préparé : inbound signé et chaîne outbound jusqu'au client officiel, sans transport actif ni appel fournisseur.
 - Réel connecté : aucun fournisseur.
 - Sandbox : aucune configurée ou appelée.
-- Mock : références, clés, résolveurs, clients, réponses Twilio et manifeste `ready` synthétique uniquement dans les tests; aucune consommation de test n'est présentée comme un message réel.
+- Mock : références, clés, résolveurs, clients, réponses Twilio et manifeste `ready` synthétique uniquement dans les tests; les consommations de test prouvent l'ordre policy -> budget -> transport sans être présentées comme messages réels.
 - Bloqué humain : compte Twilio, téléphone, conditions Sandbox, credentials gérés, endpoint HTTPS et autorisation externe d'au plus deux messages gratuits.
 - Hors périmètre immédiat : sender WhatsApp production, WABA, OS-6 à OS-8, fusion et déploiement.

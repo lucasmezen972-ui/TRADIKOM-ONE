@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-09T01:24:17.000Z",
+  "updatedAt": "2026-08-09T02:07:04.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "b561ac00e93d669301444921fc5e4b04450d8e74",
+  "lastCommit": "f0acdfb382a698a6a2991da659a27ba1700757b6",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours sans activation externe : le plafond d'un ou deux messages de l'autorisation WhatsApp/Twilio est désormais consommable atomiquement par livraison, tenant-aware, RLS, idempotent sous retry et audité sans contenu sensible. La consommation verrouille l'autorisation, refuse expiration, révocation, endpoint désactivé, autre tenant/provider/livraison et dépassement concurrent. Le registre reste incapable de produire ready et aucun transport Twilio n'est appelé. La prochaine tranche non bloquée doit imposer cette réservation durable dans le chemin outbound juste avant tout futur transport ready, tout en conservant les états réels désactivés.",
+  "currentObjective": "OS-5 reste en cours et atteint désormais la frontière du checkpoint humain : tout manifeste futur ready doit consommer le plafond durable après membership, contexte, claim et policy, immédiatement avant le transport. Le premier essai reçoit l'authorization_id en option serveur interne; les retries le retrouvent par la consommation liée au delivery_id sans seconde unité ni second audit. Absence, expiration ou révocation finalisent la livraison en refus policy avant adaptateur, credentials, destination, client ou réseau. Les états mock restent sans consommation et le registre réel conserve transportEnabled false; aucun compte, secret, Sandbox, endpoint public ou message Twilio n'est connecté.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,8 +31,8 @@
       "evidenceExpected": "Intégration bornée dans whatsapp-twilio-outbound-service et le service de budget : authorization_id fourni seulement au premier essai ready, puis récupéré par delivery_id; réservation après policy et avant adapter.sendMessage; erreur de budget finalisée sans I/O; retry temporaire avec même consommation; expiration/révocation avant reprise refusées; mock inchangé et états réels incapables de produire ready. Tests service/worker avec manifeste ready synthétique, budget 1/2, ordre des gardes, replay sans seconde unité ni second audit, absence d'autorisation, révocation/expiration, audit sans PII et zéro resolver/client/réseau. Régression canaux, PostgreSQL/RLS existant, audit production, lint, typecheck, suite complète, build, continuity-check et CI PostgreSQL/Playwright doivent être verts avant le checkpoint."
     }
   },
-  "nextAction": "Brancher la réservation de budget d'activation sur le service outbound WhatsApp juste avant le premier appel transport d'une livraison future ready : persister/récupérer l'authorization_id via la consommation liée au delivery_id, refuser tout envoi sans consommation valide et rejouer les retries sans seconde unité; conserver le registre réel transportEnabled false et n'appeler aucun fournisseur.",
-  "nextFile": "src/modules/channels/whatsapp-twilio-outbound-service.ts",
+  "nextAction": "Checkpoint humain OS-5 uniquement : après autorisation explicite, créer ou utiliser un compte Twilio d'essai gratuit, vérifier le téléphone et les conditions Sandbox, stocker les credentials dans un gestionnaire de secrets, exposer un endpoint HTTPS temporaire, émettre une autorisation durable d'au plus deux messages puis exécuter la preuve conversationnelle web vers WhatsApp et retour avant désactivation/révocation. Sans cette autorisation, ne sélectionner aucune tâche CRM, Kanban, dashboard, OS-6 ou activation fournisseur alternative.",
+  "nextFile": "docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -291,7 +291,19 @@
     "audit production sans vulnerabilite connue, lint, typecheck, build production, continuity-check et diff check verts",
     "pnpm db:verify local bloque proprement faute de DATABASE_URL; CI PostgreSQL autoritative requise",
     "commit fonctionnel b561ac0 pousse sans activation externe",
-    "continuite 31286816855 et CI PostgreSQL 31286816871 entierement vertes sur b561ac0 avec migrations, backup/restauration, RLS, 118 fichiers/484 tests, build et 20 Playwright"
+    "continuite 31286816855 et CI PostgreSQL 31286816871 entierement vertes sur b561ac0 avec migrations, backup/restauration, RLS, 118 fichiers/484 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant integration outbound du budget OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "pnpm agent:continuity-check initial ready, zero erreur et zero avertissement; PR #11 CLEAN et CI precedente verte",
+    "alignement prompt maitre actualise avant code pour imposer la consommation dans le chemin outbound ready",
+    "service outbound ready avec budget apres policy et avant adaptateur; authorization_id initial interne puis reprise par delivery_id",
+    "absence, expiration et revocation du budget finalisees en refus durable avant transport; mock et registre reel desactive inchanges",
+    "16 tests cibles verts puis regression canaux 41 fichiers/192 tests verts et 5 suites PostgreSQL ignorees sans DATABASE_URL",
+    "suite exhaustive en six lots mono-worker 118 fichiers, 471 tests verts, 6 fichiers et 17 tests PostgreSQL ignores sans DATABASE_URL",
+    "audit production sans vulnerabilite connue, lint, typecheck, build production, continuity-check et diff check verts",
+    "suite monolithique locale interrompue apres silence PGlite connu; preuve exhaustive obtenue par lots sans assertion en echec",
+    "commit fonctionnel f0acdfb pousse sans activation externe",
+    "continuite 31289096474 verte et CI PostgreSQL 31289096477 verte en 15m25s : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20 Playwright"
   ],
   "lastValidation": [
     {
@@ -885,6 +897,26 @@
     {
       "command": "CI PostgreSQL 31286816871 sur b561ac0",
       "status": "passed_audit_migrations_backup_restore_rls_concurrency_lint_typecheck_118_files_484_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant garde outbound OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean_previous_ci_green"
+    },
+    {
+      "command": "tests ciblés garde outbound et régression canaux",
+      "status": "passed_2_files_16_tests_then_41_files_192_tests_5_postgres_suites_skipped_without_database_url_policy_before_budget_before_transport_retry_replay_expiry_revocation"
+    },
+    {
+      "command": "suite exhaustive en six lots mono-worker",
+      "status": "passed_118_files_471_tests_6_files_and_17_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31289096477 et continuité 31289096474 sur f0acdfb",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
     }
   ],
   "humanBlockers": [

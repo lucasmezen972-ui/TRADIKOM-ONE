@@ -28,13 +28,15 @@ Sans ces cinq validations, l'état doit rester `awaiting_human_auth` ou inférie
 - La table est tenant-owned, reliée à l'endpoint par clé composite, indexée tenant-first et protégée par RLS. Elle ne contient ni secret, numéro, URL, SID, corps, ciphertext ou référence complète.
 - Une émission rejouée avec la même clé et le même contrat retourne la preuve existante sans second audit; une collision avec un autre contrat est refusée.
 - `revokeWhatsAppTwilioActivationAuthorization` rend la révocation monotone et auditée. Une preuve révoquée ou expirée redescend à `awaiting_human_auth`.
+- La table `channel_provider_activation_consumptions` associe immuablement une unité à une livraison du même tenant, endpoint et provider. Elle verrouille le plafond sous concurrence et permet au worker de retrouver l'autorisation par `delivery_id` sans la transporter à nouveau.
+- Pour un manifeste `ready`, le service outbound exécute obligatoirement membership, contexte/claim et policy avant de consommer une unité, puis appelle le transport. Absence, expiration ou révocation finalisent un refus durable avant adaptateur, credentials, destination, client ou réseau. Les transports `mock` ne consomment jamais ce plafond humain.
 
 ## Activation et test borné
 
 1. Vérifier que le feature flag, les références versionnées du keyring, l'endpoint actif du bon tenant, les deux URLs HTTPS et l'autorisation interne chargée par référence passent la readiness.
 2. Vérifier que le registre est explicitement promu par une future tranche autorisée; la présente tranche ne le fait pas.
 3. Construire le keyring depuis le gestionnaire de secrets uniquement après l'état `ready`, puis créer les résolveurs tenant-aware et la fabrique officielle.
-4. Envoyer au plus le nombre de messages autorisé vers le téléphone de test, avec policy, idempotence, mission durable et audit sans contenu sensible.
+4. Fournir l'identifiant d'autorisation seulement dans les options serveur internes du premier essai; laisser les retries le retrouver par la consommation liée à la livraison. Envoyer au plus le nombre de messages autorisé vers le téléphone de test, avec policy, idempotence, mission durable et audit sans contenu sensible.
 5. Prouver réception unique, callback monotone, replay sans doublon et miroir dans la conversation web.
 
 ## Rotation, révocation et désactivation
