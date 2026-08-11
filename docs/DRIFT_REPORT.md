@@ -3,7 +3,7 @@
 - Date : 11 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head initial audité : `aad9261`
+- Head initial audité : `76c98bc`
 - Commit fonctionnel : `f0acdfb`
 - Travail effectué : reconfirmation probante du checkpoint humain OS-5 et de la CI du head courant, sans mutation applicative ni activation externe.
 
@@ -15,7 +15,7 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues directement dans le PDF canonique en texte; toutes les pages cœur et les pages techniques 14, 18, 22, 26, 28-29, 35-37, 64 et 66 ont aussi été inspectées en rendu.
 - Exigence servie : pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : arrêter l'autonomie uniquement à l'étape humaine indispensable, conserver secrets et credentials hors chat/dépôt, ne pas présenter un mock comme réel, laisser les providers fail-closed sans clés, et ne déclarer OS-5 terminé qu'après un outil externe actif en sandbox ou vrai avec preuves provider, sécurité, RLS et Playwright.
-- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; pages cœur et OS-5 relues directement en texte, toutes les pages cœur et les pages techniques déterminantes inspectées visuellement; `pnpm agent:continuity-check` local `ready` sans erreur ni avertissement; fichiers suivis propres et synchronisés au head `aad9261`; PR #11 brouillon, fusionnable et `CLEAN`; continuité `31525021312` verte; CI PostgreSQL `31525021392` verte avec audit sans vulnérabilité connue, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright. Le head a avancé pendant le run par un handoff documentaire concurrent, récupéré sans écraser de travail. Le répertoire non suivi `tmp/pdfs/`, antérieur au run, est signalé et préservé hors des rendus temporaires de ce run. Aucun code ni effet externe n'a été produit pendant cette confirmation.
+- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; pages cœur et OS-5 relues directement en texte, toutes les pages cœur et les pages techniques déterminantes inspectées visuellement; `pnpm agent:continuity-check` local `ready` sans erreur ni avertissement; fichiers suivis synchronisés au head `76c98bc`; PR #11 brouillon, fusionnable et `CLEAN`; continuité `31534721086` verte; CI PostgreSQL `31534721022` verte avec audit sans vulnérabilité connue, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright. Le répertoire non suivi `tmp/`, antérieur au run, est signalé et préservé; les rendus de vérification de ce run sont restés sous `/tmp`. Aucun code ni effet externe n'a été produit pendant cette confirmation.
 - Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; il n'existe aucune autre tranche locale non bloquée alignée.
 
 ## Classification honnête
@@ -47,13 +47,13 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 - `pnpm agent:continuity-check` initial et final : `ready`, zéro erreur et zéro avertissement;
 - prompt maître : empreinte exacte, 71 pages, inspection textuelle et visuelle des pages cœur et OS-5;
-- GitHub : PR #11 ouverte, brouillon, fusionnable et `CLEAN` au head `aad9261`; CI `31525021392` et continuité `31525021312` vertes;
+- GitHub : PR #11 ouverte, brouillon, fusionnable et `CLEAN` au head `76c98bc`; CI `31534721022` et continuité `31534721086` vertes;
 - local ciblé : 2 fichiers/16 tests verts, avec ordre policy -> consommation -> transport et reprise worker;
 - local canaux : 41 fichiers/192 tests verts, 5 suites PostgreSQL ignorées sans `DATABASE_URL`;
 - local exhaustif : 118 fichiers/471 tests verts en six lots mono-worker, 6 fichiers et 17 tests PostgreSQL ignorés faute de base locale;
 - statique : audit production sans vulnérabilité connue, lint, typecheck, build production et diff check verts;
 - navigateur local : aucune interface visible modifiée; la preuve Playwright PostgreSQL du nouveau head est confiée à la CI distante, le runtime local PGlite ne partageant pas les fixtures entre Playwright et le serveur;
-- distant fonctionnel : commit fonctionnel `f0acdfb` et handoffs documentaires jusqu'à `aad9261` poussés; continuité `31525021312` verte; CI PostgreSQL `31525021392` verte en 12 min 55 s avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build production et 20/20 Playwright; PR #11 `CLEAN`. L'avertissement distant sur l'absence du PDF est attendu dans GitHub Actions et n'annule pas la vérification locale exacte.
+- distant fonctionnel : commit fonctionnel `f0acdfb` et handoffs documentaires jusqu'à `76c98bc` poussés; continuité `31534721086` verte; CI PostgreSQL `31534721022` verte en 15 min 12 s avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build production et 20/20 Playwright; PR #11 `CLEAN`. L'avertissement distant sur l'absence du PDF est attendu dans GitHub Actions et n'annule pas la vérification locale exacte.
 
 ## Prochaine action recommandée
 
