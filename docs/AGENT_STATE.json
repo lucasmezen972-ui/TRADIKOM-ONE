@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-11T14:31:18.000Z",
+  "updatedAt": "2026-08-11T20:36:03.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "8463c25e44b2dce8bc9bf031c14930fb36e07d47",
+  "lastCommit": "aad9261acf9c023119d807e8d8bd9248f4d07f21",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 reste en cours au checkpoint humain normatif. La chaîne locale non bloquée est complète et la CI du head documentaire est verte : le transport futur ready consomme le plafond durable après membership, contexte, claim et policy, juste avant I/O; les retries retrouvent la même autorisation par delivery_id. Aucun manifeste réel ne produit ready, aucun fournisseur n'est connecté et aucune nouvelle tranche locale, CRM, Kanban, dashboard ou OS-6 ne doit être sélectionnée avant l'autorisation explicite du compte Twilio d'essai, du téléphone, de la Sandbox, du gestionnaire de secrets, de l'endpoint HTTPS temporaire et d'au plus deux messages gratuits.",
@@ -321,7 +321,13 @@
     "inspection visuelle des pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
     "verification GitHub du head 8463c25 : PR #11 brouillon, mergeable, CLEAN, CI 31354943080 et continuite 31354943077 vertes",
     "CI du head courant : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
-    "aucune nouvelle tache selectionnee le 2026-08-11 : checkpoint humain Twilio indispensable, aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement"
+    "aucune nouvelle tache selectionnee le 2026-08-11 : checkpoint humain Twilio indispensable, aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur aad9261",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
+    "verification GitHub du head aad9261 : PR #11 brouillon, mergeable, CLEAN, CI 31525021392 et continuite 31525021312 vertes",
+    "CI du head aad9261 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee apres la synchronisation concurrente sur aad9261 : checkpoint humain Twilio indispensable et aucun effet externe"
   ],
   "lastValidation": [
     {
@@ -959,6 +965,14 @@
     {
       "command": "CI 31354943080 et continuité 31354943077 sur 8463c25",
       "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur aad9261 le 2026-08-11",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_all_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31525021392 et continuité 31525021312 sur aad9261",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
     }
   ],
   "humanBlockers": [
