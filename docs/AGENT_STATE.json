@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-12T02:18:09.000Z",
+  "updatedAt": "2026-08-12T12:16:35.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "6d291a8cb1a9420a2b385c821dc9bf5fefb2d595",
+  "lastCommit": "d663aaf834694bdce12f56b1b6b9bfe4af5c6de1",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 reste en cours au checkpoint humain normatif. La chaîne locale non bloquée est complète et la CI du head documentaire est verte : le transport futur ready consomme le plafond durable après membership, contexte, claim et policy, juste avant I/O; les retries retrouvent la même autorisation par delivery_id. Aucun manifeste réel ne produit ready, aucun fournisseur n'est connecté et aucune nouvelle tranche locale, CRM, Kanban, dashboard ou OS-6 ne doit être sélectionnée avant l'autorisation explicite du compte Twilio d'essai, du téléphone, de la Sandbox, du gestionnaire de secrets, de l'endpoint HTTPS temporaire et d'au plus deux messages gratuits.",
@@ -28,7 +28,7 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Maintenir OS-5 au checkpoint humain imposé par les pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : ne pas présenter le provider comme réel, ne pas sélectionner OS-6 ou une tâche secondaire et ne produire aucun effet externe sans compte d'essai autorisé, téléphone vérifié, conditions Sandbox acceptées, credentials gérés, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages gratuits. Conserver le registre fail-closed, l'isolation tenant/RLS, l'idempotence, l'audit sans contenu sensible et la classification explicite livré, réel préparé, réel connecté, Sandbox, mock, bloqué humain et hors périmètre.",
-      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages; relecture textuelle des pages cœur et OS-5 avec inspection visuelle de toutes les pages cœur et des pages techniques déterminantes; continuity-check local ready sans erreur ni avertissement; fichiers suivis synchronisés au head 6d291a8 avec tout artefact non suivi préexistant signalé et préservé; PR #11 brouillon, fusionnable et CLEAN; CI PostgreSQL 31546106045 et continuité 31546106032 vertes avec audit, migrations, RLS, 118 fichiers/488 tests, build et 20/20 Playwright. Bloc de reprise exact conservé dans NEXT_STEPS et DRIFT_REPORT, sans code produit, compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement tant que l'intervention humaine n'est pas autorisée."
+      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages; relecture textuelle des pages cœur et OS-5 avec inspection visuelle de toutes les pages cœur et des pages techniques déterminantes; continuity-check local ready sans erreur ni avertissement; fichiers suivis synchronisés au head d663aaf avec tout artefact non suivi préexistant signalé et préservé; PR #11 brouillon, fusionnable et CLEAN; CI PostgreSQL 31577379203 et continuité 31577379206 vertes avec audit, migrations, RLS, 118 fichiers/488 tests, build et 20/20 Playwright. Bloc de reprise exact conservé dans NEXT_STEPS et DRIFT_REPORT, sans code produit, compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement tant que l'intervention humaine n'est pas autorisée."
     }
   },
   "nextAction": "Checkpoint humain OS-5 uniquement : après autorisation explicite, créer ou utiliser un compte Twilio d'essai gratuit, vérifier le téléphone et les conditions Sandbox, stocker les credentials dans un gestionnaire de secrets, exposer un endpoint HTTPS temporaire, émettre une autorisation durable d'au plus deux messages puis exécuter la preuve conversationnelle web vers WhatsApp et retour avant désactivation/révocation. Sans cette autorisation, ne sélectionner aucune tâche CRM, Kanban, dashboard, OS-6 ou activation fournisseur alternative.",
@@ -345,6 +345,11 @@
     "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
     "verification GitHub du head 6d291a8 : PR #11 brouillon, mergeable, CLEAN, CI 31546106045 et continuite 31546106032 vertes",
     "CI du head 6d291a8 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur d663aaf",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 29, 35-37, 64 et 66",
+    "verification GitHub du head d663aaf : PR #11 brouillon, mergeable, CLEAN, CI 31577379203 et continuite 31577379206 vertes",
+    "CI du head d663aaf : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
     "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement"
   ],
   "lastValidation": [
@@ -1014,6 +1019,14 @@
     },
     {
       "command": "CI 31546106045 et continuité 31546106032 sur 6d291a8",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur d663aaf le 2026-08-12",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_all_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31577379203 et continuité 31577379206 sur d663aaf",
       "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
     }
   ],
