@@ -15,7 +15,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Partir du head 1da2d5d; la CI PostgreSQL/Playwright 31597401702 et la continuité 31597401712 sont vertes.
+3. Partir du head a8603bc; la CI PostgreSQL/Playwright 31654171008 et la continuité 31654171001 sont vertes.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md.
 5. Ne modifier le registre ou la configuration réelle qu'après autorisation explicite du checkpoint humain; saisir les secrets uniquement dans un gestionnaire officiel.
 6. Émettre une autorisation durable d'au plus deux messages seulement si les unités gratuites sont visibles et la Sandbox acceptée.

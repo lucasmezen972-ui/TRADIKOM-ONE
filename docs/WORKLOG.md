@@ -599,3 +599,12 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La page 31 exige toujours un outil externe actif en Sandbox ou avec clés pour achever OS-5. Toute la chaîne locale non bloquée de la séquence page 48 étant livrée, aucune tâche OS-6, CRM, Kanban, dashboard ou fournisseur alternatif n'a été sélectionnée.
 - Le blocage exact demeure : autorisation explicite d'un compte Twilio d'essai dédié, unités gratuites confirmées, téléphone vérifié, conditions Sandbox acceptées, credentials uniquement dans un gestionnaire de secrets, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages de preuve.
 - Aucun code applicatif, compte, login, secret, Sandbox, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé ou modifié pendant ce checkpoint.
+
+## 2026-08-13 - Checkpoint humain OS-5 reconfirmé sur le head a8603bc
+
+- La copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` est synchronisée au head `a8603bc` de `origin/codex/tradikom-one-os`; le répertoire non suivi `tmp/` préexistait et a été préservé. Aucun fichier de la copie iCloud n'a été utilisé.
+- Le PDF maître canonique conserve exactement 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement et inspectées en rendu.
+- `pnpm agent:continuity-check` retourne localement `ready`, sans erreur ni avertissement. La PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`; la CI `31654171008` et la continuité `31654171001` sont vertes sur ce head, avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright.
+- La page 31 exige toujours un outil externe actif en Sandbox ou avec clés pour achever OS-5. Toute la chaîne locale non bloquée de la séquence page 48 étant livrée, aucune tâche OS-6, CRM, Kanban, dashboard ou fournisseur alternatif n'a été sélectionnée.
+- Le blocage exact demeure : autorisation explicite d'un compte Twilio d'essai dédié, unités gratuites confirmées, téléphone vérifié, conditions Sandbox acceptées, credentials uniquement dans un gestionnaire de secrets, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages de preuve.
+- Aucun code applicatif, compte, login, secret, Sandbox, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé ou modifié pendant ce checkpoint.
