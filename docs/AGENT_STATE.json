@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-13T04:41:00.318Z",
+  "updatedAt": "2026-08-17T22:23:26.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "a8603bc992f077f5ed077d1389041912c427c3b5",
+  "lastCommit": "a3b43486f80018af42baee8e87c7073758c44269",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 reste en cours au checkpoint humain normatif. La chaîne locale non bloquée est complète et la CI du head documentaire est verte : le transport futur ready consomme le plafond durable après membership, contexte, claim et policy, juste avant I/O; les retries retrouvent la même autorisation par delivery_id. Aucun manifeste réel ne produit ready, aucun fournisseur n'est connecté et aucune nouvelle tranche locale, CRM, Kanban, dashboard ou OS-6 ne doit être sélectionnée avant l'autorisation explicite du compte Twilio d'essai, du téléphone, de la Sandbox, du gestionnaire de secrets, de l'endpoint HTTPS temporaire et d'au plus deux messages gratuits.",
@@ -28,7 +28,7 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Maintenir OS-5 au checkpoint humain imposé par les pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : la séquence exacte de la page 48 et toute la chaîne locale non bloquée étant livrées, ne pas présenter le provider comme réel, ne pas sélectionner OS-6 ou une tâche secondaire et ne produire aucun effet externe sans compte d'essai autorisé, téléphone vérifié, conditions Sandbox acceptées, credentials gérés, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages gratuits. Conserver le registre fail-closed, l'isolation tenant/RLS, l'idempotence, l'audit sans contenu sensible et la classification explicite livré, réel préparé, réel connecté, Sandbox, mock, bloqué humain et hors périmètre.",
-      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages; relecture directe et inspection visuelle des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; continuity-check local ready sans erreur ni avertissement; fichiers suivis synchronisés au head a8603bc avec le répertoire tmp/ non suivi préexistant signalé et préservé; PR #11 brouillon, fusionnable et CLEAN; continuité 31654171001 et CI PostgreSQL 31654171008 vertes avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright. Bloc de reprise exact conservé dans NEXT_STEPS et DRIFT_REPORT, sans code produit, compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement tant que l'intervention humaine n'est pas autorisée."
+      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages; relecture directe et inspection visuelle des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; continuity-check local ready sans erreur ni avertissement; fichiers suivis synchronisés au head a3b4348 avec le répertoire tmp/ non suivi préexistant signalé et préservé; PR #11 ouverte, brouillon, fusionnable et CLEAN; continuité 31670585549 et CI PostgreSQL 31670585503 vertes avec audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright. Bloc de reprise exact conservé dans NEXT_STEPS et DRIFT_REPORT, sans code produit, compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement tant que l'intervention humaine n'est pas autorisée."
     }
   },
   "nextAction": "Checkpoint humain OS-5 uniquement : après autorisation explicite, créer ou utiliser un compte Twilio d'essai gratuit, vérifier le téléphone et les conditions Sandbox, stocker les credentials dans un gestionnaire de secrets, exposer un endpoint HTTPS temporaire, émettre une autorisation durable d'au plus deux messages puis exécuter la preuve conversationnelle web vers WhatsApp et retour avant désactivation/révocation. Sans cette autorisation, ne sélectionner aucune tâche CRM, Kanban, dashboard, OS-6 ou activation fournisseur alternative.",
@@ -356,7 +356,12 @@
     "inspection visuelle de toutes les pages coeur et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
     "verification GitHub du head 31f344e : PR #11 brouillon, mergeable, CLEAN, CI 31595846330 et continuite 31595846550 vertes",
     "CI du head 31f344e : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
-    "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement"
+    "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur a3b4348 le 2026-08-17",
+    "relecture textuelle directe et inspection visuelle de toutes les pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub du head a3b4348 : PR #11 brouillon, mergeable, CLEAN, CI 31670585503 et continuite 31670585549 vertes",
+    "CI du head a3b4348 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee le 2026-08-17 : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement"
   ],
   "lastValidation": [
     {
@@ -1042,6 +1047,14 @@
     {
       "command": "CI 31595846330 et continuité 31595846550 sur 31f344e",
       "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur a3b4348 le 2026-08-17",
+      "status": "passed_sha256_exact_71_pages_all_core_and_os5_pages_textually_and_visually_reviewed_local_ready_pr11_clean_tracked_tree_preserved"
+    },
+    {
+      "command": "CI 31670585503 et continuité 31670585549 sur a3b4348",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
     }
   ],
   "humanBlockers": [
