@@ -5,7 +5,7 @@
 - PR : brouillon #11
 - Head initial audité : `a3b4348`
 - Commit fonctionnel : `f0acdfb`
-- Travail effectué : reconfirmation probante du checkpoint humain OS-5 et clôture du statut CI du head courant, sans mutation applicative ni activation externe.
+- Travail effectué : reconfirmation probante du checkpoint humain OS-5, diagnostic puis correction ciblée du nouvel avis de dépendance bloquant la CI, sans mutation applicative ni activation externe.
 
 ## Impact north star
 
@@ -15,8 +15,8 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues directement dans le PDF canonique en texte et inspectées en rendu.
 - Exigence servie : pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : arrêter l'autonomie uniquement à l'étape humaine indispensable, conserver secrets et credentials hors chat/dépôt, ne pas présenter un mock comme réel, laisser les providers fail-closed sans clés, et ne déclarer OS-5 terminé qu'après un outil externe actif en sandbox ou vrai avec preuves provider, sécurité, RLS et Playwright.
-- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; pages cœur et OS-5 relues directement en texte et inspectées en rendu; `pnpm agent:continuity-check` local `ready` sans erreur ni avertissement; fichiers suivis synchronisés au head `a3b4348`; PR #11 ouverte, brouillon, fusionnable et `CLEAN`; continuité `31670585549` et CI PostgreSQL `31670585503` vertes. Cette CI valide audit sans vulnérabilité connue, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright. Le répertoire non suivi `tmp/`, antérieur au run, est signalé et préservé; les rendus de vérification de ce run sont restés sous `/tmp`. Aucun code ni effet externe n'a été produit pendant cette confirmation.
-- Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; il n'existe aucune autre tranche locale non bloquée alignée.
+- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; pages cœur et OS-5 relues directement en texte et inspectées en rendu; handoff documentaire publié sur `f9494df`; PR #11 ouverte et brouillon; continuité `32075910485` verte. La CI `32075910534` a isolé GHSA-2v37-7h3g-55p8 (`nanoid` 3.3.17 via `next > postcss`). Après autorisation explicite, l'override cible désormais 3.3.18 et le lockfile ne change que les références attendues. `pnpm why` confirme 3.3.18; audit sans vulnérabilité connue, lint, typecheck, 112 fichiers/471 tests locaux, build production et continuity-check sont verts. La CI PostgreSQL/Playwright du correctif reste à obtenir. Le répertoire non suivi `tmp/` est préservé; aucun effet externe n'a été produit.
+- Écarts restants : publier le correctif et obtenir la CI complète avec PostgreSQL/RLS et 20/20 Playwright. Aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; aucune tranche CRM, Kanban, dashboard ou OS-6 n'est sélectionnée.
 
 ## Classification honnête
 
@@ -37,6 +37,7 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 ## Risques
 
+- La CI du head publié `f9494df` reste rouge sur GHSA-2v37-7h3g-55p8 jusqu'à publication du correctif local `nanoid` 3.3.18; la preuve PostgreSQL/Playwright du nouveau head est encore distante.
 - Le budget est imposé pour `ready`, mais ce statut n'existe que dans les tests tant que le checkpoint humain n'est pas autorisé.
 - Aucun gestionnaire de secrets concret n'est choisi ou connecté; toutes les valeurs de preuve restent factices.
 - L'état `ready` est prouvé uniquement avec un manifeste synthétique de test; le registre réel n'émet que `disabled`, `not_configured` ou `awaiting_human_auth` et aboutit au plus à `degraded`.
@@ -47,14 +48,14 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 - `pnpm agent:continuity-check` initial et final : `ready`, zéro erreur et zéro avertissement;
 - prompt maître : empreinte exacte, 71 pages, inspection textuelle et visuelle des pages cœur et OS-5;
-- GitHub : PR #11 ouverte, brouillon, fusionnable et `CLEAN` au head `a3b4348`; continuité `31670585549` et CI `31670585503` vertes;
+- GitHub : PR #11 ouverte et brouillon au head `f9494df`; continuité `32075910485` verte; CI `32075910534` en échec au dependency audit sur GHSA-2v37-7h3g-55p8;
 - local ciblé : 2 fichiers/16 tests verts, avec ordre policy -> consommation -> transport et reprise worker;
 - local canaux : 41 fichiers/192 tests verts, 5 suites PostgreSQL ignorées sans `DATABASE_URL`;
 - local exhaustif : 118 fichiers/471 tests verts en six lots mono-worker, 6 fichiers et 17 tests PostgreSQL ignorés faute de base locale;
-- statique : audit production sans vulnérabilité connue, lint, typecheck, build production et diff check verts;
+- statique local : audit production sans vulnérabilité connue après `nanoid` 3.3.18, lint, typecheck, 112 fichiers/471 tests, build production, continuity-check et diff check verts;
 - navigateur local : aucune interface visible modifiée; la preuve Playwright PostgreSQL du nouveau head est confiée à la CI distante, le runtime local PGlite ne partageant pas les fixtures entre Playwright et le serveur;
-- distant fonctionnel : commit fonctionnel `f0acdfb` et handoffs documentaires jusqu'à `a3b4348` poussés; continuité `31670585549` et CI PostgreSQL `31670585503` vertes. La CI couvre audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build production et 20/20 Playwright. L'avertissement distant sur l'absence du PDF est attendu dans GitHub Actions et n'annule pas la vérification locale exacte.
+- distant fonctionnel : commit fonctionnel `f0acdfb` et handoffs documentaires jusqu'à `f9494df` poussés; continuité `32075910485` verte. La CI `32075910534` est bloquée avant migrations/tests par le nouvel avis `nanoid`; la dernière preuve complète reste `31670585503` sur `a3b4348` avec 118 fichiers/488 tests, build production et 20/20 Playwright. L'avertissement distant sur l'absence du PDF est attendu et n'annule pas la vérification locale exacte.
 
 ## Prochaine action recommandée
 
-Attendre le checkpoint humain exact de `docs/OS5_PROVIDER_SELECTION.md` et `docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md`. Après autorisation seulement : configurer l'essai/Sandbox et le gestionnaire de secrets, émettre au plus deux unités gratuites, exécuter la preuve bidirectionnelle réelle, puis désactiver et révoquer. Ne sélectionner aucune tâche CRM, Kanban, dashboard ou OS-6 pendant ce blocage.
+Publier le correctif `nanoid` 3.3.18 et attendre audit/CI complets verts. Ensuite, attendre le checkpoint humain exact de `docs/OS5_PROVIDER_SELECTION.md` et `docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md`; ne configurer l'essai/Sandbox et le gestionnaire de secrets qu'après cette autorisation séparée. Ne sélectionner aucune tâche CRM, Kanban, dashboard ou OS-6.

@@ -2,7 +2,9 @@
 
 ## Prochaine action concrète
 
-Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. La chaîne locale non bloquée est désormais complète jusqu'à la frontière I/O : un futur manifeste `ready` doit consommer l'autorisation durable après membership, contexte, claim et policy, immédiatement avant le transport. Le retry worker retrouve l'`authorization_id` par la consommation liée au `delivery_id` sans seconde unité ni second audit; absence, expiration ou révocation refusent avant adaptateur, credentials, destination, client ou réseau.
+Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. Le nouvel avis de sécurité découvert par la CI sur `nanoid` 3.3.17 est corrigé localement par un override ciblé vers `3.3.18` et un lockfile minimal. Audit, lint, typecheck, 112 fichiers/471 tests locaux, build production et continuity-check sont verts; publier puis attendre la CI PostgreSQL/Playwright complète. Cette maintenance ne sélectionne aucune nouvelle tranche produit.
+
+La chaîne OS-5 non bloquée reste complète jusqu'à la frontière I/O : un futur manifeste `ready` doit consommer l'autorisation durable après membership, contexte, claim et policy, immédiatement avant le transport. Le retry worker retrouve l'`authorization_id` par la consommation liée au `delivery_id` sans seconde unité ni second audit; absence, expiration ou révocation refusent avant adaptateur, credentials, destination, client ou réseau.
 
 La prochaine action est le **checkpoint humain OS-5** décrit ci-dessous. Sans autorisation explicite, ne créer aucun compte, secret, Sandbox, endpoint public ou message réel et ne sélectionner aucune tâche CRM, Kanban, dashboard, OS-6 ou fournisseur alternatif. Le registre réel conserve `transportEnabled: false`; aucun provider réel n'est connecté.
 
@@ -15,7 +17,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Partir du head a3b4348; la continuité 31670585549 et la CI PostgreSQL/Playwright 31670585503 sont vertes. La CI confirme audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright.
+3. Partir du head documentaire f9494df; la continuité 32075910485 est verte, mais la CI 32075910534 échoue au dependency audit sur GHSA-2v37-7h3g-55p8 avant migrations/tests. Le correctif local nanoid 3.3.18 est validé et doit être publié; la dernière CI complète verte 31670585503 porte sur a3b4348.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md.
 5. Ne modifier le registre ou la configuration réelle qu'après autorisation explicite du checkpoint humain; saisir les secrets uniquement dans un gestionnaire officiel.
 6. Émettre une autorisation durable d'au plus deux messages seulement si les unités gratuites sont visibles et la Sandbox acceptée.
@@ -26,6 +28,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 
 ## Critères du prochain checkpoint
 
+- correction ciblée `nanoid` 3.3.18 publiée, audit production sans vulnérabilité connue et nouvelle CI complète verte;
 - CI PostgreSQL/Playwright du head `a3b4348` entièrement verte : 118 fichiers/488 tests et 20/20 Playwright;
 - autorisation humaine explicite, unités gratuites confirmées et plafond d'au plus deux messages;
 - endpoint HTTPS temporaire, sender Sandbox et credentials uniquement dans un gestionnaire de secrets;

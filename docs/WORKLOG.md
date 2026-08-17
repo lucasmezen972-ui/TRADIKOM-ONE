@@ -625,3 +625,18 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La CI du head courant valide audit sans vulnérabilité connue, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build production et 20/20 Playwright.
 - Les pages 31, 32, 48, 66 et 69 confirment qu'OS-5 ne peut être achevé qu'avec un outil externe actif en Sandbox ou vrai. Toute la chaîne locale non bloquée est déjà livrée; aucune tâche OS-6, CRM, Kanban, dashboard ou fournisseur alternatif n'a été sélectionnée.
 - Le blocage exact demeure : autorisation explicite d'un compte Twilio d'essai dédié, unités gratuites confirmées, téléphone vérifié, conditions Sandbox acceptées, credentials uniquement dans un gestionnaire de secrets, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages de preuve. Aucun code applicatif, compte, login, secret, Sandbox, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé ou modifié pendant ce checkpoint.
+
+## 2026-08-17 - Diagnostic du nouvel échec CI sur f9494df
+
+- Le handoff documentaire a été publié dans `f9494df` sans inclure le répertoire non suivi `tmp/` ni aucun fichier applicatif. La continuité `32075910485` est verte.
+- La CI `32075910534` s'arrête au dependency audit avant migrations, tests, build et Playwright. Le diagnostic GitHub Actions et `pnpm audit --prod --audit-level high` local isolent GHSA-2v37-7h3g-55p8 : `nanoid` 3.3.17 est vulnérable et arrive par `next > postcss`; la version corrigée minimale est 3.3.18.
+- `pnpm-workspace.yaml` contient l'override historique `nanoid@3.3.16 -> 3.3.17`, reflété dans `pnpm-lock.yaml`. Le plan ciblé est de borner les versions vulnérables vers 3.3.18, régénérer le lockfile, relancer l'audit et les validations puis publier.
+- Le workflow spécialisé de correction CI exige une approbation explicite avant implémentation. Aucun fichier de dépendance n'a donc été modifié, aucun rerun n'a été déclenché et aucun code, secret, compte, Sandbox, endpoint, message, dépense, fusion ou déploiement n'a été produit.
+
+## 2026-08-17 - Correctif nanoid 3.3.18 validé localement
+
+- L'utilisateur a explicitement autorisé la correction CI ciblée. L'override historique `nanoid@3.3.16 -> 3.3.17` devient `nanoid@3.3.17 -> 3.3.18`; `pnpm-lock.yaml` ne modifie que l'override, la résolution, le snapshot et la dépendance PostCSS correspondants.
+- `pnpm install --frozen-lockfile` confirme le lockfile; `pnpm why nanoid` retourne uniquement 3.3.18 et `pnpm audit --prod --audit-level high` ne trouve aucune vulnérabilité connue.
+- `pnpm lint` et `pnpm typecheck` sont verts. La suite mono-worker termine en 489,25 s avec 112 fichiers/471 tests verts et 6 fichiers/17 tests PostgreSQL ignorés faute de `DATABASE_URL` local.
+- Le build Next.js 16.2.11 de production est vert avec l'environnement CI factice; aucune route, interface ou fonctionnalité applicative n'a été modifiée.
+- La publication puis la CI PostgreSQL/Playwright sont la preuve restante. Aucun compte, secret, Sandbox, endpoint, message, dépense, fusion ou déploiement n'a été produit.
