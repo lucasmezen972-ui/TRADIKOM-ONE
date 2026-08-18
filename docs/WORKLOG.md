@@ -648,3 +648,10 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement. La PR #11 est ouverte, brouillon et `CLEAN` sur `e845b23`.
 - Le correctif ciblé nanoid 3.3.18 est publié. La CI `32077411092` et la continuité `32077411096` sont vertes : audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright.
 - Les pages 31, 32, 48, 66 et 69 confirment que la prochaine étape reste exclusivement le checkpoint humain Twilio Sandbox. Aucun code, compte, login, secret, Sandbox, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé ou modifié pendant ce checkpoint.
+
+## 2026-08-18 - Relecture normative et checkpoint humain OS-5 reconfirmé
+
+- La copie active est exclusivement `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; seul `tmp/` non suivi, préexistant, est préservé. La copie iCloud Documents n'a pas été utilisée.
+- Le PDF maître canonique a été vérifié à nouveau : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ont été relues en texte et inspectées en rendu; les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont aussi été relues directement.
+- `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement. La PR #11 reste brouillon et `CLEAN` au head `e845b23`; la CI `32077411092` et la continuité `32077411096` sont toujours vertes.
+- La séquence page 48 est livrée jusqu'au checkpoint fournisseur. Conformément aux pages 31-32, 36-37, 66 et 69, aucun fournisseur ne peut être activé et aucune tranche secondaire ne peut être choisie sans l'autorisation humaine Twilio exacte. Aucun effet externe n'a été produit.
