@@ -4,7 +4,7 @@
 
 Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. Le correctif ciblé `nanoid` 3.3.18 est publié dans `e845b23`; la CI `32077411092` est entièrement verte (audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright) et la continuité `32077411096` est verte. Cette maintenance ne sélectionne aucune nouvelle tranche produit.
 
-Dernière reconfirmation locale : 18 août 2026 à 20:25 UTC, après vérification de l'empreinte et des 71 pages du PDF, relecture directe textuelle des pages requises, inspection en rendu de la page 48 et `pnpm agent:continuity-check` à l'état `ready`. Le head `94e8827` est couvert par la CI `32171744587` et la continuité `32171744589`, toutes deux vertes.
+Dernière reconfirmation locale : 18 août 2026 à 21:52 UTC, après vérification de l'empreinte et des 71 pages du PDF, relecture directe textuelle des pages requises, inspection en rendu des pages 3, 31, 48, 69 et 71 et `pnpm agent:continuity-check` à l'état `ready`. Le head `94e8827` est couvert par la CI `32171744587` et la continuité `32171744589`, toutes deux vertes.
 
 La chaîne OS-5 non bloquée reste complète jusqu'à la frontière I/O : un futur manifeste `ready` doit consommer l'autorisation durable après membership, contexte, claim et policy, immédiatement avant le transport. Le retry worker retrouve l'`authorization_id` par la consommation liée au `delivery_id` sans seconde unité ni second audit; absence, expiration ou révocation refusent avant adaptateur, credentials, destination, client ou réseau.
 
