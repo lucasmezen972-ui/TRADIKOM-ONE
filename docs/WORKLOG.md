@@ -640,3 +640,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm lint` et `pnpm typecheck` sont verts. La suite mono-worker termine en 489,25 s avec 112 fichiers/471 tests verts et 6 fichiers/17 tests PostgreSQL ignorés faute de `DATABASE_URL` local.
 - Le build Next.js 16.2.11 de production est vert avec l'environnement CI factice; aucune route, interface ou fonctionnalité applicative n'a été modifiée.
 - La publication puis la CI PostgreSQL/Playwright sont la preuve restante. Aucun compte, secret, Sandbox, endpoint, message, dépense, fusion ou déploiement n'a été produit.
+
+## 2026-08-18 - Correctif nanoid publié, CI complète verte et checkpoint OS-5 maintenu
+
+- La copie active reste `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; seul `tmp/` non suivi, préexistant, est préservé. La copie iCloud Documents n'a pas été utilisée.
+- Le PDF maître canonique conserve le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5` et exactement 71 pages. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement en texte et les pages déterminantes inspectées en rendu.
+- `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement. La PR #11 est ouverte, brouillon et `CLEAN` sur `e845b23`.
+- Le correctif ciblé nanoid 3.3.18 est publié. La CI `32077411092` et la continuité `32077411096` sont vertes : audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright.
+- Les pages 31, 32, 48, 66 et 69 confirment que la prochaine étape reste exclusivement le checkpoint humain Twilio Sandbox. Aucun code, compte, login, secret, Sandbox, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé ou modifié pendant ce checkpoint.

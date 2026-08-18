@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-17T22:43:18.000Z",
+  "updatedAt": "2026-08-18T10:17:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "f9494df085c8a6eb1a36f0751e959874f1406c1c",
+  "lastCommit": "e845b23b704c6cef805563c8bc564c26685c1782",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste en cours au checkpoint humain normatif. Le nouvel avis haute sévérité GHSA-2v37-7h3g-55p8 qui bloquait le dependency audit sur nanoid 3.3.17 est corrigé localement par un override ciblé vers 3.3.18 et un lockfile régénéré; audit, lint, typecheck, 112 fichiers/471 tests locaux, build et continuity-check sont verts. La publication et la CI PostgreSQL/Playwright doivent confirmer le correctif. Aucun manifeste réel ne produit ready, aucun fournisseur n'est connecté et aucune nouvelle tranche locale, CRM, Kanban, dashboard ou OS-6 ne doit être sélectionnée.",
+  "currentObjective": "OS-5 reste au checkpoint humain normatif. Le correctif ciblé nanoid 3.3.18 est publié dans e845b23 et sa CI PostgreSQL/Playwright 32077411092, ainsi que la continuité 32077411096, sont vertes. Toute la chaîne locale non bloquée est livrée; aucun manifeste réel ne produit ready, aucun fournisseur n'est connecté et aucune nouvelle tranche CRM, Kanban, dashboard ou OS-6 ne doit être sélectionnée.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,10 +28,10 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Maintenir OS-5 au checkpoint humain imposé par les pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : la séquence exacte de la page 48 et toute la chaîne locale non bloquée étant livrées, ne pas présenter le provider comme réel, ne pas sélectionner OS-6 ou une tâche secondaire et ne produire aucun effet externe sans compte d'essai autorisé, téléphone vérifié, conditions Sandbox acceptées, credentials gérés, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages gratuits. Conserver le registre fail-closed, l'isolation tenant/RLS, l'idempotence, l'audit sans contenu sensible et la classification explicite livré, réel préparé, réel connecté, Sandbox, mock, bloqué humain et hors périmètre.",
-      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages; relecture directe et inspection visuelle des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; override nanoid 3.3.17 vers 3.3.18 et lockfile minimal; audit production sans vulnérabilité connue; lint et typecheck verts; 112 fichiers/471 tests locaux verts avec 6 fichiers/17 tests PostgreSQL ignorés sans DATABASE_URL; build production et continuity-check verts; diff check propre; publication sur codex/tradikom-one-os puis CI avec migrations, backup/restauration, RLS, 118 fichiers/488 tests et 20/20 Playwright. Aucun compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement n'est autorisé."
+      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages; relecture directe et inspection visuelle des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; correctif nanoid 3.3.18 publié dans e845b23; audit production, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright verts dans la CI 32077411092; continuité 32077411096 verte. La preuve attendue restante est exclusivement le checkpoint humain Twilio Sandbox, puis la démonstration bidirectionnelle autorisée et sa désactivation/révocation. Aucun compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement n'est autorisé avant cette autorisation explicite."
     }
   },
-  "nextAction": "Publier le correctif nanoid 3.3.18 et attendre audit, migrations, backup/restauration, RLS, lint, typecheck, tests, build et Playwright verts. Cette maintenance de sécurité ne change pas la phase : après CI verte, le prochain résultat métier reste le checkpoint humain Twilio OS-5, sans compte, secret, Sandbox, endpoint ou message avant autorisation séparée.",
+  "nextAction": "Attendre le checkpoint humain Twilio OS-5 : compte d'essai autorisé, unités gratuites confirmées, téléphone vérifié, Sandbox acceptée, secrets placés uniquement dans un gestionnaire, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages. Sans cette autorisation séparée, n'activer aucun fournisseur ni nouvelle tranche.",
   "nextFile": "docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
