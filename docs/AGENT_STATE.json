@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-18T13:34:36.000Z",
+  "updatedAt": "2026-08-18T18:33:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
@@ -28,7 +28,7 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Maintenir OS-5 au checkpoint humain imposé par les pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : la séquence exacte de la page 48 et toute la chaîne locale non bloquée étant livrées, ne pas présenter le provider comme réel, ne pas sélectionner OS-6 ou une tâche secondaire et ne produire aucun effet externe sans compte d'essai autorisé, téléphone vérifié, conditions Sandbox acceptées, credentials gérés, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages gratuits. Conserver le registre fail-closed, l'isolation tenant/RLS, l'idempotence, l'audit sans contenu sensible et la classification explicite livré, réel préparé, réel connecté, Sandbox, mock, bloqué humain et hors périmètre.",
-      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages, vérifiés le 18 août; relecture directe et inspection visuelle des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; continuity-check local ready sans avertissement; correctif nanoid 3.3.18 publié dans e845b23; audit production, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright verts dans la CI 32077411092; continuité 32077411096 verte. La preuve attendue restante est exclusivement le checkpoint humain Twilio Sandbox, puis la démonstration bidirectionnelle autorisée et sa désactivation/révocation. Aucun compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement n'est autorisé avant cette autorisation explicite."
+      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages, revérifiés le 18 août à 18:21 UTC; relecture directe textuelle et inspection visuelle des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; continuity-check local ready sans avertissement; correctif nanoid 3.3.18 publié; audit production, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright verts dans la CI 32140716991; continuité 32140716921 verte sur le handoff 290a621. La preuve attendue restante est exclusivement le checkpoint humain Twilio Sandbox, puis la démonstration bidirectionnelle autorisée et sa désactivation/révocation. Aucun compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement n'est autorisé avant cette autorisation explicite."
     }
   },
   "nextAction": "Attendre le checkpoint humain Twilio OS-5 : compte d'essai autorisé, unités gratuites confirmées, téléphone vérifié, Sandbox acceptée, secrets placés uniquement dans un gestionnaire, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages. Sans cette autorisation séparée, n'activer aucun fournisseur ni nouvelle tranche.",
