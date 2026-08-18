@@ -3,7 +3,7 @@
 - Date : 18 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Head initial audité : `94e8827`
+- Head initial audité : `3ac2008`
 - Commit fonctionnel : `f0acdfb`
 - Travail effectué : vérification d'intégrité du PDF, relecture normative, continuity-check et vérification CI du head, puis reconfirmation du checkpoint humain OS-5, sans activation externe.
 
@@ -15,7 +15,7 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues directement dans le PDF canonique en texte et inspectées en rendu.
 - Exigence servie : pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : arrêter l'autonomie uniquement à l'étape humaine indispensable, conserver secrets et credentials hors chat/dépôt, ne pas présenter un mock comme réel, laisser les providers fail-closed sans clés, et ne déclarer OS-5 terminé qu'après un outil externe actif en sandbox ou vrai avec preuves provider, sécurité, RLS et Playwright.
-- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`, recontrôlé à 21:52 UTC le 18 août; pages cœur et OS-5 relues directement en texte, avec inspection en rendu des pages 3, 31, 48, 69 et 71. `pnpm agent:continuity-check` est `ready` sans erreur ni avertissement. La CI `32171744587` et la continuité `32171744589` sont vertes sur `94e8827`. La PR #11 est ouverte, brouillon et `CLEAN`; le répertoire non suivi `tmp/` est préservé. Aucun effet fournisseur n'a été produit.
+- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`, recontrôlé à 22:28 UTC le 18 août; pages cœur et OS-5 relues directement en texte. `pnpm agent:continuity-check` est `ready` sans erreur ni avertissement. La CI `32190082465` et la continuité `32190082445` sont vertes sur `3ac2008`; l'échec transitoire `32182299767` est un HTTP 429 de téléchargement GitHub avant exécution. La PR #11 est ouverte, brouillon et `CLEAN`; le répertoire non suivi `tmp/` est préservé. Aucun effet fournisseur n'a été produit.
 - Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; aucune tranche CRM, Kanban, dashboard ou OS-6 n'est sélectionnée.
 
 ## Classification honnête
