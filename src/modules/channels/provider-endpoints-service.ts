@@ -24,6 +24,7 @@ const boundedIdentifierSchema = z
   .max(160)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 const twilioAccountSidSchema = z.string().regex(/^AC[a-fA-F0-9]{32}$/);
+const metaReferenceSchema = z.string().regex(/^\d{1,64}$/);
 const microsoftUuidSchema = z.string().uuid().transform((value) => value.toLowerCase());
 const slackAppIdSchema = z.string().regex(/^A[A-Z0-9]{8,63}$/);
 const slackWorkspaceIdSchema = z.string().regex(/^T[A-Z0-9]{8,63}$/);
@@ -57,6 +58,23 @@ const resolveWhatsAppEndpointSchema = z
   .object({
     externalAccountId: twilioAccountSidSchema,
     destinationAddress: whatsappAddressSchema,
+  })
+  .strict();
+
+const registerMetaWhatsAppEndpointSchema = z
+  .object({
+    tenantId: boundedIdentifierSchema,
+    actorId: boundedIdentifierSchema,
+    externalAccountId: metaReferenceSchema,
+    phoneNumberId: metaReferenceSchema,
+    occurredAt: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict();
+
+const resolveMetaWhatsAppEndpointSchema = z
+  .object({
+    externalAccountId: metaReferenceSchema,
+    phoneNumberId: metaReferenceSchema,
   })
   .strict();
 
@@ -106,6 +124,24 @@ export async function registerAuthorizedWhatsAppEndpoint(
     provider: "whatsapp_twilio",
     destinationValue: parsed.destinationAddress,
   }, secret);
+}
+
+export async function registerAuthorizedMetaWhatsAppEndpoint(
+  db: DbClient,
+  input: z.input<typeof registerMetaWhatsAppEndpointSchema>,
+  fingerprintSecret: string | undefined,
+) {
+  const parsed = registerMetaWhatsAppEndpointSchema.parse(input);
+  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return registerAuthorizedEndpoint(
+    db,
+    {
+      ...parsed,
+      provider: "whatsapp_meta",
+      destinationValue: parsed.phoneNumberId,
+    },
+    secret,
+  );
 }
 
 export async function registerAuthorizedTeamsEndpoint(
@@ -214,6 +250,14 @@ export async function setAuthorizedWhatsAppEndpointStatus(
   return setAuthorizedEndpointStatus(db, parsed, "whatsapp_twilio");
 }
 
+export async function setAuthorizedMetaWhatsAppEndpointStatus(
+  db: DbClient,
+  input: z.input<typeof updateStatusSchema>,
+) {
+  const parsed = updateStatusSchema.parse(input);
+  return setAuthorizedEndpointStatus(db, parsed, "whatsapp_meta");
+}
+
 export async function setAuthorizedTeamsEndpointStatus(
   db: DbClient,
   input: z.input<typeof updateStatusSchema>,
@@ -307,6 +351,24 @@ export async function resolveActiveWhatsAppEndpoint(
     externalAccountId: parsed.externalAccountId,
     destinationValue: parsed.destinationAddress,
   }, secret);
+}
+
+export async function resolveActiveMetaWhatsAppEndpoint(
+  db: DbClient,
+  input: z.input<typeof resolveMetaWhatsAppEndpointSchema>,
+  fingerprintSecret: string | undefined,
+) {
+  const parsed = resolveMetaWhatsAppEndpointSchema.parse(input);
+  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  return resolveActiveEndpoint(
+    db,
+    {
+      provider: "whatsapp_meta",
+      externalAccountId: parsed.externalAccountId,
+      destinationValue: parsed.phoneNumberId,
+    },
+    secret,
+  );
 }
 
 export async function resolveActiveTeamsEndpoint(

@@ -1,5 +1,28 @@
 # Journal de travail TRADIKOM ONE OS
 
+## 2026-08-19 - Préparation WhatsApp Cloud API Meta sans activation
+
+- Le propriétaire a écarté Telegram pour des raisons de positionnement professionnel après l'échec déjà constaté de l'essai Twilio en Martinique. WhatsApp Cloud API directe de Meta est retenue comme trajectoire professionnelle de préparation, sans compte, application Meta, token, endpoint, message, paiement ni production.
+- Le PDF canonique reste conforme (71 pages et SHA-256 exact). La carte documentaire a été contrôlée directement : les pages 64-68, et non 58-62, portent le runtime provider, le webhook, la préparation Twilio/Resend sans clé et le WebChat; l'écart de carte est à corriger.
+- `whatsapp_meta` est ajouté au registre fail-closed sous l'intitulé visible français « WhatsApp Cloud API (Meta) ». Les seuls états possibles restent `disabled`, `not_configured` et `awaiting_human_auth`; `transportEnabled` reste `false`.
+- Le manifeste exige explicitement secret d'application, token d'accès, identifiants Meta, jeton de vérification, URL HTTPS et keyring géré, sans exposer aucune valeur. Il déclare la future signature `X-Hub-Signature-256`.
+- Validation locale : 5 tests de registre verts, ESLint ciblé, TypeScript sans cache incrémental et `git diff --check` verts. Aucun appel réseau n'est exercé.
+- Le vérificateur `verifyMetaWhatsAppWebhook` reçoit exclusivement le corps brut et `X-Hub-Signature-256`, impose 512 Kio, exige le préfixe `sha256=` et compare l'HMAC SHA-256 en temps constant. Secret absent, forme invalide, altération et dépassement sont refusés avant parsing ou base.
+- Validation complémentaire : 8 tests ciblés du registre et du vérificateur sont verts, ESLint ciblé, TypeScript sans cache incrémental et diff check verts. Aucun compte Meta, token, endpoint public, appel réseau ou message réel n'est créé.
+- L'adaptateur Meta ne parse le JSON qu'après signature valide. Il accepte un seul événement `whatsapp_business_account` avec un seul changement `messages` et un seul message texte, borne WABA, Phone Number ID, identifiant message, numéro et texte, puis dérive idempotence/corrélation sans persister le corps brut.
+- Les 5 tests Meta vérificateur/adaptateur couvrent le chemin signé, l'altération et les lots ambigus; ESLint, TypeScript sans cache et diff check sont verts.
+- Le mapping tenant Meta enregistre/résout uniquement les empreintes HMAC de WABA et Phone Number ID. L'ingestion ne reçoit qu'une enveloppe déjà vérifiée, refuse un endpoint absent ou désactivé, pseudonymise l'identité par tenant et délègue au Conversation Hub avec la clé d'idempotence Meta. TypeScript, ESLint et diff check sont verts; les tests d'intégration sont la prochaine preuve.
+
+## 2026-08-19 - Reprise OS-5, intégrité confirmée et notification réactivée
+
+- Le PDF canonique a été revérifié à 14:44 UTC : 71 pages et SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ont été relues directement en rendu. `pnpm agent:continuity-check` est `ready`, sans erreur ni avertissement.
+- GitHub était temporairement injoignable depuis l'environnement local; aucune conclusion CI nouvelle n'est inférée. Les derniers runs connus restent `32194941411` et `32194941339` verts sur `3f74dd1`.
+- L'automation `continuit-tradikom-one-os` a été démise de son mode silencieux : les notifications de l'app sont désormais autorisées pour les demandes d'intervention. Aucun provider, secret, Sandbox, endpoint HTTPS ou message externe n'a été activé.
+- La tentative de commit/push des quatre documents de continuité a échoué sans effet partiel : `.git/index.lock` est refusé par les permissions de l'environnement et `github.com` ne se résout pas. Les changements restent locaux et non committés; `tmp/` n'a pas été inclus.
+- Le propriétaire a donné une autorisation explicite pour poursuivre le checkpoint OS-5. Les contraintes restent essai gratuit, Sandbox, pas de paiement ni production, deux messages maximum. Les consoles Twilio de l'app et de Chrome ont été vérifiées : aucune session n'est connectée. La connexion Chrome est laissée ouverte pour l'identification et le téléphone vérifié par le propriétaire; aucune adresse email, OTP, mot de passe ou credential n'a été lu ou transmis.
+- OS-5 reste bloqué uniquement par le checkpoint humain Twilio Sandbox. La prochaine action ne change pas : attendre l'autorisation explicite du compte d'essai, des unités gratuites, du téléphone vérifié, de la Sandbox, de l'endpoint HTTPS temporaire, du gestionnaire de secrets et du plafond durable de deux messages.
+
 Ce fichier est append-only. Chaque entrée conserve les faits, commandes, décisions et limites de la session.
 
 ## 2026-07-29 - Entrée OS-0
@@ -706,3 +729,13 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Le PDF canonique conserve 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`; les pages cœur et OS-5 requises ont été relues directement en rendu.
 - `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement. La PR #11 est brouillon et `CLEAN`; la CI `32194941411` et la continuité `32194941339` sont vertes sur `3f74dd1`.
 - Selon les pages 31-32, 48, 66 et 69, le checkpoint humain Twilio Sandbox reste l'unique étape non terminée. Aucun effet fournisseur, secret, Sandbox, endpoint public, message, dépense, fusion ou déploiement n'a été produit.
+
+## 2026-08-19 - Inbound WhatsApp Cloud API Meta livré sans activation
+
+- Le choix fonctionnel est confirmé : l'essai Twilio a échoué pour le propriétaire en Martinique et Telegram est refusé comme non professionnel. La préparation bascule vers WhatsApp Cloud API directe de Meta, sans contourner la sécurité ni créer de compte, application, token, WABA, sender, endpoint public ou message réel.
+- Le provider `whatsapp_meta` reste fail-closed (`disabled`, `not_configured`, `awaiting_human_auth`; `transportEnabled: false`). Son ingress comprend signature `X-Hub-Signature-256` sur corps brut, normalisation texte stricte, mapping WABA + Phone Number ID par HMAC, identité pseudonymisée par tenant et conversation idempotente.
+- Une migration additive `087_os2_whatsapp_meta_endpoint_provider` autorise Meta dans `channel_provider_endpoints` sans modifier l'historique déjà appliqué. Le test couvre une base neuve et une mise à niveau depuis la migration 085.
+- La route `/api/webhooks/meta/whatsapp` est livrée mais inactive en production : GET vérifie le challenge à jeton comparé en temps constant; POST accepte seulement JSON UTF-8 borné et signé. Hors état `ready`, elle répond 503 avant lecture, base ou consommateur.
+- Preuves locales : 32 tests ciblés verts, dont rejeu, deuxième message, endpoint absent/désactivé, signature avant base, absence de PII, isolation de deux tenants et réponses HTTP sans fuite. `pnpm lint`, TypeScript sans cache incrémental, diff check, continuity-check et build de production avec environnement CI simulé sont verts.
+- Limites consignées : `pnpm db:verify` requiert une `DATABASE_URL` PostgreSQL indisponible localement. `pnpm test` complet a été interrompu après des dépassements de délai dans des suites historiques worker/Twilio (5–12 s, aucune assertion métier Meta en échec); il ne doit pas être présenté comme vert. La CI publiée existante (`32262537881` et `32262537861`, vertes sur `cc0335f`) précède ce lot local.
+- Prochaine tranche : préparer le flux sortant durable Meta, sans activer le provider ni créer d'effet fournisseur. `tmp/` reste exclu.

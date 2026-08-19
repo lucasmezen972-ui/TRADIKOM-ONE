@@ -1,61 +1,53 @@
-# Drift report
+# Rapport de dérive — TRADIKOM ONE OS
 
-- Date : 19 août 2026
+- Date : 19 août 2026, 15:58 UTC
 - Branche : `codex/tradikom-one-os`
-- PR : brouillon #11
-- Head initial audité : `3f74dd1`
-- Commit fonctionnel : `f0acdfb`
-- Travail effectué : vérification d'intégrité du PDF, relecture normative en rendu, continuity-check et vérification CI du head, puis reconfirmation du checkpoint humain OS-5, sans activation externe.
+- PR : #11, brouillon
+- Head de départ : `394ebc871217a3db73a2dfef20c901039d2e040b`
+- Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**
 
 ## Impact north star
 
-Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à la frontière I/O. Le checkpoint respecte la north star en refusant une nouvelle tranche secondaire lorsque le seul résultat métier manquant est la preuve Sandbox réelle. Aucun CRM, Kanban, dashboard ou OS-6 n'a été ouvert pour contourner l'intervention humaine.
+La tranche conserve le résultat métier prioritaire : une conversation entrante vérifiée peut être rattachée au bon tenant, rejouée sans doublon et auditée sans contenu sensible. Aucun CRM, Kanban, dashboard secondaire ou fournisseur alternatif n'a été sélectionné à la place de ce parcours conversation-first.
 
 ## Alignement prompt maître
 
-- Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues directement dans le PDF canonique en texte et inspectées en rendu.
-- Exigence servie : pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : arrêter l'autonomie uniquement à l'étape humaine indispensable, conserver secrets et credentials hors chat/dépôt, ne pas présenter un mock comme réel, laisser les providers fail-closed sans clés, et ne déclarer OS-5 terminé qu'après un outil externe actif en sandbox ou vrai avec preuves provider, sécurité, RLS et Playwright.
-- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`, recontrôlé à 11:55 UTC le 19 août; pages cœur et OS-5 relues directement en rendu. `pnpm agent:continuity-check` est `ready` sans erreur ni avertissement. La CI `32194941411` et la continuité `32194941339` sont vertes sur `3f74dd1`. La PR #11 est ouverte, brouillon et `CLEAN`; le répertoire non suivi `tmp/` est préservé. Aucun effet fournisseur n'a été produit.
-- Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; aucune tranche CRM, Kanban, dashboard ou OS-6 n'est sélectionnée.
+| Pages relues | Exigence | Preuve obtenue | Écart restant |
+| --- | --- | --- | --- |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, pas de tâche CRM/Kanban secondaire, continuité documentée | La tranche relie un webhook entrant au Conversation Hub et laisse un bloc de reprise exact | Le flux sortant durable Meta reste à préparer |
+| 13-18, 22, 31-33 | Adapteurs bornés, tenant/RLS, action durable, Definition of Done | Mapping endpoint par HMAC, migration additive, transactions système et identité pseudonymisée par tenant | Preuve PostgreSQL/RLS du nouveau lot requiert une base et la CI |
+| 35-38 | Entrée non fiable, pas de contenu sensible dans l'audit, pas de secret dans le dépôt | Signature HMAC sur corps brut avant parsing/base, JSON borné, audit sans numéro, WABA, Phone Number ID ni corps brut | Aucun secret Meta réel n'est configuré ni validé |
+| 64-68 | Runtime provider uniforme, webhook signé, provider fail-closed | Registre `whatsapp_meta`, route GET/POST, challenge à jeton comparé en temps constant, POST 512 Kio, 503 hors `ready` | Le runtime reste volontairement `disabled`/`not_configured` hors tests |
+| 69 | Tests provider, sécurité, intégration, isolation | 32 tests ciblés verts : signature, normalisation, migration neuve/mise à niveau, replay, deuxième message, endpoint absent/désactivé, isolation de deux tenants, HTTP | Playwright et CI PostgreSQL du lot n'ont pas encore été relancés |
 
-## Classification honnête
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages 3-7, 31-33, 46, 48, 64-68 et 69-71 ont été consultées directement; les pages runtime/provider sont 64-68.
 
-- Livré : outbound durable, worker, callbacks, coffre, résolveurs éphémères, bootstrap keyring, fabrique SDK, readiness, autorisation persistée, consommation atomique et garde outbound obligatoire du plafond, runbook.
-- Réel préparé : inbound signé/tenant-mappé et chaîne outbound jusqu'au client officiel, sans transport actif ni appel réseau.
-- Réel connecté : aucun fournisseur.
+## Travail livré
+
+- Provider Meta fail-closed avec huit prérequis déclaratifs et aucun transport actif.
+- Vérification `X-Hub-Signature-256` HMAC SHA-256 en temps constant, sur corps brut UTF-8 borné.
+- Normalisation d'un seul message texte déterministe uniquement après signature.
+- Endpoint WABA + Phone Number ID résolu par empreinte HMAC tenant-aware, sans valeurs de destination en clair.
+- Ingestion Conversation Hub idempotente, auditée et pseudonymisée; le même expéditeur génère des fils/identités distincts entre tenants.
+- Migration additive `087_os2_whatsapp_meta_endpoint_provider`, prouvée sur base neuve et sur mise à niveau PGlite.
+- Route `/api/webhooks/meta/whatsapp` avec GET challenge et POST JSON; le handler n'appelle ni base ni consommateur lorsque le provider n'est pas `ready`.
+
+## Validation honnête
+
+- Verts : 32 tests ciblés Meta, `pnpm lint`, `pnpm exec tsc --noEmit --incremental false`, `pnpm agent:continuity-check`, `git diff --check` et build de production avec l'environnement CI simulé.
+- CI connue : PR #11 au head publié `cc0335f`, CI `32262537881` et Continuité `32262537861` vertes. Elles précèdent ce lot local Meta.
+- Limite locale : `pnpm db:verify` exige une `DATABASE_URL` PostgreSQL absente. La migration est testée en PGlite, mais la vérification PostgreSQL/RLS reste à exécuter en CI ou avec une base autorisée.
+- Limite locale : `pnpm test` complet a été interrompu après des dépassements du délai de 5 s dans des suites historiques non Meta (`workflow-worker`, sortant Twilio), sans assertion métier en échec. Ce résultat n'est pas présenté comme vert.
+
+## Classification des états
+
+- Livré : préparation inbound Meta jusqu'à la route HTTP fail-closed, avec migration et preuves locales.
+- Réel : aucun compte, app Meta, WABA, sender, token, URL publique ou message fournisseur.
 - Sandbox : aucune configurée ou appelée.
-- Mock : références, clés, résolveurs, clients, réponses Twilio et manifeste `ready` synthétique de test; consommations en base de test prouvant l'ordre policy -> budget -> transport, canal test et `tradikom_mock`.
-- Bloqué humain : compte Twilio, téléphone vérifié, conditions Sandbox, credentials dans un gestionnaire, endpoint HTTPS temporaire et autorisation externe d'au plus deux messages gratuits.
-- Hors périmètre : sender WhatsApp production, WABA, paiement, Meta direct, activation Resend/Teams/Slack, OS-6 à OS-8, fusion et déploiement.
+- Mock : uniquement les secrets/états synthétiques de test; aucun transport réseau.
+- Bloqué humain : activation réelle, endpoint HTTPS temporaire, gestionnaire de secrets et autorisation distincte sans paiement.
+- Hors périmètre : production, dépense, fusion, déploiement, CRM, Kanban, dashboard secondaire et OS-6+.
 
-## Documents concernés
+## Prochaine tranche non bloquée
 
-- `docs/AGENT_STATE.json` : alignement, preuve attendue, head et validation courante;
-- `docs/WORKLOG.md` : checkpoint append-only et blocage humain exact;
-- `docs/NEXT_STEPS.md` : head et runs autoritatifs de reprise;
-- `docs/DRIFT_REPORT.md` : alignement prompt maître, preuve, classification et écarts restants.
-
-## Risques
-
-- Le correctif de sécurité est désormais validé à distance; le risque restant est uniquement le checkpoint fournisseur humain, qui ne doit pas être contourné.
-- Le budget est imposé pour `ready`, mais ce statut n'existe que dans les tests tant que le checkpoint humain n'est pas autorisé.
-- Aucun gestionnaire de secrets concret n'est choisi ou connecté; toutes les valeurs de preuve restent factices.
-- L'état `ready` est prouvé uniquement avec un manifeste synthétique de test; le registre réel n'émet que `disabled`, `not_configured` ou `awaiting_human_auth` et aboutit au plus à `degraded`.
-- Un message externe déjà remis ne serait pas annulable; le runbook ne promet que l'arrêt des effets futurs.
-- GitHub Actions avertit que `pnpm/action-setup@v4` et `actions/upload-artifact@v4` reposent encore sur le runtime d'action Node 20 forcé vers Node 24; le run reste vert, mais la maintenance du workflow devra suivre l'évolution officielle de ces actions.
-
-## Validations
-
-- `pnpm agent:continuity-check` initial et final : `ready`, zéro erreur et zéro avertissement;
-- prompt maître : empreinte exacte, 71 pages, inspection textuelle et visuelle des pages cœur et OS-5;
-- GitHub : PR #11 ouverte, brouillon et `CLEAN` au head `3f74dd1`; CI `32194941411` et continuité `32194941339` vertes;
-- local ciblé : 2 fichiers/16 tests verts, avec ordre policy -> consommation -> transport et reprise worker;
-- local canaux : 41 fichiers/192 tests verts, 5 suites PostgreSQL ignorées sans `DATABASE_URL`;
-- local exhaustif : 118 fichiers/471 tests verts en six lots mono-worker, 6 fichiers et 17 tests PostgreSQL ignorés faute de base locale;
-- statique local : audit production sans vulnérabilité connue après `nanoid` 3.3.18, lint, typecheck, 112 fichiers/471 tests, build production, continuity-check et diff check verts;
-- navigateur local : aucune interface visible modifiée; la preuve Playwright PostgreSQL du nouveau head est confiée à la CI distante, le runtime local PGlite ne partageant pas les fixtures entre Playwright et le serveur;
-- distant fonctionnel : commit fonctionnel `f0acdfb`, handoffs documentaires et correctif nanoid `e845b23` poussés. La CI `32077411092` couvre audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright; la continuité `32077411096` est verte. L'avertissement distant sur l'absence du PDF est attendu et n'annule pas la vérification locale exacte.
-
-## Prochaine action recommandée
-
-Attendre le checkpoint humain exact de `docs/OS5_PROVIDER_SELECTION.md` et `docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md`; ne configurer l'essai/Sandbox et le gestionnaire de secrets qu'après cette autorisation séparée. Ne sélectionner aucune tâche CRM, Kanban, dashboard ou OS-6.
+Préparer le flux sortant durable Meta : réservation, policy, idempotence, audit sûr, statut provider et worker, sans client Meta, credential réel, activation ou appel réseau. Avant tout code, actualiser `masterPrompt.alignment` et relire les pages provider pertinentes.

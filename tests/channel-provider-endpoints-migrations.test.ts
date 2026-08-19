@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
+import { PGlite } from "@electric-sql/pglite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb, getMigrationIds } from "../src/lib/db";
+import {
+  createMemoryDb,
+  getMigrationIds,
+  migrate,
+} from "../src/lib/db";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const timestamp = "2026-07-30T17:20:00.000Z";
@@ -24,6 +29,10 @@ describe("migrations des endpoints fournisseur OS-2", () => {
         "os2ChannelProviderEndpointsRlsMigrationSql",
         "../src/db/migrations/0068_os2_channel_provider_endpoints_rls.sql",
       ],
+      [
+        "os2WhatsAppMetaEndpointProviderMigrationSql",
+        "../src/db/migrations/0081_os2_whatsapp_meta_endpoint_provider.sql",
+      ],
     ] as const;
 
     for (const [constant, mirrorPath] of definitions) {
@@ -34,6 +43,9 @@ describe("migrations des endpoints fournisseur OS-2", () => {
 
   it("crée la table tenant-scoped sans colonne d'adresse ou de payload", async () => {
     expect(getMigrationIds()).toContain("073_os2_channel_provider_endpoints");
+    expect(getMigrationIds()).toContain(
+      "087_os2_whatsapp_meta_endpoint_provider",
+    );
     expect(getMigrationIds(true)).toEqual(
       expect.arrayContaining([
         "073_os2_channel_provider_endpoints",
@@ -123,6 +135,57 @@ describe("migrations des endpoints fournisseur OS-2", () => {
       ),
     ).rejects.toThrow(/check constraint|violates/i);
   });
+
+  it("autorise l'endpoint WhatsApp Cloud Meta sans enregistrer de destination", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    await seedTenant(db, "user_meta", "tenant_meta");
+
+    await db.query(
+      `insert into channel_provider_endpoints (
+         id, tenant_id, provider, external_account_id,
+         destination_fingerprint, status, created_by, created_at, updated_at
+       ) values ($1, $2, 'whatsapp_meta', $3, $4, 'active', $5, $6, $6)`,
+      [
+        "endpoint_meta",
+        "tenant_meta",
+        "123456789",
+        "e".repeat(64),
+        "user_meta",
+        timestamp,
+      ],
+    );
+
+    const rows = await db.query<{ provider: string }>(
+      "select provider from channel_provider_endpoints where id = 'endpoint_meta'",
+    );
+    expect(rows.rows).toEqual([{ provider: "whatsapp_meta" }]);
+  });
+
+  it("met à niveau une base existante avant d'autoriser WhatsApp Cloud Meta", async () => {
+    const db = new PGlite();
+    opened.push(db);
+    await migrate(db, {
+      targetMigrationId: "085_os5_channel_provider_activation_consumptions",
+    });
+    await seedTenant(db, "user_upgrade", "tenant_upgrade");
+
+    await expect(
+      seedMetaEndpoint(db, "endpoint_meta_before", "tenant_upgrade", "user_upgrade"),
+    ).rejects.toThrow(/check constraint|violates/i);
+
+    await migrate(db);
+    await seedMetaEndpoint(
+      db,
+      "endpoint_meta_after",
+      "tenant_upgrade",
+      "user_upgrade",
+    );
+    const rows = await db.query<{ provider: string }>(
+      "select provider from channel_provider_endpoints where id = 'endpoint_meta_after'",
+    );
+    expect(rows.rows).toEqual([{ provider: "whatsapp_meta" }]);
+  });
 });
 
 type TestDb = Awaited<ReturnType<typeof createMemoryDb>>;
@@ -154,6 +217,28 @@ async function seedEndpoint(
        destination_fingerprint, status, created_by, created_at, updated_at
      ) values ($1, $2, 'whatsapp_twilio', $3, $4, 'active', $5, $6, $6)`,
     [endpointId, tenantId, externalAccountId, fingerprint, userId, timestamp],
+  );
+}
+
+async function seedMetaEndpoint(
+  db: TestDb,
+  endpointId: string,
+  tenantId: string,
+  userId: string,
+) {
+  await db.query(
+    `insert into channel_provider_endpoints (
+       id, tenant_id, provider, external_account_id,
+       destination_fingerprint, status, created_by, created_at, updated_at
+     ) values ($1, $2, 'whatsapp_meta', $3, $4, 'active', $5, $6, $6)`,
+    [
+      endpointId,
+      tenantId,
+      "123456789",
+      "f".repeat(64),
+      userId,
+      timestamp,
+    ],
   );
 }
 

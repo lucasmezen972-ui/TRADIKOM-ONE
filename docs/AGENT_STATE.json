@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-19T11:55:54.000Z",
+  "updatedAt": "2026-08-19T15:58:43.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "3f74dd10bc568cf9f0b36b53d650bfa44eba888d",
+  "lastCommit": "394ebc871217a3db73a2dfef20c901039d2e040b",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 reste au checkpoint humain normatif, reconfirmé le 19 août après relecture directe du PDF canonique et vérification GitHub du head 3f74dd1. La CI PostgreSQL/Playwright 32194941411 et la continuité 32194941339 sont vertes. Toute la chaîne locale non bloquée est livrée; aucun manifeste réel ne produit ready, aucun fournisseur n'est connecté et aucune nouvelle tranche CRM, Kanban, dashboard ou OS-6 ne doit être sélectionnée.",
+  "currentObjective": "Twilio est indisponible selon le propriétaire et Telegram est explicitement refusé. OS-5 prépare WhatsApp Cloud API officielle de Meta : manifeste fail-closed, signature sur corps brut, normalisation texte stricte, mapping tenant-aware, migration additive, ingestion idempotente et frontière HTTP GET/POST sont livrés sans réseau ni secret réel. Les preuves couvrent challenge, replay, deuxième message, endpoint absent/désactivé, signature avant base, absence de PII et isolation de deux tenants. Le provider reste disabled/not_configured hors tests; aucun compte, token, endpoint public ni message réel n'a été créé.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -24,15 +24,15 @@
         "30-33 Shadow mode, irréversibilité, données sensibles et entrées non fiables",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
-        "58-62 Runtime provider, webhooks, Twilio, Resend et WebChat",
+        "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Maintenir OS-5 au checkpoint humain imposé par les pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : la séquence exacte de la page 48 et toute la chaîne locale non bloquée étant livrées, ne pas présenter le provider comme réel, ne pas sélectionner OS-6 ou une tâche secondaire et ne produire aucun effet externe sans compte d'essai autorisé, téléphone vérifié, conditions Sandbox acceptées, credentials gérés, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages gratuits. Conserver le registre fail-closed, l'isolation tenant/RLS, l'idempotence, l'audit sans contenu sensible et la classification explicite livré, réel préparé, réel connecté, Sandbox, mock, bloqué humain et hors périmètre.",
-      "evidenceExpected": "PDF canonique au SHA-256 exact et 71 pages, revérifiés le 19 août à 11:55 UTC; relecture directe en rendu des pages cœur 3-7, 31-33, 46, 48, 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38, 64-68; continuity-check local ready sans avertissement; CI 32194941411 et continuité 32194941339 vertes sur 3f74dd1. La preuve attendue restante est exclusivement le checkpoint humain Twilio Sandbox, puis la démonstration bidirectionnelle autorisée et sa désactivation/révocation. Aucun compte, secret, Sandbox, endpoint public, message, dépense, fusion ni déploiement n'est autorisé avant cette autorisation explicite."
+      "requirement": "Conserver le chemin conversation-first et ne sélectionner un provider professionnel que s'il peut fournir une preuve verticale réelle avec webhook vérifié avant la base, tenant/RLS, idempotence, actions durables, audit sans contenu sensible et états disabled/not_configured/mock. La frontière HTTP Meta doit refuser avant lecture/base quand le provider n'est pas prêt, borner strictement le JSON et ne remettre qu'un corps brut signé au service tenant-aware. Telegram est explicitement hors candidat.",
+      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 64-68 relues directement : runtime provider uniforme, webhook signé, provider sans secret réel et WebChat de référence. WhatsApp Developer Hub officiel confirme des numéros de test, webhooks et sandbox gratuits. La migration additive 087, les 32 tests ciblés Meta et le build de production prouvent le challenge GET à jeton comparé en temps constant, le POST JSON borné/signé, le 503 hors état ready, le mapping tenant-aware, le rejeu, l'audit sans PII et l'absence d'appel réseau. La prochaine preuve attendue est la préparation durable du flux sortant Meta, sans rendre le provider réel ni configurer de credential."
     }
   },
-  "nextAction": "Attendre le checkpoint humain Twilio OS-5 : compte d'essai autorisé, unités gratuites confirmées, téléphone vérifié, Sandbox acceptée, secrets placés uniquement dans un gestionnaire, endpoint HTTPS temporaire et autorisation durable d'au plus deux messages. Sans cette autorisation séparée, n'activer aucun fournisseur ni nouvelle tranche.",
-  "nextFile": "docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md",
+  "nextAction": "Reprendre la première tranche OS-5 restante : concevoir le service sortant durable WhatsApp Cloud Meta avec réservation, policy, idempotence et états honnêtes, sans activer le provider, appeler Meta ni stocker de credential en clair.",
+  "nextFile": "src/modules/channels/whatsapp-meta-outbound-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",

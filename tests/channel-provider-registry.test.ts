@@ -11,12 +11,13 @@ describe("registre des canaux fournisseurs OS-2", () => {
     vi.restoreAllMocks();
   });
 
-  it("garde les quatre transports désactivés par défaut sans accès réseau", () => {
+  it("garde les cinq transports désactivés par défaut sans accès réseau", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const providers = listPreparedChannelProviders({});
 
     expect(providers.map((provider) => provider.provider)).toEqual([
       "whatsapp_twilio",
+      "whatsapp_meta",
       "teams_microsoft",
       "slack",
       "email_resend",
@@ -51,6 +52,28 @@ describe("registre des canaux fournisseurs OS-2", () => {
     });
   });
 
+  it("prépare Meta WhatsApp sans token ni transport actif", () => {
+    const provider = getPreparedChannelProvider("whatsapp_meta", {
+      FEATURE_CHANNEL_WHATSAPP_META: "true",
+      META_WHATSAPP_APP_SECRET: "app_secret_test",
+    });
+
+    expect(provider).toMatchObject({
+      state: "not_configured",
+      transportEnabled: false,
+      signatureScheme: "meta_x_hub_signature_256",
+      missingEnvironment: [
+        "META_WHATSAPP_ACCESS_TOKEN",
+        "META_WHATSAPP_PHONE_NUMBER_ID",
+        "META_WHATSAPP_WABA_ID",
+        "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN",
+        "META_WHATSAPP_WEBHOOK_URL",
+        "CHANNEL_PROVIDER_SECRET_ACTIVE_KEY_VERSION",
+        "CHANNEL_PROVIDER_SECRET_KEY_REFERENCES",
+      ],
+    });
+  });
+
   it("attend toujours l'authentification humaine malgré une configuration complète", () => {
     const providers = listPreparedChannelProviders({
       FEATURE_CHANNEL_WHATSAPP: "true",
@@ -64,6 +87,14 @@ describe("registre des canaux fournisseurs OS-2", () => {
         "https://app.example.test/api/webhooks/twilio/whatsapp",
       TWILIO_WHATSAPP_STATUS_CALLBACK_URL:
         "https://app.example.test/api/webhooks/twilio/whatsapp/status",
+      FEATURE_CHANNEL_WHATSAPP_META: "true",
+      META_WHATSAPP_APP_SECRET: "app_secret_test",
+      META_WHATSAPP_ACCESS_TOKEN: "access_token_test",
+      META_WHATSAPP_PHONE_NUMBER_ID: "phone_number_test",
+      META_WHATSAPP_WABA_ID: "waba_test",
+      META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verify_token_test",
+      META_WHATSAPP_WEBHOOK_URL:
+        "https://app.example.test/api/webhooks/meta/whatsapp",
       FEATURE_CHANNEL_TEAMS: "true",
       MICROSOFT_TENANT_ID: "tenant_test",
       MICROSOFT_CLIENT_ID: "client_test",

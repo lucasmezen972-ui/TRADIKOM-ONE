@@ -1,62 +1,57 @@
 # Étapes suivantes TRADIKOM ONE OS
 
-## Prochaine action concrète
+## Situation actuelle
 
-Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. Le correctif ciblé `nanoid` 3.3.18 est publié dans `e845b23`; la CI `32077411092` est entièrement verte (audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright) et la continuité `32077411096` est verte. Cette maintenance ne sélectionne aucune nouvelle tranche produit.
+- Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; `tmp/` est non suivi et doit rester exclu de tout commit.
+- Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+- Les pages cœur 3-7, 31-33, 46, 48, 64-68 et 69-71 ont été relues directement; les pages runtime/provider sont bien 64-68.
+- La PR #11 est ouverte en brouillon. Au head publié `cc0335f`, CI `32262537881` et Continuité `32262537861` sont vertes. Le lot Meta courant est local et doit être revalidé par CI seulement après publication.
 
-Dernière reconfirmation locale : 19 août 2026 à 11:55 UTC, après vérification de l'empreinte et des 71 pages du PDF, relecture directe en rendu de toutes les pages requises et `pnpm agent:continuity-check` à l'état `ready`. Le head `3f74dd1` est couvert par la CI `32194941411` et la continuité `32194941339`, toutes deux vertes.
+## Dernière tranche livrée : inbound WhatsApp Cloud API Meta, sans activation
 
-La chaîne OS-5 non bloquée reste complète jusqu'à la frontière I/O : un futur manifeste `ready` doit consommer l'autorisation durable après membership, contexte, claim et policy, immédiatement avant le transport. Le retry worker retrouve l'`authorization_id` par la consommation liée au `delivery_id` sans seconde unité ni second audit; absence, expiration ou révocation refusent avant adaptateur, credentials, destination, client ou réseau.
-
-La prochaine action est le **checkpoint humain OS-5** décrit ci-dessous. Sans autorisation explicite, ne créer aucun compte, secret, Sandbox, endpoint public ou message réel et ne sélectionner aucune tâche CRM, Kanban, dashboard, OS-6 ou fournisseur alternatif. Le registre réel conserve `transportEnabled: false`; aucun provider réel n'est connecté.
+- Le provider `whatsapp_meta` est fail-closed : `disabled`, `not_configured` ou `awaiting_human_auth`, avec `transportEnabled: false`.
+- Le corps brut est borné à 512 Kio, signé par `X-Hub-Signature-256`, puis seulement normalisé en un événement texte strict.
+- Le WABA et le Phone Number ID sont mappés par empreinte HMAC tenant-aware; le Conversation Hub reçoit une identité pseudonymisée et une clé d'idempotence stable.
+- La migration additive `087_os2_whatsapp_meta_endpoint_provider` autorise Meta sur les bases existantes sans réécrire les migrations historiques.
+- La route `/api/webhooks/meta/whatsapp` n'est atteignable qu'en état `ready` de test : GET vérifie le challenge à jeton constant-time, POST transmet le JSON brut signé. En état réel actuel, elle retourne 503 et n'ouvre aucune base ni transport.
 
 ## Référence prompt maître
 
-Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement, en texte et en rendu. Les pages 14, 18, 22, 26, 28-29, 32, 37, 64, 66 et 69 imposent frontière provider, tenant/RLS, action durable, idempotence, policy, audit sans contenu sensible, état honnête et tests provider/sécurité.
+Les pages 14, 22, 31-33, 35-38, 46, 48, 64-68 et 69 imposent la suite : conserver l'adaptateur borné, le tenant/RLS, l'idempotence, l'audit sans contenu sensible, les états fournisseur honnêtes et les tests provider/sécurité avant toute activation.
+
+## Prochaine action concrète
+
+Reprendre la première tranche OS-5 restante : préparer le **flux sortant durable WhatsApp Cloud Meta**. Commencer par comparer les réservations, policy, idempotence et audits du flux WhatsApp existant, puis ajouter uniquement les briques Meta nécessaires avec tests. Le provider doit rester sans clé, sans client réseau et sans état `ready` hors tests.
+
+Ne pas créer d'application Meta, token, webhook public, sender, WABA, message fournisseur, paiement ou déploiement pendant cette tranche.
+
+## Validation disponible
+
+- 32 tests ciblés Meta verts : registre, signature, adaptateur, migration neuve/mise à niveau, ingress/replay/deuxième message, endpoint absent/désactivé, signature avant base, isolation tenant et frontière HTTP.
+- `pnpm lint`, `pnpm exec tsc --noEmit --incremental false`, `pnpm agent:continuity-check` et `git diff --check` sont verts.
+- Build de production vert avec l'environnement CI local simulé; la route Meta est inventoriée par Next.js.
+- `pnpm db:verify` est non exécutable ici faute de `DATABASE_URL` PostgreSQL. La migration PGlite de mise à niveau est néanmoins couverte par test.
+- `pnpm test` complet a été interrompu : des tests historiques du worker et du sortant Twilio dépassent le délai local de 5 s (5–12 s) sans assertion métier échouée. Ne pas présenter cette exécution comme une suite complète verte; revalider via CI PostgreSQL après publication.
+
+## État de vérité
+
+- Livré : préparation Meta inbound complète jusqu'à la route HTTP fail-closed, avec migration, audit, idempotence et preuves locales.
+- Réel connecté : aucun fournisseur.
+- Sandbox : aucune configurée ou appelée.
+- Mock : seuls les états `ready` et les secrets factices des tests; aucun message externe.
+- Bloqué humain : toute activation Meta réelle demande un compte, les conditions de test, un endpoint HTTPS temporaire, un gestionnaire de secrets et une autorisation distincte sans paiement.
+- Hors périmètre immédiat : CRM, Kanban, dashboard secondaire, production, fusion, déploiement et dépense.
 
 ## Bloc de reprise exact
 
 ```text
-1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
-2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Partir du head `3f74dd1`; le correctif nanoid 3.3.18 est publié. La CI PostgreSQL/Playwright `32194941411` et la continuité `32194941339` sont vertes.
-4. Relire docs/OS5_PROVIDER_SELECTION.md et docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md.
-5. Ne modifier le registre ou la configuration réelle qu'après autorisation explicite du checkpoint humain; saisir les secrets uniquement dans un gestionnaire officiel.
-6. Émettre une autorisation durable d'au plus deux messages seulement si les unités gratuites sont visibles et la Sandbox acceptée.
-7. Exécuter la preuve verticale Conversation web -> WhatsApp Sandbox -> retour signé, avec la même livraison/idempotence sous retry.
-8. Vérifier PostgreSQL/RLS, provider, sécurité et Playwright, puis désactiver endpoint/transport, révoquer autorisation et credentials temporaires.
-9. Documenter séparément livré, réel, Sandbox, mock et irréversible; ne fusionner ni déployer sans autorisation.
+1. Vérifier le PDF maître, SHA-256, 71 pages et pnpm agent:continuity-check.
+2. Lire docs/AGENT_STATE.json, docs/WORKLOG.md et docs/DRIFT_REPORT.md.
+3. Repartir de la branche codex/tradikom-one-os, sans inclure tmp/.
+4. Auditer la réservation durable et le worker sortant existants avant toute nouvelle écriture.
+5. Mettre à jour masterPrompt.alignment avant de coder le flux sortant Meta.
+6. Garder Meta disabled/not_configured/mock : aucune clé, aucun client, aucun appel réseau ou message réel.
+7. Ajouter les preuves provider, tenant, idempotence, audit, policy et migration nécessaires.
+8. Relancer les tests ciblés, lint, typecheck, build, continuity-check et documenter les limites PostgreSQL/CI.
+9. Ne fusionner, ne déployer, ne dépenser et ne demander aucun secret sans autorisation séparée.
 ```
-
-## Critères du prochain checkpoint
-
-- correction ciblée `nanoid` 3.3.18 publiée, audit production sans vulnérabilité connue et CI `32077411092` entièrement verte : 118 fichiers/488 tests et 20/20 Playwright;
-- autorisation humaine explicite, unités gratuites confirmées et plafond d'au plus deux messages;
-- endpoint HTTPS temporaire, sender Sandbox et credentials uniquement dans un gestionnaire de secrets;
-- preuve bidirectionnelle réelle marquée Sandbox, avec signature, mapping tenant, idempotence, callback et audit sans contenu sensible;
-- expiration, révocation, endpoint désactivé et budget épuisé refusés avant secrets/client/réseau;
-- désactivation et révocation vérifiées après preuve; limites irréversibles d'un message déjà remis documentées;
-- aucun paiement, dépassement, fusion, production ou changement DNS sans nouvelle autorisation.
-
-## Intervention humaine indispensable pour la preuve réelle
-
-```text
-Checkpoint humain OS-5 - ne transmettre aucun secret dans le chat.
-
-1. Autoriser explicitement un compte Twilio d'essai dédié.
-2. Confirmer les unités gratuites et l'absence de paiement ou upgrade.
-3. Vérifier le téléphone, accepter la Sandbox et rejoindre avec le seul téléphone de test.
-4. Autoriser un endpoint HTTPS temporaire et révocable.
-5. Autoriser le stockage des credentials uniquement dans un gestionnaire de secrets.
-6. Émettre l'autorisation durable pour au plus deux messages de preuve, puis désactiver et révoquer.
-```
-
-## État de vérité
-
-- Livré : OS-1 à OS-4; sélection OS-5; chaîne WhatsApp préparée; readiness; autorisation durable; consommation atomique et garde outbound obligatoire du plafond; runbook.
-- Réel préparé : inbound signé et chaîne outbound jusqu'au client officiel, sans transport actif ni appel fournisseur.
-- Réel connecté : aucun fournisseur.
-- Sandbox : aucune configurée ou appelée.
-- Mock : références, clés, résolveurs, clients, réponses Twilio et manifeste `ready` synthétique uniquement dans les tests; les consommations de test prouvent l'ordre policy -> budget -> transport sans être présentées comme messages réels.
-- Bloqué humain : compte Twilio, téléphone, conditions Sandbox, credentials gérés, endpoint HTTPS et autorisation externe d'au plus deux messages gratuits.
-- Hors périmètre immédiat : sender WhatsApp production, WABA, OS-6 à OS-8, fusion et déploiement.

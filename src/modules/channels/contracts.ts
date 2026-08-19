@@ -6,6 +6,7 @@ import type {
 
 export const externalChannelProviderSchema = z.enum([
   "whatsapp_twilio",
+  "whatsapp_meta",
   "teams_microsoft",
   "slack",
   "email_resend",
@@ -72,6 +73,7 @@ export const channelAdapterManifestSchema = z
       .max(12),
     signatureScheme: z.enum([
       "twilio_sdk",
+      "meta_x_hub_signature_256",
       "microsoft_jwt",
       "slack_v0_hmac_sha256",
       "resend_svix",
