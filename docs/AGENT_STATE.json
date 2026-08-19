@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-19T15:58:43.000Z",
+  "updatedAt": "2026-08-19T16:01:35.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "394ebc871217a3db73a2dfef20c901039d2e040b",
+  "lastCommit": "5e87c8823973e50207209d1af39ff6bccb634839",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "Twilio est indisponible selon le propriétaire et Telegram est explicitement refusé. OS-5 prépare WhatsApp Cloud API officielle de Meta : manifeste fail-closed, signature sur corps brut, normalisation texte stricte, mapping tenant-aware, migration additive, ingestion idempotente et frontière HTTP GET/POST sont livrés sans réseau ni secret réel. Les preuves couvrent challenge, replay, deuxième message, endpoint absent/désactivé, signature avant base, absence de PII et isolation de deux tenants. Le provider reste disabled/not_configured hors tests; aucun compte, token, endpoint public ni message réel n'a été créé.",
