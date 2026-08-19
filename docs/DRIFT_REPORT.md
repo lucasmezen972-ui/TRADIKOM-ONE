@@ -5,7 +5,7 @@
 - PR : brouillon #11
 - Head initial audité : `3f74dd1`
 - Commit fonctionnel : `f0acdfb`
-- Travail effectué : vérification d'intégrité du PDF, relecture normative, continuity-check et vérification CI du head, puis reconfirmation du checkpoint humain OS-5, sans activation externe.
+- Travail effectué : vérification d'intégrité du PDF, relecture normative en rendu, continuity-check et vérification CI du head, puis reconfirmation du checkpoint humain OS-5, sans activation externe.
 
 ## Impact north star
 
@@ -15,7 +15,7 @@ Le chemin Conversation -> WhatsApp conserve toutes ses gardes prouvées jusqu'à
 
 - Pages consultées : pages 3-7, 13-18, 22, 26-33, 35-38, 46, 48 et 64-71, relues directement dans le PDF canonique en texte et inspectées en rendu.
 - Exigence servie : pages 3, 6, 14, 29, 31-32, 36-37, 66 et 69 : arrêter l'autonomie uniquement à l'étape humaine indispensable, conserver secrets et credentials hors chat/dépôt, ne pas présenter un mock comme réel, laisser les providers fail-closed sans clés, et ne déclarer OS-5 terminé qu'après un outil externe actif en sandbox ou vrai avec preuves provider, sécurité, RLS et Playwright.
-- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`, recontrôlé à 11:08 UTC le 19 août; pages cœur et OS-5 relues directement, avec inspection visuelle des pages déterminantes 3, 6, 14, 29, 31-32, 37, 48, 66, 69 et 71. `pnpm agent:continuity-check` est `ready` sans erreur ni avertissement. La CI `32194941411` et la continuité `32194941339` sont vertes sur `3f74dd1`. La PR #11 est ouverte, brouillon et `CLEAN`; le répertoire non suivi `tmp/` est préservé. Aucun effet fournisseur n'a été produit.
+- Preuve obtenue : PDF de 71 pages au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`, recontrôlé à 11:55 UTC le 19 août; pages cœur et OS-5 relues directement en rendu. `pnpm agent:continuity-check` est `ready` sans erreur ni avertissement. La CI `32194941411` et la continuité `32194941339` sont vertes sur `3f74dd1`. La PR #11 est ouverte, brouillon et `CLEAN`; le répertoire non suivi `tmp/` est préservé. Aucun effet fournisseur n'a été produit.
 - Écarts restants : aucun gestionnaire de secrets concret, compte Twilio, téléphone vérifié, Sandbox, endpoint HTTPS public ou message fournisseur n'est connecté. La preuve réelle web + WhatsApp, la désactivation post-preuve et le succès OS-5 page 31 restent bloqués par l'autorisation humaine exacte; aucune tranche CRM, Kanban, dashboard ou OS-6 n'est sélectionnée.
 
 ## Classification honnête
