@@ -4,7 +4,7 @@
 
 Le candidat unique OS-5 reste **WhatsApp via Twilio Sandbox**. Le correctif ciblé `nanoid` 3.3.18 est publié dans `e845b23`; la CI `32077411092` est entièrement verte (audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright) et la continuité `32077411096` est verte. Cette maintenance ne sélectionne aucune nouvelle tranche produit.
 
-Dernière reconfirmation locale : 18 août 2026 à 22:28 UTC, après vérification de l'empreinte et des 71 pages du PDF, relecture directe textuelle des pages requises et `pnpm agent:continuity-check` à l'état `ready`. Le head `3ac2008` est couvert par la CI `32190082465` et la continuité `32190082445`, toutes deux vertes. La tentative de continuité `32182299767` du head précédent a subi un HTTP 429 GitHub lors du téléchargement de `pnpm/action-setup`, avant toute vérification du dépôt; le contrôle équivalent du head courant est vert.
+Dernière reconfirmation locale : 19 août 2026 à 11:08 UTC, après vérification de l'empreinte et des 71 pages du PDF, relecture directe textuelle des pages requises et `pnpm agent:continuity-check` à l'état `ready`. Le head `3f74dd1` est couvert par la CI `32194941411` et la continuité `32194941339`, toutes deux vertes.
 
 La chaîne OS-5 non bloquée reste complète jusqu'à la frontière I/O : un futur manifeste `ready` doit consommer l'autorisation durable après membership, contexte, claim et policy, immédiatement avant le transport. Le retry worker retrouve l'`authorization_id` par la consommation liée au `delivery_id` sans seconde unité ni second audit; absence, expiration ou révocation refusent avant adaptateur, credentials, destination, client ou réseau.
 
@@ -19,7 +19,7 @@ Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE.
 2. Vérifier le PDF maître, son SHA-256 et ses 71 pages, puis exécuter pnpm agent:continuity-check.
-3. Partir du head `3ac2008`; le correctif nanoid 3.3.18 est publié. La CI PostgreSQL/Playwright `32190082465` et la continuité `32190082445` sont vertes.
+3. Partir du head `3f74dd1`; le correctif nanoid 3.3.18 est publié. La CI PostgreSQL/Playwright `32194941411` et la continuité `32194941339` sont vertes.
 4. Relire docs/OS5_PROVIDER_SELECTION.md et docs/OS5_TWILIO_ACTIVATION_RUNBOOK.md.
 5. Ne modifier le registre ou la configuration réelle qu'après autorisation explicite du checkpoint humain; saisir les secrets uniquement dans un gestionnaire officiel.
 6. Émettre une autorisation durable d'au plus deux messages seulement si les unités gratuites sont visibles et la Sandbox acceptée.
