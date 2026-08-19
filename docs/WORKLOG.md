@@ -697,6 +697,6 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 ## 2026-08-19 - Checkpoint humain OS-5 reconfirmé à 11:08 UTC
 
 - La copie active reste exclusivement `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; `tmp/` est le seul élément non suivi, préexistant et préservé. La copie iCloud Documents n'a pas été utilisée.
-- Le PDF canonique a été revérifié : 71 pages et SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement en texte.
+- Le PDF canonique a été revérifié : 71 pages et SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement en texte; les pages 3, 6, 14, 29, 31-32, 37, 48, 66, 69 et 71 ont été inspectées en rendu.
 - `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement. La PR #11 est ouverte, brouillon et `CLEAN` au head `3f74dd1`; la CI `32194941411` et la continuité `32194941339` sont vertes.
 - Les pages 31-32, 48, 66 et 69 maintiennent le checkpoint humain Twilio Sandbox comme unique étape non terminée. Aucun compte, secret, Sandbox, endpoint public, message fournisseur, dépense, fusion ou déploiement n'a été créé.
