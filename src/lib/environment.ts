@@ -33,7 +33,9 @@ const environmentSchema = z
       .optional(),
     CONNECTOR_ENCRYPTION_KEY: z.string().min(32).optional(),
     CONNECTOR_ENCRYPTION_KEY_VERSION: z.string().trim().min(1).max(80).optional(),
-    EMAIL_PROVIDER: z.enum(["console", "test"]).optional(),
+    EMAIL_PROVIDER: z.enum(["console", "test", "resend"]).optional(),
+    RESEND_API_KEY: z.string().trim().min(1).optional(),
+    EMAIL_FROM: z.string().trim().email().optional(),
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_MODEL: z.string().min(1).optional(),
     FEATURE_PUBLIC_DEMO: booleanString.optional(),
@@ -57,6 +59,17 @@ const environmentSchema = z
       !environment.OPENAI_API_KEY
     ) {
       addRequiredIssue(context, "OPENAI_API_KEY");
+    }
+
+    // Vérifié dans tous les environnements : un fournisseur réel sélectionné
+    // sans clé ni expéditeur échouerait silencieusement à l'exécution.
+    if (environment.EMAIL_PROVIDER === "resend") {
+      if (!environment.RESEND_API_KEY) {
+        addRequiredIssue(context, "RESEND_API_KEY");
+      }
+      if (!environment.EMAIL_FROM) {
+        addRequiredIssue(context, "EMAIL_FROM");
+      }
     }
 
     if (environment.NODE_ENV !== "production") {
@@ -188,7 +201,13 @@ function withoutEmptyValues(input: EnvironmentInput) {
 
 function addRequiredIssue(
   context: z.RefinementCtx,
-  variable: "APP_URL" | "DATABASE_URL" | "CONNECTOR_ENCRYPTION_KEY" | "OPENAI_API_KEY",
+  variable:
+    | "APP_URL"
+    | "DATABASE_URL"
+    | "CONNECTOR_ENCRYPTION_KEY"
+    | "OPENAI_API_KEY"
+    | "RESEND_API_KEY"
+    | "EMAIL_FROM",
 ) {
   context.addIssue({
     code: "custom",

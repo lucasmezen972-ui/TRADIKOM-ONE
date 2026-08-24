@@ -40,8 +40,11 @@ import {
   getOpportunities,
   getOpportunityDetail,
   mergeContacts,
+  crmQuerySchema,
   opportunityFiltersSchema,
+  opportunityReorderSchema,
   opportunityUpdateSchema,
+  reorderOpportunityInStage,
   submitPublicLead as submitPublicLeadDomain,
   updateContactProfile,
   updateOpportunity,
@@ -84,8 +87,28 @@ import {
   submitMarketingProposalForApproval,
   submitMarketingProposalSchema,
 } from "@/modules/autonomous-marketing";
+import {
+  approvalCenterQuerySchema,
+  getApprovalCenter,
+  resumeApproval,
+  resumeApprovalSchema,
+  snoozeApproval,
+  snoozeApprovalSchema,
+} from "@/modules/approval-center";
+import {
+  deleteTenantAsset,
+  getTenantAssets,
+  readPublicAsset,
+  uploadTenantAsset,
+  type UploadAssetInput,
+} from "@/modules/assets";
 import { getAuditLogs } from "@/modules/audit";
-import { getDashboardData } from "@/modules/dashboard";
+import {
+  getEmailSuppressions,
+  releaseEmailSuppression,
+  releaseSuppressionSchema,
+} from "@/modules/email-suppression";
+import { dashboardQuerySchema, getDashboardData } from "@/modules/dashboard";
 import { seedDemo } from "@/modules/demo";
 import {
   acceptInvitation,
@@ -100,8 +123,10 @@ import {
   invitationSchema,
   orgSchema,
   resendInvitation,
+  tenantPreferencesSchema,
   updateMemberRole,
   updateMemberRoleSchema,
+  updateTenantPreferences,
   acceptInvitationSchema,
 } from "@/modules/tenants";
 import { createDefaultTenantResources } from "@/modules/tenants/provisioning";
@@ -190,13 +215,18 @@ import {
   decideStrategicRecommendation,
   generateStrategicRecommendations,
   getStrategicAdvisor,
+  getStrategicRuleMutes,
+  liftStrategicRecommendationMute,
   strategicRecommendationDecisionSchema,
+  strategicRuleMuteSchema,
 } from "@/modules/strategic-advisor";
 import {
   applyApprovedWebsiteAiProposal,
   decideWebsiteAiProposal,
   generateWebsiteAiProposals,
   getWebsiteAiWorkspace,
+  reviseWebsiteAiProposal,
+  reviseWebsiteAiProposalSchema,
   submitWebsiteAiProposalForApproval,
   websiteAiProposalDecisionSchema,
   websiteAiProposalReferenceSchema,
@@ -213,6 +243,8 @@ import {
   reputationProposalDecisionSchema,
   reputationProposalReferenceSchema,
   reputationReviewSchema,
+  reviseReputationProposal,
+  reviseReputationProposalSchema,
   submitReputationProposalForApproval,
 } from "@/modules/reputation-ai";
 import {
@@ -296,6 +328,10 @@ import {
   processUniversalExportJob,
   type CreateExportInput,
 } from "@/modules/exports";
+import {
+  deleteAccount,
+  deleteAccountSchema,
+} from "@/modules/account-deletion";
 
 export type ServiceDependencies = {
   emailProvider?: EmailProvider;
@@ -333,6 +369,8 @@ export function createServices(
     createSession: (userId: string) => createSession(db, userId),
     getSessionUser: (sessionId?: string) => getSessionUser(db, sessionId),
     revokeSession: (sessionToken?: string) => revokeSession(db, sessionToken),
+    deleteAccount: (userId: string, input: z.input<typeof deleteAccountSchema>) =>
+      deleteAccount(db, userId, input),
     createTenant: (userId: string, input: z.input<typeof orgSchema>) =>
       createTenantDomain(db, userId, input, {
         createDefaults: createDefaultTenantResources,
@@ -365,6 +403,18 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof updateMemberRoleSchema>,
     ) => updateMemberRole(db, userId, tenantId, input),
+    getEmailSuppressions: (userId: string, tenantId: string) =>
+      getEmailSuppressions(db, userId, tenantId),
+    releaseEmailSuppression: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof releaseSuppressionSchema>,
+    ) => releaseEmailSuppression(db, userId, tenantId, input),
+    updateTenantPreferences: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof tenantPreferencesSchema>,
+    ) => updateTenantPreferences(db, userId, tenantId, input),
     saveOnboarding: (
       userId: string,
       tenantId: string,
@@ -391,8 +441,21 @@ export function createServices(
     ) => archiveBusinessBrainEntry(db, userId, tenantId, input),
     getStrategicAdvisor: (userId: string, tenantId: string) =>
       getStrategicAdvisor(db, userId, tenantId),
-    generateStrategicRecommendations: (userId: string, tenantId: string) =>
-      generateStrategicRecommendations(db, userId, tenantId),
+    getStrategicRuleMutes: (
+      userId: string,
+      tenantId: string,
+      options: { now?: Date } = {},
+    ) => getStrategicRuleMutes(db, userId, tenantId, options),
+    liftStrategicRecommendationMute: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof strategicRuleMuteSchema>,
+    ) => liftStrategicRecommendationMute(db, userId, tenantId, input),
+    generateStrategicRecommendations: (
+      userId: string,
+      tenantId: string,
+      options: { now?: Date } = {},
+    ) => generateStrategicRecommendations(db, userId, tenantId, options),
     decideStrategicRecommendation: (
       userId: string,
       tenantId: string,
@@ -431,6 +494,11 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof websiteAiProposalDecisionSchema>,
     ) => decideWebsiteAiProposal(db, userId, tenantId, input),
+    reviseWebsiteAiProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseWebsiteAiProposalSchema>,
+    ) => reviseWebsiteAiProposal(db, userId, tenantId, input),
     applyApprovedWebsiteAiProposal: (
       userId: string,
       tenantId: string,
@@ -459,6 +527,11 @@ export function createServices(
       tenantId: string,
       input: z.input<typeof reputationProposalDecisionSchema>,
     ) => decideReputationProposal(db, userId, tenantId, input),
+    reviseReputationProposal: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof reviseReputationProposalSchema>,
+    ) => reviseReputationProposal(db, userId, tenantId, input),
     getCompetitorIntelligenceWorkspace: (userId: string, tenantId: string) =>
       getCompetitorIntelligenceWorkspace(db, userId, tenantId),
     createCompetitorProfile: (
@@ -548,10 +621,40 @@ export function createServices(
       submitPublicLeadDomain(db, slug, payload, {
         getPublishedSite,
       }),
-    getDashboard: (userId: string, tenantId: string) =>
+    getDashboard: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof dashboardQuerySchema> = {},
+    ) =>
       getDashboardData(db, userId, tenantId, {
         timeZone: process.env.BUSINESS_TIME_ZONE,
+        ...input,
       }),
+    getApprovalCenter: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof approvalCenterQuerySchema> = {},
+    ) => getApprovalCenter(db, userId, tenantId, input),
+    uploadTenantAsset: (
+      userId: string,
+      tenantId: string,
+      input: UploadAssetInput,
+    ) => uploadTenantAsset(db, userId, tenantId, input),
+    getTenantAssets: (userId: string, tenantId: string, limit?: number) =>
+      getTenantAssets(db, userId, tenantId, limit),
+    deleteTenantAsset: (userId: string, tenantId: string, assetId: string) =>
+      deleteTenantAsset(db, userId, tenantId, assetId),
+    readPublicAsset: (assetId: string) => readPublicAsset(db, assetId),
+    snoozeApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof snoozeApprovalSchema>,
+    ) => snoozeApproval(db, userId, tenantId, input),
+    resumeApproval: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof resumeApprovalSchema>,
+    ) => resumeApproval(db, userId, tenantId, input),
     getOpportunityRadar: (userId: string, tenantId: string) =>
       getOpportunityRadar(db, userId, tenantId),
     dismissOpportunityRadarAlert: (
@@ -559,7 +662,11 @@ export function createServices(
       tenantId: string,
       alertId: string,
     ) => dismissOpportunityRadarAlert(db, userId, tenantId, { alertId }),
-    getCrm: (userId: string, tenantId: string) => getCrm(db, userId, tenantId),
+    getCrm: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof crmQuerySchema> = {},
+    ) => getCrm(db, userId, tenantId, input),
     getOpportunities: (
       userId: string,
       tenantId: string,
@@ -576,6 +683,11 @@ export function createServices(
       opportunityId: string,
       input: z.input<typeof opportunityUpdateSchema>,
     ) => updateOpportunity(db, userId, tenantId, opportunityId, input),
+    reorderOpportunityInStage: (
+      userId: string,
+      tenantId: string,
+      input: z.input<typeof opportunityReorderSchema>,
+    ) => reorderOpportunityInStage(db, userId, tenantId, input),
     getContactDetail: (userId: string, tenantId: string, contactId: string) =>
       getContactDetail(db, userId, tenantId, contactId),
     getContactDuplicateCandidates: (userId: string, tenantId: string) =>

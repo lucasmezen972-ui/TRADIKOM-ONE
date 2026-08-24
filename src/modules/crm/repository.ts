@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { openStageCondition } from "@/lib/pipeline-stages";
 import { safeJson } from "@/lib/security";
 import type { Activity, Contact, Lead, Task } from "@/lib/types";
 
@@ -76,6 +77,9 @@ type OpportunityRow = {
   value_cents: number;
   next_follow_up_at: string | null;
   lost_reason: string | null;
+  assigned_user_id: string | null;
+  probability: number | null;
+  expected_close_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -695,7 +699,12 @@ export async function findPipelineStageById(
 export async function listOpportunities(
   db: DbClient,
   tenantId: string,
-  filters: { search?: string; stageId?: string },
+  filters: {
+    search?: string;
+    stageId?: string;
+    followUpDueBefore?: string;
+    stalledBefore?: string;
+  },
 ) {
   const params: unknown[] = [tenantId];
   const where = ["opportunities.tenant_id = $1"];
@@ -712,13 +721,33 @@ export async function listOpportunities(
     );
   }
 
+  if (filters.followUpDueBefore) {
+    params.push(filters.followUpDueBefore);
+    where.push(
+      `opportunities.next_follow_up_at is not null
+       and opportunities.next_follow_up_at < $${params.length}
+       and ${openStageCondition}`,
+    );
+  }
+
+  if (filters.stalledBefore) {
+    params.push(filters.stalledBefore);
+    where.push(
+      `opportunities.updated_at < $${params.length}
+       and (opportunities.next_follow_up_at is null
+            or opportunities.next_follow_up_at < $${params.length})
+       and ${openStageCondition}`,
+    );
+  }
+
   const result = await db.query<OpportunityListRow>(
     `select opportunities.*, pipeline_stages.name as stage_name, contacts.name as contact_name, contacts.email as contact_email
      from opportunities
      join pipeline_stages on pipeline_stages.id = opportunities.stage_id
      join contacts on contacts.id = opportunities.contact_id and contacts.tenant_id = opportunities.tenant_id
      where ${where.join(" and ")}
-     order by opportunities.updated_at desc
+     order by opportunities.board_position asc nulls last,
+              opportunities.updated_at desc
      limit 100`,
     params,
   );
@@ -753,13 +782,17 @@ export async function updateOpportunityRecord(
     valueCents: number;
     nextFollowUpAt: string | null;
     lostReason: string | null;
+    assignedUserId: string | null;
+    probability: number | null;
+    expectedCloseAt: string | null;
     updatedAt: string;
   },
 ) {
   const result = await db.query<OpportunityRow>(
     `update opportunities
-     set stage_id = $1, value_cents = $2, next_follow_up_at = $3, lost_reason = $4, updated_at = $5
-     where tenant_id = $6 and id = $7
+     set stage_id = $1, value_cents = $2, next_follow_up_at = $3, lost_reason = $4,
+       assigned_user_id = $5, probability = $6, expected_close_at = $7, updated_at = $8
+     where tenant_id = $9 and id = $10
      returning opportunities.*, (
        select name from pipeline_stages where pipeline_stages.id = opportunities.stage_id
      ) as stage_name`,
@@ -768,6 +801,9 @@ export async function updateOpportunityRecord(
       input.valueCents,
       input.nextFollowUpAt,
       input.lostReason,
+      input.assignedUserId,
+      input.probability,
+      input.expectedCloseAt,
       input.updatedAt,
       input.tenantId,
       input.opportunityId,
@@ -775,6 +811,84 @@ export async function updateOpportunityRecord(
   );
 
   return result.rows[0] ? mapOpportunity(result.rows[0]) : null;
+}
+
+export async function insertOpportunityChanges(
+  db: DbClient,
+  entries: Array<{
+    id: string;
+    tenantId: string;
+    opportunityId: string;
+    field: string;
+    previousValue: string | null;
+    nextValue: string | null;
+    changedBy: string;
+    createdAt: string;
+  }>,
+) {
+  for (const entry of entries) {
+    await db.query(
+      `insert into opportunity_changes
+        (id, tenant_id, opportunity_id, field, previous_value, next_value, changed_by, created_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        entry.id,
+        entry.tenantId,
+        entry.opportunityId,
+        entry.field,
+        entry.previousValue,
+        entry.nextValue,
+        entry.changedBy,
+        entry.createdAt,
+      ],
+    );
+  }
+}
+
+export async function listOpportunityChanges(
+  db: DbClient,
+  tenantId: string,
+  opportunityId: string,
+  limit: number,
+) {
+  const result = await db.query<{
+    id: string;
+    field: string;
+    previous_value: string | null;
+    next_value: string | null;
+    changed_by_name: string | null;
+    created_at: string;
+  }>(
+    `select changes.id, changes.field, changes.previous_value, changes.next_value,
+       users.name as changed_by_name, changes.created_at
+     from opportunity_changes as changes
+     left join users on users.id = changes.changed_by
+     where changes.tenant_id = $1 and changes.opportunity_id = $2
+     order by changes.created_at desc
+     limit $3`,
+    [tenantId, opportunityId, limit],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    field: row.field,
+    previousValue: row.previous_value,
+    nextValue: row.next_value,
+    changedByName: row.changed_by_name,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function listTenantMemberOptions(db: DbClient, tenantId: string) {
+  const result = await db.query<{ id: string; name: string }>(
+    `select users.id, users.name
+     from memberships
+     join users on users.id = memberships.user_id
+     where memberships.tenant_id = $1 and users.deleted_at is null
+     order by users.name asc`,
+    [tenantId],
+  );
+  return result.rows;
 }
 
 export async function findFormSubmissionByIdempotency(
@@ -1082,6 +1196,9 @@ function mapOpportunity(row: OpportunityRow) {
     valueCents: row.value_cents,
     nextFollowUpAt: row.next_follow_up_at ?? undefined,
     lostReason: row.lost_reason ?? undefined,
+    assignedUserId: row.assigned_user_id ?? undefined,
+    probability: row.probability ?? undefined,
+    expectedCloseAt: row.expected_close_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -1103,4 +1220,36 @@ function mapOpportunityListItem(row: OpportunityListRow) {
     contactName: row.contact_name,
     contactEmail: row.contact_email,
   };
+}
+
+/**
+ * Les cartes d'une étape dans leur ordre d'affichage. Sert de base au
+ * déplacement manuel : les positions ne sont écrites qu'à partir de cet ordre,
+ * ce qui évite toute reprise de données à la migration.
+ */
+export async function listStageOpportunityOrder(
+  db: DbClient,
+  tenantId: string,
+  stageId: string,
+) {
+  const result = await db.query<{ id: string; board_position: number | null }>(
+    `select id, board_position from opportunities
+     where tenant_id = $1 and stage_id = $2
+     order by board_position asc nulls last, updated_at desc`,
+    [tenantId, stageId],
+  );
+  return result.rows;
+}
+
+export async function updateOpportunityBoardPosition(
+  db: DbClient,
+  tenantId: string,
+  opportunityId: string,
+  position: number,
+) {
+  await db.query(
+    `update opportunities set board_position = $3
+     where tenant_id = $1 and id = $2`,
+    [tenantId, opportunityId, position],
+  );
 }

@@ -11,13 +11,37 @@
 - Creation automatique contact, lead, opportunite, activite, tache et notification mock.
 - Dashboard, CRM, workflows, connecteurs, import CSV, webhook et audit log.
 - Reset password securise, invitations d'equipe et administration des roles non-owner.
+- Exports universels (8 entites, CSV/XLSX/JSON, selection de champs et fenetre de dates) et suppression de compte RGPD.
+- Seuil d'opportunite bloquee reglable par organisation, entre 1 et 90 jours (`docs/COMMAND_CENTER.md`).
+- Apprentissage des refus par le conseiller strategique : une regle refusee est mise en sourdine 30 jours (`docs/STRATEGIC_ADVISOR.md`).
+- Modification d'une proposition marketing depuis le centre d'approbation (`docs/APPROVAL_CENTER.md`).
+- Liste de suppression email alimentee par les echecs definitifs de livraison (`docs/EMAIL_PROVIDER.md`).
+- Suppression d'un fichier envoye, refusee tant qu'il est utilise (`docs/ASSET_UPLOAD.md`).
+- Revision depuis le centre d'approbation des trois familles de contenu : marketing, reponse a un avis, contenu de site (`docs/APPROVAL_CENTER.md`).
+- Duree de sourdine d'une regle refusee reglable par organisation, entre 1 et 365 jours (`docs/STRATEGIC_ADVISOR.md`).
+- Reordonnancement des cartes a l'interieur d'une colonne du pipeline (`docs/PIPELINE.md`).
 - Seed Garage Caraibes Auto.
 
-## Prochaines priorites
+## Ce backlog n'est plus le pilote
 
-- Brancher un fournisseur email de production pour reset password et invitations.
-- Ajouter file upload valide pour logo/photos.
-- Ajouter connecteurs OAuth reels.
-- Brancher les vrais appels OpenAI structures derriere l'abstraction.
-- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves.
-- Ajouter exports de donnees et suppression de compte.
+Depuis l'audit d'entree du 3 aout 2026, la priorite est fixee par
+`docs/ROADMAP_TRADIKOM_ONE_OS.md`, pas par ce fichier.
+
+La raison est ecrite dans `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md` : ce backlog est
+alimente par les manques du CRM. Chaque lot termine en revele un suivant, tout
+aussi legitime et tout aussi lateral. Vingt lots ont ete livres ainsi — tous
+corrects, testes et documentes, aucun au service du coeur conversationnel.
+
+**Regle** : ne rien prendre ici tant qu'une tranche OS est ouverte, sauf si
+l'element sert directement cette tranche.
+
+## Dette produit connue, en attente
+
+Prise en compte dans la roadmap OS, pas avant.
+
+- Webhooks de bounce du fournisseur email pour capter les rebonds asynchrones ; la liste de suppression alimentee par les echecs a l'envoi est livree (`docs/EMAIL_PROVIDER.md`). — arrive avec **OS-5**.
+- Antivirus et redimensionnement des fichiers envoyes ; la suppression est livree (`docs/ASSET_UPLOAD.md`). — arrive avec **OS-7** (multimodal).
+- Connecteurs OAuth reels. — **OS-5**.
+- Appels modele reels derriere l'abstraction, et correction de `OpenAiProvider` qui etiquette `openai` une sortie deterministe. — correctif d'etiquette immediat, appels reels en **OS-5**.
+- Remplacer les actions email/SMS/WhatsApp mock par des fournisseurs approuves. Les messages WhatsApp prets a envoyer sont livres (`docs/WHATSAPP.md`) ; l'API WhatsApp Business reste hors perimetre. — **OS-2**.
+- `testTimeout` global dans `vitest.config.ts`. — premier commit d'**OS-1**.

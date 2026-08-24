@@ -77,7 +77,9 @@ describe("autonomous marketing module", () => {
     expect(
       dashboard.commandCenter.pendingApprovals.some(
         (item) =>
-          item.approvalType === "marketing" && item.actionHref === "/marketing",
+          // Les propositions IA sont décidées dans le centre d'approbation unifié.
+          item.approvalType === "marketing" &&
+          item.actionHref === "/validations",
       ),
     ).toBe(true);
 
@@ -173,10 +175,15 @@ describe("autonomous marketing module", () => {
     expect(revision).toMatchObject({ version: 2 });
     const currentRows = await services.getAutonomousMarketing(owner.id, tenant.id);
     const revised = currentRows.find((item) => item.id === revision.proposalId);
+    // La proposition attendait une decision : la nouvelle version la remplace
+    // dans la file au lieu de retomber en brouillon. L'approbation d'origine
+    // reste retiree, verifiee plus bas : aucune approbation ne pointe jamais
+    // vers un contenu qui a change.
     expect(revised).toMatchObject({
-      status: "draft",
+      status: "pending_approval",
       version: 2,
     });
+    expect(revision.awaitingDecision).toBe(true);
     expect(revised?.evidence.map((item) => item.ref).sort()).toEqual(
       current.evidence.map((item) => item.ref).sort(),
     );
@@ -196,7 +203,7 @@ describe("autonomous marketing module", () => {
       { id: proposalId, status: "superseded", version: 1, supersedes_id: null },
       {
         id: revision.proposalId,
-        status: "draft",
+        status: "pending_approval",
         version: 2,
         supersedes_id: proposalId,
       },

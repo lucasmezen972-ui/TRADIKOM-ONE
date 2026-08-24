@@ -15,6 +15,7 @@ Phase 2 changes sessions from raw database session IDs to bearer-style session t
 - The maintenance command removes expired/revoked sessions and expired/consumed auth tokens in bounded retention-aware batches.
 - Owners and administrators can invite team members. Only owners can invite or manage administrators.
 - Registration, login, password reset, invitation creation, and invitation acceptance use atomic server-side rate limits with hashed subject/scope keys.
+- Account deletion (RGPD) requires the authenticated user's password plus an explicit French confirmation text. It is refused while the user is the sole owner of any organization. Execution runs in a single transaction: memberships removed, all sessions revoked, password reset tokens deleted, and name/email/password hash anonymized with `users.deleted_at` set. Audit entries `account.deletion_requested` and `account.deletion_executed` are written per former tenant without personal data.
 
 Remaining work:
 

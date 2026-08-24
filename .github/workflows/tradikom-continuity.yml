@@ -1,0 +1,46 @@
+name: Tradikom One Continuity Check
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  continuity:
+    name: Continuity state
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify continuity state
+        run: pnpm agent:continuity-check
+
+      # Le rapport est produit meme quand la verification echoue : c'est
+      # justement dans ce cas qu'on a besoin de le lire.
+      - name: Upload continuity state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tradikom-continuity-state
+          path: |
+            docs/AGENT_STATE.json
+            docs/NEXT_STEPS.md
+            docs/DRIFT_REPORT.md
+            docs/WORKLOG.md

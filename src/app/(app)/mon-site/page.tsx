@@ -9,10 +9,12 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import {
   applyWebsiteAiProposalAction,
+  deleteTenantAssetAction,
   decideWebsiteAiProposalAction,
   generateWebsiteAiProposalsAction,
   moveSectionAction,
@@ -20,6 +22,7 @@ import {
   restoreVersionAction,
   submitWebsiteAiProposalAction,
   updateSectionAction,
+  uploadSectionImageAction,
 } from "@/app/actions";
 import { SiteRenderer } from "@/components/site-renderer";
 import { getServices } from "@/lib/services";
@@ -37,6 +40,8 @@ type WebsitePageProps = {
     iaSoumise?: string;
     iaDecision?: "approved" | "rejected";
     iaApplication?: "applied" | "stale";
+    fichier?: string;
+    messageFichier?: string;
   }>;
 };
 
@@ -46,6 +51,7 @@ export default async function WebsitePage({ searchParams }: WebsitePageProps) {
   const services = await getServices();
   const workspace = await services.getWebsiteWorkspace(user.id, tenant.id);
   const aiProposals = await services.getWebsiteAiWorkspace(user.id, tenant.id);
+  const assets = await services.getTenantAssets(user.id, tenant.id);
   const canManageAi = ["owner", "administrator", "manager"].includes(
     membership.role,
   );
@@ -247,8 +253,98 @@ export default async function WebsitePage({ searchParams }: WebsitePageProps) {
                   Enregistrer
                 </button>
               </form>
+
+              <form
+                action={uploadSectionImageAction}
+                encType="multipart/form-data"
+                className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3"
+              >
+                <input type="hidden" name="sectionId" value={section.id} />
+                <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                  Remplacer l&apos;image
+                  <input
+                    type="file"
+                    name="fichier"
+                    accept="image/png,image/jpeg,image/webp"
+                    required
+                    className="rounded-md border border-slate-200 px-3 py-2 font-normal"
+                  />
+                </label>
+                <button className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-800">
+                  Envoyer l&apos;image
+                </button>
+                <p className="w-full text-xs text-slate-500">
+                  PNG, JPEG ou WebP, 5 Mo maximum. Le format est vérifié à
+                  partir du contenu du fichier, pas de son extension.
+                </p>
+              </form>
             </div>
           ))}
+
+          <div className="rounded-lg bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold">Fichiers envoyés</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Un fichier encore utilisé par une section ou par le profil de
+              l&apos;entreprise ne peut pas être supprimé : la page publiée
+              afficherait une image manquante sans que personne ne s&apos;en
+              aperçoive.
+            </p>
+            {params.fichier === "supprime" ? (
+              <p
+                role="status"
+                className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900"
+              >
+                Fichier supprimé.
+              </p>
+            ) : null}
+            {params.fichier === "utilise" ? (
+              <p
+                role="status"
+                className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
+              >
+                {params.messageFichier ?? "Ce fichier est encore utilisé."}
+              </p>
+            ) : null}
+            {assets.length === 0 ? (
+              <p className="mt-3 rounded-md border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+                Aucun fichier envoyé pour le moment.
+              </p>
+            ) : (
+              <ul className="mt-3 grid gap-2">
+                {assets.map((asset) => (
+                  <li
+                    key={asset.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {asset.originalName}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {asset.contentType} —{" "}
+                        {Math.max(1, Math.round(asset.byteSize / 1024))} Ko
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={asset.url}
+                        className="text-sm font-semibold text-[#0b8f84] underline-offset-4 hover:underline"
+                      >
+                        Voir
+                      </Link>
+                      <form action={deleteTenantAssetAction}>
+                        <input type="hidden" name="assetId" value={asset.id} />
+                        <button className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
+                          <Trash2 size={15} aria-hidden />
+                          Supprimer
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <div className="rounded-lg bg-white p-5 shadow-sm">
             <h2 className="text-lg font-bold">Versions</h2>

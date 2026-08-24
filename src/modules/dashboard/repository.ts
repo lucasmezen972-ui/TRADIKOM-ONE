@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { openStageCondition } from "@/lib/pipeline-stages";
 import type {
   DashboardApiSourceFailure,
   DashboardPendingApproval,
@@ -11,6 +12,7 @@ type DashboardMetricRow = {
   form_submissions: number | string;
   overdue_tasks: number | string;
   opportunities_needing_follow_up: number | string;
+  stalled_opportunities: number | string;
   workflow_failures: number | string;
   dead_letters: number | string;
   connector_issues: number | string;
@@ -26,11 +28,19 @@ export async function getDashboardMetrics(
     now: string;
     dayStartedAt: string;
     dayEndsAt: string;
+    stalledBefore: string;
     canApprove: boolean;
   },
 ) {
   const result = await db.query<DashboardMetricRow>(
-    `select
+    `with open_opportunities as (
+       select opportunities.next_follow_up_at, opportunities.updated_at
+       from opportunities
+       join pipeline_stages on pipeline_stages.id = opportunities.stage_id
+         and pipeline_stages.tenant_id = opportunities.tenant_id
+       where opportunities.tenant_id = $1 and ${openStageCondition}
+     )
+     select
        (select count(*)::int from leads
         where tenant_id = $1 and created_at >= $2 and created_at < $3) as new_leads,
        (select count(*)::int from contacts
@@ -41,14 +51,13 @@ export async function getDashboardMetrics(
         where tenant_id = $1) as form_submissions,
        (select count(*)::int from tasks
         where tenant_id = $1 and status = 'open' and due_at < $4) as overdue_tasks,
-       (select count(*)::int from opportunities
-        join pipeline_stages on pipeline_stages.id = opportunities.stage_id
-          and pipeline_stages.tenant_id = opportunities.tenant_id
-        where opportunities.tenant_id = $1
-          and opportunities.next_follow_up_at is not null
-          and opportunities.next_follow_up_at < $3
-          and lower(pipeline_stages.name) not in ('gagne', 'gagné', 'perdu', 'won', 'lost'))
+       (select count(*)::int from open_opportunities
+        where next_follow_up_at is not null and next_follow_up_at < $3)
           as opportunities_needing_follow_up,
+       (select count(*)::int from open_opportunities
+        where updated_at < $6
+          and (next_follow_up_at is null or next_follow_up_at < $6))
+          as stalled_opportunities,
        (select count(*)::int from workflow_runs
         where tenant_id = $1 and status = 'failed') as workflow_failures,
        (select count(*)::int from domain_events
@@ -62,7 +71,8 @@ export async function getDashboardMetrics(
         where tenant_id = $1 and upgrade_blocked = 1) as breaking_api_changes,
        case when $5 = 1 then
          (select count(*)::int from approvals
-          where tenant_id = $1 and status = 'pending')
+          where tenant_id = $1 and status = 'pending'
+            and (snoozed_until is null or snoozed_until <= $4))
          +
          (select count(*)::int from connector_approval_requests
           where tenant_id = $1 and status = 'pending')
@@ -73,6 +83,7 @@ export async function getDashboardMetrics(
       input.dayEndsAt,
       input.now,
       input.canApprove ? 1 : 0,
+      input.stalledBefore,
     ],
   );
   const row = result.rows[0];
@@ -84,6 +95,7 @@ export async function getDashboardMetrics(
     formSubmissions: toCount(row?.form_submissions),
     overdueTasks: toCount(row?.overdue_tasks),
     opportunitiesNeedingFollowUp: toCount(row?.opportunities_needing_follow_up),
+    stalledOpportunities: toCount(row?.stalled_opportunities),
     workflowFailures: toCount(row?.workflow_failures),
     deadLetters: toCount(row?.dead_letters),
     connectorIssues: toCount(row?.connector_issues),
@@ -158,7 +170,9 @@ export async function listOverdueTaskActions(
     title: row.title,
     explanation: "Cette tâche a dépassé son échéance.",
     actionLabel: row.contact_id ? "Ouvrir le contact" : "Voir les contacts",
-    actionHref: row.contact_id ? `/contacts/${row.contact_id}` : "/contacts",
+    actionHref: row.contact_id
+      ? `/contacts/${row.contact_id}`
+      : "/contacts?vue=taches-en-retard",
     severity: "critical" as const,
   }));
 }
@@ -185,7 +199,7 @@ export async function listOpportunityFollowUpActions(
      where opportunities.tenant_id = $1
        and opportunities.next_follow_up_at is not null
        and opportunities.next_follow_up_at < $2
-       and lower(pipeline_stages.name) not in ('gagne', 'gagné', 'perdu', 'won', 'lost')
+       and ${openStageCondition}
      order by opportunities.next_follow_up_at asc
      limit $3`,
     [tenantId, dayEndsAt, limit],
@@ -195,6 +209,49 @@ export async function listOpportunityFollowUpActions(
     title: row.name,
     explanation: `Relance attendue sur une opportunité de ${formatEuro(row.value_cents)}.`,
     actionLabel: "Ouvrir l'opportunité",
+    actionHref: `/opportunites/${row.id}`,
+    severity: "warning" as const,
+  }));
+}
+
+export async function listStalledOpportunityActions(
+  db: DbClient,
+  tenantId: string,
+  stalledBefore: string,
+  limit: number,
+) {
+  const result = await db.query<{
+    id: string;
+    name: string;
+    value_cents: number;
+    stage_name: string;
+    updated_at: string;
+    next_follow_up_at: string | null;
+  }>(
+    `select opportunities.id, contacts.name, opportunities.value_cents,
+       pipeline_stages.name as stage_name, opportunities.updated_at,
+       opportunities.next_follow_up_at
+     from opportunities
+     join contacts on contacts.id = opportunities.contact_id
+       and contacts.tenant_id = opportunities.tenant_id
+     join pipeline_stages on pipeline_stages.id = opportunities.stage_id
+       and pipeline_stages.tenant_id = opportunities.tenant_id
+     where opportunities.tenant_id = $1
+       and opportunities.updated_at < $2
+       and (opportunities.next_follow_up_at is null
+            or opportunities.next_follow_up_at < $2)
+       and ${openStageCondition}
+     order by opportunities.updated_at asc
+     limit $3`,
+    [tenantId, stalledBefore, limit],
+  );
+  return result.rows.map((row) => ({
+    id: `stalled-opportunity:${row.id}`,
+    title: row.name,
+    explanation: row.next_follow_up_at
+      ? `Relance prévue le ${formatDay(row.next_follow_up_at)} jamais effectuée. Vente de ${formatEuro(row.value_cents)} bloquée à l'étape « ${row.stage_name} ».`
+      : `Aucune action prévue depuis le ${formatDay(row.updated_at)}. Vente de ${formatEuro(row.value_cents)} bloquée à l'étape « ${row.stage_name} ».`,
+    actionLabel: "Planifier la prochaine action",
     actionHref: `/opportunites/${row.id}`,
     severity: "warning" as const,
   }));
@@ -273,6 +330,7 @@ export async function listPendingApprovalActions(
   db: DbClient,
   tenantId: string,
   canApprove: boolean,
+  now: string,
   limit: number,
 ) {
   if (!canApprove) {
@@ -301,12 +359,13 @@ export async function listPendingApprovalActions(
        end as approval_type,
        created_at
      from approvals where tenant_id = $1 and status = 'pending'
+       and (snoozed_until is null or snoozed_until <= $3)
      union all
      select id, 'connector' as approval_type, created_at
      from connector_approval_requests where tenant_id = $1 and status = 'pending'
      order by created_at asc
      limit $2`,
-    [tenantId, limit],
+    [tenantId, limit, now],
   );
   return result.rows.map((row) => ({
     id: `approval:${row.approval_type}:${row.id}`,
@@ -326,20 +385,15 @@ export async function listPendingApprovalActions(
           : "Approbation de connecteur",
     explanation: "Une décision autorisée est en attente.",
     actionLabel: "Examiner",
+    // Les propositions IA sont décidées dans le centre d'approbation unifié ;
+    // workflows et connecteurs gardent leurs écrans dédiés, avec leurs propres
+    // contrôles (reprise, file d'attente, sandbox).
     actionHref:
       row.approval_type === "workflow"
         ? "/automatisations"
-        : row.approval_type === "strategic"
-          ? "/conseiller-strategique"
-          : row.approval_type === "marketing"
-            ? "/marketing"
-            : row.approval_type === "website_ai"
-              ? "/mon-site"
-              : row.approval_type === "reputation"
-                ? "/reputation"
-                : row.approval_type === "competitor"
-                  ? "/veille-concurrentielle"
-          : "/intelligence-api",
+        : row.approval_type === "connector"
+          ? "/intelligence-api"
+          : "/validations",
     severity: "warning" as const,
     approvalType: row.approval_type,
   }));
@@ -377,6 +431,14 @@ function formatEuro(valueCents: number) {
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(valueCents / 100);
+}
+
+function formatDay(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "une date inconnue";
+  }
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(parsed);
 }
 
 function safeClassification(value: string) {

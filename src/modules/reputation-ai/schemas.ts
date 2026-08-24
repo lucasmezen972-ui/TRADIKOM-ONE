@@ -38,3 +38,19 @@ export type ReputationProposalReferenceInput = z.input<
 export type ReputationProposalDecisionInput = z.input<
   typeof reputationProposalDecisionSchema
 >;
+
+/**
+ * Seul le contenu adressé au client est modifiable. Le sentiment, la
+ * confiance et le niveau de risque sont des évaluations, pas de la rédaction ;
+ * et réécrire la justification ferait mentir la piste d'audit sur ce que le
+ * modèle a réellement avancé.
+ */
+export const reviseReputationProposalSchema = z.object({
+  proposalId: z.string().trim().min(1).max(160),
+  responseDraft: z.string().trim().min(10).max(1500),
+  improvementPlan: z.string().trim().min(10).max(1500),
+});
+
+export type ReviseReputationProposalInput = z.input<
+  typeof reviseReputationProposalSchema
+>;

@@ -156,7 +156,8 @@ describe("strategic advisor module", () => {
       dashboard.commandCenter.pendingApprovals.some(
         (item) =>
           item.approvalType === "strategic" &&
-          item.actionHref === "/conseiller-strategique",
+          // Les propositions IA sont décidées dans le centre d'approbation unifié.
+          item.actionHref === "/validations",
       ),
     ).toBe(true);
 

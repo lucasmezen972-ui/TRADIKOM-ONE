@@ -16,6 +16,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/reset-db.ts",
     "db:generate": "drizzle-kit generate",
+    "agent:continuity-check": "tsx scripts/agent/continuity-check.ts",
     "worker": "tsx src/worker/index.ts",
     "maintenance": "tsx scripts/maintenance.ts"
   },
@@ -33,7 +34,7 @@
     "pg": "8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "yaml": "2.8.1",
+    "yaml": "2.8.3",
     "zod": "4.4.3"
   },
   "devDependencies": {

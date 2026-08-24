@@ -1,5 +1,7 @@
 import { withTenantDbTransaction } from "@/db/tenant-context";
+import { getBusinessDayPeriod } from "@/lib/business-day";
 import type { DbClient } from "@/lib/db";
+import { stalledBefore } from "@/lib/pipeline-stages";
 import { id, nowIso, toJson } from "@/lib/security";
 import type { Contact, Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
@@ -18,6 +20,7 @@ import {
   insertContactConsent,
   insertContactNote,
   insertContactTask,
+  insertOpportunityChanges,
   listActivities,
   listContactActivities,
   listContactNotes,
@@ -27,17 +30,22 @@ import {
   listContacts,
   listLeads,
   listOpportunities,
+  listOpportunityChanges,
   listPipelineStages,
+  listStageOpportunityOrder,
+  listTenantMemberOptions,
   listTasks,
   mergeContactConsents,
   reassignMergedContactReferences,
   updateContact,
   updateContactConsent,
   updateMergedContactSurvivor,
+  updateOpportunityBoardPosition,
   updateOpportunityRecord,
 } from "@/modules/crm/repository";
 import {
   completeTaskSchema,
+  crmQuerySchema,
   contactMergeSchema,
   contactConsentSchema,
   contactNoteSchema,
@@ -45,6 +53,7 @@ import {
   contactUpdateSchema,
   duplicatePairSchema,
   opportunityFiltersSchema,
+  opportunityReorderSchema,
   opportunityLookupSchema,
   opportunityUpdateSchema,
   tenantContactLookupSchema,
@@ -54,10 +63,13 @@ import {
   type ContactNoteInput,
   type ContactTaskInput,
   type ContactUpdateInput,
+  type CrmQueryInput,
   type OpportunityFiltersInput,
+  type OpportunityReorderInput,
   type OpportunityUpdateInput,
 } from "@/modules/crm/schemas";
-import { assertTenantAccess } from "@/modules/tenants";
+import { assertTenantAccess, getTenantById } from "@/modules/tenants";
+import { findMembershipRole } from "@/modules/tenants/repository";
 
 const crmWriteRoles: Role[] = [
   "owner",
@@ -98,8 +110,14 @@ type DuplicateCandidate = {
   actionHref: string;
 };
 
-export async function getCrm(db: DbClient, userId: string, tenantId: string) {
+export async function getCrm(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: CrmQueryInput = {},
+) {
   await assertTenantAccess(db, userId, tenantId);
+  const parsed = crmQuerySchema.parse(input);
   const [contacts, leads, tasks, activities] = await Promise.all([
     listContacts(db, tenantId),
     listLeads(db, tenantId),
@@ -107,10 +125,28 @@ export async function getCrm(db: DbClient, userId: string, tenantId: string) {
     listActivities(db, tenantId, 20),
   ]);
 
+  const nowIsoValue = parsed.now.toISOString();
+  const period = getBusinessDayPeriod(parsed.now, parsed.timeZone);
+  const filteredLeads =
+    parsed.view === "nouveaux-leads"
+      ? leads.filter(
+          (lead) =>
+            lead.createdAt >= period.dayStartedAt &&
+            lead.createdAt < period.dayEndsAt,
+        )
+      : leads;
+  const filteredTasks =
+    parsed.view === "taches-en-retard"
+      ? tasks.filter(
+          (task) => task.status === "open" && task.dueAt < nowIsoValue,
+        )
+      : tasks;
+
   return {
+    view: parsed.view,
     contacts,
-    leads,
-    tasks,
+    leads: filteredLeads,
+    tasks: filteredTasks,
     activities,
   };
 }
@@ -626,9 +662,21 @@ export async function getOpportunities(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const parsed = opportunityFiltersSchema.parse(input);
+  // Le seuil configuré n'est lu que si le filtre « bloquées » est demandé :
+  // la liste sans filtre garde son coût d'origine.
+  const stalledThreshold = parsed.stalled
+    ? stalledBefore(
+        parsed.now,
+        (await getTenantById(db, tenantId)).stalledOpportunityDays,
+      )
+    : undefined;
   const filters = {
     search: parsed.search?.trim() || undefined,
     stageId: parsed.stageId?.trim() || undefined,
+    followUpDueBefore: parsed.followUpDue
+      ? getBusinessDayPeriod(parsed.now, parsed.timeZone).dayEndsAt
+      : undefined,
+    stalledBefore: stalledThreshold,
   };
   const [stages, opportunities] = await Promise.all([
     listPipelineStages(db, tenantId),
@@ -636,6 +684,75 @@ export async function getOpportunities(
   ]);
 
   return { stages, opportunities };
+}
+
+/**
+ * Remonte ou descend une carte d'un cran dans sa colonne. Les positions sont
+ * attribuées à la volée depuis l'ordre affiché, puis seules les deux cartes
+ * échangées sont réécrites : aucune reprise de données, aucune renumérotation
+ * globale.
+ */
+export async function reorderOpportunityInStage(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: OpportunityReorderInput,
+) {
+  const parsed = opportunityReorderSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, crmWriteRoles);
+    const opportunity = await findOpportunityById(
+      transaction,
+      tenantId,
+      parsed.opportunityId,
+    );
+    if (!opportunity) {
+      throw new CrmError("opportunity_not_found", "Opportunite introuvable.");
+    }
+
+    const order = await listStageOpportunityOrder(
+      transaction,
+      tenantId,
+      opportunity.stageId,
+    );
+    const index = order.findIndex((row) => row.id === parsed.opportunityId);
+    const target = parsed.direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= order.length) {
+      // Déjà en haut ou en bas : rien à faire, et surtout pas une erreur.
+      return { moved: false };
+    }
+
+    // La position vaut l'index d'affichage courant ; l'échange ne touche que
+    // les deux cartes concernées.
+    const swapped = [...order];
+    [swapped[index], swapped[target]] = [swapped[target]!, swapped[index]!];
+    for (const [position, row] of swapped.entries()) {
+      if (order[position]?.id !== row.id || row.board_position !== position) {
+        await updateOpportunityBoardPosition(
+          transaction,
+          tenantId,
+          row.id,
+          position,
+        );
+      }
+    }
+
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "opportunity.reordered",
+      targetType: "opportunity",
+      targetId: parsed.opportunityId,
+      metadata: {
+        stageId: opportunity.stageId,
+        direction: parsed.direction,
+        fromPosition: index,
+        toPosition: target,
+      },
+    });
+
+    return { moved: true };
+  });
 }
 
 export async function getOpportunityDetail(
@@ -646,16 +763,18 @@ export async function getOpportunityDetail(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const parsed = opportunityLookupSchema.parse({ opportunityId });
-  const [opportunity, stages] = await Promise.all([
+  const [opportunity, stages, members, changes] = await Promise.all([
     findOpportunityById(db, tenantId, parsed.opportunityId),
     listPipelineStages(db, tenantId),
+    listTenantMemberOptions(db, tenantId),
+    listOpportunityChanges(db, tenantId, parsed.opportunityId, 20),
   ]);
 
   if (!opportunity) {
     return null;
   }
 
-  return { opportunity, stages };
+  return { opportunity, stages, members, changes };
 }
 
 export async function updateOpportunity(
@@ -683,20 +802,91 @@ export async function updateOpportunity(
     throw new CrmError("stage_not_found", "Etape de pipeline introuvable.");
   }
 
-  const updated = await updateOpportunityRecord(db, {
-    tenantId,
-    opportunityId: existing.id,
+  const assignedUserId = parsed.assignedUserId?.trim() || null;
+  if (assignedUserId) {
+    const isMember = await findMembershipRole(db, assignedUserId, tenantId);
+    if (!isMember) {
+      throw new CrmError(
+        "assignee_not_member",
+        "Le responsable doit appartenir à cette organisation.",
+      );
+    }
+  }
+
+  const nextValues = {
     stageId: stage.id,
     valueCents: parsed.valueCents,
     nextFollowUpAt: parsed.nextFollowUpAt
       ? new Date(parsed.nextFollowUpAt).toISOString()
       : null,
     lostReason: parsed.lostReason?.trim() || null,
+    assignedUserId,
+    probability: parsed.probability ?? null,
+    expectedCloseAt: parsed.expectedCloseAt
+      ? new Date(parsed.expectedCloseAt).toISOString()
+      : null,
+  };
+
+  const updated = await updateOpportunityRecord(db, {
+    tenantId,
+    opportunityId: existing.id,
+    ...nextValues,
     updatedAt: nowIso(),
   });
 
   if (!updated) {
     throw new CrmError("opportunity_not_found", "Opportunite introuvable.");
+  }
+
+  const changedAt = nowIso();
+  const changes = [
+    {
+      field: "stage",
+      previous: existing.stageName,
+      next: stage.name,
+    },
+    {
+      field: "value_cents",
+      previous: String(existing.valueCents),
+      next: String(nextValues.valueCents),
+    },
+    {
+      field: "assigned_user_id",
+      previous: existing.assignedUserId ?? null,
+      next: nextValues.assignedUserId,
+    },
+    {
+      field: "probability",
+      previous:
+        existing.probability === undefined ? null : String(existing.probability),
+      next:
+        nextValues.probability === null ? null : String(nextValues.probability),
+    },
+    {
+      field: "expected_close_at",
+      previous: existing.expectedCloseAt ?? null,
+      next: nextValues.expectedCloseAt,
+    },
+    {
+      field: "next_follow_up_at",
+      previous: existing.nextFollowUpAt ?? null,
+      next: nextValues.nextFollowUpAt,
+    },
+  ]
+    .filter((change) => (change.previous ?? null) !== (change.next ?? null))
+    .map((change) => ({
+      id: id("opportunity_change"),
+      tenantId,
+      opportunityId: updated.id,
+      field: change.field,
+      previousValue: change.previous ?? null,
+      nextValue: change.next ?? null,
+      changedBy: userId,
+      createdAt: changedAt,
+    }));
+
+  if (changes.length > 0) {
+    await insertOpportunityChanges(db, changes);
   }
 
   await insertActivity(db, {

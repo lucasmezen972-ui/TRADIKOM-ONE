@@ -124,7 +124,8 @@ describe("Competitor Intelligence module", () => {
       expect.arrayContaining([
         expect.objectContaining({
           title: "Décision de veille concurrentielle",
-          actionHref: "/veille-concurrentielle",
+          // Les propositions IA sont décidées dans le centre d'approbation unifié.
+          actionHref: "/validations",
           approvalType: "competitor",
         }),
       ]),

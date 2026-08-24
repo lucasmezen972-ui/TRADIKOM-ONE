@@ -9,6 +9,7 @@ import {
   Building2,
   Contact,
   Gauge,
+  ShieldCheck,
   Globe2,
   HeartPulse,
   Lightbulb,
@@ -37,6 +38,7 @@ type AppShellProps = {
 
 const navItems = [
   { href: "/aujourdhui", label: "Aujourd'hui", icon: Gauge },
+  { href: "/validations", label: "Actions à valider", icon: ShieldCheck },
   {
     href: "/cerveau-entreprise",
     label: "Cerveau d'entreprise",

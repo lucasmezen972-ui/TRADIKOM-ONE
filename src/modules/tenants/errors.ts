@@ -2,6 +2,7 @@ export type TenantErrorCode =
   | "tenant_not_found"
   | "tenant_owner_not_found"
   | "tenant_access_denied"
+  | "invalid_tenant_preference"
   | "invalid_invitation"
   | "invitation_account_exists"
   | "invitation_account_mismatch"

@@ -99,7 +99,8 @@ describe("Reputation AI module", () => {
       expect.arrayContaining([
         expect.objectContaining({
           title: "Validation d'une réponse à un avis",
-          actionHref: "/reputation",
+          // Les propositions IA sont décidées dans le centre d'approbation unifié.
+          actionHref: "/validations",
           approvalType: "reputation",
         }),
       ]),

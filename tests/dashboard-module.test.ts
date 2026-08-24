@@ -50,6 +50,7 @@ describe("dashboard module", () => {
       formSubmissions: 1,
       overdueTasks: 1,
       opportunitiesNeedingFollowUp: 1,
+      stalledOpportunities: 1,
       workflowFailures: 1,
       deadLetters: 1,
       connectorIssues: 1,
@@ -66,6 +67,11 @@ describe("dashboard module", () => {
     expect(dashboard.commandCenter.newLeads).toHaveLength(1);
     expect(dashboard.commandCenter.overdueTasks).toHaveLength(1);
     expect(dashboard.commandCenter.opportunitiesNeedingFollowUp).toHaveLength(1);
+    expect(dashboard.commandCenter.stalledOpportunities).toHaveLength(1);
+    expect(dashboard.commandCenter.stalledOpportunities[0]).toMatchObject({
+      actionHref: "/opportunites/opportunity-stalled",
+      severity: "warning",
+    });
     expect(dashboard.commandCenter.workflowFailures).toHaveLength(1);
     expect(dashboard.commandCenter.deadLetters).toHaveLength(1);
     expect(dashboard.commandCenter.apiSourceFailures).toHaveLength(1);
@@ -152,6 +158,7 @@ describe("dashboard module", () => {
       formSubmissions: 0,
       overdueTasks: 0,
       opportunitiesNeedingFollowUp: 0,
+      stalledOpportunities: 0,
       workflowFailures: 0,
       deadLetters: 0,
       apiSourceFailures: 0,
@@ -246,13 +253,15 @@ async function seedOperationalDashboard(
       (id, tenant_id, contact_id, stage_id, value_cents, next_follow_up_at, lost_reason, created_at, updated_at)
      values
       ('opportunity-due', $1, 'contact-current', $2, 250000, $3, null, $4, $4),
-      ('opportunity-future', $1, 'contact-previous', $2, 180000, $5, null, $4, $4)`,
+      ('opportunity-future', $1, 'contact-previous', $2, 180000, $5, null, $4, $4),
+      ('opportunity-stalled', $1, 'contact-previous', $2, 320000, null, null, $6, $6)`,
     [
       tenantId,
       stageId,
       "2026-07-14T18:00:00.000Z",
       "2026-07-14T05:00:00.000Z",
       "2026-07-16T18:00:00.000Z",
+      "2026-06-01T09:00:00.000Z",
     ],
   );
   await db.query(

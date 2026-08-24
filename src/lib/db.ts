@@ -315,6 +315,33 @@ function getMigrations(enableRls: boolean) {
           sql: phase5WebsiteDomainBindingsRlsMigrationSql,
         }]
       : []),
+    { id: "067_account_deletion", sql: accountDeletionMigrationSql },
+    { id: "068_pipeline_detail", sql: pipelineDetailMigrationSql },
+    ...(enableRls
+      ? [{ id: "069_pipeline_detail_rls", sql: pipelineDetailRlsMigrationSql }]
+      : []),
+    { id: "070_approval_snooze", sql: approvalSnoozeMigrationSql },
+    { id: "071_tenant_assets", sql: tenantAssetsMigrationSql },
+    ...(enableRls
+      ? [{ id: "072_tenant_assets_rls", sql: tenantAssetsRlsMigrationSql }]
+      : []),
+    { id: "073_tenant_preferences", sql: tenantPreferencesMigrationSql },
+    {
+      id: "074_strategic_refusal_learning",
+      sql: strategicRefusalLearningMigrationSql,
+    },
+    { id: "075_email_suppressions", sql: emailSuppressionsMigrationSql },
+    ...(enableRls
+      ? [{
+          id: "076_email_suppressions_rls",
+          sql: emailSuppressionsRlsMigrationSql,
+        }]
+      : []),
+    { id: "077_tenant_mute_preference", sql: tenantMutePreferenceMigrationSql },
+    {
+      id: "078_opportunity_board_position",
+      sql: opportunityBoardPositionMigrationSql,
+    },
   ];
 }
 
@@ -3951,6 +3978,188 @@ create policy tenant_isolation on website_domain_bindings
 
 drop policy if exists tenant_isolation on domain_verification_jobs;
 create policy tenant_isolation on domain_verification_jobs
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const accountDeletionMigrationSql = `
+alter table users add column if not exists deleted_at text;
+`;
+
+const pipelineDetailMigrationSql = `
+alter table opportunities add column if not exists assigned_user_id text
+  references users(id);
+alter table opportunities add column if not exists probability integer;
+alter table opportunities add column if not exists expected_close_at text;
+
+create table if not exists opportunity_changes (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  opportunity_id text not null,
+  field text not null,
+  previous_value text,
+  next_value text,
+  changed_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, opportunity_id)
+    references opportunities(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_opportunity_changes_tenant_opportunity
+  on opportunity_changes (tenant_id, opportunity_id, created_at desc);
+create index if not exists idx_opportunities_tenant_assigned
+  on opportunities (tenant_id, assigned_user_id);
+`;
+
+const tenantAssetsMigrationSql = `
+create table if not exists tenant_assets (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  kind text not null check (kind in ('section_image', 'logo')),
+  content_type text not null check (
+    content_type in ('image/png', 'image/jpeg', 'image/webp')
+  ),
+  byte_size integer not null check (byte_size > 0),
+  checksum text not null check (char_length(checksum) = 64),
+  storage_key text not null,
+  original_name text not null,
+  uploaded_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id)
+);
+
+create index if not exists idx_tenant_assets_tenant_created
+  on tenant_assets (tenant_id, created_at desc);
+`;
+
+const tenantAssetsRlsMigrationSql = `
+alter table tenant_assets enable row level security;
+
+drop policy if exists tenant_isolation on tenant_assets;
+create policy tenant_isolation on tenant_assets
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+/**
+ * Nouvelle table tenant-scopée : la migration RLS générique ne couvre que les
+ * tables présentes quand elle s'exécute, d'où la migration d'isolation dédiée.
+ */
+const emailSuppressionsMigrationSql = `
+create table if not exists email_suppressions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  email text not null,
+  reason text not null check (reason in ('permanent_failure', 'manual')),
+  provider text not null,
+  error_code text,
+  detail text not null,
+  suppressed_by text references users(id),
+  created_at text not null,
+  unique (tenant_id, email),
+  unique (tenant_id, id)
+);
+
+create index if not exists idx_email_suppressions_tenant_created
+  on email_suppressions (tenant_id, created_at desc);
+`;
+
+const emailSuppressionsRlsMigrationSql = `
+alter table email_suppressions enable row level security;
+
+drop policy if exists tenant_isolation on email_suppressions;
+create policy tenant_isolation on email_suppressions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+/**
+ * Une règle refusée est mise en sourdine ; la levée est explicite et tracée
+ * sur la décision de refus elle-même, qui reste intacte dans l'historique.
+ * Colonnes additives sur une table déjà couverte par la RLS.
+ */
+const strategicRefusalLearningMigrationSql = `
+alter table strategic_recommendations
+  add column if not exists mute_lifted_at text;
+
+alter table strategic_recommendations
+  add column if not exists mute_lifted_by text references users(id);
+
+alter table strategic_recommendations
+  drop constraint if exists strategic_recommendations_mute_lift_pairing;
+
+alter table strategic_recommendations
+  add constraint strategic_recommendations_mute_lift_pairing
+  check (
+    (mute_lifted_at is null and mute_lifted_by is null)
+    or (mute_lifted_at is not null and mute_lifted_by is not null)
+  );
+
+create index if not exists idx_strategic_recommendations_tenant_rule_decided
+  on strategic_recommendations (tenant_id, rule_key, decided_at desc);
+`;
+
+/**
+ * Colonne nullable et sans reprise de données : une opportunité jamais
+ * réordonnée garde `null` et conserve le tri par date de mise à jour. Les
+ * positions ne sont attribuées qu'au premier déplacement manuel.
+ */
+const opportunityBoardPositionMigrationSql = `
+alter table opportunities
+  add column if not exists board_position integer;
+
+create index if not exists idx_opportunities_tenant_stage_position
+  on opportunities (tenant_id, stage_id, board_position);
+`;
+
+/**
+ * Seconde préférence d'organisation, même table et même raisonnement que
+ * `073_tenant_preferences` : colonne additive, contrainte SQL en miroir des
+ * bornes zod, aucune migration d'isolation à ajouter.
+ */
+const tenantMutePreferenceMigrationSql = `
+alter table tenants
+  add column if not exists strategic_mute_days integer not null default 30;
+
+alter table tenants
+  drop constraint if exists tenants_strategic_mute_days_range;
+
+alter table tenants
+  add constraint tenants_strategic_mute_days_range
+  check (strategic_mute_days between 1 and 365);
+`;
+
+/**
+ * Colonne additive sur une table qui porte déjà sa politique RLS : rien à
+ * ajouter côté isolation, contrairement à une nouvelle table.
+ */
+const tenantPreferencesMigrationSql = `
+alter table tenants
+  add column if not exists stalled_opportunity_days integer not null default 7;
+
+alter table tenants
+  drop constraint if exists tenants_stalled_opportunity_days_range;
+
+alter table tenants
+  add constraint tenants_stalled_opportunity_days_range
+  check (stalled_opportunity_days between 1 and 90);
+`;
+
+const approvalSnoozeMigrationSql = `
+alter table approvals add column if not exists snoozed_until text;
+alter table approvals add column if not exists snoozed_by text references users(id);
+alter table approvals add column if not exists snooze_reason text;
+
+create index if not exists idx_approvals_tenant_status_snoozed
+  on approvals (tenant_id, status, snoozed_until);
+`;
+
+const pipelineDetailRlsMigrationSql = `
+alter table opportunity_changes enable row level security;
+
+drop policy if exists tenant_isolation on opportunity_changes;
+create policy tenant_isolation on opportunity_changes
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
