@@ -852,3 +852,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La CI `33382142767` et la continuité `33382142732` sont entièrement vertes sur le head exact; la PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`.
 - La première étape concrète non terminée demeure le checkpoint humain Meta exigé pour faire passer OS-5 de livré/mock à sandbox ou réel. Aucun OS-6, CRM, Kanban ou dashboard secondaire n'a été sélectionné.
 - Aucun code, compte, app, WABA, numéro, clé, secret, client Graph, endpoint public, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché.
+
+## 2026-08-31 - Checkpoint Meta maintenu à 12:23 UTC
+
+- La copie active reste exclusivement `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, lisible, inscriptible et synchronisée au head `70bdb4771eed444ddf6058887a1b1c98508c89c5` sur `codex/tradikom-one-os`; `tmp/` demeure non suivi et préservé.
+- Le PDF canonique conserve 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement; les pages 29, 32, 48, 64, 69 et 71 ont été inspectées en rendu.
+- `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La CI `33386730276` et la continuité `33386730332` sont entièrement vertes sur le head exact; la PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`.
+- La page 31 exige toujours un fournisseur actif en sandbox ou réel pour clore OS-5. Cette preuve reste bloquée sur l'autorisation humaine Meta précise prévue page 29; aucune tâche OS-6, CRM, Kanban ou dashboard secondaire n'a été sélectionnée.
+- Aucun code, compte, app, WABA, numéro, clé, secret, client Graph, endpoint public, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché.

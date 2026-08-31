@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T11:22:00.000Z",
+  "updatedAt": "2026-08-31T12:23:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "4e313864a7b158d580d1fd6d6d5d2d7effb1523a",
-  "publishedHeadObserved": "4e313864a7b158d580d1fd6d6d5d2d7effb1523a",
+  "lastCommit": "70bdb4771eed444ddf6058887a1b1c98508c89c5",
+  "publishedHeadObserved": "70bdb4771eed444ddf6058887a1b1c98508c89c5",
   "status": "ready_for_human_checkpoint",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche OS-5 Meta et sa réconciliation avec main sont publiées et entièrement prouvées au head 4e31386 : migrations main 067-078 immuables, migrations OS 079-102 avec miroirs SQL 0073-0096, historiques documentaires et services tenant/Meta conservés. La PR #11 est ouverte, brouillon et MERGEABLE/CLEAN. La CI 33382142767 et la continuité 33382142732 sont entièrement vertes, y compris migrations PostgreSQL, backup/restauration, RLS, tests, build et Playwright. Le provider Meta reste fail-closed; la prochaine preuve est bloquée sur une autorisation humaine distincte, sans activation réelle, clé, client Graph ou message externe.",
+  "currentObjective": "La tranche OS-5 Meta et sa réconciliation avec main sont publiées et entièrement prouvées au head 70bdb47 : migrations main 067-078 immuables, migrations OS 079-102 avec miroirs SQL 0073-0096, historiques documentaires et services tenant/Meta conservés. La PR #11 est ouverte, brouillon et MERGEABLE/CLEAN. La CI 33386730276 et la continuité 33386730332 sont entièrement vertes, y compris migrations PostgreSQL, backup/restauration, RLS, tests, build et Playwright. Le provider Meta reste fail-closed; la prochaine preuve est bloquée sur une autorisation humaine distincte, sans activation réelle, clé, client Graph ou message externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,7 +29,7 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Maintenir le parcours conversation-first OS-5 jusqu'à une preuve fournisseur honnête. Les pages 13-18, 22, 26-30, 31-32, 35-38, 48 et 64-69 imposent webhook vérifié avant la base, tenant/RLS, idempotence, action durable, policy, audit sans contenu sensible et états disabled/not_configured/mock. La chaîne logicielle étant entièrement prouvée, ne sélectionner ni OS-6, CRM, Kanban ni dashboard : s'arrêter uniquement sur l'autorisation humaine minimale requise pour Meta.",
-      "evidenceExpected": "PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Preuve publiée au head 4e31386 : migrations additives et RLS, adaptateur Meta sans client Graph, réservation durable, policy, idempotence, lease/backoff, audit sans PII et continuité Node native; CI 33382142767 et continuité 33382142732 entièrement vertes. Preuve encore attendue uniquement après autorisation humaine distincte : configuration Meta bornée et message externe de démonstration, explicitement classés sandbox ou réel."
+      "evidenceExpected": "PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Preuve publiée au head 70bdb47 : migrations additives et RLS, adaptateur Meta sans client Graph, réservation durable, policy, idempotence, lease/backoff, audit sans PII et continuité Node native; CI 33386730276 et continuité 33386730332 entièrement vertes. Preuve encore attendue uniquement après autorisation humaine distincte : configuration Meta bornée et message externe de démonstration, explicitement classés sandbox ou réel."
     }
   },
   "nextAction": "Maintenir le checkpoint OS-5 sans sélectionner OS-6, CRM, Kanban ou dashboard. Attendre une autorisation humaine distincte avant tout compte/app/WABA, endpoint HTTPS, secret, activation ou message de preuve Meta; continuer seulement les contrôles de continuité non mutatifs entre-temps.",
@@ -425,7 +425,11 @@
     "heartbeat 2026-08-31T11:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
     "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
     "pnpm agent:continuity-check 2026-08-31T11:20:09Z : ready, zéro erreur et zéro avertissement",
-    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 4e31386; CI 33382142767 et continuité 33382142732 entièrement vertes"
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 4e31386; CI 33382142767 et continuité 33382142732 entièrement vertes",
+    "heartbeat 2026-08-31T12:19Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T12:21:48Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 70bdb47; CI 33386730276 et continuité 33386730332 entièrement vertes"
   ],
   "lastValidation": [
     {
@@ -1255,6 +1259,10 @@
     {
       "command": "heartbeat normatif et GitHub au head 4e31386 le 2026-08-31T11:18Z",
       "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33382142767_and_continuity_33382142732_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 70bdb47 le 2026-08-31T12:19Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33386730276_and_continuity_33386730332_green_tmp_preserved"
     }
   ],
   "humanBlockers": [
