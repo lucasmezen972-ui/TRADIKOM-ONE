@@ -795,3 +795,12 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN` au head `7b9d4f3` avant le présent commit documentaire. Elle n'a pas été fusionnée ni déployée.
 - Pendant la vérification finale, le distant a avancé d'un commit documentaire direct `575c321` sur les mêmes quatre handoffs. Son contenu a été comparé avant réconciliation : il confirme la CI verte et le checkpoint humain, sans fichier applicatif. Sa continuité `33361142814` est verte; sa CI `33361142777` était en cours au moment du checkpoint.
 - Le lot Meta reste fail-closed : aucun compte, app, WABA, numéro, token, client Graph, endpoint public, Sandbox, message externe, dépense ou activation réelle. La prochaine preuve fournisseur exige une autorisation humaine distincte; aucune tâche OS-6, CRM, Kanban ou dashboard secondaire n'est sélectionnée.
+
+## 2026-08-31 - Checkpoint humain Meta reconfirmé à 06:21 UTC
+
+- La copie active reste exclusivement `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, courante, lisible et inscriptible sur `codex/tradikom-one-os`. Le head local et distant est `50e7cfadd3c7b9c4def73e6c570397bd79c5b145`; `tmp/` reste le seul élément non suivi et a été préservé.
+- Le PDF canonique conserve 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement; les pages 29, 32, 48, 64, 69 et 71 ont aussi été inspectées en rendu.
+- `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`.
+- La CI `33361459789` est verte sur le head exact avec migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright. La continuité `33361459787` est verte.
+- Les pages 29, 31-32, 48, 64, 69 et 71 confirment qu'aucune tranche locale secondaire ne doit remplacer le checkpoint fournisseur. La prochaine étape requiert une autorisation humaine distincte pour un compte/app/WABA/numéro de test Meta, un endpoint HTTPS et des secrets gérés, puis un message de preuve explicitement classé sandbox ou réel.
+- Aucun code, compte, application, WABA, numéro, token, secret, endpoint public, client Graph, message externe, dépense, fusion, déploiement, tâche OS-6, CRM, Kanban ou dashboard n'a été créé ou sélectionné.

@@ -1,12 +1,12 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint — 31 août 2026, 05:34 UTC
+## Checkpoint — 31 août 2026, 06:21 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- PR #11 : ouverte, brouillon et mergeable au head documentaire `575c3210a2ec395687f437cbeba292596d9b56e1` avant cette mise à jour; la CI de ce head était en cours.
+- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` au head synchronisé `50e7cfadd3c7b9c4def73e6c570397bd79c5b145`.
 - Réconciliation publiée : `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`; le commit documentaire distant observé est `7b9d4f34abc8fe6c79734f97ca7f227b22351015`.
 - Migrations `main` préservées : runtime 067-078 / SQL 0061-0072. Migrations OS renumérotées : runtime 079-102 / SQL 0073-0096.
-- CI `33359971937` et continuité `33359971941` entièrement vertes sur `7b9d4f3`; continuité `33361142814` verte sur `575c321`, avec CI `33361142777` en cours au checkpoint.
+- CI `33361459789` et continuité `33361459787` entièrement vertes sur le head exact `50e7cfa`.
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**.
 
 ## Impact north star
@@ -21,10 +21,10 @@ Les pages 3-7, 13-18, 22, 26-38, 46, 48 et 64-71 du prompt maître ont été rel
 | --- | --- | --- | --- |
 | 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre d'exécution strict et continuité documentée | Tranche OS-5 Meta maintenue; réconciliation publiée; quatre documents actualisés; aucune tâche CRM/Kanban/dashboard/OS-6 sélectionnée | La prochaine preuve fournisseur est un checkpoint humain, pas une nouvelle tranche autonome |
 | 13-18, 22, 26-30 | Adaptateurs bornés, runtime provider, action durable, policy, idempotence et gouvernance | Adaptateur Meta sans client Graph; réservation durable avant effet; policy, claim/lease, retry/backoff et clé d'idempotence testés | Provider réel volontairement non configuré et non activé |
-| 31-33 | Definition of Done stricte : migrations neuves/mise à niveau, PostgreSQL/RLS, tests, build et preuve utilisable | CI `33359971937` verte : migrations PostgreSQL, backup/restauration, RLS, tests unitaires/intégration, build production et Playwright | Aucun écart logiciel ou CI connu sur le head vérifié; preuve fournisseur réelle soumise à autorisation |
+| 31-33 | Definition of Done stricte : migrations neuves/mise à niveau, PostgreSQL/RLS, tests, build et preuve utilisable | CI `33361459789` verte sur `50e7cfa` : migrations PostgreSQL, backup/restauration, RLS, tests unitaires/intégration, build production et Playwright | Aucun écart logiciel ou CI connu sur le head vérifié; preuve fournisseur réelle soumise à autorisation |
 | 35-38 | Entrées non fiables, données sensibles protégées, audit sans contenu ni secret | Signature avant base côté ingress; liaisons par empreintes opaques; audit sans numéro, identité, corps ou credential; aucune clé dans le dépôt | Gestion réelle des secrets et endpoint HTTPS relèvent d'une intervention humaine ultérieure |
 | 64-68 | Runtime fournisseur uniforme, endpoint tenant-aware, états honnêtes et webhook signé | `whatsapp_meta` est `disabled`/`not_configured` hors test; liaison endpoint-identité; transport injecté uniquement en mock | Aucun client Graph ni appel réel; activation humaine non autorisée |
-| 69 | Matrice de tests provider, sécurité, intégration et isolation | Local post-réconciliation : 12 fichiers/65 tests Meta verts; CI `33359971937` apporte PostgreSQL/RLS et le parcours complet; continuité `33359971941` verte | Deux fichiers PostgreSQL/RLS restent ignorés localement faute de `DATABASE_URL`, couverts par la CI autoritative |
+| 69 | Matrice de tests provider, sécurité, intégration et isolation | Local post-réconciliation : 12 fichiers/65 tests Meta verts; CI `33361459789` apporte PostgreSQL/RLS et le parcours complet; continuité `33361459787` verte | Deux fichiers PostgreSQL/RLS restent ignorés localement faute de `DATABASE_URL`, couverts par la CI autoritative |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement.
 
@@ -43,8 +43,8 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Le dépôt stable a été vérifié courant, lisible et inscriptible. Le fast-forward local `5111214` → `7b9d4f3` a été effectué uniquement après preuve d'ascendance et absence de chevauchement; aucun reset, clean, stash, changement de branche ou commit de fusion local. `tmp/` reste non suivi et préservé.
 - Local : 12 fichiers/65 tests Meta verts; 2 fichiers PostgreSQL/RLS ignorés faute de `DATABASE_URL`. `git diff --check`, séquence des migrations et absence de marqueurs de conflit sont verts.
 - `pnpm agent:continuity-check` : `ready`, zéro erreur, zéro avertissement. Le premier passage sandbox a échoué sur un socket `tsx` avec `EPERM`; le même contrôle a réussi hors sandbox.
-- CI `33359971937` : succès en 17 min 24 s sur migrations, backup/restauration, lint, typecheck, tests unitaires/intégration, build production et Playwright.
-- Continuité `33359971941` : succès. PR #11 : `OPEN`, `DRAFT`, `MERGEABLE/CLEAN`.
+- CI `33361459789` : succès en 16 min 10 s sur migrations, backup/restauration, lint, typecheck, tests unitaires/intégration, build production et Playwright.
+- Continuité `33361459787` : succès. PR #11 : `OPEN`, `DRAFT`, `MERGEABLE/CLEAN`.
 
 ## Classification des états
 

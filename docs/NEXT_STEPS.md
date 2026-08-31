@@ -6,8 +6,8 @@
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026.
 - La réconciliation autorisée avec `main` est publiée par `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`. Les migrations `main` 067-078 / SQL 0061-0072 sont préservées et les migrations OS sont renumérotées 079-102 / SQL 0073-0096.
-- Le dernier head distant observé avant cette mise à jour est `575c3210a2ec395687f437cbeba292596d9b56e1`, un descendant documentaire direct de `7b9d4f3`. La PR #11 est ouverte, brouillon et mergeable.
-- La CI `33359971937` et la continuité `33359971941` sont entièrement vertes sur `7b9d4f3`. Sur `575c321`, la continuité `33361142814` est verte et la CI `33361142777` était en cours lors du checkpoint.
+- La branche locale et distante est synchronisée au head `50e7cfadd3c7b9c4def73e6c570397bd79c5b145`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`.
+- La CI `33361459789` et la continuité `33361459787` sont entièrement vertes sur ce head exact.
 
 ## Tranche livrée : flux WhatsApp Cloud Meta, sans activation
 
@@ -33,8 +33,8 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le
 
 - Post-réconciliation local : 12 fichiers/65 tests Meta verts; 2 fichiers PostgreSQL/RLS ignorés faute de `DATABASE_URL` local.
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement. Le premier passage sandbox a rencontré `EPERM` sur le socket `tsx`; le même contrôle requis a été relancé hors sandbox avec succès.
-- CI `33359971937` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright verts.
-- Continuité `33359971941` : verte.
+- CI `33361459789` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright verts.
+- Continuité `33361459787` : verte.
 - `git diff --check`, séquence des migrations 0065-0096 et absence de marqueurs de conflit : verts.
 
 ## État de vérité
@@ -53,7 +53,7 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le
 2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
 3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
 4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
-5. La réconciliation est publiée par 64192145 et la CI 33359971937 ainsi que la continuité 33359971941 sont vertes sur 7b9d4f3.
+5. La réconciliation est publiée par 64192145; le head courant 50e7cfa est synchronisé et sa CI 33361459789 ainsi que sa continuité 33361459787 sont vertes.
 6. Conserver tmp/ hors index et maintenir Meta disabled/not_configured/mock : aucune clé, client Graph, app, WABA, endpoint public ou message réel.
 7. La prochaine preuve fournisseur exige une autorisation humaine distincte; ne pas sélectionner OS-6, CRM, Kanban ou dashboard entre-temps.
 8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.

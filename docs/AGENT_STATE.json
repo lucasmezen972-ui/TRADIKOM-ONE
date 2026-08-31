@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T05:39:04.862Z",
+  "updatedAt": "2026-08-31T06:21:34.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "64192145e13f4fb0e61fe3e6bea7eb95548b4ede",
-  "publishedHeadObserved": "575c3210a2ec395687f437cbeba292596d9b56e1",
+  "lastCommit": "50e7cfadd3c7b9c4def73e6c570397bd79c5b145",
+  "publishedHeadObserved": "50e7cfadd3c7b9c4def73e6c570397bd79c5b145",
   "status": "ready_for_human_checkpoint",
   "currentPhase": "OS-5",
-  "currentObjective": "La réconciliation autorisée de la PR #11 avec main est publiée sans perte par le commit 64192145 : les migrations main 067-078 restent immuables, les migrations OS sont décalées en 079-102 avec miroirs SQL 0073-0096, et les historiques documentaires ainsi que les services tenant/Meta sont conservés. La PR #11 est ouverte, brouillon, MERGEABLE/CLEAN au head 7b9d4f3. La CI 33359971937 et la continuité 33359971941 sont entièrement vertes, y compris migrations PostgreSQL, backup/restauration, RLS, tests, build et Playwright. Le provider Meta reste fail-closed; aucune activation réelle, clé, client Graph ou message externe n'est autorisé.",
+  "currentObjective": "La tranche OS-5 Meta et sa réconciliation avec main sont publiées et entièrement prouvées au head 50e7cfa : migrations main 067-078 immuables, migrations OS 079-102 avec miroirs SQL 0073-0096, historiques documentaires et services tenant/Meta conservés. La PR #11 est ouverte, brouillon et MERGEABLE/CLEAN. La CI 33361459789 et la continuité 33361459787 sont vertes, y compris migrations PostgreSQL, backup/restauration, RLS, tests, build et Playwright. Le provider Meta reste fail-closed; la prochaine preuve est bloquée sur une autorisation humaine distincte, sans activation réelle, clé, client Graph ou message externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,8 +28,8 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Conserver le chemin conversation-first et ne sélectionner un provider professionnel que s'il peut fournir une preuve verticale réelle avec webhook vérifié avant la base, tenant/RLS, idempotence, actions durables, audit sans contenu sensible et états disabled/not_configured/mock. Les pages 15-18, 22, 26-30, 35-38 et 64-68 imposent pour l'envoi Meta une exécution uniquement via le runtime provider, une réservation durable avant tout effet, une policy et une idempotency key, un état provider honnête, une route endpoint-identité tenant-aware et aucune donnée sensible dans l'audit. Telegram reste explicitement hors candidat.",
-      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue et publiée : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. La CI 33359971937 apporte la preuve PostgreSQL/RLS, migrations, backup/restauration, build et Playwright sur le head réconcilié 7b9d4f3; la continuité 33359971941 est verte. Preuve encore attendue uniquement après autorisation humaine distincte : fournisseur Meta configuré et preuve externe bornée. Aucun compte, token, endpoint public ou message Meta ne doit être créé sans cette autorisation."
+      "requirement": "Maintenir le parcours conversation-first OS-5 jusqu'à une preuve fournisseur honnête. Les pages 13-18, 22, 26-30, 31-32, 35-38, 48 et 64-69 imposent webhook vérifié avant la base, tenant/RLS, idempotence, action durable, policy, audit sans contenu sensible et états disabled/not_configured/mock. La chaîne logicielle étant entièrement prouvée, ne sélectionner ni OS-6, CRM, Kanban ni dashboard : s'arrêter uniquement sur l'autorisation humaine minimale requise pour Meta.",
+      "evidenceExpected": "PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Preuve publiée au head 50e7cfa : migrations additives et RLS, adaptateur Meta sans client Graph, réservation durable, policy, idempotence, lease/backoff, audit sans PII; CI 33361459789 et continuité 33361459787 entièrement vertes. Preuve encore attendue uniquement après autorisation humaine distincte : configuration Meta bornée et message externe de démonstration, explicitement classés sandbox ou réel."
     }
   },
   "nextAction": "Maintenir le checkpoint OS-5 sans sélectionner OS-6, CRM, Kanban ou dashboard. Attendre une autorisation humaine distincte avant tout compte/app/WABA, endpoint HTTPS, secret, activation ou message de preuve Meta; continuer seulement les contrôles de continuité non mutatifs entre-temps.",
@@ -400,7 +400,11 @@
     "continuité 33359971941 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN au head 7b9d4f3",
     "continuity-check documentaire initial bloqué sur deux balises textuelles explicites dans DRIFT_REPORT et NEXT_STEPS, corrigées sans changement produit",
     "pnpm agent:continuity-check final 2026-08-31T05:39:04Z : ready, zéro erreur et zéro avertissement",
-    "fetch final : origin a avancé de 7b9d4f3 à 575c321 par un commit strictement documentaire sur les quatre handoffs; continuité 33361142814 verte et CI 33361142777 en cours avant réconciliation locale"
+    "fetch final : origin a avancé de 7b9d4f3 à 575c321 par un commit strictement documentaire sur les quatre handoffs; continuité 33361142814 verte et CI 33361142777 en cours avant réconciliation locale",
+    "heartbeat 2026-08-31T06:18Z : dépôt stable courant, lisible, inscriptible et synchronisé sur 50e7cfa; tmp préservé",
+    "PDF canonique : SHA-256 exact, 71 pages, pages cœur et OS-5 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T06:21:31Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 50e7cfa; CI 33361459789 et continuité 33361459787 entièrement vertes"
   ],
   "lastValidation": [
     {
@@ -1206,6 +1210,10 @@
     {
       "command": "pnpm agent:continuity-check final après mise à jour des quatre documents",
       "status": "passed_ready_zero_errors_zero_warnings_at_2026_08_31T05_39_04Z"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 50e7cfa le 2026-08-31T06:21Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_continuity_ready_pr_open_draft_mergeable_clean_ci_33361459789_and_continuity_33361459787_green_tmp_preserved"
     }
   ],
   "humanBlockers": [
