@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Clock3,
   Globe2,
+  PauseCircle,
   ShieldAlert,
   Target,
 } from "lucide-react";
@@ -22,28 +23,36 @@ export default async function TodayPage() {
   const services = await getServices();
   const dashboard = await services.getDashboard(user.id, tenant.id);
   const commandCenter = dashboard.commandCenter;
+  const stalledDays = dashboard.tenant.stalledOpportunityDays;
 
   const metrics = [
     {
       label: "Nouveaux leads",
       value: dashboard.metrics.newLeads,
       detail: "Reçus aujourd'hui",
-      href: "/contacts",
+      href: "/contacts?vue=nouveaux-leads",
       icon: Target,
     },
     {
       label: "Tâches en retard",
       value: dashboard.metrics.overdueTasks,
       detail: "Actions échues",
-      href: "/contacts",
+      href: "/contacts?vue=taches-en-retard",
       icon: Clock3,
     },
     {
       label: "Opportunités à relancer",
       value: dashboard.metrics.opportunitiesNeedingFollowUp,
       detail: "Échéance aujourd'hui ou dépassée",
-      href: "/opportunites",
+      href: "/opportunites?filtre=relance",
       icon: ClipboardCheck,
+    },
+    {
+      label: "Opportunités bloquées",
+      value: dashboard.metrics.stalledOpportunities,
+      detail: `Sans avancée depuis plus de ${stalledDays} jours`,
+      href: "/opportunites?filtre=bloquees",
+      icon: PauseCircle,
     },
     {
       label: "Incidents actifs",
@@ -53,7 +62,7 @@ export default async function TodayPage() {
         dashboard.metrics.connectorIssues +
         dashboard.metrics.apiSourceFailures,
       detail: "Workflows, connecteurs et sources",
-      href: "/automatisations",
+      href: "/automatisations?filtre=echecs",
       icon: AlertTriangle,
     },
   ];
@@ -78,7 +87,7 @@ export default async function TodayPage() {
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs opérationnels">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="Indicateurs opérationnels">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
@@ -138,6 +147,18 @@ export default async function TodayPage() {
       </OperationalSection>
 
       <OperationalSection
+        title="Ventes à risque"
+        description={`Opportunités ouvertes qui n'ont pas avancé depuis plus de ${stalledDays} jours, faute d'action planifiée ou de relance effectuée.`}
+      >
+        <ActionColumn
+          title="Opportunités bloquées"
+          items={commandCenter.stalledOpportunities}
+          empty="Aucune opportunité bloquée : toutes vos ventes ouvertes ont avancé récemment."
+          wide
+        />
+      </OperationalSection>
+
+      <OperationalSection
         title="Opportunity Radar"
         description="Alertes actives issues des règles métier de cette organisation."
       >
@@ -192,7 +213,24 @@ export default async function TodayPage() {
         title="Approbations et publication"
         description="Décisions autorisées et état de la vitrine publique."
       >
-        <ActionColumn title="Approbations en attente" items={commandCenter.pendingApprovals} empty="Aucune approbation visible pour votre rôle." />
+        <div className="grid content-start gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold">Actions à valider</h3>
+            {commandCenter.pendingApprovals.length > 0 ? (
+              <Link
+                href="/validations"
+                className="text-sm font-semibold text-[#0b8f84] underline-offset-4 hover:underline"
+              >
+                Tout examiner
+              </Link>
+            ) : null}
+          </div>
+          {commandCenter.pendingApprovals.length > 0
+            ? commandCenter.pendingApprovals.map((item) => (
+                <ActionCard key={item.id} action={item} />
+              ))
+            : <EmptyState>Aucune action en attente de validation.</EmptyState>}
+        </div>
         <div className="grid gap-3">
           <h3 className="font-bold">Site web</h3>
           <Link href="/mon-site" className="rounded-lg border border-slate-200 bg-white p-4">

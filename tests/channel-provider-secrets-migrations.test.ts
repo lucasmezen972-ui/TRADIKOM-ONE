@@ -18,21 +18,21 @@ describe("migrations du coffre fournisseur OS-5", () => {
     for (const [constant, path] of [
       [
         "os5ChannelProviderSecretVersionsMigrationSql",
-        "../src/db/migrations/0075_os5_channel_provider_secret_versions.sql",
+        "../src/db/migrations/0087_os5_channel_provider_secret_versions.sql",
       ],
       [
         "os5ChannelProviderSecretVersionsRlsMigrationSql",
-        "../src/db/migrations/0076_os5_channel_provider_secret_versions_rls.sql",
+        "../src/db/migrations/0088_os5_channel_provider_secret_versions_rls.sql",
       ],
     ] as const) {
       const mirror = readFileSync(new URL(path, import.meta.url), "utf8");
       expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
     }
     expect(getMigrationIds()).toContain(
-      "081_os5_channel_provider_secret_versions",
+      "093_os5_channel_provider_secret_versions",
     );
     expect(getMigrationIds(true)).toContain(
-      "082_os5_channel_provider_secret_versions_rls",
+      "094_os5_channel_provider_secret_versions_rls",
     );
   });
 

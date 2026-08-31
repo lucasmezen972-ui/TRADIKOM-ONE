@@ -26,8 +26,19 @@ export type StrategicRecommendationRow = {
   decided_by: string | null;
   decision_reason: string | null;
   decided_at: string | null;
+  mute_lifted_at: string | null;
+  mute_lifted_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type StrategicRuleMuteRow = {
+  rule_key: string;
+  recommendation_id: string;
+  title: string;
+  decision_reason: string;
+  decided_at: string;
+  decided_by_name: string | null;
 };
 
 export type StrategicEvidenceRow = {
@@ -41,6 +52,71 @@ export type StrategicEvidenceRow = {
   captured_at: string;
   created_at: string;
 };
+
+/**
+ * Le refus le plus récent de chaque règle, non levé et encore dans la fenêtre
+ * de sourdine. La requête part des refus, pas des règles : une règle jamais
+ * refusée n'a simplement aucune ligne.
+ */
+export async function listActiveStrategicRuleMutes(
+  db: DbClient,
+  tenantId: string,
+  mutedSince: string,
+) {
+  const result = await db.query<StrategicRuleMuteRow>(
+    `select distinct on (recommendations.rule_key)
+       recommendations.rule_key,
+       recommendations.id as recommendation_id,
+       recommendations.title,
+       recommendations.decision_reason,
+       recommendations.decided_at,
+       users.name as decided_by_name
+     from strategic_recommendations as recommendations
+     left join users on users.id = recommendations.decided_by
+     where recommendations.tenant_id = $1
+       and recommendations.status = 'rejected'
+       and recommendations.mute_lifted_at is null
+       and recommendations.decided_at >= $2
+     order by recommendations.rule_key, recommendations.decided_at desc`,
+    [tenantId, mutedSince],
+  );
+  return result.rows;
+}
+
+/**
+ * Lève la sourdine sur toutes les décisions de refus encore actives de la
+ * règle : la ligne de refus n'est pas modifiée par ailleurs, elle reste dans
+ * l'historique avec son motif et son auteur.
+ */
+export async function liftStrategicRuleMute(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    ruleKey: string;
+    actorId: string;
+    mutedSince: string;
+    now: string;
+  },
+) {
+  const result = await db.query<{ id: string }>(
+    `update strategic_recommendations
+     set mute_lifted_at = $4, mute_lifted_by = $3
+     where tenant_id = $1
+       and rule_key = $2
+       and status = 'rejected'
+       and mute_lifted_at is null
+       and decided_at >= $5
+     returning id`,
+    [
+      input.tenantId,
+      input.ruleKey,
+      input.actorId,
+      input.now,
+      input.mutedSince,
+    ],
+  );
+  return result.rows.map((row) => row.id);
+}
 
 export async function findStrategicRecommendationByFingerprint(
   db: DbClient,

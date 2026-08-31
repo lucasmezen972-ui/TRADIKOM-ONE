@@ -23,15 +23,15 @@ describe("migrations des endpoints fournisseur OS-2", () => {
     const definitions = [
       [
         "os2ChannelProviderEndpointsMigrationSql",
-        "../src/db/migrations/0067_os2_channel_provider_endpoints.sql",
+        "../src/db/migrations/0079_os2_channel_provider_endpoints.sql",
       ],
       [
         "os2ChannelProviderEndpointsRlsMigrationSql",
-        "../src/db/migrations/0068_os2_channel_provider_endpoints_rls.sql",
+        "../src/db/migrations/0080_os2_channel_provider_endpoints_rls.sql",
       ],
       [
         "os2WhatsAppMetaEndpointProviderMigrationSql",
-        "../src/db/migrations/0081_os2_whatsapp_meta_endpoint_provider.sql",
+        "../src/db/migrations/0093_os2_whatsapp_meta_endpoint_provider.sql",
       ],
     ] as const;
 
@@ -42,14 +42,14 @@ describe("migrations des endpoints fournisseur OS-2", () => {
   });
 
   it("crée la table tenant-scoped sans colonne d'adresse ou de payload", async () => {
-    expect(getMigrationIds()).toContain("073_os2_channel_provider_endpoints");
+    expect(getMigrationIds()).toContain("085_os2_channel_provider_endpoints");
     expect(getMigrationIds()).toContain(
-      "087_os2_whatsapp_meta_endpoint_provider",
+      "099_os2_whatsapp_meta_endpoint_provider",
     );
     expect(getMigrationIds(true)).toEqual(
       expect.arrayContaining([
-        "073_os2_channel_provider_endpoints",
-        "074_os2_channel_provider_endpoints_rls",
+        "085_os2_channel_provider_endpoints",
+        "086_os2_channel_provider_endpoints_rls",
       ]),
     );
 
@@ -166,7 +166,7 @@ describe("migrations des endpoints fournisseur OS-2", () => {
     const db = new PGlite();
     opened.push(db);
     await migrate(db, {
-      targetMigrationId: "085_os5_channel_provider_activation_consumptions",
+      targetMigrationId: "097_os5_channel_provider_activation_consumptions",
     });
     await seedTenant(db, "user_upgrade", "tenant_upgrade");
 

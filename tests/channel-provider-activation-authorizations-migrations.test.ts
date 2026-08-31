@@ -20,21 +20,21 @@ describe("migrations des autorisations d'activation OS-5", () => {
     for (const [constant, path] of [
       [
         "os5ChannelProviderActivationAuthorizationsMigrationSql",
-        "../src/db/migrations/0077_os5_channel_provider_activation_authorizations.sql",
+        "../src/db/migrations/0089_os5_channel_provider_activation_authorizations.sql",
       ],
       [
         "os5ChannelProviderActivationAuthorizationsRlsMigrationSql",
-        "../src/db/migrations/0078_os5_channel_provider_activation_authorizations_rls.sql",
+        "../src/db/migrations/0090_os5_channel_provider_activation_authorizations_rls.sql",
       ],
     ] as const) {
       const mirror = readFileSync(new URL(path, import.meta.url), "utf8");
       expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
     }
     expect(getMigrationIds()).toContain(
-      "083_os5_channel_provider_activation_authorizations",
+      "095_os5_channel_provider_activation_authorizations",
     );
     expect(getMigrationIds(true)).toContain(
-      "084_os5_channel_provider_activation_authorizations_rls",
+      "096_os5_channel_provider_activation_authorizations_rls",
     );
   });
 

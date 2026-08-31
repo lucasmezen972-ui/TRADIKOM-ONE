@@ -8,6 +8,7 @@ import {
   decideWebsiteAiApproval,
   decideWebsiteAiProposalRecord,
   findApprovedWebsiteAiProposal,
+  findWebsiteAiProposal,
   findWebsiteAiProposalByFingerprint,
   getNextWebsiteAiProposalVersion,
   insertWebsiteAiApproval,
@@ -15,6 +16,7 @@ import {
   insertWebsiteAiEvidence,
   insertWebsiteAiProposal,
   listWebsiteAiEvidence,
+  listWebsiteAiEvidenceForProposal,
   listWebsiteAiProposals,
   markWebsiteAiProposalApplied,
   markWebsiteAiProposalStale,
@@ -24,12 +26,15 @@ import {
 } from "@/modules/website-ai/repository";
 import {
   buildWebsiteAiProposalCandidates,
+  hashWebsiteAiRevision,
   hashWebsiteSectionContent,
   websiteAiGenerationVersion,
 } from "@/modules/website-ai/rules";
 import {
+  reviseWebsiteAiProposalSchema,
   websiteAiProposalDecisionSchema,
   websiteAiProposalReferenceSchema,
+  type ReviseWebsiteAiProposalInput,
   type WebsiteAiProposalDecisionInput,
   type WebsiteAiProposalReferenceInput,
 } from "@/modules/website-ai/schemas";
@@ -258,6 +263,133 @@ export async function decideWebsiteAiProposal(
       targetId: parsed.proposalId,
       metadata: { publicationTriggered: false },
     });
+  });
+}
+
+/**
+ * Le contenu proposé pour une section est destiné à être publié : le
+ * dirigeant doit pouvoir le corriger avant d'approuver, pas seulement
+ * l'accepter ou le rejeter en bloc.
+ */
+export async function reviseWebsiteAiProposal(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: ReviseWebsiteAiProposalInput,
+) {
+  const parsed = reviseWebsiteAiProposalSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [...websiteAiRoles]);
+    const current = await findWebsiteAiProposal(
+      transaction,
+      tenantId,
+      parsed.proposalId,
+    );
+    if (!current || !["proposed", "pending_approval"].includes(current.status)) {
+      throw new WebsiteAiError(
+        "website_ai_proposal_not_found",
+        "Cette proposition n'est plus modifiable.",
+      );
+    }
+    const evidence = await listWebsiteAiEvidenceForProposal(
+      transaction,
+      tenantId,
+      current.id,
+    );
+    if (evidence.length === 0) {
+      throw new WebsiteAiError(
+        "website_ai_evidence_required",
+        "La proposition ne peut pas être révisée sans preuve vérifiée.",
+      );
+    }
+
+    const wasAwaitingDecision = current.status === "pending_approval";
+    const now = nowIso();
+    const superseded = await supersedeOpenWebsiteAiProposals(
+      transaction,
+      tenantId,
+      current.proposal_key,
+      now,
+    );
+    for (const row of superseded) {
+      await supersedeWebsiteAiApproval(transaction, tenantId, row.id);
+    }
+
+    const proposalId = id("website_ai_proposal");
+    const version = await getNextWebsiteAiProposalVersion(
+      transaction,
+      tenantId,
+      current.proposal_key,
+    );
+    await insertWebsiteAiProposal(transaction, {
+      id: proposalId,
+      tenantId,
+      websiteId: current.website_id,
+      sectionId: current.section_id,
+      proposalKey: current.proposal_key,
+      fingerprint: hashWebsiteAiRevision({
+        proposalKey: current.proposal_key,
+        version,
+        proposedTitle: parsed.proposedTitle,
+        proposedBody: parsed.proposedBody,
+      }),
+      proposalType: current.proposal_type,
+      title: current.title,
+      rationale: current.rationale,
+      expectedGain: current.expected_gain,
+      riskSummary: current.risk_summary,
+      proposedTitle: parsed.proposedTitle,
+      proposedBody: parsed.proposedBody,
+      // Repris tel quel : sinon réviser remettrait à zéro la garde qui
+      // empêche d'appliquer une proposition à une section modifiée depuis.
+      originalContentHash: current.original_content_hash,
+      version,
+      supersedesId: current.id,
+      generationVersion: current.generation_version,
+      actorId: userId,
+      now,
+    });
+    for (const item of evidence) {
+      await insertWebsiteAiEvidence(transaction, {
+        id: id("website_ai_evidence"),
+        tenantId,
+        proposalId,
+        evidence: {
+          type: item.evidence_type,
+          ref: item.evidence_ref,
+          label: item.label,
+          observedValue: item.observed_value,
+        },
+        now,
+      });
+    }
+
+    if (wasAwaitingDecision) {
+      await submitWebsiteAiProposal(transaction, tenantId, proposalId, now);
+      await insertWebsiteAiApproval(transaction, {
+        id: id("approval"),
+        tenantId,
+        proposalId,
+        actorId: userId,
+        now,
+      });
+    }
+
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "website_ai.proposal_revised",
+      targetType: "website_ai_proposal",
+      targetId: proposalId,
+      metadata: {
+        supersedesId: current.id,
+        version,
+        awaitingDecision: wasAwaitingDecision,
+        publicationTriggered: false,
+      },
+    });
+
+    return { proposalId, version, awaitingDecision: wasAwaitingDecision };
   });
 }
 

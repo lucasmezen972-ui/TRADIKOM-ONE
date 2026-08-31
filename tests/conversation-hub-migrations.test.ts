@@ -10,13 +10,13 @@ afterEach(async () => {
 
 describe("migrations du Conversation Hub", () => {
   it("enregistre les migrations et crée uniquement le schéma canonique borné", async () => {
-    expect(getMigrationIds()).toContain("067_os1_conversation_hub");
+    expect(getMigrationIds()).toContain("079_os1_conversation_hub");
     expect(getMigrationIds(true)).toEqual(
       expect.arrayContaining([
-        "067_os1_conversation_hub",
-        "068_os1_conversation_hub_rls",
-        "069_os1_conversation_action_plans",
-        "070_os1_conversation_action_plans_rls",
+        "079_os1_conversation_hub",
+        "080_os1_conversation_hub_rls",
+        "081_os1_conversation_action_plans",
+        "082_os1_conversation_action_plans_rls",
       ]),
     );
 

@@ -6,6 +6,7 @@ import { ReputationAiError } from "@/modules/reputation-ai/errors";
 import {
   decideReputationApproval,
   decideReputationProposalRecord,
+  findReputationProposal,
   findReputationProposalByFingerprint,
   findReputationReviewByHash,
   getNextReputationProposalVersion,
@@ -15,6 +16,7 @@ import {
   insertReputationProposal,
   insertReputationReview,
   listReputationEvidence,
+  listReputationEvidenceForProposal,
   listReputationProposals,
   listReputationReviews,
   submitReputationProposal,
@@ -29,9 +31,11 @@ import {
   reputationProposalDecisionSchema,
   reputationProposalReferenceSchema,
   reputationReviewSchema,
+  reviseReputationProposalSchema,
   type ReputationProposalDecisionInput,
   type ReputationProposalReferenceInput,
   type ReputationReviewInput,
+  type ReviseReputationProposalInput,
 } from "@/modules/reputation-ai/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
 
@@ -290,6 +294,135 @@ export async function submitReputationProposalForApproval(
       targetId: parsed.proposalId,
       metadata: { publicationTriggered: false, externalActionTriggered: false },
     });
+  });
+}
+
+/**
+ * Une réponse à un avis client est exactement le genre de texte qu'un
+ * dirigeant veut reformuler avant qu'il parte : le fond est souvent juste, la
+ * formulation lui appartient. Réviser crée une nouvelle version et ne décide
+ * rien — si la proposition attendait une décision, la nouvelle l'attend aussi.
+ */
+export async function reviseReputationProposal(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: ReviseReputationProposalInput,
+) {
+  const parsed = reviseReputationProposalSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [
+      ...reputationManageRoles,
+    ]);
+    const current = await findReputationProposal(
+      transaction,
+      tenantId,
+      parsed.proposalId,
+    );
+    if (!current || !["proposed", "pending_approval"].includes(current.status)) {
+      throw new ReputationAiError(
+        "reputation_proposal_not_found",
+        "Cette proposition n'est plus modifiable.",
+      );
+    }
+    const evidence = await listReputationEvidenceForProposal(
+      transaction,
+      tenantId,
+      current.id,
+    );
+    if (evidence.length === 0) {
+      throw new ReputationAiError(
+        "reputation_evidence_required",
+        "La proposition ne peut pas être révisée sans preuve vérifiée.",
+      );
+    }
+
+    const wasAwaitingDecision = current.status === "pending_approval";
+    const now = nowIso();
+    const superseded = await supersedeOpenReputationProposals(
+      transaction,
+      tenantId,
+      current.review_id,
+      now,
+    );
+    for (const row of superseded) {
+      await supersedeReputationApproval(transaction, tenantId, row.id);
+    }
+
+    const proposalId = id("reputation_proposal");
+    const version = await getNextReputationProposalVersion(
+      transaction,
+      tenantId,
+      current.review_id,
+    );
+    await insertReputationProposal(transaction, {
+      id: proposalId,
+      tenantId,
+      reviewId: current.review_id,
+      fingerprint: hashToken(
+        toJson({
+          reviewId: current.review_id,
+          version,
+          responseDraft: parsed.responseDraft,
+          improvementPlan: parsed.improvementPlan,
+        }),
+      ),
+      sentiment: current.sentiment,
+      confidence: current.confidence,
+      riskLevel: current.risk_level,
+      rationale: current.rationale,
+      responseDraft: parsed.responseDraft,
+      improvementPlan: parsed.improvementPlan,
+      version,
+      supersedesId: current.id,
+      generationVersion: current.generation_version,
+      actorId: userId,
+      now,
+    });
+    for (const item of evidence) {
+      await insertReputationEvidence(transaction, {
+        id: id("reputation_evidence"),
+        tenantId,
+        proposalId,
+        evidence: {
+          type: item.evidence_type,
+          ref: item.evidence_ref,
+          label: item.label,
+          observedValue: item.observed_value,
+        },
+        now,
+      });
+    }
+
+    // Sans cette reprise, corriger une réponse depuis « Actions à valider » la
+    // ferait disparaître de la file sans que rien ne le signale.
+    if (wasAwaitingDecision) {
+      await submitReputationProposal(transaction, tenantId, proposalId, now);
+      await insertReputationApproval(transaction, {
+        id: id("approval"),
+        tenantId,
+        proposalId,
+        actorId: userId,
+        now,
+      });
+    }
+
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "reputation.proposal_revised",
+      targetType: "reputation_response",
+      targetId: proposalId,
+      metadata: {
+        supersedesId: current.id,
+        version,
+        awaitingDecision: wasAwaitingDecision,
+        publicationTriggered: false,
+        externalActionTriggered: false,
+      },
+    });
+
+    return { proposalId, version, awaitingDecision: wasAwaitingDecision };
   });
 }
 

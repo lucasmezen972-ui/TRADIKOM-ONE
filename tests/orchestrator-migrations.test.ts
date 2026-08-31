@@ -10,11 +10,11 @@ afterEach(async () => {
 
 describe("migrations des plans Conversation", () => {
   it("ajoute les plans immuables et leurs étapes tenant-scoped", async () => {
-    expect(getMigrationIds()).toContain("069_os1_conversation_action_plans");
+    expect(getMigrationIds()).toContain("081_os1_conversation_action_plans");
     expect(getMigrationIds(true)).toEqual(
       expect.arrayContaining([
-        "069_os1_conversation_action_plans",
-        "070_os1_conversation_action_plans_rls",
+        "081_os1_conversation_action_plans",
+        "082_os1_conversation_action_plans_rls",
       ]),
     );
 

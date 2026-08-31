@@ -7,7 +7,8 @@ export type CrmErrorCode =
   | "stage_not_found"
   | "duplicate_pair_not_found"
   | "duplicate_merge_invalid"
-  | "contact_already_merged";
+  | "contact_already_merged"
+  | "assignee_not_member";
 
 export class CrmError extends Error {
   constructor(

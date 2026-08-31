@@ -1,0 +1,48 @@
+# Centre de pilotage
+
+La page `Aujourd'hui` répond à quatre questions : que faire aujourd'hui, qu'est-ce qui bloque, où sont les opportunités, et quelles actions attendent une validation.
+
+Toutes les valeurs viennent de lectures SQL tenant-scoped. Chaque indicateur ouvre une vue filtrée par le même critère métier que le compteur, afin qu'un chiffre et la liste correspondante ne divergent jamais.
+
+## Indicateurs et vues filtrées
+
+| Indicateur | Vue ouverte | Critère |
+| --- | --- | --- |
+| Nouveaux leads | `/contacts?vue=nouveaux-leads` | leads créés dans le jour métier courant |
+| Tâches en retard | `/contacts?vue=taches-en-retard` | tâches `open` dont l'échéance est dépassée |
+| Opportunités à relancer | `/opportunites?filtre=relance` | étape ouverte, `next_follow_up_at` échu avant la fin du jour métier |
+| Opportunités bloquées | `/opportunites?filtre=bloquees` | étape ouverte, sans avancée depuis le seuil de l'organisation (7 jours par défaut) |
+| Incidents actifs | `/automatisations?filtre=echecs` | exécutions de workflow en échec terminal |
+
+Le jour métier est calculé dans le fuseau de l'organisation (`BUSINESS_TIME_ZONE`, par défaut `America/Martinique`) par `src/lib/business-day.ts`, et non en UTC : un lead reçu à 22 h aux Antilles reste un lead du jour.
+
+Les actions préparées par les modules IA sont regroupées dans le centre d'approbation (`docs/APPROVAL_CENTER.md`) ; la carte « Actions à valider » du tableau de bord y renvoie.
+
+## Opportunité bloquée
+
+Une opportunité est bloquée quand elle réunit les trois conditions suivantes :
+
+- son étape de pipeline n'est pas terminale (ni gagné, ni perdu) ;
+- elle n'a pas été modifiée depuis plus de N jours ;
+- elle n'a aucune prochaine action planifiée, **ou** sa relance planifiée est dépassée depuis plus de N jours.
+
+La troisième condition compte les deux cas parce que le workflow de lead planifie systématiquement une relance à J+1 : une définition limitée à `next_follow_up_at is null` ne se déclencherait presque jamais en production.
+
+### Seuil réglable par organisation
+
+N vaut 7 jours par défaut et se règle dans `Paramètres` → `Pilotage commercial`, entre 1 et 90 jours, aux côtés de la durée de sourdine du conseiller (`docs/STRATEGIC_ADVISOR.md`). La valeur vit dans `tenants.stalled_opportunity_days` (migration `073_tenant_preferences`, miroir SQL `0067`) : une colonne additive sur une table qui porte déjà sa politique RLS, donc rien à ajouter côté isolation, contrairement à une nouvelle table.
+
+Le réglage est réservé au propriétaire et aux administrateurs, et chaque changement réel est tracé dans le journal d'audit (`organization.preferences_updated`, avec l'ancienne et la nouvelle valeur). Une sauvegarde identique n'écrit rien.
+
+Les bornes 1–90 existent en deux endroits volontairement : le schéma zod, qui renvoie un message lisible au dirigeant, et la contrainte SQL `tenants_stalled_opportunity_days_range`, qui protège la table de toute écriture hors application.
+
+La valeur par défaut, les bornes et la liste des étapes terminales sont centralisées dans `src/lib/pipeline-stages.ts`. Le module `dashboard` lit le seuil de l'organisation avant de composer ses requêtes ; le module `crm` ne le lit que si le filtre « bloquées » est demandé, pour ne pas alourdir la liste sans filtre. Les deux appliquent donc exactement la même règle, et les libellés affichés (`Aujourd'hui`, `/opportunites`) reprennent le nombre de jours réellement en vigueur.
+
+« Bloquée » se distingue de « à relancer » : la relance est l'action normale du jour, le blocage signale une vente qui n'avance plus.
+
+Les deux compteurs d'opportunités sont calculés depuis une CTE `open_opportunities` commune, pour ne parcourir la table qu'une fois par chargement du tableau de bord.
+
+## Limites actuelles
+
+- Les étapes terminales sont reconnues par nom (`gagne`, `gagné`, `perdu`, `won`, `lost`) ; un pipeline personnalisé avec d'autres libellés de clôture ne sera pas exclu.
+- Les listes du centre de pilotage restent bornées à dix éléments ; les compteurs, eux, sont exacts.

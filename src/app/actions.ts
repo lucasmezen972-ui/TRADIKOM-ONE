@@ -11,6 +11,7 @@ import {
 } from "@/lib/security";
 import { getServices } from "@/lib/services";
 import { safeServerAction } from "@/lib/public-action";
+import { PublicActionError } from "@/modules/request-context";
 import {
   getCurrentSession,
   requireTenantContext,
@@ -97,6 +98,30 @@ export async function logoutAction() {
   redirect("/");
 }
 
+export async function deleteAccountAction(formData: FormData) {
+  const user = await requireUser();
+  const services = await getServices();
+
+  try {
+    await safeServerAction("account.delete", () =>
+      services.deleteAccount(user.id, {
+        password: text(formData, "password"),
+        confirmation: text(formData, "confirmation"),
+      }),
+    );
+  } catch (error) {
+    if (error instanceof PublicActionError) {
+      redirect(
+        `/parametres?suppressionCompte=erreur&messageSuppression=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  await clearSessionCookie();
+  redirect("/?compte=supprime");
+}
+
 export async function createOrganizationAction(formData: FormData) {
   const user = await requireUser();
   const services = await getServices();
@@ -121,12 +146,24 @@ export async function switchTenantAction(formData: FormData) {
 export async function createInvitationAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const invitation = await safeServerAction("invitation.create", () =>
-    services.createInvitation(user.id, tenant.id, {
-      email: text(formData, "email"),
-      role: text(formData, "role") as Exclude<Role, "owner">,
-    }),
-  );
+  let invitation;
+  try {
+    invitation = await safeServerAction("invitation.create", () =>
+      services.createInvitation(user.id, tenant.id, {
+        email: text(formData, "email"),
+        role: text(formData, "role") as Exclude<Role, "owner">,
+      }),
+    );
+  } catch (error) {
+    // Une adresse bloquée est un cas normal, pas une panne : le message dit
+    // quoi faire plutôt que d'afficher une page d'erreur.
+    if (error instanceof PublicActionError && error.code === "email_suppressed") {
+      redirect(
+        `/parametres?blocage=refus&messageBlocage=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
   revalidatePath("/parametres");
   const preview = invitation.developmentLink
     ? `&lien=${encodeURIComponent(invitation.developmentLink)}`
@@ -141,13 +178,23 @@ export async function createInvitationAction(formData: FormData) {
 export async function resendInvitationAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const invitation = await safeServerAction("invitation.resend", () =>
-    services.resendInvitation(
-      user.id,
-      tenant.id,
-      text(formData, "invitationId"),
-    ),
-  );
+  let invitation;
+  try {
+    invitation = await safeServerAction("invitation.resend", () =>
+      services.resendInvitation(
+        user.id,
+        tenant.id,
+        text(formData, "invitationId"),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof PublicActionError && error.code === "email_suppressed") {
+      redirect(
+        `/parametres?blocage=refus&messageBlocage=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
 
   revalidatePath("/parametres");
   const preview = invitation.developmentLink
@@ -197,6 +244,46 @@ export async function updateMemberRoleAction(formData: FormData) {
   );
   revalidatePath("/parametres");
   redirect("/parametres");
+}
+
+export async function releaseEmailSuppressionAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("email.suppression_release", () =>
+    services.releaseEmailSuppression(user.id, tenant.id, {
+      email: text(formData, "email"),
+    }),
+  );
+  revalidatePath("/parametres");
+  redirect("/parametres?blocage=leve");
+}
+
+export async function updateTenantPreferencesAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+
+  try {
+    await safeServerAction("organization.preferences_update", () =>
+      services.updateTenantPreferences(user.id, tenant.id, {
+        stalledOpportunityDays: text(formData, "stalledOpportunityDays"),
+        strategicMuteDays: text(formData, "strategicMuteDays"),
+      }),
+    );
+  } catch (error) {
+    // Une saisie hors bornes revient sur la page avec son message, pas en 500.
+    if (error instanceof PublicActionError) {
+      redirect(
+        `/parametres?preferences=erreur&messagePreferences=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/parametres");
+  revalidatePath("/aujourdhui");
+  revalidatePath("/opportunites");
+  revalidatePath("/conseiller-strategique");
+  redirect("/parametres?preferences=ok");
 }
 
 export async function saveOnboardingAction(formData: FormData) {
@@ -296,7 +383,7 @@ export async function generateStrategicRecommendationsAction() {
   revalidatePath("/conseiller-strategique");
   revalidatePath("/aujourdhui");
   redirect(
-    `/conseiller-strategique?analyse=1&nouvelles=${result.createdIds.length}`,
+    `/conseiller-strategique?analyse=1&nouvelles=${result.createdIds.length}&ecartees=${result.mutedCount}`,
   );
 }
 
@@ -315,7 +402,21 @@ export async function decideStrategicRecommendationAction(formData: FormData) {
   );
   revalidatePath("/conseiller-strategique");
   revalidatePath("/aujourdhui");
-  redirect(`/conseiller-strategique?decision=${decision}`);
+  redirect(
+    decisionRedirect(formData, "/conseiller-strategique", `decision=${decision}`),
+  );
+}
+
+export async function liftStrategicRuleMuteAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("strategic_advisor.lift_rule_mute", () =>
+    services.liftStrategicRecommendationMute(user.id, tenant.id, {
+      ruleKey: text(formData, "ruleKey"),
+    }),
+  );
+  revalidatePath("/conseiller-strategique");
+  redirect("/conseiller-strategique?sourdine=levee");
 }
 
 export async function generateMarketingProposalsAction() {
@@ -356,7 +457,7 @@ export async function decideMarketingProposalAction(formData: FormData) {
   );
   revalidatePath("/marketing");
   revalidatePath("/aujourdhui");
-  redirect(`/marketing?decision=${decision}`);
+  redirect(decisionRedirect(formData, "/marketing", `decision=${decision}`));
 }
 
 export async function reviseMarketingProposalAction(formData: FormData) {
@@ -379,7 +480,38 @@ export async function reviseMarketingProposalAction(formData: FormData) {
     }),
   );
   revalidatePath("/marketing");
-  redirect("/marketing?revision=1");
+  revalidatePath("/validations");
+  redirect(decisionRedirect(formData, "/marketing", "revision=1"));
+}
+
+export async function reviseReputationProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("reputation.revise", () =>
+    services.reviseReputationProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      responseDraft: text(formData, "responseDraft"),
+      improvementPlan: text(formData, "improvementPlan"),
+    }),
+  );
+  revalidatePath("/reputation");
+  revalidatePath("/validations");
+  redirect(decisionRedirect(formData, "/reputation", "revision=1"));
+}
+
+export async function reviseWebsiteAiProposalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("website_ai.revise", () =>
+    services.reviseWebsiteAiProposal(user.id, tenant.id, {
+      proposalId: text(formData, "proposalId"),
+      proposedTitle: text(formData, "proposedTitle"),
+      proposedBody: text(formData, "proposedBody"),
+    }),
+  );
+  revalidatePath("/mon-site");
+  revalidatePath("/validations");
+  redirect(decisionRedirect(formData, "/mon-site", "revision=1"));
 }
 
 export async function generateWebsiteAiProposalsAction() {
@@ -420,7 +552,9 @@ export async function decideWebsiteAiProposalAction(formData: FormData) {
   );
   revalidatePath("/mon-site");
   revalidatePath("/aujourdhui");
-  redirect(`/mon-site?iaDecision=${decision}`);
+  redirect(
+    decisionRedirect(formData, "/mon-site", `iaDecision=${decision}`),
+  );
 }
 
 export async function applyWebsiteAiProposalAction(formData: FormData) {
@@ -503,7 +637,7 @@ export async function decideReputationProposalAction(formData: FormData) {
   );
   revalidatePath("/reputation");
   revalidatePath("/aujourdhui");
-  redirect(`/reputation?decision=${decision}`);
+  redirect(decisionRedirect(formData, "/reputation", `decision=${decision}`));
 }
 
 export async function createCompetitorProfileAction(formData: FormData) {
@@ -581,7 +715,9 @@ export async function decideCompetitorInsightAction(formData: FormData) {
   );
   revalidatePath("/veille-concurrentielle");
   revalidatePath("/aujourdhui");
-  redirect(`/veille-concurrentielle?decision=${decision}`);
+  redirect(
+    decisionRedirect(formData, "/veille-concurrentielle", `decision=${decision}`),
+  );
 }
 
 export async function recordFinancialInputSnapshotAction(formData: FormData) {
@@ -858,6 +994,9 @@ export async function updateOpportunityAction(formData: FormData) {
       valueCents: moneyToCents(text(formData, "valueEuros")),
       nextFollowUpAt: text(formData, "nextFollowUpAt") || undefined,
       lostReason: text(formData, "lostReason") || undefined,
+      assignedUserId: text(formData, "assignedUserId") || undefined,
+      probability: percentToNumber(text(formData, "probability")),
+      expectedCloseAt: text(formData, "expectedCloseAt") || undefined,
     },
   );
 
@@ -1712,6 +1851,23 @@ function text(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Destination de retour après une décision prise hors de la page du module.
+ * Seules des destinations internes connues sont acceptées : la valeur vient
+ * d'un formulaire et ne doit jamais permettre une redirection ouverte.
+ */
+const decisionReturnPaths = new Set(["/validations"]);
+
+function decisionRedirect(
+  formData: FormData,
+  fallback: string,
+  query: string,
+) {
+  const requested = text(formData, "retour");
+  const destination = decisionReturnPaths.has(requested) ? requested : fallback;
+  return `${destination}?${query}`;
+}
+
 function list(formData: FormData, key: string) {
   return text(formData, key)
     .split(",")
@@ -1726,6 +1882,14 @@ function moneyToCents(value: string) {
 
 function optionalMoneyToCents(value: string) {
   return value ? strictMoneyToCents(value) : null;
+}
+
+function percentToNumber(value: string) {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function strictMoneyToCents(value: string) {
@@ -1750,4 +1914,137 @@ function mergeFieldSource(
 ) {
   const value = text(formData, key);
   return value && value !== survivorContactId ? "merged" : "survivor";
+}
+
+export async function snoozeApprovalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("approval_center.snooze", () =>
+    services.snoozeApproval(user.id, tenant.id, {
+      approvalId: text(formData, "approvalId"),
+      snoozedUntil: text(formData, "snoozedUntil"),
+      reason: text(formData, "reason") || undefined,
+    }),
+  );
+  revalidatePath("/validations");
+  revalidatePath("/aujourdhui");
+  redirect("/validations?report=1");
+}
+
+export async function resumeApprovalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("approval_center.resume", () =>
+    services.resumeApproval(user.id, tenant.id, {
+      approvalId: text(formData, "approvalId"),
+    }),
+  );
+  revalidatePath("/validations");
+  revalidatePath("/aujourdhui");
+  redirect("/validations?reprise=1");
+}
+
+export async function uploadSectionImageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const file = formData.get("fichier");
+
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/mon-site?fichier=vide");
+  }
+
+  const asset = await safeServerAction("asset.upload", async () =>
+    services.uploadTenantAsset(user.id, tenant.id, {
+      kind: "section_image",
+      originalName: file.name,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+    }),
+  );
+
+  const sectionId = text(formData, "sectionId");
+  if (sectionId) {
+    const workspace = await services.getWebsiteWorkspace(user.id, tenant.id);
+    const section = workspace.sections.find((item) => item.id === sectionId);
+    if (section) {
+      await services.updateWebsiteSection(user.id, tenant.id, sectionId, {
+        title: section.title,
+        body: section.body,
+        imageUrl: asset.url,
+        buttonLabel: section.buttonLabel,
+        buttonHref: section.buttonHref,
+        enabled: section.enabled,
+      });
+    }
+  }
+
+  revalidatePath("/mon-site");
+  redirect("/mon-site?fichier=ajoute");
+}
+
+export async function deleteTenantAssetAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+
+  try {
+    await safeServerAction("asset.delete", () =>
+      services.deleteTenantAsset(user.id, tenant.id, text(formData, "assetId")),
+    );
+  } catch (error) {
+    // « Encore utilisé » est une réponse normale : elle dit où le remplacer.
+    if (error instanceof PublicActionError && error.code === "asset_in_use") {
+      redirect(
+        `/mon-site?fichier=utilise&messageFichier=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/mon-site");
+  redirect("/mon-site?fichier=supprime");
+}
+
+export async function reorderOpportunityAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("opportunity.reorder", () =>
+    services.reorderOpportunityInStage(user.id, tenant.id, {
+      opportunityId: text(formData, "opportunityId"),
+      direction: text(formData, "direction") === "up" ? "up" : "down",
+    }),
+  );
+  revalidatePath("/opportunites");
+  redirect("/opportunites?vue=tableau");
+}
+
+export async function moveOpportunityStageAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  const opportunityId = text(formData, "opportunityId");
+  const stageId = text(formData, "stageId");
+
+  const detail = await services.getOpportunityDetail(
+    user.id,
+    tenant.id,
+    opportunityId,
+  );
+  if (!detail) {
+    redirect("/opportunites?deplacement=introuvable");
+  }
+
+  // Le changement d'étape passe par le service métier : garde de rôle,
+  // transaction, audit et historique des changements sont conservés.
+  const { opportunity } = detail;
+  await services.updateOpportunity(user.id, tenant.id, opportunityId, {
+    stageId,
+    valueCents: opportunity.valueCents,
+    nextFollowUpAt: opportunity.nextFollowUpAt,
+    lostReason: opportunity.lostReason,
+    assignedUserId: opportunity.assignedUserId,
+    probability: opportunity.probability,
+    expectedCloseAt: opportunity.expectedCloseAt,
+  });
+
+  revalidatePath("/opportunites");
+  revalidatePath(`/opportunites/${opportunityId}`);
+  redirect("/opportunites?vue=tableau&deplacement=ok");
 }

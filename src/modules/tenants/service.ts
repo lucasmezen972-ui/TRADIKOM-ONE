@@ -1,5 +1,7 @@
 import type { DbClient } from "@/lib/db";
 import { withTenantDbTransaction } from "@/db/tenant-context";
+import { stalledOpportunityDays } from "@/lib/pipeline-stages";
+import { strategicRefusalMuteDays } from "@/modules/strategic-advisor/rules";
 import { daysFromNow, hashToken, id, nowIso, secureToken, slugify } from "@/lib/security";
 import type { Membership, Role, Tenant } from "@/lib/types";
 import {
@@ -9,6 +11,10 @@ import {
   registerUser,
 } from "@/modules/auth";
 import { recordAuditLog } from "@/modules/audit";
+import {
+  assertEmailNotSuppressed,
+  suppressEmail,
+} from "@/modules/email-suppression/enforcement";
 import { TenantError } from "@/modules/tenants/errors";
 import {
   findMembershipRole,
@@ -30,6 +36,7 @@ import {
   tenantSlugExists,
   updateInvitationDelivery,
   updateMembershipRole,
+  updateTenantPreferenceColumns,
   type InvitationRow,
   type TenantRow,
 } from "@/modules/tenants/repository";
@@ -37,11 +44,13 @@ import {
   acceptInvitationSchema,
   invitationSchema,
   orgSchema,
+  tenantPreferencesSchema,
   updateMemberRoleSchema,
   type AcceptInvitationInput,
   type CreateInvitationInput,
   type CreateTenantInput,
   type UpdateMemberRoleInput,
+  type UpdateTenantPreferencesInput,
 } from "@/modules/tenants/schemas";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
@@ -84,6 +93,8 @@ export async function createTenant(
       name: parsed.name,
       slug,
       category: parsed.category,
+      stalledOpportunityDays,
+      strategicMuteDays: strategicRefusalMuteDays,
       createdAt: now,
     });
     await insertMembership(transaction, {
@@ -107,6 +118,8 @@ export async function createTenant(
       name: parsed.name,
       slug,
       category: parsed.category,
+      stalledOpportunityDays,
+      strategicMuteDays: strategicRefusalMuteDays,
       createdAt: now,
     } satisfies Tenant;
   });
@@ -216,6 +229,10 @@ export async function createInvitation(
     );
   }
 
+  // Refusé avant d'écrire l'invitation : créer une ligne qu'on sait
+  // indélivrable ne ferait qu'encombrer la liste des invitations en attente.
+  await assertEmailNotSuppressed(db, tenantId, email);
+
   const now = nowIso();
   const invitationToken = secureToken();
   const invitationId = id("invite");
@@ -259,6 +276,7 @@ export async function createInvitation(
     outcome: delivery.outcome,
     occurredAt: deliveryAttemptedAt,
   });
+  await recordSuppressionOnPermanentFailure(db, tenantId, email, delivery.outcome);
   await recordAuditLog(db, {
     tenantId,
     actorId: userId,
@@ -314,6 +332,7 @@ export async function resendInvitation(
     limit: rateLimitPolicies.invitationCreate.limit,
     windowSeconds: rateLimitPolicies.invitationCreate.windowSeconds,
   });
+  await assertEmailNotSuppressed(db, tenantId, invitation.email);
 
   const invitationToken = secureToken();
   const expiresAt = daysFromNow(7);
@@ -352,6 +371,12 @@ export async function resendInvitation(
     outcome: delivery.outcome,
     occurredAt: deliveryAttemptedAt,
   });
+  await recordSuppressionOnPermanentFailure(
+    db,
+    tenantId,
+    invitation.email,
+    delivery.outcome,
+  );
   await recordAuditLog(db, {
     tenantId,
     actorId: userId,
@@ -620,6 +645,69 @@ export async function getTenantById(db: DbClient, tenantId: string) {
   return mapTenant(tenant);
 }
 
+/**
+ * Le seuil décide de ce que le dirigeant voit comme « bloqué » sur son tableau
+ * de bord : c'est une règle de pilotage, réservée au propriétaire et aux
+ * administrateurs, et tracée comme les autres décisions d'organisation.
+ */
+export async function updateTenantPreferences(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: UpdateTenantPreferencesInput,
+) {
+  await assertTenantAccess(db, userId, tenantId, ["owner", "administrator"]);
+  const result = tenantPreferencesSchema.safeParse(input);
+  if (!result.success) {
+    // Le seuil est saisi à la main : le dirigeant doit lire la borne franchie,
+    // pas un « informations invalides » générique.
+    throw new TenantError(
+      "invalid_tenant_preference",
+      result.error.issues[0]?.message ?? "Seuil invalide.",
+    );
+  }
+  const parsed = result.data;
+
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    const previous = await getTenantById(transaction, tenantId);
+    const next = {
+      stalledOpportunityDays:
+        parsed.stalledOpportunityDays ?? previous.stalledOpportunityDays,
+      strategicMuteDays: parsed.strategicMuteDays ?? previous.strategicMuteDays,
+    };
+    const row = await updateTenantPreferenceColumns(transaction, tenantId, next);
+    if (!row) {
+      throw new TenantError("tenant_not_found", "Organisation introuvable.");
+    }
+
+    // Une sauvegarde sans changement réel n'encombre pas le journal d'audit,
+    // et un champ inchangé n'y apparaît pas non plus.
+    const changed = (
+      [
+        ["stalledOpportunityDays", next.stalledOpportunityDays],
+        ["strategicMuteDays", next.strategicMuteDays],
+      ] as const
+    ).filter(([field, value]) => previous[field] !== value);
+
+    for (const [field, nextValue] of changed) {
+      await recordAuditLog(transaction, {
+        tenantId,
+        actorId: userId,
+        action: "organization.preferences_updated",
+        targetType: "tenant",
+        targetId: tenantId,
+        metadata: {
+          field,
+          previousValue: previous[field],
+          nextValue,
+        },
+      });
+    }
+
+    return mapTenant(row);
+  });
+}
+
 export async function getTenantBySlug(db: DbClient, slug: string) {
   const tenant = await findTenantBySlug(db, slug);
   return tenant ? mapTenant(tenant) : null;
@@ -690,8 +778,40 @@ function mapTenant(row: TenantRow): Tenant {
     name: row.name,
     slug: row.slug,
     category: row.category,
+    // Une organisation créée avant la migration lit la valeur par défaut.
+    stalledOpportunityDays:
+      row.stalled_opportunity_days ?? stalledOpportunityDays,
+    strategicMuteDays: row.strategic_mute_days ?? strategicRefusalMuteDays,
     createdAt: row.created_at,
   };
+}
+
+/**
+ * Seul un échec **définitif** bloque l'adresse. Un 429 ou un 5xx est
+ * retryable : le fournisseur est indisponible, l'adresse n'y est pour rien, et
+ * la bloquer sur cette base priverait l'organisation d'un destinataire valide.
+ */
+async function recordSuppressionOnPermanentFailure(
+  db: DbClient,
+  tenantId: string,
+  email: string,
+  outcome: {
+    status: string;
+    provider: string;
+    errorCode?: string;
+  },
+) {
+  if (outcome.status !== "permanent_failure") {
+    return;
+  }
+  await suppressEmail(db, tenantId, {
+    email,
+    reason: "permanent_failure",
+    provider: outcome.provider,
+    errorCode: outcome.errorCode ?? null,
+    detail:
+      "La livraison a définitivement échoué lors d'un envoi d'invitation.",
+  });
 }
 
 function invitationRoleLabel(role: Role) {

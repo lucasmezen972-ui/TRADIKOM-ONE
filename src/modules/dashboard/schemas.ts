@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isValidTimeZone } from "@/lib/business-day";
+
 export const dashboardQuerySchema = z.object({
   activityLimit: z.number().int().min(1).max(20).default(8),
   workflowLimit: z.number().int().min(1).max(20).default(5),
@@ -14,12 +16,3 @@ export const dashboardQuerySchema = z.object({
 });
 
 export type DashboardQueryInput = z.input<typeof dashboardQuerySchema>;
-
-function isValidTimeZone(value: string) {
-  try {
-    new Intl.DateTimeFormat("fr-FR", { timeZone: value }).format();
-    return true;
-  } catch {
-    return false;
-  }
-}

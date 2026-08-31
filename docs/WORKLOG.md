@@ -1,5 +1,14 @@
 # Journal de travail TRADIKOM ONE OS
 
+## 2026-08-31 - Réconciliation autorisée de la PR #11 avec main
+
+- Les 16 conflits annoncés ont été reproduits puis résolus sans force-push, fusion de PR, activation fournisseur ni déploiement.
+- Les migrations déjà livrées sur `main` restent 067-078 avec miroirs SQL 0061-0072. Les 24 migrations OS ont été décalées en 079-102 et leurs miroirs en 0073-0096 pour préserver le chemin de mise à niveau d'une base existante.
+- Les évolutions tenant de `main` et le lot OS-5 Meta sont combinés : journal des livraisons Resend, liste de suppression sur échec définitif, endpoints opaques, réservation durable, policy, idempotence, lease, retry et audit sans PII.
+- Un doublon d'export Resend issu de l'auto-merge a été supprimé sans retirer les deux implémentations bornées utilisées directement par leurs tests.
+- Validation locale : lint et typecheck verts; 30 tests ciblés de fusion/migrations verts; continuity-check `ready`; build Next.js production vert. La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL. Son seul échec était un timeout à 5,256 s sans assertion; le `testTimeout` global prévu est passé à 60 s et le fichier repasse avec 3/3 tests verts.
+- Prochaine preuve : commit/push sans force, puis CI PostgreSQL/RLS et Playwright. Meta reste `disabled`/`not_configured` hors doubles de test.
+
 ## 2026-08-19 - Préparation WhatsApp Cloud API Meta sans activation
 
 - Le propriétaire a écarté Telegram pour des raisons de positionnement professionnel après l'échec déjà constaté de l'essai Twilio en Martinique. WhatsApp Cloud API directe de Meta est retenue comme trajectoire professionnelle de préparation, sans compte, application Meta, token, endpoint, message, paiement ni production.
@@ -62,7 +71,7 @@ Ce fichier est append-only. Chaque entrée conserve les faits, commandes, décis
 ## 2026-07-30 - Persistance tenant-scoped du Conversation Hub
 
 - Les tests de migration ont été écrits avant la persistance et couvrent les sept tables canoniques, l'absence de payload brut, les relations inter-tenant, l'idempotence, la taille des pièces jointes et l'anti-boucle.
-- Les migrations runtime `067_os1_conversation_hub` et `068_os1_conversation_hub_rls` sont ajoutées avec les miroirs SQL `0061` et `0062` strictement identiques.
+- Les migrations runtime `079_os1_conversation_hub` et `080_os1_conversation_hub_rls` sont ajoutées avec les miroirs SQL `0061` et `0062` strictement identiques.
 - Chaque table porte `tenant_id`, une clé ou un index tenant-leading, des relations tenant-composées et une politique RLS `ALL`. Les colonnes de clés étrangères utilisées par les parcours principaux sont indexées.
 - Le test PostgreSQL RLS existant couvre désormais l'absence de contexte, la lecture limitée au tenant, l'écriture cross-tenant et la relation fil/identité inter-tenant.
 - La parité runtime/SQL et `git diff --check` passent. Les nouvelles tentatives Vitest et ESLint restent bloquées sans diagnostic sur le runner Node local; la CI Linux/PostgreSQL devient l'arbitre.
@@ -734,7 +743,7 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 
 - Le choix fonctionnel est confirmé : l'essai Twilio a échoué pour le propriétaire en Martinique et Telegram est refusé comme non professionnel. La préparation bascule vers WhatsApp Cloud API directe de Meta, sans contourner la sécurité ni créer de compte, application, token, WABA, sender, endpoint public ou message réel.
 - Le provider `whatsapp_meta` reste fail-closed (`disabled`, `not_configured`, `awaiting_human_auth`; `transportEnabled: false`). Son ingress comprend signature `X-Hub-Signature-256` sur corps brut, normalisation texte stricte, mapping WABA + Phone Number ID par HMAC, identité pseudonymisée par tenant et conversation idempotente.
-- Une migration additive `087_os2_whatsapp_meta_endpoint_provider` autorise Meta dans `channel_provider_endpoints` sans modifier l'historique déjà appliqué. Le test couvre une base neuve et une mise à niveau depuis la migration 085.
+- Une migration additive `099_os2_whatsapp_meta_endpoint_provider` autorise Meta dans `channel_provider_endpoints` sans modifier l'historique déjà appliqué. Le test couvre une base neuve et une mise à niveau depuis la migration 085.
 - La route `/api/webhooks/meta/whatsapp` est livrée mais inactive en production : GET vérifie le challenge à jeton comparé en temps constant; POST accepte seulement JSON UTF-8 borné et signé. Hors état `ready`, elle répond 503 avant lecture, base ou consommateur.
 - Preuves locales : 32 tests ciblés verts, dont rejeu, deuxième message, endpoint absent/désactivé, signature avant base, absence de PII, isolation de deux tenants et réponses HTTP sans fuite. `pnpm lint`, TypeScript sans cache incrémental, diff check, continuity-check et build de production avec environnement CI simulé sont verts.
 - Limites consignées : `pnpm db:verify` requiert une `DATABASE_URL` PostgreSQL indisponible localement. `pnpm test` complet a été interrompu après des dépassements de délai dans des suites historiques worker/Twilio (5–12 s, aucune assertion métier Meta en échec); il ne doit pas être présenté comme vert. La CI publiée existante (`32262537881` et `32262537861`, vertes sur `cc0335f`) précède ce lot local.

@@ -19,11 +19,11 @@ describe("migrations des liaisons endpoint-identité Meta", () => {
     const definitions = [
       [
         "os5ChannelProviderIdentityBindingsMigrationSql",
-        "../src/db/migrations/0083_os5_channel_provider_identity_bindings.sql",
+        "../src/db/migrations/0095_os5_channel_provider_identity_bindings.sql",
       ],
       [
         "os5ChannelProviderIdentityBindingsRlsMigrationSql",
-        "../src/db/migrations/0084_os5_channel_provider_identity_bindings_rls.sql",
+        "../src/db/migrations/0096_os5_channel_provider_identity_bindings_rls.sql",
       ],
     ] as const;
     for (const [constant, mirrorPath] of definitions) {
@@ -31,10 +31,10 @@ describe("migrations des liaisons endpoint-identité Meta", () => {
       expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
     }
     expect(getMigrationIds()).toContain(
-      "089_os5_channel_provider_identity_bindings",
+      "101_os5_channel_provider_identity_bindings",
     );
     expect(getMigrationIds(true)).toContain(
-      "090_os5_channel_provider_identity_bindings_rls",
+      "102_os5_channel_provider_identity_bindings_rls",
     );
   });
 

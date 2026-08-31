@@ -30,6 +30,10 @@ export type Tenant = {
   name: string;
   slug: string;
   category: string;
+  /** Jours d'inactivité avant qu'une opportunité ouverte soit dite bloquée. */
+  stalledOpportunityDays: number;
+  /** Jours pendant lesquels une règle refusée n'est plus proposée. */
+  strategicMuteDays: number;
   createdAt: string;
 };
 
@@ -336,6 +340,90 @@ export type DashboardPendingApproval = DashboardActionItem & {
     | "competitor";
 };
 
+export type ApprovalCenterItem = {
+  id: string;
+  kind:
+    | "strategic"
+    | "marketing"
+    | "website_ai"
+    | "reputation"
+    | "competitor";
+  kindLabel: string;
+  approvalId: string;
+  targetId: string;
+  title: string;
+  rationale: string | null;
+  expectedGain: string | null;
+  riskSummary: string | null;
+  confidence: number | null;
+  requestedAt: string;
+  detailHref: string;
+  decisionField: string;
+  /**
+   * Présent uniquement pour les modules qui savent réviser une proposition.
+   * L'union est discriminée par `module` : brancher un second module se fait
+   * en ajoutant une variante, que le compilateur oblige alors à traiter.
+   */
+  revision?: ApprovalRevision;
+};
+
+export type ApprovalRevision =
+  | MarketingApprovalRevision
+  | ReputationApprovalRevision
+  | WebsiteAiApprovalRevision;
+
+export type WebsiteAiApprovalRevision = {
+  module: "website_ai";
+  proposedTitle: string;
+  proposedBody: string;
+};
+
+export type ReputationApprovalRevision = {
+  module: "reputation";
+  responseDraft: string;
+  improvementPlan: string;
+};
+
+export type MarketingApprovalRevision = {
+  module: "marketing";
+  channel: "email" | "sms" | "whatsapp";
+  title: string;
+  subject: string;
+  objective: string;
+  audience: string;
+  content: string;
+  callToAction: string;
+  expectedOutcome: string;
+  riskSummary: string;
+};
+
+export type ApprovalCenterDecision = {
+  id: string;
+  kind: ApprovalCenterItem["kind"];
+  kindLabel: string;
+  title: string;
+  decision: "approved" | "rejected";
+  reason: string;
+  decidedAt: string;
+};
+
+export type ApprovalCenterSnoozedItem = {
+  id: string;
+  kind: ApprovalCenterItem["kind"];
+  kindLabel: string;
+  targetId: string;
+  snoozedUntil: string;
+  snoozeReason: string | null;
+  snoozedByName: string | null;
+};
+
+export type ApprovalCenterData = {
+  canApprove: boolean;
+  pending: ApprovalCenterItem[];
+  snoozed: ApprovalCenterSnoozedItem[];
+  history: ApprovalCenterDecision[];
+};
+
 export type DashboardData = {
   tenant: Tenant;
   metrics: {
@@ -345,6 +433,7 @@ export type DashboardData = {
     formSubmissions: number;
     overdueTasks: number;
     opportunitiesNeedingFollowUp: number;
+    stalledOpportunities: number;
     workflowFailures: number;
     deadLetters: number;
     connectorIssues: number;
@@ -367,6 +456,7 @@ export type DashboardData = {
     overdueTasks: DashboardActionItem[];
     newLeads: DashboardActionItem[];
     opportunitiesNeedingFollowUp: DashboardActionItem[];
+    stalledOpportunities: DashboardActionItem[];
     workflowFailures: DashboardActionItem[];
     deadLetters: DashboardActionItem[];
     apiSourceFailures: DashboardApiSourceFailure[];

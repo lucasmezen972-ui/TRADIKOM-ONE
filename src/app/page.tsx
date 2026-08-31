@@ -8,7 +8,11 @@ import { isPublicDemoEnabled } from "@/modules/demo";
 export const dynamic = "force-dynamic";
 
 type HomeProps = {
-  searchParams: Promise<{ motdepasse?: string; connexion?: string }>;
+  searchParams: Promise<{
+    motdepasse?: string;
+    connexion?: string;
+    compte?: string;
+  }>;
 };
 
 export default async function Home({ searchParams }: HomeProps) {
@@ -96,6 +100,12 @@ export default async function Home({ searchParams }: HomeProps) {
 
           <div className="rounded-lg border border-white/10 bg-white/[0.06] p-5">
             <h2 className="text-lg font-bold">Connexion</h2>
+            {params.compte === "supprime" ? (
+              <p className="mt-3 rounded-md border border-emerald-300/30 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-50">
+                Votre compte a été supprimé et vos données personnelles ont été
+                anonymisées.
+              </p>
+            ) : null}
             {params.motdepasse === "reinitialise" ? (
               <p className="mt-3 rounded-md border border-emerald-300/30 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-50">
                 Votre mot de passe a été mis à jour.

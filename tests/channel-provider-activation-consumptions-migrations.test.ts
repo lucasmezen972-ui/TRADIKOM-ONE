@@ -18,21 +18,21 @@ describe("migrations de consommation d'activation OS-5", () => {
     for (const [constant, path] of [
       [
         "os5ChannelProviderActivationConsumptionsMigrationSql",
-        "../src/db/migrations/0079_os5_channel_provider_activation_consumptions.sql",
+        "../src/db/migrations/0091_os5_channel_provider_activation_consumptions.sql",
       ],
       [
         "os5ChannelProviderActivationConsumptionsRlsMigrationSql",
-        "../src/db/migrations/0080_os5_channel_provider_activation_consumptions_rls.sql",
+        "../src/db/migrations/0092_os5_channel_provider_activation_consumptions_rls.sql",
       ],
     ] as const) {
       const mirror = readFileSync(new URL(path, import.meta.url), "utf8");
       expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
     }
     expect(getMigrationIds()).toContain(
-      "085_os5_channel_provider_activation_consumptions",
+      "097_os5_channel_provider_activation_consumptions",
     );
     expect(getMigrationIds(true)).toContain(
-      "086_os5_channel_provider_activation_consumptions_rls",
+      "098_os5_channel_provider_activation_consumptions_rls",
     );
   });
 
@@ -44,7 +44,7 @@ describe("migrations de consommation d'activation OS-5", () => {
     const upgraded = new PGlite();
     opened.push(upgraded);
     await migrate(upgraded, {
-      targetMigrationId: "083_os5_channel_provider_activation_authorizations",
+      targetMigrationId: "095_os5_channel_provider_activation_authorizations",
     });
     expect(await tableColumns(upgraded)).toEqual([]);
     await migrate(upgraded);

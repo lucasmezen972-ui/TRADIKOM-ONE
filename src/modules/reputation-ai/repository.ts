@@ -241,3 +241,30 @@ export async function insertReputationDecision(db: DbClient, input: {
       input.reason, input.actorId, input.now],
   );
 }
+
+export async function findReputationProposal(
+  db: DbClient,
+  tenantId: string,
+  proposalId: string,
+) {
+  const result = await db.query<ReputationProposalRow>(
+    `select * from reputation_response_proposals
+     where tenant_id = $1 and id = $2`,
+    [tenantId, proposalId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listReputationEvidenceForProposal(
+  db: DbClient,
+  tenantId: string,
+  proposalId: string,
+) {
+  const result = await db.query<ReputationEvidenceRow>(
+    `select * from reputation_proposal_evidence
+     where tenant_id = $1 and proposal_id = $2
+     order by captured_at asc`,
+    [tenantId, proposalId],
+  );
+  return result.rows;
+}

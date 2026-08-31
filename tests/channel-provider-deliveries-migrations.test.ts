@@ -19,27 +19,27 @@ describe("migrations des livraisons fournisseur OS-5", () => {
     const definitions = [
       [
         "os5ChannelProviderDeliveriesMigrationSql",
-        "../src/db/migrations/0070_os5_channel_provider_deliveries.sql",
+        "../src/db/migrations/0082_os5_channel_provider_deliveries.sql",
       ],
       [
         "os5ChannelProviderDeliveriesRlsMigrationSql",
-        "../src/db/migrations/0071_os5_channel_provider_deliveries_rls.sql",
+        "../src/db/migrations/0083_os5_channel_provider_deliveries_rls.sql",
       ],
       [
         "os5ChannelProviderDeliveryRetriesMigrationSql",
-        "../src/db/migrations/0072_os5_channel_provider_delivery_retries.sql",
+        "../src/db/migrations/0084_os5_channel_provider_delivery_retries.sql",
       ],
       [
         "os5ChannelProviderDeliveryEventsMigrationSql",
-        "../src/db/migrations/0073_os5_channel_provider_delivery_events.sql",
+        "../src/db/migrations/0085_os5_channel_provider_delivery_events.sql",
       ],
       [
         "os5ChannelProviderDeliveryEventsRlsMigrationSql",
-        "../src/db/migrations/0074_os5_channel_provider_delivery_events_rls.sql",
+        "../src/db/migrations/0086_os5_channel_provider_delivery_events_rls.sql",
       ],
       [
         "os5WhatsAppMetaOutboundProviderMigrationSql",
-        "../src/db/migrations/0082_os5_whatsapp_meta_outbound_provider.sql",
+        "../src/db/migrations/0094_os5_whatsapp_meta_outbound_provider.sql",
       ],
     ] as const;
 
@@ -47,21 +47,21 @@ describe("migrations des livraisons fournisseur OS-5", () => {
       const mirror = readFileSync(new URL(mirrorPath, import.meta.url), "utf8");
       expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
     }
-    expect(getMigrationIds()).toContain("076_os5_channel_provider_deliveries");
+    expect(getMigrationIds()).toContain("088_os5_channel_provider_deliveries");
     expect(getMigrationIds(true)).toContain(
-      "077_os5_channel_provider_deliveries_rls",
+      "089_os5_channel_provider_deliveries_rls",
     );
     expect(getMigrationIds()).toContain(
-      "078_os5_channel_provider_delivery_retries",
+      "090_os5_channel_provider_delivery_retries",
     );
     expect(getMigrationIds()).toContain(
-      "079_os5_channel_provider_delivery_events",
+      "091_os5_channel_provider_delivery_events",
     );
     expect(getMigrationIds(true)).toContain(
-      "080_os5_channel_provider_delivery_events_rls",
+      "092_os5_channel_provider_delivery_events_rls",
     );
     expect(getMigrationIds()).toContain(
-      "088_os5_whatsapp_meta_outbound_provider",
+      "100_os5_whatsapp_meta_outbound_provider",
     );
   });
 
@@ -263,7 +263,7 @@ describe("migrations des livraisons fournisseur OS-5", () => {
       const db = new PGlite();
       opened.push(db);
       await migrate(db, {
-        targetMigrationId: "087_os2_whatsapp_meta_endpoint_provider",
+        targetMigrationId: "099_os2_whatsapp_meta_endpoint_provider",
       });
       await seedContext(db, "a");
       await db.query(

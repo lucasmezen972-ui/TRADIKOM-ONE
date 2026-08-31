@@ -10,6 +10,15 @@ overrides:
   "postcss": ">=8.5.18"
   "sharp": ">=0.35.0"
 
+# GHSA-mh99-v99m-4gvg (brace-expansion, DoS par expansion non bornée) : la seule
+# version corrigée (5.0.8) change l'API CJS et casse minimatch 3 (eslint, chaîne
+# exceljs>archiver). Les patterns glob de ces chaînes sont statiques (jamais issus
+# d'une entrée utilisateur), le risque DoS est donc inapplicable ici. À retirer dès
+# qu'un correctif rétroporté existe pour les majeures 1.x/2.x.
+auditConfig:
+  ignoreGhsas:
+  - GHSA-mh99-v99m-4gvg
+
 allowBuilds:
   esbuild: true
   sharp: true

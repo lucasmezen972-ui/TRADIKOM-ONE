@@ -19,7 +19,7 @@ describe("migrations des snapshots de mission OS-4", () => {
     );
     const mirror = readFileSync(
       new URL(
-        "../src/db/migrations/0069_os4_workflow_definition_snapshots.sql",
+        "../src/db/migrations/0081_os4_workflow_definition_snapshots.sql",
         import.meta.url,
       ),
       "utf8",
@@ -27,7 +27,7 @@ describe("migrations des snapshots de mission OS-4", () => {
     expect(
       extractSqlTemplate(runtime, "os4WorkflowDefinitionSnapshotsMigrationSql").trim(),
     ).toBe(mirror.trim());
-    expect(getMigrationIds()).toContain("075_os4_workflow_definition_snapshots");
+    expect(getMigrationIds()).toContain("087_os4_workflow_definition_snapshots");
   });
 
   it("conserve un snapshot borné et interdit sa mutation", async () => {

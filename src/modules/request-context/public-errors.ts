@@ -1,7 +1,11 @@
 import { ZodError } from "zod";
+import { AccountDeletionError } from "@/modules/account-deletion";
+import { ApprovalCenterError } from "@/modules/approval-center";
+import { AssetError } from "@/modules/assets";
 import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
+import { EmailSuppressionError } from "@/modules/email-suppression";
 import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
@@ -30,9 +34,19 @@ export function toPublicError(error: unknown): PublicError {
   }
 
   if (error instanceof AuthError) return mapAuthError(error);
+  if (error instanceof AccountDeletionError) {
+    return mapAccountDeletionError(error);
+  }
+  if (error instanceof ApprovalCenterError) {
+    return mapApprovalCenterError(error);
+  }
   if (error instanceof TenantError) return mapTenantError(error);
   if (error instanceof ConnectorError) return mapConnectorError(error);
+  if (error instanceof AssetError) return mapAssetError(error);
   if (error instanceof CrmError) return mapCrmError(error);
+  if (error instanceof EmailSuppressionError) {
+    return mapEmailSuppressionError(error);
+  }
   if (error instanceof WorkflowError) return mapWorkflowError(error);
   if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
   if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
@@ -74,12 +88,70 @@ function mapAuthError(error: AuthError): PublicError {
   }
 }
 
+function mapApprovalCenterError(error: ApprovalCenterError): PublicError {
+  switch (error.code) {
+    case "approval_center_access_denied":
+      return publicError(
+        error.code,
+        "approval_center",
+        "Vous n'avez pas le droit de décider de cette action.",
+        403,
+      );
+    case "approval_not_found":
+      return publicError(
+        error.code,
+        "approval_center",
+        "Cette action n'est plus en attente.",
+        404,
+      );
+    default:
+      return publicError(
+        error.code,
+        "approval_center",
+        "La date de report est invalide.",
+        400,
+      );
+  }
+}
+
+function mapAccountDeletionError(error: AccountDeletionError): PublicError {
+  switch (error.code) {
+    case "invalid_password":
+      return publicError(
+        error.code,
+        "account_deletion",
+        "Mot de passe incorrect. La suppression du compte a été refusée.",
+        401,
+      );
+    case "sole_owner_conflict":
+      return publicError(error.code, "account_deletion", error.message, 409);
+    case "account_not_found":
+      return publicError(
+        error.code,
+        "account_deletion",
+        "Compte introuvable ou déjà supprimé.",
+        404,
+      );
+    default:
+      return publicError(
+        error.code,
+        "account_deletion",
+        "La suppression du compte est impossible pour le moment.",
+        400,
+      );
+  }
+}
+
 function mapTenantError(error: TenantError): PublicError {
   if (error.code === "tenant_access_denied") {
     return publicError(error.code, "authorization", "Accès refusé.", 403);
   }
   if (error.code === "member_exists") {
     return publicError(error.code, "tenant", "Cette personne est déjà membre.", 409);
+  }
+  if (error.code === "invalid_tenant_preference") {
+    // Le message vient d'un libellé écrit dans le schéma, pas d'une trace zod.
+    return publicError(error.code, "validation", error.message, 400);
   }
   if (error.code.startsWith("invalid_invitation")) {
     return publicError(
@@ -127,7 +199,42 @@ function mapCrmError(error: CrmError): PublicError {
       400,
     );
   }
+  if (error.code === "assignee_not_member") {
+    return publicError(
+      error.code,
+      "crm",
+      "Le responsable doit appartenir à cette organisation.",
+      400,
+    );
+  }
   return publicError(error.code, "crm", "Opération CRM impossible.", 400);
+}
+
+function mapAssetError(error: AssetError): PublicError {
+  if (error.code === "asset_in_use") {
+    // Le message nomme les endroits où le fichier sert encore.
+    return publicError(error.code, "asset", error.message, 409);
+  }
+  if (error.code === "asset_not_found") {
+    return publicError(error.code, "asset", "Ce fichier n'existe plus.", 404);
+  }
+  if (error.code === "asset_access_denied") {
+    return publicError(error.code, "authorization", "Accès refusé.", 403);
+  }
+  return publicError(error.code, "asset", error.message, 400);
+}
+
+function mapEmailSuppressionError(error: EmailSuppressionError): PublicError {
+  if (error.code === "email_suppressed") {
+    // Le message explique quoi faire : corriger l'adresse ou la réautoriser.
+    return publicError(error.code, "email", error.message, 409);
+  }
+  return publicError(
+    error.code,
+    "email",
+    "Cette adresse n'est pas bloquée.",
+    404,
+  );
 }
 
 function mapWorkflowError(error: WorkflowError): PublicError {

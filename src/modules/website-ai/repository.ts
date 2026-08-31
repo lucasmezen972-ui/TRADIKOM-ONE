@@ -340,3 +340,29 @@ export async function markWebsiteAiProposalApplied(
   );
   return result.rows[0] ?? null;
 }
+
+export async function findWebsiteAiProposal(
+  db: DbClient,
+  tenantId: string,
+  proposalId: string,
+) {
+  const result = await db.query<WebsiteAiProposalRow>(
+    `select * from website_ai_proposals where tenant_id = $1 and id = $2`,
+    [tenantId, proposalId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listWebsiteAiEvidenceForProposal(
+  db: DbClient,
+  tenantId: string,
+  proposalId: string,
+) {
+  const result = await db.query<WebsiteAiEvidenceRow>(
+    `select * from website_ai_evidence
+     where tenant_id = $1 and proposal_id = $2
+     order by id asc`,
+    [tenantId, proposalId],
+  );
+  return result.rows;
+}

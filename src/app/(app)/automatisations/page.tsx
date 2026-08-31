@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   approveWorkflowRunAction,
   cancelWorkflowQueueEventAction,
@@ -19,7 +20,15 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-export default async function AutomationsPage() {
+type AutomationsPageProps = {
+  searchParams: Promise<{ filtre?: string }>;
+};
+
+export default async function AutomationsPage({
+  searchParams,
+}: AutomationsPageProps) {
+  const params = await searchParams;
+  const failuresOnly = params.filtre === "echecs";
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
   const [runs, deadLetters, queue] = await Promise.all([
@@ -27,6 +36,9 @@ export default async function AutomationsPage() {
     services.getWorkflowDeadLetters(user.id, tenant.id),
     services.getWorkflowQueueOverview(user.id, tenant.id),
   ]);
+  const visibleRuns = failuresOnly
+    ? runs.filter((run) => run.status === "failed")
+    : runs;
 
   return (
     <div className="grid gap-6">
@@ -36,6 +48,19 @@ export default async function AutomationsPage() {
         </p>
         <h1 className="mt-1 text-4xl font-bold">Automatisations</h1>
       </header>
+      {failuresOnly ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#0b8f84] bg-[#0b8f84]/5 px-4 py-3">
+          <span className="rounded-full bg-[#0b8f84] px-3 py-1 text-sm font-semibold text-white">
+            Filtre actif : exécutions en échec uniquement
+          </span>
+          <Link
+            href="/automatisations"
+            className="text-sm font-semibold text-[#0b8f84] underline-offset-4 hover:underline"
+          >
+            Retirer le filtre
+          </Link>
+        </div>
+      ) : null}
       <section className="rounded-lg bg-white p-5 shadow-sm">
         <h2 className="text-xl font-bold">Workflow par defaut</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -47,7 +72,7 @@ export default async function AutomationsPage() {
         </div>
       </section>
       <WorkflowQueuePanel queue={queue} />
-      <section className="rounded-lg bg-white p-5 shadow-sm">
+      <section id="incidents" className="rounded-lg bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold">Incidents a traiter</h2>
@@ -73,9 +98,18 @@ export default async function AutomationsPage() {
         </div>
       </section>
       <section className="rounded-lg bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-bold">Historique</h2>
+        <h2 className="text-xl font-bold">
+          {failuresOnly ? "Exécutions en échec" : "Historique"}
+        </h2>
         <div className="mt-4 grid gap-3">
-          {runs.map((run) => (
+          {visibleRuns.length === 0 ? (
+            <p className="rounded-md border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+              {failuresOnly
+                ? "Aucune exécution en échec. Vos automatisations fonctionnent normalement."
+                : "Aucune exécution de workflow pour le moment. Les automatisations se déclenchent automatiquement à l'arrivée d'un lead."}
+            </p>
+          ) : null}
+          {visibleRuns.map((run) => (
             <div key={run.id} className="rounded-md border border-slate-200 px-4 py-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

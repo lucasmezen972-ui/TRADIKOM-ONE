@@ -1,5 +1,13 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint de réconciliation — 31 août 2026, 05:11 UTC
+
+- Les 16 conflits avec `main` sont résolus localement après autorisation humaine.
+- Les migrations `main` 067-078 / SQL 0061-0072 sont préservées; les migrations OS sont renumérotées 079-102 / SQL 0073-0096.
+- Lint, typecheck, 30 tests ciblés, continuity-check et build production sont verts.
+- La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL. Son unique échec était un timeout de 256 ms au-delà de l'ancien plafond de 5 s, sans assertion; le délai global prévu est maintenant 60 s et le test concerné repasse entièrement.
+- Écart restant : publier le commit de réconciliation et obtenir la preuve CI PostgreSQL/RLS. Aucun fournisseur n'est activé.
+
 - Date : 31 août 2026, 04:20 UTC
 - Branche : `codex/tradikom-one-os`
 - PR : #11, ouverte en brouillon et en conflit avec `main`

@@ -191,7 +191,13 @@ function withoutEmptyValues(input: EnvironmentInput) {
 
 function addRequiredIssue(
   context: z.RefinementCtx,
-  variable: "APP_URL" | "DATABASE_URL" | "CONNECTOR_ENCRYPTION_KEY" | "OPENAI_API_KEY",
+  variable:
+    | "APP_URL"
+    | "DATABASE_URL"
+    | "CONNECTOR_ENCRYPTION_KEY"
+    | "OPENAI_API_KEY"
+    | "RESEND_API_KEY"
+    | "EMAIL_FROM",
 ) {
   context.addIssue({
     code: "custom",

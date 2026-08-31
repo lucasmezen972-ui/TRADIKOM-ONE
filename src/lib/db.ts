@@ -315,119 +315,146 @@ function getMigrations(enableRls: boolean) {
           sql: phase5WebsiteDomainBindingsRlsMigrationSql,
         }]
       : []),
+    { id: "067_account_deletion", sql: accountDeletionMigrationSql },
+    { id: "068_pipeline_detail", sql: pipelineDetailMigrationSql },
+    ...(enableRls
+      ? [{ id: "069_pipeline_detail_rls", sql: pipelineDetailRlsMigrationSql }]
+      : []),
+    { id: "070_approval_snooze", sql: approvalSnoozeMigrationSql },
+    { id: "071_tenant_assets", sql: tenantAssetsMigrationSql },
+    ...(enableRls
+      ? [{ id: "072_tenant_assets_rls", sql: tenantAssetsRlsMigrationSql }]
+      : []),
+    { id: "073_tenant_preferences", sql: tenantPreferencesMigrationSql },
     {
-      id: "067_os1_conversation_hub",
+      id: "074_strategic_refusal_learning",
+      sql: strategicRefusalLearningMigrationSql,
+    },
+    { id: "075_email_suppressions", sql: emailSuppressionsMigrationSql },
+    ...(enableRls
+      ? [{
+          id: "076_email_suppressions_rls",
+          sql: emailSuppressionsRlsMigrationSql,
+        }]
+      : []),
+    { id: "077_tenant_mute_preference", sql: tenantMutePreferenceMigrationSql },
+    {
+      id: "078_opportunity_board_position",
+      sql: opportunityBoardPositionMigrationSql,
+    },
+    {
+      id: "079_os1_conversation_hub",
       sql: os1ConversationHubMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "068_os1_conversation_hub_rls",
+          id: "080_os1_conversation_hub_rls",
           sql: os1ConversationHubRlsMigrationSql,
         }]
       : []),
     {
-      id: "069_os1_conversation_action_plans",
+      id: "081_os1_conversation_action_plans",
       sql: os1ConversationActionPlansMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "070_os1_conversation_action_plans_rls",
+          id: "082_os1_conversation_action_plans_rls",
           sql: os1ConversationActionPlansRlsMigrationSql,
         }]
       : []),
     {
-      id: "071_os2_email_provider_events",
+      id: "083_os2_email_provider_events",
       sql: os2EmailProviderEventsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "072_os2_email_provider_events_rls",
+          id: "084_os2_email_provider_events_rls",
           sql: os2EmailProviderEventsRlsMigrationSql,
         }]
       : []),
     {
-      id: "073_os2_channel_provider_endpoints",
+      id: "085_os2_channel_provider_endpoints",
       sql: os2ChannelProviderEndpointsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "074_os2_channel_provider_endpoints_rls",
+          id: "086_os2_channel_provider_endpoints_rls",
           sql: os2ChannelProviderEndpointsRlsMigrationSql,
         }]
       : []),
     {
-      id: "075_os4_workflow_definition_snapshots",
+      id: "087_os4_workflow_definition_snapshots",
       sql: os4WorkflowDefinitionSnapshotsMigrationSql,
     },
     {
-      id: "076_os5_channel_provider_deliveries",
+      id: "088_os5_channel_provider_deliveries",
       sql: os5ChannelProviderDeliveriesMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "077_os5_channel_provider_deliveries_rls",
+          id: "089_os5_channel_provider_deliveries_rls",
           sql: os5ChannelProviderDeliveriesRlsMigrationSql,
         }]
       : []),
     {
-      id: "078_os5_channel_provider_delivery_retries",
+      id: "090_os5_channel_provider_delivery_retries",
       sql: os5ChannelProviderDeliveryRetriesMigrationSql,
     },
     {
-      id: "079_os5_channel_provider_delivery_events",
+      id: "091_os5_channel_provider_delivery_events",
       sql: os5ChannelProviderDeliveryEventsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "080_os5_channel_provider_delivery_events_rls",
+          id: "092_os5_channel_provider_delivery_events_rls",
           sql: os5ChannelProviderDeliveryEventsRlsMigrationSql,
         }]
       : []),
     {
-      id: "081_os5_channel_provider_secret_versions",
+      id: "093_os5_channel_provider_secret_versions",
       sql: os5ChannelProviderSecretVersionsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "082_os5_channel_provider_secret_versions_rls",
+          id: "094_os5_channel_provider_secret_versions_rls",
           sql: os5ChannelProviderSecretVersionsRlsMigrationSql,
         }]
       : []),
     {
-      id: "083_os5_channel_provider_activation_authorizations",
+      id: "095_os5_channel_provider_activation_authorizations",
       sql: os5ChannelProviderActivationAuthorizationsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "084_os5_channel_provider_activation_authorizations_rls",
+          id: "096_os5_channel_provider_activation_authorizations_rls",
           sql: os5ChannelProviderActivationAuthorizationsRlsMigrationSql,
         }]
       : []),
     {
-      id: "085_os5_channel_provider_activation_consumptions",
+      id: "097_os5_channel_provider_activation_consumptions",
       sql: os5ChannelProviderActivationConsumptionsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "086_os5_channel_provider_activation_consumptions_rls",
+          id: "098_os5_channel_provider_activation_consumptions_rls",
           sql: os5ChannelProviderActivationConsumptionsRlsMigrationSql,
         }]
       : []),
     {
-      id: "087_os2_whatsapp_meta_endpoint_provider",
+      id: "099_os2_whatsapp_meta_endpoint_provider",
       sql: os2WhatsAppMetaEndpointProviderMigrationSql,
     },
     {
-      id: "088_os5_whatsapp_meta_outbound_provider",
+      id: "100_os5_whatsapp_meta_outbound_provider",
       sql: os5WhatsAppMetaOutboundProviderMigrationSql,
     },
     {
-      id: "089_os5_channel_provider_identity_bindings",
+      id: "101_os5_channel_provider_identity_bindings",
       sql: os5ChannelProviderIdentityBindingsMigrationSql,
     },
     ...(enableRls
       ? [{
-          id: "090_os5_channel_provider_identity_bindings_rls",
+          id: "102_os5_channel_provider_identity_bindings_rls",
           sql: os5ChannelProviderIdentityBindingsRlsMigrationSql,
         }]
       : []),
@@ -4069,6 +4096,165 @@ drop policy if exists tenant_isolation on domain_verification_jobs;
 create policy tenant_isolation on domain_verification_jobs
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const accountDeletionMigrationSql = `
+alter table users add column if not exists deleted_at text;
+`;
+
+const pipelineDetailMigrationSql = `
+alter table opportunities add column if not exists assigned_user_id text
+  references users(id);
+alter table opportunities add column if not exists probability integer;
+alter table opportunities add column if not exists expected_close_at text;
+
+create table if not exists opportunity_changes (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  opportunity_id text not null,
+  field text not null,
+  previous_value text,
+  next_value text,
+  changed_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, opportunity_id)
+    references opportunities(tenant_id, id) on delete cascade
+);
+
+create index if not exists idx_opportunity_changes_tenant_opportunity
+  on opportunity_changes (tenant_id, opportunity_id, created_at desc);
+create index if not exists idx_opportunities_tenant_assigned
+  on opportunities (tenant_id, assigned_user_id);
+`;
+
+const pipelineDetailRlsMigrationSql = `
+alter table opportunity_changes enable row level security;
+
+drop policy if exists tenant_isolation on opportunity_changes;
+create policy tenant_isolation on opportunity_changes
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const approvalSnoozeMigrationSql = `
+alter table approvals add column if not exists snoozed_until text;
+alter table approvals add column if not exists snoozed_by text references users(id);
+alter table approvals add column if not exists snooze_reason text;
+
+create index if not exists idx_approvals_tenant_status_snoozed
+  on approvals (tenant_id, status, snoozed_until);
+`;
+
+const tenantAssetsMigrationSql = `
+create table if not exists tenant_assets (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  kind text not null check (kind in ('section_image', 'logo')),
+  content_type text not null check (
+    content_type in ('image/png', 'image/jpeg', 'image/webp')
+  ),
+  byte_size integer not null check (byte_size > 0),
+  checksum text not null check (char_length(checksum) = 64),
+  storage_key text not null,
+  original_name text not null,
+  uploaded_by text not null references users(id),
+  created_at text not null,
+  unique (tenant_id, id)
+);
+
+create index if not exists idx_tenant_assets_tenant_created
+  on tenant_assets (tenant_id, created_at desc);
+`;
+
+const tenantAssetsRlsMigrationSql = `
+alter table tenant_assets enable row level security;
+
+drop policy if exists tenant_isolation on tenant_assets;
+create policy tenant_isolation on tenant_assets
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const tenantPreferencesMigrationSql = `
+alter table tenants
+  add column if not exists stalled_opportunity_days integer not null default 7;
+
+alter table tenants
+  drop constraint if exists tenants_stalled_opportunity_days_range;
+
+alter table tenants
+  add constraint tenants_stalled_opportunity_days_range
+  check (stalled_opportunity_days between 1 and 90);
+`;
+
+const strategicRefusalLearningMigrationSql = `
+alter table strategic_recommendations
+  add column if not exists mute_lifted_at text;
+
+alter table strategic_recommendations
+  add column if not exists mute_lifted_by text references users(id);
+
+alter table strategic_recommendations
+  drop constraint if exists strategic_recommendations_mute_lift_pairing;
+
+alter table strategic_recommendations
+  add constraint strategic_recommendations_mute_lift_pairing
+  check (
+    (mute_lifted_at is null and mute_lifted_by is null)
+    or (mute_lifted_at is not null and mute_lifted_by is not null)
+  );
+
+create index if not exists idx_strategic_recommendations_tenant_rule_decided
+  on strategic_recommendations (tenant_id, rule_key, decided_at desc);
+`;
+
+const emailSuppressionsMigrationSql = `
+create table if not exists email_suppressions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  email text not null,
+  reason text not null check (reason in ('permanent_failure', 'manual')),
+  provider text not null,
+  error_code text,
+  detail text not null,
+  suppressed_by text references users(id),
+  created_at text not null,
+  unique (tenant_id, email),
+  unique (tenant_id, id)
+);
+
+create index if not exists idx_email_suppressions_tenant_created
+  on email_suppressions (tenant_id, created_at desc);
+`;
+
+const emailSuppressionsRlsMigrationSql = `
+alter table email_suppressions enable row level security;
+
+drop policy if exists tenant_isolation on email_suppressions;
+create policy tenant_isolation on email_suppressions
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const tenantMutePreferenceMigrationSql = `
+alter table tenants
+  add column if not exists strategic_mute_days integer not null default 30;
+
+alter table tenants
+  drop constraint if exists tenants_strategic_mute_days_range;
+
+alter table tenants
+  add constraint tenants_strategic_mute_days_range
+  check (strategic_mute_days between 1 and 365);
+`;
+
+const opportunityBoardPositionMigrationSql = `
+alter table opportunities
+  add column if not exists board_position integer;
+
+create index if not exists idx_opportunities_tenant_stage_position
+  on opportunities (tenant_id, stage_id, board_position);
 `;
 
 const os1ConversationHubMigrationSql = `

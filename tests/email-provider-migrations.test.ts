@@ -18,11 +18,11 @@ describe("migrations des événements email OS-2", () => {
     const definitions = [
       [
         "os2EmailProviderEventsMigrationSql",
-        "../src/db/migrations/0065_os2_email_provider_events.sql",
+        "../src/db/migrations/0077_os2_email_provider_events.sql",
       ],
       [
         "os2EmailProviderEventsRlsMigrationSql",
-        "../src/db/migrations/0066_os2_email_provider_events_rls.sql",
+        "../src/db/migrations/0078_os2_email_provider_events_rls.sql",
       ],
     ] as const;
 
@@ -33,11 +33,11 @@ describe("migrations des événements email OS-2", () => {
   });
 
   it("crée les deux tables minimales et enregistre leurs migrations RLS", async () => {
-    expect(getMigrationIds()).toContain("071_os2_email_provider_events");
+    expect(getMigrationIds()).toContain("083_os2_email_provider_events");
     expect(getMigrationIds(true)).toEqual(
       expect.arrayContaining([
-        "071_os2_email_provider_events",
-        "072_os2_email_provider_events_rls",
+        "083_os2_email_provider_events",
+        "084_os2_email_provider_events_rls",
       ]),
     );
 
