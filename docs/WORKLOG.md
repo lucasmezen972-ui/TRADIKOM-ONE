@@ -9,6 +9,8 @@
 - Validation locale : lint et typecheck verts; 30 tests ciblés de fusion/migrations verts; continuity-check `ready`; build Next.js production vert. La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL. Son seul échec était un timeout à 5,256 s sans assertion; le `testTimeout` global prévu est passé à 60 s et le fichier repasse avec 3/3 tests verts.
 - Prochaine preuve : commit/push sans force, puis CI PostgreSQL/RLS et Playwright. Meta reste `disabled`/`not_configured` hors doubles de test.
 - La réconciliation fonctionnelle est enregistrée dans le merge commit `8ecf24f`; aucun historique n'a été réécrit.
+- Faute de credentials Git dans l'environnement distant, les mêmes arbres ont été publiés via l'API Git autorisée : merge commit distant `6419214`, handoff `7b9d4f3`, mise à jour de ref strictement non forcée.
+- Preuve distante finale : PR #11 mergeable; continuité `33359971941` verte; CI `33359971937` verte avec migrations PostgreSQL/RLS, backup/restauration, lint, typecheck, tests unitaires/intégration, build production et Playwright.
 
 ## 2026-08-19 - Préparation WhatsApp Cloud API Meta sans activation
 

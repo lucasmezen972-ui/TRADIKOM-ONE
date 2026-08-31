@@ -6,7 +6,8 @@
 - Les migrations `main` 067-078 / SQL 0061-0072 sont préservées; les migrations OS sont renumérotées 079-102 / SQL 0073-0096.
 - Lint, typecheck, 30 tests ciblés, continuity-check et build production sont verts.
 - La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL. Son unique échec était un timeout de 256 ms au-delà de l'ancien plafond de 5 s, sans assertion; le délai global prévu est maintenant 60 s et le test concerné repasse entièrement.
-- Écart restant : publier le commit de réconciliation et obtenir la preuve CI PostgreSQL/RLS. Aucun fournisseur n'est activé.
+- Publication et preuve obtenues : head `7b9d4f3`, PR #11 mergeable, continuité `33359971941` et CI PostgreSQL/RLS `33359971937` entièrement vertes. Aucun fournisseur n'est activé.
+- Écart courant : prochaine étape à confirmer depuis le PDF canonique sur l'ordinateur source; Meta reste inactif jusqu'à une autorisation humaine distincte.
 
 - Date : 31 août 2026, 04:20 UTC
 - Branche : `codex/tradikom-one-os`

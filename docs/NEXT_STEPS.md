@@ -25,10 +25,10 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 
 ## Prochaine action concrète
 
-1. Pousser le commit de fusion local `8ecf24f` sans force sur `codex/tradikom-one-os`.
-2. Laisser démarrer la CI `pull_request` et obtenir la preuve PostgreSQL/RLS de `channel_provider_identity_bindings` et des migrations renumérotées.
-3. Corriger immédiatement un défaut prouvé de réconciliation ou d'OS-5 Meta; distinguer l'échec historique OS-6 `conversation_messages_check` s'il réapparaît.
-4. Ne pas fusionner la PR #11, activer Meta, déployer ou dépenser sans autorisation humaine distincte.
+1. Reprendre depuis l'ordinateur qui contient le PDF canonique et relire les pages obligatoires ainsi que la première étape incomplète de la page 48.
+2. La réconciliation est publiée au head `7b9d4f3`; la continuité `33359971941` et la CI PostgreSQL/RLS `33359971937` sont entièrement vertes, et la PR #11 est mergeable.
+3. Obtenir une autorisation humaine distincte avant toute activation Meta, secret, endpoint public, message réel, fusion, déploiement ou dépense.
+4. Si l'autorisation porte sur Meta, utiliser les capacités navigateur/ordinateur disponibles pour guider ou exécuter les étapes autorisées, sans contourner les permissions ni exposer les secrets.
 
 ### Inventaire de réconciliation préparé en lecture seule
 
@@ -52,7 +52,7 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport injecté uniquement dans les tests; aucun effet réseau.
 - Bloqué humain : toute activation Meta exige compte/app/WABA/numéro autorisé, endpoint HTTPS, secrets en gestionnaire et autorisation explicite.
-- Bloqué technique externe : preuve PostgreSQL/RLS complète attendue de la CI après publication du commit de réconciliation.
+- Bloqué humain : la prochaine étape réelle nécessite la relecture du PDF sur l'ordinateur source puis une autorisation explicite pour le checkpoint Meta ou toute opération externe.
 - Hors périmètre : CRM, Kanban, dashboard secondaire, activation réelle, production, fusion, déploiement et dépense.
 
 ## Bloc de reprise exact
@@ -63,7 +63,7 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
 4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
 5. Le lot Meta est publié sur eec609b et ses handoffs documentaires atteignent 39002dd avant le présent checkpoint; conserver tmp/ hors index.
-6. Le commit de réconciliation est prêt localement; le pousser sans force, puis surveiller la CI PostgreSQL/RLS et corriger immédiatement tout défaut attribuable à la fusion ou à OS-5 Meta.
+6. La réconciliation est publiée et sa CI est verte; reprendre la page 48 sur l'ordinateur source puis demander l'autorisation avant toute activation Meta ou opération externe.
 7. Garder Meta disabled/not_configured/mock : aucune clé, client Graph, app, WABA, endpoint public ou message réel.
 8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.
 9. Mettre à jour les quatre documents avant arrêt. Ne pas fusionner, déployer, dépenser ni demander de secret.

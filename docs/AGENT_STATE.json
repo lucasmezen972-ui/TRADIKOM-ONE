@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T05:11:31.000Z",
+  "updatedAt": "2026-08-31T05:35:02.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "8ecf24f",
-  "publishedHeadObserved": "5111214117ab59cae676da4d6a239657536a49b1",
-  "status": "in_progress",
+  "publishedHeadObserved": "7b9d4f34abc8fe6c79734f97ca7f227b22351015",
+  "status": "ready_for_human_checkpoint",
   "currentPhase": "OS-5",
-  "currentObjective": "La réconciliation autorisée de la PR #11 avec main est résolue localement sans perte : les migrations main 067-078 restent immuables, les migrations OS sont décalées en 079-102 avec miroirs SQL 0073-0096, les historiques documentaires et les services tenant/Meta sont conservés. Lint, typecheck, 30 tests ciblés, le test de délai corrigé, continuity-check et build production sont verts. La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL; son seul échec était un dépassement de 256 ms du délai Vitest historique, corrigé par le testTimeout global prévu puis revalidé. Le provider Meta reste fail-closed et aucune activation réelle n'est autorisée.",
+  "currentObjective": "La réconciliation autorisée de la PR #11 avec main est publiée et entièrement prouvée : migrations main 067-078 immuables, migrations OS 079-102 avec miroirs SQL 0073-0096, historiques documentaires et services tenant/Meta conservés. La PR #11 est mergeable. La continuité 33359971941 et la CI PostgreSQL/RLS 33359971937 sont vertes, y compris audit, migrations, backup/restauration, lint, typecheck, tests unitaires/intégration, build et Playwright. Le provider Meta reste fail-closed et aucune activation réelle n'est autorisée sans checkpoint humain distinct.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,8 +32,8 @@
       "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue et publiée : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. Preuve encore attendue : exécution PostgreSQL/RLS après réconciliation humaine du conflit de la PR #11, aucun PostgreSQL local n'étant disponible. Aucun compte, token, endpoint public ou message Meta ne doit être créé."
     }
   },
-  "nextAction": "Pousser les commits de réconciliation sans force, puis surveiller la CI PostgreSQL/RLS de la PR #11 et corriger immédiatement tout défaut prouvé de fusion ou d'OS-5 Meta.",
-  "nextFile": "docs/WORKLOG.md",
+  "nextAction": "Depuis l'ordinateur qui contient le PDF maître, relire les pages obligatoires et la première étape incomplète de la page 48, puis obtenir l'autorisation humaine distincte avant toute activation Meta, secret, endpoint public, message réel, fusion ou déploiement.",
+  "nextFile": "docs/MASTER_PROMPT_REFERENCE.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
