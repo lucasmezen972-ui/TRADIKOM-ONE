@@ -6,8 +6,8 @@
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 30 août 2026.
 - La branche locale a été réconciliée sans perte par fast-forward strict de `787d54b` vers le head distant `33777bf`; le lot Meta sale n'avait aucun chemin en conflit avec le commit OS-6 distant et reste intégralement préservé.
-- Les commits `eec609b` (lot Meta) et `545c402` (handoff) ont été poussés sans force; `origin/codex/tradikom-one-os` pointe sur `545c402` et `tmp/` est resté exclusivement local.
-- La PR #11 est ouverte, brouillon, `CONFLICTING/DIRTY` avec `main`. Après le push, aucun `statusCheckRollup` ni run GitHub Actions n'a été créé pour `545c402`; la dernière CI reste `32374109077`, rouge uniquement sur `goal-watch-service / conversation_messages_check` du head précédent `33777bf`.
+- Le lot `eec609b` et les handoffs documentaires jusqu'à `b3642e3` ont été poussés sans force; la branche locale et distante étaient synchronisées avant le présent checkpoint et `tmp/` est resté exclusivement local.
+- La PR #11 est ouverte, brouillon, `CONFLICTING/DIRTY` avec `main`. Au heartbeat de 03:18 UTC, aucun `statusCheckRollup` ni run GitHub Actions n'a été créé pour `b3642e3`; la dernière CI reste `32374109077`, rouge uniquement sur `goal-watch-service / conversation_messages_check` du head précédent `33777bf`.
 
 ## Dernière tranche livrée localement : flux sortant WhatsApp Cloud Meta, sans activation
 
@@ -54,7 +54,7 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
 3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
 4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
-5. Le lot Meta est publié sur eec609b et le handoff sur 545c402; conserver tmp/ hors index.
+5. Le lot Meta est publié sur eec609b et ses handoffs documentaires atteignent b3642e3 avant le présent checkpoint; conserver tmp/ hors index.
 6. Demander l'autorisation avant de réconcilier le conflit de PR avec main, puis surveiller la CI PostgreSQL/RLS; ne corriger qu'un défaut attribuable à OS-5 Meta.
 7. Garder Meta disabled/not_configured/mock : aucune clé, client Graph, app, WABA, endpoint public ou message réel.
 8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.

@@ -1,10 +1,10 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-- Date : 31 août 2026, 03:15 UTC
+- Date : 31 août 2026, 03:20 UTC
 - Branche : `codex/tradikom-one-os`
 - PR : #11, ouverte en brouillon et en conflit avec `main`
 - Head distant avant publication du lot : `33777bfc01ab08982671aa10b7e3487bdc82eb16`
-- Head publié observé : `545c402c1322aea588adde04201d09c7c01bbe2b`
+- Head publié observé avant le présent checkpoint : `b3642e32b3212c63474ad93186d8c0e7e6bed6fe`
 - Commit local du lot OS-5 Meta : `eec609b75364a2ded1afa14ecdd71e47c75327b4`
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**
 
@@ -42,7 +42,7 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - État distant avant publication : continuité `32374109126` verte; CI `32374109077` rouge uniquement sur `goal-watch-service` avec la contrainte `conversation_messages_check`, donc sur le commit OS-6 distant et non sur le lot Meta encore local.
 - Réconciliation Git : le head local `787d54b` était l'ancêtre direct du head distant `33777bf`. Un fast-forward strict d'un commit, sans chemin commun avec les modifications Meta, a préservé le worktree sale; aucun reset, clean, stash, changement de branche ou commit de fusion.
 - Publication effectuée sans force : `eec609b` contient les 22 fichiers contrôlés du lot et de continuité, puis `545c402` actualise le handoff; `tmp/` est exclu et reste non suivi localement.
-- État CI post-publication : PR #11 au head `545c402`, brouillon et `CONFLICTING/DIRTY`; aucun contrôle ni run n'a été créé pour ce head. La dernière CI rouge `32374109077` concerne `33777bf` et son seul échec observé reste OS-6 `conversation_messages_check`.
+- État CI reconfirmé au heartbeat de 03:18 UTC : PR #11 au head `b3642e3`, brouillon et `CONFLICTING/DIRTY`; aucun contrôle ni run n'a été créé pour ce head. La dernière CI rouge `32374109077` concerne `33777bf` et son seul échec observé reste OS-6 `conversation_messages_check`.
 
 ## Classification des états
 
@@ -56,4 +56,4 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Écarts restants et reprise
 
-Le lot Meta est publié. Une intervention humaine est indispensable pour autoriser la réconciliation du conflit entre la PR #11 et `main`; aucune fusion de PR ni réécriture d'historique n'a été tentée. Après réconciliation, surveiller la CI PostgreSQL et attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.
+Le lot Meta est publié. Le heartbeat a reconfirmé le PDF exact, les pages requises, le dépôt synchronisé avant checkpoint et l'absence de nouveau contrôle GitHub. Une intervention humaine est indispensable pour autoriser la réconciliation du conflit entre la PR #11 et `main`; aucune fusion de PR ni réécriture d'historique n'a été tentée. Après réconciliation, surveiller la CI PostgreSQL et attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.

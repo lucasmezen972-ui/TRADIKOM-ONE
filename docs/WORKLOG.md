@@ -755,3 +755,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Après une dernière vérification d'ascendance distante (`0` commit distant contre `2` locaux), `eec609b` et `545c402` ont été poussés sans force de `33777bf` vers `545c402`; `tmp/` est resté non suivi.
 - Après publication, la PR #11 est toujours brouillon et `CONFLICTING/DIRTY`; aucun contrôle ni nouveau run n'a été créé pour `545c402`. La preuve CI PostgreSQL/RLS est donc bloquée jusqu'à une réconciliation humaine autorisée avec `main`.
 - Aucun PostgreSQL local n'est exploitable : ni `DATABASE_URL`, ni binaire PostgreSQL, ni Docker/Podman/Colima, ni formule PostgreSQL Homebrew. Aucun téléchargement, service externe ou secret n'a été demandé pour contourner ce blocage.
+
+## 2026-08-31 - Heartbeat de continuité à 03:18 UTC
+
+- Le dépôt stable est toujours courant, lisible et inscriptible sur `codex/tradikom-one-os`; `tmp/` reste le seul élément non suivi et a été préservé. La copie iCloud n'a pas été utilisée.
+- Le PDF canonique a été revérifié : 71 pages, aucune protection, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement avec le runtime PDF fourni.
+- `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La page 32 et la matrice page 69 confirment que PostgreSQL/RLS et CI restent la première preuve manquante; aucune tâche OS-6, CRM, Kanban ou dashboard n'a été sélectionnée.
+- GitHub est inchangé au head `b3642e3` : PR #11 ouverte, brouillon, `CONFLICTING/DIRTY`, zéro contrôle et zéro run Actions créé pour ce head. La dernière CI demeure `32374109077` sur `33777bf`, avec l'unique échec OS-6 `conversation_messages_check` déjà documenté.
+- Aucune réconciliation avec `main`, fusion, activation Meta, clé, client Graph, message réel, dépense ou déploiement n'a été tenté. Reprise exacte : obtenir l'autorisation humaine de réconcilier le conflit de PR, puis laisser la CI PostgreSQL/RLS vérifier le lot Meta publié.

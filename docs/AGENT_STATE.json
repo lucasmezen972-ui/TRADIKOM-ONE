@@ -1,10 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T03:15:38.000Z",
+  "updatedAt": "2026-08-31T03:20:59.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "eec609b75364a2ded1afa14ecdd71e47c75327b4",
+  "publishedHeadObserved": "b3642e32b3212c63474ad93186d8c0e7e6bed6fe",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 dispose d'une tranche verticale WhatsApp Cloud API Meta entrante et sortante publiée sur la branche : webhooks vérifiés avant la base, liaisons opaques endpoint-identité, réservation durable, policy, idempotence, reprises bornées et audit sans contenu sensible. Le provider reste volontairement fail-closed, sans client Graph, credential, compte, endpoint public ni message réel. La preuve locale est verte; la preuve PostgreSQL/RLS distante est bloquée car la PR #11 est en conflit avec main et aucun contrôle ne s'est créé sur le nouveau head.",
@@ -385,7 +386,9 @@
     "commit local contrôlé eec609b du lot OS-5 Meta; 22 fichiers, tmp exclu",
     "push fast-forward 33777bf vers 545c402 sur origin/codex/tradikom-one-os sans force",
     "verification post-push : PR #11 head 545c402 brouillon CONFLICTING/DIRTY, aucun statusCheckRollup ni run créé pour le head",
-    "recherche locale PostgreSQL : aucun postgres, pg_ctl, initdb, Docker, Podman ou Colima; Homebrew ne contient pas de formule PostgreSQL"
+    "recherche locale PostgreSQL : aucun postgres, pg_ctl, initdb, Docker, Podman ou Colima; Homebrew ne contient pas de formule PostgreSQL",
+    "heartbeat 2026-08-31T03:18Z : PDF 71 pages et SHA-256 exact, pages coeur et OS-5 relues directement avec le runtime PDF fourni, continuity-check ready sans avertissement",
+    "GitHub au head b3642e3 : PR #11 OPEN DRAFT CONFLICTING/DIRTY, aucun statusCheckRollup ni run Actions créé; dernier run inchangé sur 33777bf"
   ],
   "lastValidation": [
     {
@@ -1151,6 +1154,14 @@
     {
       "command": "preuve PostgreSQL/RLS locale",
       "status": "blocked_no_database_url_no_postgres_binary_no_container_runtime_no_installed_postgresql_formula"
+    },
+    {
+      "command": "heartbeat de continuité au head publié b3642e3 le 2026-08-31T03:18Z",
+      "status": "passed_repository_read_write_pdf_sha256_exact_71_pages_required_pages_reviewed_continuity_ready_zero_errors_zero_warnings_tmp_preserved"
+    },
+    {
+      "command": "PR #11 et GitHub Actions au heartbeat 2026-08-31T03:18Z",
+      "status": "unchanged_open_draft_conflicting_dirty_head_b3642e3_zero_checks_zero_runs_for_head_human_reconciliation_required"
     }
   ],
   "humanBlockers": [
