@@ -1,9 +1,10 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-- Date : 31 août 2026, 03:07 UTC
+- Date : 31 août 2026, 03:15 UTC
 - Branche : `codex/tradikom-one-os`
 - PR : #11, ouverte en brouillon et en conflit avec `main`
-- Head distant réconcilié avant publication du lot : `33777bfc01ab08982671aa10b7e3487bdc82eb16`
+- Head distant avant publication du lot : `33777bfc01ab08982671aa10b7e3487bdc82eb16`
+- Head publié observé : `545c402c1322aea588adde04201d09c7c01bbe2b`
 - Commit local du lot OS-5 Meta : `eec609b75364a2ded1afa14ecdd71e47c75327b4`
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**
 
@@ -16,8 +17,8 @@ La tranche complète localement le chemin prioritaire conversation → action du
 | Pages relues | Exigence | Preuve obtenue | Écart restant |
 | --- | --- | --- | --- |
 | 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre d'exécution strict et continuité documentée | Flux Meta entrant puis sortant traité comme tranche OS-5; documents de reprise actualisés; aucune nouvelle tâche CRM/Kanban/dashboard sélectionnée | Le commit OS-6 distant préexistant reste hors de cette tranche et sa CI rouge n'est pas traité comme prochaine priorité |
-| 13-18, 22, 26-30 | Adaptateurs bornés, runtime provider, action durable, policy, idempotence et gouvernance | Adaptateur Meta sans client Graph; réservation durable avant effet; policy, claim/lease, retry/backoff et clé d'idempotence testés | Provider réel volontairement non configuré; preuve CI du head du lot à publier |
-| 31-33 | Definition of Done stricte : migrations neuves/mise à niveau, PostgreSQL/RLS, tests, build et preuve utilisable | Migrations runtime/SQL additives, tests PGlite de base neuve et upgrade, 65 tests Meta, régression Twilio, suite complète, lint, typecheck et build verts | Test PostgreSQL/RLS ignoré sans `DATABASE_URL`; backup/restauration, CI et Playwright restent à prouver sur le head publié |
+| 13-18, 22, 26-30 | Adaptateurs bornés, runtime provider, action durable, policy, idempotence et gouvernance | Adaptateur Meta sans client Graph; réservation durable avant effet; policy, claim/lease, retry/backoff et clé d'idempotence testés; lot publié | Provider réel volontairement non configuré; CI bloquée par le conflit de PR |
+| 31-33 | Definition of Done stricte : migrations neuves/mise à niveau, PostgreSQL/RLS, tests, build et preuve utilisable | Migrations runtime/SQL additives, tests PGlite de base neuve et upgrade, 65 tests Meta, régression Twilio, suite complète, lint, typecheck et build verts | Test PostgreSQL/RLS ignoré sans moteur local; aucun run n'est créé sur le head publié tant que la PR est en conflit |
 | 35-38 | Entrées non fiables, données sensibles protégées, audit sans contenu ni secret | Signature avant base côté ingress; liaisons par empreintes opaques; audit sans numéro, identité, corps ou credential; aucune clé dans le dépôt | Gestion réelle de secrets et endpoint HTTPS relèvent d'une autorisation humaine ultérieure |
 | 64-68 | Runtime fournisseur uniforme, endpoint tenant-aware, états honnêtes et webhook signé | `whatsapp_meta` est `disabled`/`not_configured` hors test; liaison endpoint-identité empêche le routage par un autre numéro; transport uniquement injecté en mock | Aucun client Graph ni appel réel; activation humaine non autorisée |
 | 69 | Matrice de tests provider, sécurité, intégration et isolation | 12 fichiers/65 tests Meta verts, 5 fichiers/38 tests Twilio verts, 121 fichiers/523 tests complets verts; cas d'isolation, rejeu, refus avant transport et persistance couverts | 1 test Meta PostgreSQL/RLS et 18 tests PostgreSQL globaux ignorés localement faute de base |
@@ -37,10 +38,11 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 ## Validation honnête
 
 - Verts localement sur le head réconcilié et le lot Meta : 12 fichiers/65 tests Meta, 5 fichiers/38 tests Twilio, 121 fichiers/523 tests complets, ESLint, TypeScript sans cache, build Next.js production, `git diff --check` et continuity-check.
-- Ignorés faute d'infrastructure locale : 1 test Meta PostgreSQL/RLS; au total 7 fichiers et 18 tests PostgreSQL. Aucun `DATABASE_URL`, Docker ou serveur PostgreSQL local n'est disponible.
+- Ignorés faute d'infrastructure locale : 1 test Meta PostgreSQL/RLS; au total 7 fichiers et 18 tests PostgreSQL. Aucun `DATABASE_URL`, binaire PostgreSQL, Docker, Podman, Colima ou formule PostgreSQL Homebrew n'est disponible.
 - État distant avant publication : continuité `32374109126` verte; CI `32374109077` rouge uniquement sur `goal-watch-service` avec la contrainte `conversation_messages_check`, donc sur le commit OS-6 distant et non sur le lot Meta encore local.
 - Réconciliation Git : le head local `787d54b` était l'ancêtre direct du head distant `33777bf`. Un fast-forward strict d'un commit, sans chemin commun avec les modifications Meta, a préservé le worktree sale; aucun reset, clean, stash, changement de branche ou commit de fusion.
-- Publication préparée : le commit local `eec609b` contient exactement les 22 fichiers contrôlés du lot et de continuité; `tmp/` est exclu.
+- Publication effectuée sans force : `eec609b` contient les 22 fichiers contrôlés du lot et de continuité, puis `545c402` actualise le handoff; `tmp/` est exclu et reste non suivi localement.
+- État CI post-publication : PR #11 au head `545c402`, brouillon et `CONFLICTING/DIRTY`; aucun contrôle ni run n'a été créé pour ce head. La dernière CI rouge `32374109077` concerne `33777bf` et son seul échec observé reste OS-6 `conversation_messages_check`.
 
 ## Classification des états
 
@@ -49,9 +51,9 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport synthétique uniquement dans les tests, sans réseau.
 - Bloqué humain : compte/app/WABA/numéro de test, endpoint HTTPS, secrets en gestionnaire et autorisation explicite avant activation ou preuve externe.
-- Bloqué technique externe : PostgreSQL/RLS et CI du head publié.
+- Bloqué humain/technique externe : autorisation de réconcilier le conflit de PR, puis CI PostgreSQL/RLS du head Meta.
 - Hors périmètre : dépense, fusion, déploiement, DNS, CRM, Kanban, dashboard secondaire et correction fonctionnelle OS-6 non liée.
 
 ## Écarts restants et reprise
 
-Publier le lot Meta uniquement après contrôle précis de l'index et exclusion de `tmp/`, puis surveiller la CI PostgreSQL. Si la CI échoue, attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.
+Le lot Meta est publié. Une intervention humaine est indispensable pour autoriser la réconciliation du conflit entre la PR #11 et `main`; aucune fusion de PR ni réécriture d'historique n'a été tentée. Après réconciliation, surveiller la CI PostgreSQL et attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T03:11:59.000Z",
+  "updatedAt": "2026-08-31T03:15:38.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "eec609b75364a2ded1afa14ecdd71e47c75327b4",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "OS-5 dispose localement d'une tranche verticale WhatsApp Cloud API Meta entrante et sortante : webhooks vérifiés avant la base, liaisons opaques endpoint-identité, réservation durable, policy, idempotence, reprises bornées et audit sans contenu sensible. Le provider reste volontairement fail-closed, sans client Graph, credential, compte, endpoint public ni message réel. La preuve locale est verte; la preuve PostgreSQL/RLS et la CI publiée du lot sortant restent à obtenir après publication sûre de la branche.",
+  "currentObjective": "OS-5 dispose d'une tranche verticale WhatsApp Cloud API Meta entrante et sortante publiée sur la branche : webhooks vérifiés avant la base, liaisons opaques endpoint-identité, réservation durable, policy, idempotence, reprises bornées et audit sans contenu sensible. Le provider reste volontairement fail-closed, sans client Graph, credential, compte, endpoint public ni message réel. La preuve locale est verte; la preuve PostgreSQL/RLS distante est bloquée car la PR #11 est en conflit avec main et aucun contrôle ne s'est créé sur le nouveau head.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,10 +28,10 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Conserver le chemin conversation-first et ne sélectionner un provider professionnel que s'il peut fournir une preuve verticale réelle avec webhook vérifié avant la base, tenant/RLS, idempotence, actions durables, audit sans contenu sensible et états disabled/not_configured/mock. Les pages 15-18, 22, 26-30, 35-38 et 64-68 imposent pour l'envoi Meta une exécution uniquement via le runtime provider, une réservation durable avant tout effet, une policy et une idempotency key, un état provider honnête, une route endpoint-identité tenant-aware et aucune donnée sensible dans l'audit. Telegram reste explicitement hors candidat.",
-      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue localement : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. Preuves encore attendues : exécution PostgreSQL/RLS avec DATABASE_URL et CI publiée du head du lot. Aucun compte, token, endpoint public ou message Meta ne doit être créé."
+      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue et publiée : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. Preuve encore attendue : exécution PostgreSQL/RLS après réconciliation humaine du conflit de la PR #11, aucun PostgreSQL local n'étant disponible. Aucun compte, token, endpoint public ou message Meta ne doit être créé."
     }
   },
-  "nextAction": "Publier le lot OS-5 Meta sur la branche réconciliée, surveiller la CI PostgreSQL/RLS, puis corriger uniquement un défaut directement attribuable au lot Meta; ne pas activer le provider ni traiter le Goal and Watch Engine hors ordre.",
+  "nextAction": "Après autorisation humaine, réconcilier le conflit de la PR #11 avec main sans perdre le lot Meta, puis laisser la CI PostgreSQL/RLS s'exécuter et corriger uniquement un défaut directement attribuable à OS-5 Meta; ne pas activer le provider ni traiter le Goal and Watch Engine hors ordre.",
   "nextFile": "tests/channel-provider-identity-bindings-postgres-rls.test.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -382,7 +382,10 @@
     "régression Twilio sortante : 5 fichiers et 38 tests verts",
     "suite locale exhaustive sur le head réconcilié : 121 fichiers verts, 523 tests verts, 7 fichiers et 18 tests PostgreSQL ignorés sans DATABASE_URL",
     "ESLint complet, TypeScript sans cache incrémental, build Next.js production et git diff --check verts sur le head réconcilié",
-    "commit local contrôlé eec609b du lot OS-5 Meta; 22 fichiers, tmp exclu"
+    "commit local contrôlé eec609b du lot OS-5 Meta; 22 fichiers, tmp exclu",
+    "push fast-forward 33777bf vers 545c402 sur origin/codex/tradikom-one-os sans force",
+    "verification post-push : PR #11 head 545c402 brouillon CONFLICTING/DIRTY, aucun statusCheckRollup ni run créé pour le head",
+    "recherche locale PostgreSQL : aucun postgres, pg_ctl, initdb, Docker, Podman ou Colima; Homebrew ne contient pas de formule PostgreSQL"
   ],
   "lastValidation": [
     {
@@ -1136,9 +1139,22 @@
     {
       "command": "commit eec609b75364a2ded1afa14ecdd71e47c75327b4",
       "status": "passed_22_controlled_os5_meta_and_continuity_files_tmp_excluded"
+    },
+    {
+      "command": "push du lot Meta et du handoff vers origin/codex/tradikom-one-os",
+      "status": "passed_fast_forward_33777bf_to_545c402_no_force_tmp_remained_untracked"
+    },
+    {
+      "command": "PR #11 et workflows après push du head 545c402",
+      "status": "blocked_pr_draft_conflicting_dirty_no_status_check_rollup_no_run_created_for_new_head"
+    },
+    {
+      "command": "preuve PostgreSQL/RLS locale",
+      "status": "blocked_no_database_url_no_postgres_binary_no_container_runtime_no_installed_postgresql_formula"
     }
   ],
   "humanBlockers": [
+    "Réconciliation autorisée du conflit entre la PR #11 et main afin que les workflows pull_request puissent vérifier le head Meta publié",
     "Création ou mise à disposition humaine d'un compte développeur Meta, d'une application, d'un WABA et d'un numéro de test autorisé",
     "Token Meta et secret d'application stockés uniquement dans un gestionnaire de secrets, ainsi qu'un endpoint HTTPS contrôlé",
     "Autorisation explicite avant toute activation réelle ou tout message de preuve Meta",
