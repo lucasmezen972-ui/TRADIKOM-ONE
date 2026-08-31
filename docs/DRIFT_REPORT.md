@@ -1,11 +1,11 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint — 31 août 2026, 18:52 UTC
+## Checkpoint — 31 août 2026, 19:20 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- Head fonctionnel local et distant publié : `24622e9000619fd40c25e40be0d4cebefb8a51c0`.
-- PR #11 : ouverte, brouillon et fusionnable sur ce head.
-- CI `33425435804` et continuité `33425435724` entièrement vertes.
+- Head local et distant publié : `cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3`.
+- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` sur ce head.
+- CI `33427555175` et continuité `33427555275` entièrement vertes.
 - Provider examiné : WhatsApp Cloud API directe de Meta, non activé.
 - Worktree préservé : `tmp/` reste non suivi et hors index.
 
@@ -15,17 +15,17 @@ La tranche empêche qu'un webhook Meta réel soit rejeté ou casse l'idempotence
 
 ## Alignement prompt maître
 
-Les pages 3-7, 13-22, 26-38, 46, 48 et 64-71 du prompt maître ont été relues pour ce checkpoint; les pages 29, 32, 37, 48, 64 et 69 ont aussi été inspectées visuellement.
+Les pages 3-7, 13-22, 26-38, 46, 48 et 64-71 du prompt maître ont été relues pour ce checkpoint; les pages 48 et 69 ont aussi été inspectées visuellement pendant ce heartbeat.
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Compatibilité ingress OS-5 traitée et publiée avant tout module secondaire; quatre documents actualisés; aucun CRM/Kanban/dashboard/OS-6 sélectionné | Checkpoint humain Meta |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Head final et reprise revérifiés; aucun CRM/Kanban/dashboard/OS-6 sélectionné; dépôt local/distant aligné | Checkpoint humain Meta |
 | 13-18, 30-33 | Signature avant parsing, entrée non fiable bornée, identité opaque et action durable idempotente | Signature HMAC vérifiée avant JSON; champs officiels explicitement typés; `wamid` opaque conservé; idempotence/corrélation dérivées par SHA-256; rejeu sans doublon; CI verte | Preuve fournisseur externe |
 | 17-22, 26-30 | PostgreSQL, RLS, runtime fournisseur et isolation tenant | Endpoint à 16 chiffres résolu sous le bon tenant; conversation, identité et liaison créées par services tenant-aware; aucun grant Data API ajouté; PostgreSQL/RLS CI verts | Gestionnaire de secrets réel non configuré |
-| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | Fixture anonymisée; local 17 fichiers/108 tests; CI 142 fichiers/653 tests, build et 20 Playwright verts | Preuve fournisseur externe |
+| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | Head final : CI 33427555175 et continuité 33427555275 vertes avec PostgreSQL/RLS, 142 fichiers/653 tests, build et 20 Playwright | Fournisseur actif en sandbox ou réel avec clés, bloqué par le SMS Meta |
 | 35-38 | Données sensibles protégées et audit sans contenu | Nom, display number, sender, Phone Number ID, timestamp et `wamid` absents des audits, identités et liaisons; seule la provenance conversationnelle conserve l'identifiant externe requis | Gestionnaire de secrets réel non configuré |
 | 64-68 | Runtime provider uniforme, webhook Meta et fournisseur fail-closed | Enveloppe officielle Meta normalisée vers le contrat commun; aucun client Graph ni transport réel; provider toujours non activé | Meta for Developers attend le code SMS; aucun token ni transport réel |
-| 69 | Matrice provider, intégration, sécurité et isolation | Intégration signée avec endpoint 16 chiffres et replay; régression locale 108 tests et CI complète verte | Configuration fournisseur humaine |
+| 69 | Matrice provider, intégration, sécurité et isolation | Matrice relue en rendu; intégration signée avec endpoint 16 chiffres, replay et CI complète verte sur cb3e50b | Configuration fournisseur humaine |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
@@ -51,6 +51,7 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Correctif enveloppe : 4 fichiers/24 tests ingress-webhook verts, puis 17 fichiers/108 tests Meta et coffre verts.
 - ESLint complet, TypeScript, `git diff --check`, continuity-check (`ready`, zéro erreur/avertissement) et build Next.js production verts.
 - La CI `33425435804` est entièrement verte en 19 min 22 s : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/653 tests, build production et 20/20 Playwright. La continuité `33425435724` est verte.
+- Le handoff final `cb3e50b` est lui aussi prouvé : CI `33427555175` verte en 20 min 32 s et continuité `33427555275` verte; PR #11 `MERGEABLE/CLEAN`.
 - Tests ciblés : 14 fichiers réussis et 2 ignorés; 91 tests réussis et 2 PostgreSQL ignorés.
 - Migrations : miroir runtime/SQL, base neuve, upgrade depuis runtime 101 et refus du mauvais couple provider/endpoint validés sous PGlite.
 - ESLint complet, TypeScript, `git diff --check` et build Next.js production verts. Le build a été relancé hors sandbox uniquement pour les polices Google requises.

@@ -940,3 +940,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La continuité `33425435724` est verte. La CI `33425435804` est entièrement verte en 19 min 22 s : dépendances/audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/653 tests, build production et 20/20 Playwright.
 - La PR #11 reste ouverte, brouillon et fusionnable sur le head fonctionnel. Aucun merge, déploiement, secret, requête Graph, message externe, endpoint public ou dépense n'a été déclenché.
 - Le prochain résultat utile reste le checkpoint humain Meta déjà ouvert dans Chrome : l'utilisateur saisit lui-même le code SMS et indique seulement que l'étape est terminée. Après validation, toute création de token persistant demandera une confirmation au moment exact et toute valeur restera hors chat, logs, Git et modèle.
+
+## 2026-08-31 - Heartbeat de continuité au head final à 19:20 UTC
+
+- La copie active est toujours exclusivement `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, lisible et inscriptible. Le head local et distant est `cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3`; `tmp/` reste le seul élément non suivi, préservé et hors index.
+- Le PDF canonique a été revérifié : 71 pages et SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-22, 26-38 et 64-68 ont été relues directement; les pages 48 et 69 ont été inspectées en rendu.
+- `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33427555175` et la continuité `33427555275` sont vertes sur le head exact.
+- La page 31 confirme que le seul critère OS-5 encore manquant est un fournisseur actif en sandbox ou réel avec clés. Le checkpoint humain Meta for Developers reste donc la première étape concrète : saisie du code SMS directement dans Chrome, sans le transmettre au chat.
+- Aucune tâche OS-6, CRM, Kanban ou dashboard n'a été sélectionnée. Aucun secret, token, compte finalisé, requête Graph, message externe, endpoint public, dépense, fusion ou déploiement n'a été déclenché.

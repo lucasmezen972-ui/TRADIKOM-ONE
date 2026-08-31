@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 17-22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026; les pages 29, 32, 37, 48, 64 et 69 ont été contrôlées visuellement.
-- Le head fonctionnel local et distant publié est `24622e9000619fd40c25e40be0d4cebefb8a51c0`. La PR #11 est ouverte, brouillon et fusionnable; la CI `33425435804` et la continuité `33425435724` sont vertes sur ce head.
+- Le head local et distant publié est `cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33427555175` et la continuité `33427555275` sont vertes sur ce head.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -45,6 +45,7 @@ Les pages 13-22, 26-33, 35-38, 46, 48 et 64-69 imposent signature avant parsing,
 - La CI `33422211572` lève ces limites : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20 Playwright verts. La continuité `33422211485` est verte.
 - Correctif enveloppe : 4 fichiers/24 tests ciblés puis 17 fichiers/108 tests de régression verts localement; ESLint complet, TypeScript, build production, continuity-check et `git diff --check` verts.
 - La CI `33425435804` est verte : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/653 tests, build production et 20 Playwright. La continuité `33425435724` est verte.
+- Le head documentaire final `cb3e50b` est également entièrement prouvé par la CI `33427555175` et la continuité `33427555275`; la PR est revenue à `CLEAN`.
 - `git diff --check` est vert.
 
 ## État de vérité
@@ -62,7 +63,7 @@ Les pages 13-22, 26-33, 35-38, 46, 48 et 64-69 imposent signature avant parsing,
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le correctif d'enveloppe officielle est publié au head 24622e9; CI 33425435804 et continuité 33425435724 sont vertes avec PostgreSQL/RLS, 142 fichiers/653 tests, build et 20 Playwright.
+3. Le head final est cb3e50b; CI 33427555175 et continuité 33427555275 sont vertes avec PostgreSQL/RLS, 142 fichiers/653 tests, build et 20 Playwright. La PR #11 est ouverte, brouillon et MERGEABLE/CLEAN.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T18:52:00.000Z",
+  "updatedAt": "2026-08-31T19:20:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "24622e9000619fd40c25e40be0d4cebefb8a51c0",
-  "publishedHeadObserved": "24622e9000619fd40c25e40be0d4cebefb8a51c0",
+  "lastCommit": "cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3",
+  "publishedHeadObserved": "cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3",
   "status": "os5_meta_official_webhook_envelope_compatibility_ci_proven_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La compatibilité de l'ingress avec l'enveloppe webhook WhatsApp Cloud officielle est publiée au head 24622e9 et entièrement prouvée par la CI 33425435804 et la continuité 33425435724 : champs officiels additionnels bornés, wamid avec padding accepté, externalMessageId opaque conservé, clés internes idempotence/corrélation dérivées par SHA-256, endpoint 16 chiffres, replay sans doublon et absence de données d'identité fournisseur dans audits et liaisons. Meta for Developers reste en attente du code SMS saisi directement dans Chrome; aucun secret, appel Graph ou message externe.",
+  "currentObjective": "Le head final cb3e50b est publié, la PR #11 est ouverte, brouillon, MERGEABLE/CLEAN, et la CI 33427555175 ainsi que la continuité 33427555275 sont vertes. La compatibilité d'enveloppe WhatsApp Cloud, le coffre chiffré Meta, PostgreSQL/RLS, 142 fichiers/653 tests, le build et 20 Playwright sont prouvés. La page 31 impose maintenant le checkpoint fournisseur : Meta for Developers attend le code SMS saisi directement dans Chrome. Aucun secret, appel Graph, message externe, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,8 +28,8 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Poursuivre OS-5 conversation-first en rendant l'ingress compatible avec l'enveloppe webhook WhatsApp Cloud officielle observée, sans relâcher la validation d'entrée non fiable ni stocker les données utilisateur fournies. Les pages 13-18, 22, 29, 32, 37, 48, 64 et 69 imposent signature avant parsing, schémas bornés, identité opaque tenant-aware, idempotence durable, audit sans PII et preuve d'intégration. Accepter explicitement messaging_product, display_phone_number, contacts et timestamp; accepter un wamid opaque jusqu'à 256 caractères incluant le padding base64, tout en dérivant idempotencyKey et correlationId d'une empreinte sûre conforme aux contrats internes.",
-      "evidenceExpected": "Fixture anonymisée reproduisant exactement la forme Meta fournie, signature HMAC valide, normalisation réussie, externalMessageId opaque conservé, clés internes hexadécimales bornées et stables, champs contact/display/timestamp absents du résultat public hors informations métier déjà requises, replay d'ingress idempotent et audit sans nom, numéro, texte ou wamid. Régressions adaptateur/ingress/webhook vertes; aucune requête Graph ni message externe. PDF canonique déjà revérifié à 71 pages et SHA-256 exact, pages cœur et OS-5 relues directement."
+      "requirement": "Respecter l'ordre page 48 et la Definition of Done page 32 : OS-5 ne passe au fournisseur réel qu'après l'intervention humaine minimale prévue pages 6, 29 et 31. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard en substitution. L'utilisateur saisit le code SMS directement dans l'interface officielle; les secrets ne transitent jamais dans le chat, les logs, Git ou le modèle. Toute création de token persistant et toute requête Graph, activation ou message externe exigent une confirmation distincte au moment exact.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Dépôt local/distant aligné sur cb3e50b, PR #11 MERGEABLE/CLEAN, CI 33427555175 et continuité 33427555275 vertes. Checkpoint exact : saisie du SMS directement dans Chrome, puis confirmation juste avant token persistant; zéro secret, Graph, message, endpoint public, déploiement ou dépense avant ces validations."
     }
   },
   "nextAction": "L'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et demander une confirmation au moment exact avant toute création de token persistant; injecter ensuite par références serveur sans lire, afficher, journaliser ou commiter les valeurs. Ne déclencher ni Graph, message, endpoint public, déploiement ou dépense sans autorisation distincte.",
@@ -1355,6 +1355,10 @@
     {
       "command": "publication 24622e9, CI 33425435804 et continuité 33425435724",
       "status": "passed_fast_forward_tmp_excluded_migrations_backup_restore_rls_lint_typecheck_142_files_653_tests_build_20_playwright_continuity_green_pr_11_open_draft_mergeable"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head final cb3e50b le 2026-08-31T19:20Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_and_os5_pages_reviewed_pages_48_69_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33427555175_and_continuity_33427555275_green_tmp_preserved_human_sms_checkpoint"
     }
   ],
   "humanBlockers": [
