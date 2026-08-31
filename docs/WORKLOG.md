@@ -812,3 +812,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - La CI `33361459789` est verte sur le head exact avec migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright. La continuité `33361459787` est verte.
 - Les pages 29, 31-32, 48, 64, 69 et 71 confirment qu'aucune tranche locale secondaire ne doit remplacer le checkpoint fournisseur. La prochaine étape requiert une autorisation humaine distincte pour un compte/app/WABA/numéro de test Meta, un endpoint HTTPS et des secrets gérés, puis un message de preuve explicitement classé sandbox ou réel.
 - Aucun code, compte, application, WABA, numéro, token, secret, endpoint public, client Graph, message externe, dépense, fusion, déploiement, tâche OS-6, CRM, Kanban ou dashboard n'a été créé ou sélectionné.
+
+## 2026-08-31 - Continuité Meta et CI reconfirmées à 07:25 UTC
+
+- La copie active a été contrôlée exclusivement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, lisible et inscriptible sur `codex/tradikom-one-os`; `tmp/` reste non suivi, préservé et hors index.
+- Le PDF canonique conserve 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement; les pages 29, 32, 48, 64, 69 et 71 ont été inspectées en rendu.
+- Après vérification de l'ascendance directe et de l'absence de chevauchement avec `tmp/`, le head local `d784196` a été avancé strictement vers le head distant `19f2ecaa73ace444a4ce7f8311f510168ed97586`, sans reset, clean, stash, changement de branche ni commit de fusion local.
+- `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement avec l'unique lanceur Node natif. La CI `33365186452` et la continuité `33365186446` sont entièrement vertes sur `19f2eca`; la PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`.
+- La première étape non terminée de la page 48 reste le checkpoint humain Meta. Aucun OS-6, CRM, Kanban ou dashboard secondaire n'a été sélectionné; aucun compte, clé, secret, client Graph, endpoint public, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché.

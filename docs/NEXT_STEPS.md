@@ -6,8 +6,8 @@
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026.
 - La réconciliation autorisée avec `main` est publiée par `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`. Les migrations `main` 067-078 / SQL 0061-0072 sont préservées et les migrations OS sont renumérotées 079-102 / SQL 0073-0096.
-- Le head distant de reprise est `d784196f1c9cdfa72b436431c4f05b1b6f714fe3`, descendant documentaire de `50e7cfa`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`.
-- La CI `33361459789` et la continuité `33361459787` sont entièrement vertes sur `50e7cfa`, avec 623 tests et 20 scénarios Playwright; `d784196` ne modifie que les quatre documents de continuité.
+- Le head local et distant de reprise est `19f2ecaa73ace444a4ce7f8311f510168ed97586`, descendant direct de `d784196`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`.
+- La CI `33365186452` et la continuité `33365186446` sont entièrement vertes sur `19f2eca`, y compris migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests, build et Playwright.
 
 ## Tranche livrée : flux WhatsApp Cloud Meta, sans activation
 
@@ -32,10 +32,10 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le
 ## Validation disponible
 
 - Post-réconciliation local : 12 fichiers/65 tests Meta verts; 2 fichiers PostgreSQL/RLS ignorés faute de `DATABASE_URL` local.
-- `pnpm agent:continuity-check` : `ready`, zéro erreur. La clé de script `tsx` dupliquée qui provoquait `EPERM` a été supprimée; la commande native Node est désormais l'unique lanceur et un test empêche sa régression. L'environnement distant avertit seulement que le PDF local est absent.
+- `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement localement. La clé de script `tsx` dupliquée qui provoquait `EPERM` a été supprimée; la commande native Node est désormais l'unique lanceur et un test empêche sa régression. L'environnement distant avertit seulement que le PDF local est absent.
 - Validation locale du correctif : lint et typecheck complets verts; 140 fichiers Vitest, 606 tests réussis, 18 ignorés et zéro échec; build production vert avec les variables factices de la CI.
-- CI `33361459789` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 623 tests, build production et 20 scénarios Playwright verts sur `50e7cfa`.
-- Continuité `33361459787` : verte sur `50e7cfa`.
+- CI `33365186452` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright verts sur `19f2eca`.
+- Continuité `33365186446` : verte sur `19f2eca`.
 - `git diff --check`, séquence des migrations 0065-0096 et absence de marqueurs de conflit : verts.
 
 ## État de vérité
@@ -54,7 +54,7 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le
 2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
 3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
 4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
-5. La réconciliation est publiée par 64192145; le head de reprise d784196 descend du head 50e7cfa dont la CI 33361459789 et la continuité 33361459787 sont entièrement vertes.
+5. La réconciliation est publiée par 64192145; le head de reprise 19f2eca est synchronisé et sa CI 33365186452 ainsi que sa continuité 33365186446 sont entièrement vertes.
 6. Conserver tmp/ hors index et maintenir Meta disabled/not_configured/mock : aucune clé, client Graph, app, WABA, endpoint public ou message réel.
 7. La prochaine preuve fournisseur exige une autorisation humaine distincte; ne pas sélectionner OS-6, CRM, Kanban ou dashboard entre-temps.
 8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.
