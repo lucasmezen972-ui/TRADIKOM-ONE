@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T17:50:18.000Z",
+  "updatedAt": "2026-08-31T18:15:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "02584ba0712c8593db40145fb73424d729ddd0fe",
-  "publishedHeadObserved": "02584ba0712c8593db40145fb73424d729ddd0fe",
-  "status": "os5_meta_secret_vault_ready_for_publication_human_otp_pending",
+  "lastCommit": "f99b5f39e4dd1dfe116df60c7969f815513a8084",
+  "publishedHeadObserved": "f99b5f39e4dd1dfe116df60c7969f815513a8084",
+  "status": "os5_meta_secret_vault_ci_proven_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche locale OS-5 étend le coffre fournisseur chiffré à WhatsApp Meta : migration additive runtime 103 / SQL 0097, clé étrangère composée tenant-endpoint-provider, repositories et services provider-scoped, rotation/révocation idempotentes, résolveurs éphémères et audits sans valeur sensible. La compatibilité Twilio est préservée. La preuve locale compte 14 fichiers réussis et 2 PostgreSQL ignorés, 91 tests réussis et 2 ignorés, plus lint, typecheck et build production verts; PostgreSQL/RLS et la suite exhaustive doivent être confirmés par la CI après publication. La configuration réelle autorisée par l'utilisateur reste au checkpoint Meta for Developers : le code SMS doit être saisi directement dans Chrome, sans clé dans le chat ou le modèle. Aucun appel Graph ni message externe n'est autorisé par ce checkpoint.",
+  "currentObjective": "Le coffre fournisseur chiffré WhatsApp Meta est publié au head f99b5f3 et prouvé par la CI 33422211572 et la continuité 33422211485 : migration runtime 103 / SQL 0097, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20 Playwright verts. Il lie tenant-endpoint-provider, généralise repositories/services, conserve Twilio, chiffre les payloads Meta, fournit rotation/révocation idempotentes et résolveurs éphémères, et audite sans valeur sensible. La configuration réelle autorisée par l'utilisateur reste au checkpoint Meta for Developers : le code SMS doit être saisi directement dans Chrome, sans clé dans le chat ou le modèle. Aucun appel Graph ni message externe n'est autorisé par ce checkpoint.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,7 +32,7 @@
       "evidenceExpected": "Migration runtime 103 et miroir SQL 0097 acceptant seulement whatsapp_twilio/whatsapp_meta, repositories et services explicitement provider-scoped, compatibilité Twilio préservée, payloads Meta chiffrés avec keyring et résolus uniquement en mémoire, rotation/révocation idempotentes, audit sans contenu sensible, refus cross-tenant et tests PostgreSQL/RLS. PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages techniques 17-22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 37, 48, 64 et 69. Checkpoint humain exact : saisir le code SMS Meta dans Chrome puis reprendre la console officielle; aucune valeur secrète ne transitera dans le chat."
     }
   },
-  "nextAction": "Publier en fast-forward la tranche du coffre Meta puis attendre sa CI PostgreSQL/RLS. En parallèle, l'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et préparer l'injection par références de gestionnaire de secrets sans lire, afficher, journaliser ou commiter les valeurs. Demander une confirmation au moment exact avant toute création de token persistant; ne déclencher ni requête Graph, message, endpoint public, déploiement ou dépense.",
+  "nextAction": "L'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et préparer l'injection par références de gestionnaire de secrets sans lire, afficher, journaliser ou commiter les valeurs. Demander une confirmation au moment exact avant toute création de token persistant; ne déclencher ni requête Graph, message, endpoint public, déploiement ou dépense.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1343,6 +1343,10 @@
     {
       "command": "GitHub avant publication au head 9288aa7",
       "status": "passed_local_remote_aligned_pr_11_open_draft_mergeable_clean_ci_33416889004_and_continuity_33416888927_green"
+    },
+    {
+      "command": "publication du coffre Meta au head f99b5f3 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33422211572_green_migrations_backup_restore_rls_lint_typecheck_142_files_651_tests_build_20_playwright_continuity_33422211485_green"
     }
   ],
   "humanBlockers": [

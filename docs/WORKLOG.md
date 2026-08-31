@@ -916,3 +916,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Validation non revendiquée : la suite exhaustive est restée silencieuse et a été interrompue sans assertion en échec; `pnpm db:verify` exige `DATABASE_URL`. La CI du futur head doit apporter migrations PostgreSQL, backup/restauration, RLS, suite complète, build et Playwright.
 - Le gestionnaire local a recréé `node_modules` pendant une tentative de build sous sandbox. Le dossier incomplet a été mis à l'écart dans `/private/tmp`, puis les 601 dépendances exactes ont été restaurées depuis le cache local et le lockfile sans modifier les sources ni le lockfile. Le build direct final est vert hors sandbox, l'accès réseau ayant servi uniquement aux polices Google requises.
 - Le parent local et distant vérifié est `9288aa767d758c25fd7383a101a8881405f1668a`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33416889004` et la continuité `33416888927` sont vertes sur ce parent, donc antérieures à la tranche locale. `tmp/` reste non suivi et préservé.
+
+## 2026-08-31 - Coffre WhatsApp Meta publié et CI verte à 18:15 UTC
+
+- Après une seconde vérification distante, `9288aa7` était toujours le parent exact. Le commit `f99b5f39e4dd1dfe116df60c7969f815513a8084` a été poussé en fast-forward sans force; les 12 fichiers contrôlés ont été inclus et `tmp/` est resté hors index.
+- La continuité `33422211485` est verte. La CI `33422211572` est entièrement verte en 19 min 15 s : dépendances/audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20/20 Playwright.
+- La PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`. Aucun merge, déploiement, DNS, dépense, endpoint public, requête Graph ou message externe n'a été déclenché.
+- Les extraits `muse-spark-1.2`, `MODEL_API_KEY` et `api.meta.ai/v1/responses` fournis par l'utilisateur appartiennent à l'API de modèles IA Meta et non à WhatsApp Cloud API; ils n'ont pas été installés, exécutés ou configurés dans TRADIKOM ONE.
+- La prochaine étape reste strictement humaine : saisir le code SMS dans l'onglet Meta for Developers. Ensuite seulement, inventorier app/WABA/Phone Number ID et demander une confirmation au moment exact avant toute création de token persistant; aucune valeur ne doit transiter dans le chat ou le modèle.

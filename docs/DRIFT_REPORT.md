@@ -1,11 +1,11 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint — 31 août 2026, 17:50 UTC
+## Checkpoint — 31 août 2026, 18:15 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- Parent local et distant observé : `9288aa767d758c25fd7383a101a8881405f1668a`.
-- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` avant publication de la tranche locale.
-- CI `33416889004` et continuité `33416888927` vertes sur le parent publié.
+- Head fonctionnel local et distant publié : `f99b5f39e4dd1dfe116df60c7969f815513a8084`.
+- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN`.
+- CI `33422211572` et continuité `33422211485` entièrement vertes sur ce head.
 - Provider examiné : WhatsApp Cloud API directe de Meta, non activé.
 - Worktree préservé : `tmp/` reste non suivi et hors index.
 
@@ -19,12 +19,12 @@ Les pages 3-7, 17-22, 26-38, 46, 48 et 64-71 du prompt maître ont été relues 
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | OS-5 Meta poursuivi; quatre documents actualisés; aucun CRM/Kanban/dashboard/OS-6 sélectionné | Publication et CI du nouveau head encore à produire |
-| 17-22, 26-30 | PostgreSQL, RLS, chiffrement, runtime fournisseur, action durable et idempotence | Migration 103 / SQL 0097; provider fermé à Twilio/Meta; clé étrangère tenant-endpoint-provider; rotation/révocation et rejeu idempotent | PostgreSQL/RLS réel non disponible localement, CI requise |
-| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | 91 tests ciblés verts, lint, typecheck et build production verts; aucun secret réel utilisé | Suite exhaustive locale silencieuse; preuve CI complète requise |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | OS-5 Meta publié; quatre documents actualisés; aucun CRM/Kanban/dashboard/OS-6 sélectionné | Checkpoint humain Meta encore requis |
+| 17-22, 26-30 | PostgreSQL, RLS, chiffrement, runtime fournisseur, action durable et idempotence | Migration 103 / SQL 0097; provider fermé à Twilio/Meta; clé étrangère tenant-endpoint-provider; rotation/révocation et rejeu idempotent; CI PostgreSQL verte | Gestionnaire de secrets réel non configuré |
+| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | CI : migrations/backup/RLS, lint, typecheck, 142 fichiers/651 tests, build et 20 Playwright verts | Preuve fournisseur externe toujours soumise au checkpoint humain |
 | 35-38 | Données sensibles protégées et audit sans contenu | AES-256-GCM avec AAD tenant/provider/endpoint/identité/portée/version; résolveurs éphémères; audit sans token, secret, numéro, contenu ou ciphertext | Gestionnaire de secrets réel non configuré |
 | 64-68 | Runtime provider uniforme, endpoint tenant-aware et fournisseur fail-closed | Repositories/services provider-scoped, liaison Meta exigée pour l'identité, transport branché seulement en `mock` | Meta for Developers attend le code SMS; aucun token ni transport réel |
-| 69 | Matrice provider, intégration, sécurité et isolation | 14 fichiers réussis, 2 PostgreSQL ignorés; 91 tests réussis, 2 ignorés; base neuve et upgrade PGlite prouvées | Migrations/backup/RLS, suite complète et Playwright à confirmer en CI |
+| 69 | Matrice provider, intégration, sécurité et isolation | Local : 91 tests ciblés verts; CI : 142 fichiers/651 tests et 20 Playwright verts, avec PostgreSQL/RLS | Aucun écart logiciel sur cette tranche; reste la configuration fournisseur humaine |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
@@ -46,13 +46,13 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Tests ciblés : 14 fichiers réussis et 2 ignorés; 91 tests réussis et 2 PostgreSQL ignorés.
 - Migrations : miroir runtime/SQL, base neuve, upgrade depuis runtime 101 et refus du mauvais couple provider/endpoint validés sous PGlite.
 - ESLint complet, TypeScript, `git diff --check` et build Next.js production verts. Le build a été relancé hors sandbox uniquement pour les polices Google requises.
-- La suite `pnpm test` exhaustive est restée silencieuse et a été interrompue sans assertion en échec; elle n'est pas présentée comme verte.
-- `pnpm db:verify` refuse sans `DATABASE_URL`; aucune clé ou URL PostgreSQL n'a été demandée. La CI doit vérifier migrations, backup/restauration et RLS.
-- La CI publiée `33416889004` est verte mais précède la tranche locale; elle ne prouve donc pas encore runtime 103 / SQL 0097.
+- La suite `pnpm test` exhaustive locale est restée silencieuse et a été interrompue sans assertion en échec; elle n'est pas présentée comme verte localement.
+- `pnpm db:verify` local refuse sans `DATABASE_URL`; aucune clé ou URL PostgreSQL n'a été demandée.
+- La CI publiée `33422211572` lève ces limites : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20 Playwright verts en 19 min 15 s. La continuité `33422211485` est verte.
 
 ## Classification des états
 
-- Livré localement : coffre Meta chiffré, provider-scoped, versionné, révocable et audité sans secret.
+- Livré et prouvé CI : coffre Meta chiffré, provider-scoped, versionné, révocable et audité sans secret.
 - Réel : aucun compte développeur finalisé, app, WABA, numéro, token, endpoint public, requête Graph ou message.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport injecté uniquement en test, sans réseau fournisseur.
@@ -61,4 +61,4 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Écarts restants et reprise
 
-Le premier écart est de publier le coffre Meta et d'obtenir sa CI PostgreSQL/RLS complète. Le checkpoint externe reste ensuite Meta for Developers : l'utilisateur saisit le code SMS directement dans Chrome et ne le transmet pas au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Les secrets doivent être injectés par références serveur sans être lus, affichés, journalisés ou commis. Aucune requête Graph, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
+Le coffre Meta est publié et sa CI PostgreSQL/RLS est verte. Le premier écart restant est donc Meta for Developers : l'utilisateur saisit le code SMS directement dans Chrome et ne le transmet pas au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Les secrets doivent être injectés par références serveur sans être lus, affichés, journalisés ou commis. Aucune requête Graph, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.

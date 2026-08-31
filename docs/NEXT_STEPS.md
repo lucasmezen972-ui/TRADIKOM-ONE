@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 17-22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026; les pages 29, 32, 37, 48, 64 et 69 ont été contrôlées visuellement.
-- Le head local et distant de départ est `9288aa767d758c25fd7383a101a8881405f1668a`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33416889004` et la continuité `33416888927` sont vertes sur ce head.
+- Le head fonctionnel local et distant publié est `f99b5f39e4dd1dfe116df60c7969f815513a8084`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33422211572` et la continuité `33422211485` sont vertes sur ce head.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -24,24 +24,23 @@ Les pages 17-22, 26-33, 35-38, 46, 48 et 64-69 imposent le chiffrement des crede
 
 ## Prochaine action concrète
 
-1. Enregistrer et pousser la tranche locale en fast-forward, après une dernière preuve que le distant reste le parent exact et sans inclure `tmp/`.
-2. Attendre la CI du nouveau head et exiger migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite complète, build et Playwright verts.
-3. L'utilisateur saisit le code SMS directement dans Chrome puis indique seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
-4. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
-5. Injecter les valeurs réelles par références de gestionnaire de secrets côté serveur, sans les lire, afficher, journaliser ou commiter. Conserver le provider `not_configured`/`awaiting_human_auth` tant que la composition n'est pas complète.
-6. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte; aucune de ces actions n'est couverte par l'autorisation de stocker les clés.
+1. L'utilisateur saisit le code SMS directement dans Chrome puis indique seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
+2. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
+3. Injecter les valeurs réelles par références de gestionnaire de secrets côté serveur, sans les lire, afficher, journaliser ou commiter. Conserver le provider `not_configured`/`awaiting_human_auth` tant que la composition n'est pas complète.
+4. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte; aucune de ces actions n'est couverte par l'autorisation de stocker les clés.
 
 ## Validation disponible
 
 - Régression coffre/Meta : 14 fichiers réussis, 2 fichiers PostgreSQL ignorés, 91 tests réussis et 2 ignorés faute de `DATABASE_URL`.
 - Migrations PGlite : base neuve et mise à niveau depuis runtime 101 validées; mauvais couple endpoint/provider refusé.
 - ESLint complet, TypeScript et build Next.js production verts. Le build a été relancé hors sandbox uniquement pour charger les polices Google requises.
-- `pnpm test` exhaustif est resté silencieux et a été interrompu sans assertion en échec; `pnpm db:verify` refuse correctement sans `DATABASE_URL`. La CI du nouveau head doit fournir ces preuves.
-- `git diff --check` est vert. La dernière CI publiée, antérieure à cette tranche, reste `33416889004` verte sur `9288aa7`.
+- `pnpm test` exhaustif local est resté silencieux et a été interrompu sans assertion en échec; `pnpm db:verify` refuse correctement sans `DATABASE_URL`.
+- La CI `33422211572` lève ces limites : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20 Playwright verts. La continuité `33422211485` est verte.
+- `git diff --check` est vert.
 
 ## État de vérité
 
-- Livré localement : coffre chiffré Meta provider-scoped, migrations, rotation/révocation, résolveurs, audit sûr et tests.
+- Livré et prouvé CI : coffre chiffré Meta provider-scoped, migrations, rotation/révocation, résolveurs, audit sûr et tests.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -53,11 +52,9 @@ Les pages 17-22, 26-33, 35-38, 46, 48 et 64-69 imposent le chiffrement des crede
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le parent publié observé est 9288aa7; la tranche locale ajoute runtime 103 / SQL 0097 et le coffre Meta provider-scoped.
-4. Rejouer les tests coffre/Meta, lint, typecheck et diff check; DATABASE_URL reste réservé à la CI.
-5. Réconcilier le head distant uniquement par fast-forward sûr, commiter sans tmp/, pousser sans force et suivre la CI.
-6. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
-7. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
-8. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
-9. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.
+3. Le coffre Meta est publié au head f99b5f3; CI 33422211572 et continuité 33422211485 sont vertes.
+4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
+5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
+6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
+7. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.
 ```
