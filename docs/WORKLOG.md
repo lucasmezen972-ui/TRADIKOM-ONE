@@ -763,3 +763,12 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La page 32 et la matrice page 69 confirment que PostgreSQL/RLS et CI restent la première preuve manquante; aucune tâche OS-6, CRM, Kanban ou dashboard n'a été sélectionnée.
 - GitHub est inchangé au head `b3642e3` : PR #11 ouverte, brouillon, `CONFLICTING/DIRTY`, zéro contrôle et zéro run Actions créé pour ce head. La dernière CI demeure `32374109077` sur `33777bf`, avec l'unique échec OS-6 `conversation_messages_check` déjà documenté.
 - Aucune réconciliation avec `main`, fusion, activation Meta, clé, client Graph, message réel, dépense ou déploiement n'a été tenté. Reprise exacte : obtenir l'autorisation humaine de réconcilier le conflit de PR, puis laisser la CI PostgreSQL/RLS vérifier le lot Meta publié.
+
+## 2026-08-31 - Heartbeat de continuité à 04:18 UTC
+
+- La copie active reste `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, lisible et inscriptible, sur `codex/tradikom-one-os`. Le head local et distant est `39002dd`; `tmp/` reste le seul élément non suivi et la copie iCloud n'a pas été utilisée.
+- Le PDF canonique est inchangé : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement. `pnpm agent:continuity-check` retourne `ready`, sans erreur ni avertissement.
+- GitHub est inchangé : PR #11 ouverte, brouillon, `CONFLICTING/DIRTY`, aucun contrôle ni run créé pour `39002dd`; dernière CI `32374109077` sur `33777bf`, rouge uniquement sur le test OS-6 déjà documenté.
+- Une analyse `git merge-tree` en lecture seule a réduit l'incertitude sans modifier le dépôt. La base commune est `aa46bb1`, `origin/main` est `2a73d05`, avec 24 commits exclusifs côté main et 90 côté branche. Seize fichiers présentent des conflits; `pnpm-lock.yaml` compte 14 hunks, le workflow et `src/lib/db.ts` 4 chacun, le script de continuité et le service tenant 2 chacun.
+- Les chemins conflictuels sont consignés dans `NEXT_STEPS.md`. La stratégie préparée est de combiner les configurations et historiques, préserver Meta et les évolutions tenant, puis régénérer le lockfile. Cette stratégie n'a pas été exécutée faute d'autorisation de réconcilier avec `main`.
+- Aucun code, merge, reset, clean, stash, changement de branche, provider, secret, message externe, dépense ou déploiement n'a été produit.

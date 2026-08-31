@@ -1,10 +1,10 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-- Date : 31 août 2026, 03:20 UTC
+- Date : 31 août 2026, 04:20 UTC
 - Branche : `codex/tradikom-one-os`
 - PR : #11, ouverte en brouillon et en conflit avec `main`
 - Head distant avant publication du lot : `33777bfc01ab08982671aa10b7e3487bdc82eb16`
-- Head publié observé avant le présent checkpoint : `b3642e32b3212c63474ad93186d8c0e7e6bed6fe`
+- Head publié observé avant le présent checkpoint : `39002dd57adfa0af08ebad408a22a6e7aacc22f1`
 - Commit local du lot OS-5 Meta : `eec609b75364a2ded1afa14ecdd71e47c75327b4`
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**
 
@@ -16,7 +16,7 @@ La tranche complète localement le chemin prioritaire conversation → action du
 
 | Pages relues | Exigence | Preuve obtenue | Écart restant |
 | --- | --- | --- | --- |
-| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre d'exécution strict et continuité documentée | Flux Meta entrant puis sortant traité comme tranche OS-5; documents de reprise actualisés; aucune nouvelle tâche CRM/Kanban/dashboard sélectionnée | Le commit OS-6 distant préexistant reste hors de cette tranche et sa CI rouge n'est pas traité comme prochaine priorité |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre d'exécution strict et continuité documentée | Flux Meta entrant puis sortant traité comme tranche OS-5; documents de reprise actualisés; aucune nouvelle tâche CRM/Kanban/dashboard sélectionnée; conflit de PR audité sans fusion | Le commit OS-6 distant préexistant reste hors de cette tranche et sa CI rouge n'est pas traitée comme prochaine priorité |
 | 13-18, 22, 26-30 | Adaptateurs bornés, runtime provider, action durable, policy, idempotence et gouvernance | Adaptateur Meta sans client Graph; réservation durable avant effet; policy, claim/lease, retry/backoff et clé d'idempotence testés; lot publié | Provider réel volontairement non configuré; CI bloquée par le conflit de PR |
 | 31-33 | Definition of Done stricte : migrations neuves/mise à niveau, PostgreSQL/RLS, tests, build et preuve utilisable | Migrations runtime/SQL additives, tests PGlite de base neuve et upgrade, 65 tests Meta, régression Twilio, suite complète, lint, typecheck et build verts | Test PostgreSQL/RLS ignoré sans moteur local; aucun run n'est créé sur le head publié tant que la PR est en conflit |
 | 35-38 | Entrées non fiables, données sensibles protégées, audit sans contenu ni secret | Signature avant base côté ingress; liaisons par empreintes opaques; audit sans numéro, identité, corps ou credential; aucune clé dans le dépôt | Gestion réelle de secrets et endpoint HTTPS relèvent d'une autorisation humaine ultérieure |
@@ -42,7 +42,8 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - État distant avant publication : continuité `32374109126` verte; CI `32374109077` rouge uniquement sur `goal-watch-service` avec la contrainte `conversation_messages_check`, donc sur le commit OS-6 distant et non sur le lot Meta encore local.
 - Réconciliation Git : le head local `787d54b` était l'ancêtre direct du head distant `33777bf`. Un fast-forward strict d'un commit, sans chemin commun avec les modifications Meta, a préservé le worktree sale; aucun reset, clean, stash, changement de branche ou commit de fusion.
 - Publication effectuée sans force : `eec609b` contient les 22 fichiers contrôlés du lot et de continuité, puis `545c402` actualise le handoff; `tmp/` est exclu et reste non suivi localement.
-- État CI reconfirmé au heartbeat de 03:18 UTC : PR #11 au head `b3642e3`, brouillon et `CONFLICTING/DIRTY`; aucun contrôle ni run n'a été créé pour ce head. La dernière CI rouge `32374109077` concerne `33777bf` et son seul échec observé reste OS-6 `conversation_messages_check`.
+- État CI reconfirmé au heartbeat de 04:18 UTC : PR #11 au head `39002dd`, brouillon et `CONFLICTING/DIRTY`; aucun contrôle ni run n'a été créé pour ce head. La dernière CI rouge `32374109077` concerne `33777bf` et son seul échec observé reste OS-6 `conversation_messages_check`.
+- Audit de conflit sans mutation : base commune `aa46bb1`, `origin/main` `2a73d05`, divergence 24/90 commits. Seize chemins sont conflictuels : 2 configuration/workflow, 7 documents, 1 script, 3 manifestes/lockfile et 3 fichiers applicatifs. `pnpm-lock.yaml` concentre 14 hunks; `src/lib/db.ts` en concentre 4.
 
 ## Classification des états
 
@@ -56,4 +57,4 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Écarts restants et reprise
 
-Le lot Meta est publié. Le heartbeat a reconfirmé le PDF exact, les pages requises, le dépôt synchronisé avant checkpoint et l'absence de nouveau contrôle GitHub. Une intervention humaine est indispensable pour autoriser la réconciliation du conflit entre la PR #11 et `main`; aucune fusion de PR ni réécriture d'historique n'a été tentée. Après réconciliation, surveiller la CI PostgreSQL et attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.
+Le lot Meta est publié. Le heartbeat a reconfirmé le PDF exact, les pages requises, le dépôt synchronisé avant checkpoint et l'absence de nouveau contrôle GitHub. La future réconciliation est maintenant bornée à 16 fichiers, mais une intervention humaine reste indispensable pour l'autoriser; aucune fusion de PR, écriture d'index ou réécriture d'historique n'a été tentée. Après réconciliation et régénération du lockfile, surveiller la CI PostgreSQL et attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.

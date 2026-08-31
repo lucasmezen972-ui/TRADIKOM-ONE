@@ -6,8 +6,9 @@
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 30 août 2026.
 - La branche locale a été réconciliée sans perte par fast-forward strict de `787d54b` vers le head distant `33777bf`; le lot Meta sale n'avait aucun chemin en conflit avec le commit OS-6 distant et reste intégralement préservé.
-- Le lot `eec609b` et les handoffs documentaires jusqu'à `b3642e3` ont été poussés sans force; la branche locale et distante étaient synchronisées avant le présent checkpoint et `tmp/` est resté exclusivement local.
-- La PR #11 est ouverte, brouillon, `CONFLICTING/DIRTY` avec `main`. Au heartbeat de 03:18 UTC, aucun `statusCheckRollup` ni run GitHub Actions n'a été créé pour `b3642e3`; la dernière CI reste `32374109077`, rouge uniquement sur `goal-watch-service / conversation_messages_check` du head précédent `33777bf`.
+- Le lot `eec609b` et les handoffs documentaires jusqu'à `39002dd` ont été poussés sans force; la branche locale et distante sont synchronisées avant le présent checkpoint et `tmp/` reste exclusivement local.
+- La PR #11 est ouverte, brouillon, `CONFLICTING/DIRTY` avec `main`. Au heartbeat de 04:18 UTC, aucun `statusCheckRollup` ni run GitHub Actions n'a été créé pour `39002dd`; la dernière CI reste `32374109077`, rouge uniquement sur `goal-watch-service / conversation_messages_check` du head précédent `33777bf`.
+- `origin/main` pointe sur `2a73d05`; depuis la base commune `aa46bb1`, main compte 24 commits exclusifs et la branche 90. L'audit `merge-tree` en lecture seule identifie 16 fichiers conflictuels sans modifier l'index ni le worktree.
 
 ## Dernière tranche livrée localement : flux sortant WhatsApp Cloud Meta, sans activation
 
@@ -24,10 +25,17 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 
 ## Prochaine action concrète
 
-1. Obtenir l'autorisation humaine de réconcilier la PR #11 avec `main`; préserver les commits Meta et ne pas fusionner la PR elle-même.
-2. Après réconciliation, laisser démarrer la CI `pull_request` et obtenir la preuve PostgreSQL/RLS de `channel_provider_identity_bindings`.
+1. Obtenir l'autorisation humaine de réconcilier la PR #11 avec `main`; préserver les commits Meta et les historiques documentaires, sans fusionner la PR elle-même.
+2. Résoudre les 16 fichiers inventoriés ci-dessous, régénérer `pnpm-lock.yaml`, puis laisser démarrer la CI `pull_request` et obtenir la preuve PostgreSQL/RLS de `channel_provider_identity_bindings`.
 3. Distinguer l'échec historique OS-6 `conversation_messages_check` d'un éventuel défaut directement causé par le lot Meta; ne corriger qu'un défaut OS-5 prouvé.
 4. Ne pas reprendre CRM, Kanban, dashboard secondaire ni Goal and Watch Engine : ils ne remplacent pas la première étape OS-5 non terminée de la page 48.
+
+### Inventaire de réconciliation préparé en lecture seule
+
+- Configuration/workflow : `.env.example`, `.github/workflows/tradikom-continuity.yml`.
+- Continuité : `docs/AGENT_STATE.json`, `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md`, `docs/DRIFT_REPORT.md`, `docs/NEXT_STEPS.md`, `docs/RESUME_PROMPT.md`, `docs/ROADMAP_TRADIKOM_ONE_OS.md`, `docs/WORKLOG.md`, `scripts/agent/continuity-check.ts`.
+- Dépendances : `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`; le lockfile comporte 14 hunks et doit être régénéré après résolution des manifestes.
+- Application : `src/lib/db.ts`, `src/lib/environment.ts`, `src/modules/tenants/service.ts`; préserver à la fois les migrations/runtime Meta de la branche et les évolutions tenant de `main`.
 
 ## Validation disponible
 
@@ -54,8 +62,8 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
 3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
 4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
-5. Le lot Meta est publié sur eec609b et ses handoffs documentaires atteignent b3642e3 avant le présent checkpoint; conserver tmp/ hors index.
-6. Demander l'autorisation avant de réconcilier le conflit de PR avec main, puis surveiller la CI PostgreSQL/RLS; ne corriger qu'un défaut attribuable à OS-5 Meta.
+5. Le lot Meta est publié sur eec609b et ses handoffs documentaires atteignent 39002dd avant le présent checkpoint; conserver tmp/ hors index.
+6. Demander l'autorisation avant de réconcilier les 16 conflits avec main; régénérer le lockfile, puis surveiller la CI PostgreSQL/RLS et ne corriger qu'un défaut attribuable à OS-5 Meta.
 7. Garder Meta disabled/not_configured/mock : aucune clé, client Graph, app, WABA, endpoint public ou message réel.
 8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.
 9. Mettre à jour les quatre documents avant arrêt. Ne pas fusionner, déployer, dépenser ni demander de secret.
