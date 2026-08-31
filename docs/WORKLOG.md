@@ -933,3 +933,10 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Validation locale : 4 fichiers/24 tests ingress-webhook verts, puis 17 fichiers/108 tests Meta et coffre verts. ESLint complet, TypeScript, `git diff --check`, continuity-check (`ready`, zéro erreur/avertissement) et build Next.js production sont verts.
 - Le parent local et distant observé est `54755dec72a755f13c1b8602b9bb7c4120b91df1`; la publication et la CI du correctif restent à effectuer. `tmp/` demeure non suivi et hors index.
 - Aucun secret, code SMS, compte, app, WABA, numéro réel, client Graph, requête fournisseur, message externe, endpoint public, dépense, fusion ou déploiement n'a été créé ou déclenché. Le checkpoint suivant reste la saisie du code SMS directement par l'utilisateur dans Chrome après preuve CI de ce correctif.
+
+## 2026-08-31 - Enveloppe webhook officielle Meta publiée et CI verte à 18:52 UTC
+
+- Après deux fetchs et vérification d'ascendance, le parent distant `54755de` était exact. Les sept fichiers contrôlés ont été commités sous `24622e9000619fd40c25e40be0d4cebefb8a51c0` puis poussés en fast-forward sans force; `tmp/` est resté hors index.
+- La continuité `33425435724` est verte. La CI `33425435804` est entièrement verte en 19 min 22 s : dépendances/audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/653 tests, build production et 20/20 Playwright.
+- La PR #11 reste ouverte, brouillon et fusionnable sur le head fonctionnel. Aucun merge, déploiement, secret, requête Graph, message externe, endpoint public ou dépense n'a été déclenché.
+- Le prochain résultat utile reste le checkpoint humain Meta déjà ouvert dans Chrome : l'utilisateur saisit lui-même le code SMS et indique seulement que l'étape est terminée. Après validation, toute création de token persistant demandera une confirmation au moment exact et toute valeur restera hors chat, logs, Git et modèle.

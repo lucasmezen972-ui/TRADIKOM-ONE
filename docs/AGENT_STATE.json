@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T18:29:00.000Z",
+  "updatedAt": "2026-08-31T18:52:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "54755dec72a755f13c1b8602b9bb7c4120b91df1",
-  "publishedHeadObserved": "54755dec72a755f13c1b8602b9bb7c4120b91df1",
-  "status": "os5_meta_official_webhook_envelope_compatibility_local_proven_ci_pending",
+  "lastCommit": "24622e9000619fd40c25e40be0d4cebefb8a51c0",
+  "publishedHeadObserved": "24622e9000619fd40c25e40be0d4cebefb8a51c0",
+  "status": "os5_meta_official_webhook_envelope_compatibility_ci_proven_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La compatibilité de l'ingress avec l'enveloppe webhook WhatsApp Cloud officielle est corrigée et prouvée localement : champs officiels additionnels bornés, wamid avec padding accepté, externalMessageId opaque conservé et clés internes idempotence/corrélation dérivées par SHA-256. Une fixture intégralement anonymisée prouve signature, résolution endpoint 16 chiffres, rejeu sans doublon et absence de nom, numéros, timestamp ou wamid dans audits et liaisons d'identité. Publier la tranche après réconciliation distante puis obtenir la CI. Meta for Developers reste en attente du code SMS saisi directement dans Chrome; aucun appel Graph ni message externe.",
+  "currentObjective": "La compatibilité de l'ingress avec l'enveloppe webhook WhatsApp Cloud officielle est publiée au head 24622e9 et entièrement prouvée par la CI 33425435804 et la continuité 33425435724 : champs officiels additionnels bornés, wamid avec padding accepté, externalMessageId opaque conservé, clés internes idempotence/corrélation dérivées par SHA-256, endpoint 16 chiffres, replay sans doublon et absence de données d'identité fournisseur dans audits et liaisons. Meta for Developers reste en attente du code SMS saisi directement dans Chrome; aucun secret, appel Graph ou message externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,7 +32,7 @@
       "evidenceExpected": "Fixture anonymisée reproduisant exactement la forme Meta fournie, signature HMAC valide, normalisation réussie, externalMessageId opaque conservé, clés internes hexadécimales bornées et stables, champs contact/display/timestamp absents du résultat public hors informations métier déjà requises, replay d'ingress idempotent et audit sans nom, numéro, texte ou wamid. Régressions adaptateur/ingress/webhook vertes; aucune requête Graph ni message externe. PDF canonique déjà revérifié à 71 pages et SHA-256 exact, pages cœur et OS-5 relues directement."
     }
   },
-  "nextAction": "Réconcilier le head distant, publier la compatibilité d'enveloppe officielle sans tmp/, puis exiger une CI entièrement verte. Ensuite reprendre le checkpoint humain : code SMS saisi directement dans Chrome, inventaire app/WABA/Phone Number ID, confirmation au moment exact avant token persistant et injection par références serveur. Ne déclencher ni Graph, message, endpoint public, déploiement ou dépense.",
+  "nextAction": "L'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et demander une confirmation au moment exact avant toute création de token persistant; injecter ensuite par références serveur sans lire, afficher, journaliser ou commiter les valeurs. Ne déclencher ni Graph, message, endpoint public, déploiement ou dépense sans autorisation distincte.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1351,6 +1351,10 @@
     {
       "command": "compatibilité locale de l'enveloppe webhook WhatsApp Cloud officielle au parent 54755de",
       "status": "passed_anonymized_fixture_hmac_signature_16_digit_endpoint_padded_wamid_sha256_internal_keys_idempotent_replay_no_provider_identity_values_in_audit_or_bindings_17_files_108_tests_lint_typecheck_build_continuity_diffcheck_green_ci_pending"
+    },
+    {
+      "command": "publication 24622e9, CI 33425435804 et continuité 33425435724",
+      "status": "passed_fast_forward_tmp_excluded_migrations_backup_restore_rls_lint_typecheck_142_files_653_tests_build_20_playwright_continuity_green_pr_11_open_draft_mergeable"
     }
   ],
   "humanBlockers": [
