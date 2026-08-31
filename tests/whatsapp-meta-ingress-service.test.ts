@@ -141,6 +141,82 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     ]);
   }, 20_000);
 
+  it("ingère l'enveloppe officielle complète sans diffuser ses données fournisseur", async () => {
+    const officialPhoneNumberId = "7000000000000001";
+    const officialDisplayPhoneNumber = "15550001111";
+    const officialSender = "15550002222";
+    const officialContactName = "Contact Exemple";
+    const officialTimestamp = "1760000000";
+    const officialMessageId =
+      "wamid.HBgLMTU1NTAwMDIyMjIVAGHAYWZha2VfZXhhbXBsZQA=";
+    const setup = await createSetup({ phoneNumberId: officialPhoneNumberId });
+    const signedWebhook = webhook({
+      contactName: officialContactName,
+      displayPhoneNumber: officialDisplayPhoneNumber,
+      messageId: officialMessageId,
+      officialEnvelope: true,
+      phoneNumberId: officialPhoneNumberId,
+      sender: officialSender,
+      timestamp: officialTimestamp,
+    });
+
+    const first = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedWebhook,
+      { appSecret, fingerprintSecret, receivedAt },
+    );
+    const replay = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedWebhook,
+      { appSecret, fingerprintSecret, receivedAt },
+    );
+
+    expect(first).toMatchObject({
+      accepted: true,
+      replayed: false,
+      tenantId: setup.tenant.id,
+    });
+    expect(replay).toMatchObject({
+      accepted: true,
+      replayed: true,
+      messageId: first.accepted ? first.messageId : "",
+      threadId: first.accepted ? first.threadId : "",
+    });
+    if (!first.accepted) throw new Error("Webhook Meta officiel attendu comme accepté.");
+    const thread = await getConversationThread(
+      setup.db,
+      setup.owner.id,
+      setup.tenant.id,
+      first.threadId,
+    );
+    expect(thread.messages).toHaveLength(1);
+    expect(thread.messages[0]).toMatchObject({
+      text: "Bonjour depuis Meta",
+      provenance: {
+        adapterKey: "whatsapp-meta",
+        externalMessageId: officialMessageId,
+      },
+    });
+
+    const safePersistence = JSON.stringify(
+      await Promise.all([
+        setup.db.query("select * from audit_logs"),
+        setup.db.query("select * from conversation_channel_identities"),
+        setup.db.query("select * from channel_provider_identity_bindings"),
+      ]),
+    );
+    for (const providerValue of [
+      officialContactName,
+      officialDisplayPhoneNumber,
+      officialSender,
+      officialPhoneNumberId,
+      officialTimestamp,
+      officialMessageId,
+    ]) {
+      expect(safePersistence).not.toContain(providerValue);
+    }
+  }, 20_000);
+
   it("refuse un endpoint absent ou désactivé sans conversation", async () => {
     const setup = await createSetup();
     const absent = await receivePreparedMetaWhatsAppWebhook(
@@ -318,9 +394,14 @@ describe("ingestion WhatsApp Cloud Meta", () => {
 });
 
 type PayloadOverrides = {
+  contactName?: string;
+  displayPhoneNumber?: string;
   messageId?: string;
+  officialEnvelope?: boolean;
   phoneNumberId?: string;
+  sender?: string;
   text?: string;
+  timestamp?: string;
   wabaId?: string;
 };
 
@@ -334,13 +415,35 @@ function payload(overrides: PayloadOverrides = {}) {
           {
             field: "messages",
             value: {
+              ...(overrides.officialEnvelope
+                ? {
+                    messaging_product: "whatsapp",
+                    contacts: [
+                      {
+                        profile: {
+                          name: overrides.contactName ?? "Contact Exemple",
+                        },
+                        wa_id: overrides.sender ?? sender,
+                      },
+                    ],
+                  }
+                : {}),
               metadata: {
+                ...(overrides.officialEnvelope
+                  ? {
+                      display_phone_number:
+                        overrides.displayPhoneNumber ?? "15550001111",
+                    }
+                  : {}),
                 phone_number_id: overrides.phoneNumberId ?? phoneNumberId,
               },
               messages: [
                 {
                   id: overrides.messageId ?? messageId,
-                  from: sender,
+                  from: overrides.sender ?? sender,
+                  ...(overrides.officialEnvelope
+                    ? { timestamp: overrides.timestamp ?? "1760000000" }
+                    : {}),
                   type: "text",
                   text: { body: overrides.text ?? "Bonjour depuis Meta" },
                 },
@@ -363,7 +466,7 @@ function webhook(overrides: PayloadOverrides = {}) {
   };
 }
 
-async function createSetup() {
+async function createSetup(options: { phoneNumberId?: string } = {}) {
   const db = await createMemoryDb();
   opened.push(db);
   const services = createServices(db);
@@ -382,7 +485,7 @@ async function createSetup() {
       tenantId: tenant.id,
       actorId: owner.id,
       externalAccountId: wabaId,
-      phoneNumberId,
+      phoneNumberId: options.phoneNumberId ?? phoneNumberId,
     },
     fingerprintSecret,
   );

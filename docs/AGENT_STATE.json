@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T18:15:00.000Z",
+  "updatedAt": "2026-08-31T18:29:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "f99b5f39e4dd1dfe116df60c7969f815513a8084",
-  "publishedHeadObserved": "f99b5f39e4dd1dfe116df60c7969f815513a8084",
-  "status": "os5_meta_secret_vault_ci_proven_human_otp_pending",
+  "lastCommit": "54755dec72a755f13c1b8602b9bb7c4120b91df1",
+  "publishedHeadObserved": "54755dec72a755f13c1b8602b9bb7c4120b91df1",
+  "status": "os5_meta_official_webhook_envelope_compatibility_local_proven_ci_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le coffre fournisseur chiffré WhatsApp Meta est publié au head f99b5f3 et prouvé par la CI 33422211572 et la continuité 33422211485 : migration runtime 103 / SQL 0097, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20 Playwright verts. Il lie tenant-endpoint-provider, généralise repositories/services, conserve Twilio, chiffre les payloads Meta, fournit rotation/révocation idempotentes et résolveurs éphémères, et audite sans valeur sensible. La configuration réelle autorisée par l'utilisateur reste au checkpoint Meta for Developers : le code SMS doit être saisi directement dans Chrome, sans clé dans le chat ou le modèle. Aucun appel Graph ni message externe n'est autorisé par ce checkpoint.",
+  "currentObjective": "La compatibilité de l'ingress avec l'enveloppe webhook WhatsApp Cloud officielle est corrigée et prouvée localement : champs officiels additionnels bornés, wamid avec padding accepté, externalMessageId opaque conservé et clés internes idempotence/corrélation dérivées par SHA-256. Une fixture intégralement anonymisée prouve signature, résolution endpoint 16 chiffres, rejeu sans doublon et absence de nom, numéros, timestamp ou wamid dans audits et liaisons d'identité. Publier la tranche après réconciliation distante puis obtenir la CI. Meta for Developers reste en attente du code SMS saisi directement dans Chrome; aucun appel Graph ni message externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,11 +28,11 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Poursuivre OS-5 par la première tranche logicielle non bloquée après la frontière Graph : étendre additivement le cycle de vie chiffré des secrets fournisseur de whatsapp_twilio à whatsapp_meta, sans exposer de secret dans Git, les logs, les audits, le navigateur ou le modèle. Les pages 22, 26, 29, 32, 37, 48, 64 et 69 imposent migrations tenant-scoped/RLS, rotation et révocation, résolveurs serveur éphémères, provider explicitement borné et tests sans clé réelle. L'utilisateur autorise désormais la configuration réelle Meta, mais l'inscription Meta for Developers attend son code SMS saisi directement dans Chrome; poursuivre le coffre et ne créer aucune clé, ressource payante, requête Graph ni message externe pendant ce checkpoint.",
-      "evidenceExpected": "Migration runtime 103 et miroir SQL 0097 acceptant seulement whatsapp_twilio/whatsapp_meta, repositories et services explicitement provider-scoped, compatibilité Twilio préservée, payloads Meta chiffrés avec keyring et résolus uniquement en mémoire, rotation/révocation idempotentes, audit sans contenu sensible, refus cross-tenant et tests PostgreSQL/RLS. PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages techniques 17-22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 37, 48, 64 et 69. Checkpoint humain exact : saisir le code SMS Meta dans Chrome puis reprendre la console officielle; aucune valeur secrète ne transitera dans le chat."
+      "requirement": "Poursuivre OS-5 conversation-first en rendant l'ingress compatible avec l'enveloppe webhook WhatsApp Cloud officielle observée, sans relâcher la validation d'entrée non fiable ni stocker les données utilisateur fournies. Les pages 13-18, 22, 29, 32, 37, 48, 64 et 69 imposent signature avant parsing, schémas bornés, identité opaque tenant-aware, idempotence durable, audit sans PII et preuve d'intégration. Accepter explicitement messaging_product, display_phone_number, contacts et timestamp; accepter un wamid opaque jusqu'à 256 caractères incluant le padding base64, tout en dérivant idempotencyKey et correlationId d'une empreinte sûre conforme aux contrats internes.",
+      "evidenceExpected": "Fixture anonymisée reproduisant exactement la forme Meta fournie, signature HMAC valide, normalisation réussie, externalMessageId opaque conservé, clés internes hexadécimales bornées et stables, champs contact/display/timestamp absents du résultat public hors informations métier déjà requises, replay d'ingress idempotent et audit sans nom, numéro, texte ou wamid. Régressions adaptateur/ingress/webhook vertes; aucune requête Graph ni message externe. PDF canonique déjà revérifié à 71 pages et SHA-256 exact, pages cœur et OS-5 relues directement."
     }
   },
-  "nextAction": "L'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et préparer l'injection par références de gestionnaire de secrets sans lire, afficher, journaliser ou commiter les valeurs. Demander une confirmation au moment exact avant toute création de token persistant; ne déclencher ni requête Graph, message, endpoint public, déploiement ou dépense.",
+  "nextAction": "Réconcilier le head distant, publier la compatibilité d'enveloppe officielle sans tmp/, puis exiger une CI entièrement verte. Ensuite reprendre le checkpoint humain : code SMS saisi directement dans Chrome, inventaire app/WABA/Phone Number ID, confirmation au moment exact avant token persistant et injection par références serveur. Ne déclencher ni Graph, message, endpoint public, déploiement ou dépense.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1347,6 +1347,10 @@
     {
       "command": "publication du coffre Meta au head f99b5f3 et workflows distants",
       "status": "passed_fast_forward_tmp_excluded_ci_33422211572_green_migrations_backup_restore_rls_lint_typecheck_142_files_651_tests_build_20_playwright_continuity_33422211485_green"
+    },
+    {
+      "command": "compatibilité locale de l'enveloppe webhook WhatsApp Cloud officielle au parent 54755de",
+      "status": "passed_anonymized_fixture_hmac_signature_16_digit_endpoint_padded_wamid_sha256_internal_keys_idempotent_replay_no_provider_identity_values_in_audit_or_bindings_17_files_108_tests_lint_typecheck_build_continuity_diffcheck_green_ci_pending"
     }
   ],
   "humanBlockers": [

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import {
   verifyMetaWhatsAppWebhook,
@@ -6,9 +7,23 @@ import {
 
 const receivedAtSchema = z.string().datetime({ offset: true });
 const numericReferenceSchema = z.string().regex(/^\d{1,64}$/);
-const messageIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,160}$/);
+const messageIdSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .regex(/^wamid\.[-A-Za-z0-9._:+/=]+$/);
 const senderSchema = z.string().regex(/^\d{8,15}$/);
+const displayPhoneNumberSchema = z.string().regex(/^\+?\d{8,15}$/);
+const messageTimestampSchema = z.string().regex(/^\d{1,20}$/);
 const textSchema = z.string().trim().min(1).max(4_096);
+const contactSchema = z
+  .object({
+    profile: z
+      .object({ name: z.string().trim().min(1).max(256) })
+      .strict(),
+    wa_id: senderSchema,
+  })
+  .strict();
 
 export type PreparedMetaWhatsAppInboundMessage = {
   provider: "whatsapp_meta";
@@ -82,13 +97,21 @@ function normalizeMetaPayload(
       field: z.literal("messages"),
       value: z
         .object({
-          metadata: z.object({ phone_number_id: numericReferenceSchema }).strict(),
+          messaging_product: z.literal("whatsapp").optional(),
+          metadata: z
+            .object({
+              display_phone_number: displayPhoneNumberSchema.optional(),
+              phone_number_id: numericReferenceSchema,
+            })
+            .strict(),
+          contacts: z.array(contactSchema).min(1).max(10).optional(),
           messages: z
             .array(
               z
                 .object({
                   id: messageIdSchema,
                   from: senderSchema,
+                  timestamp: messageTimestampSchema.optional(),
                   type: z.literal("text"),
                   text: z.object({ body: textSchema }).strict(),
                 })
@@ -103,6 +126,9 @@ function normalizeMetaPayload(
   if (!change.success) return { ok: false, code: "whatsapp_payload_invalid" };
 
   const message = change.data.value.messages[0];
+  const messageFingerprint = createHash("sha256")
+    .update(message.id, "utf8")
+    .digest("hex");
   return {
     ok: true,
     message: {
@@ -113,8 +139,8 @@ function normalizeMetaPayload(
       senderAddress: `whatsapp:+${message.from}`,
       recipientAddress: `whatsapp:+${change.data.value.metadata.phone_number_id}`,
       text: message.text.body,
-      idempotencyKey: `ingress:whatsapp_meta:${message.id}`,
-      correlationId: `meta_${message.id}`,
+      idempotencyKey: `ingress:whatsapp_meta:${messageFingerprint}`,
+      correlationId: `meta_${messageFingerprint}`,
       receivedAt,
     },
   };
