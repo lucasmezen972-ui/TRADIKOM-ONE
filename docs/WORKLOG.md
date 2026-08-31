@@ -876,3 +876,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La CI `33396625266` et la continuité `33396625267` sont entièrement vertes sur le head exact; la PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`.
 - La première étape concrète non terminée reste le checkpoint humain Meta nécessaire pour une preuve sandbox ou réelle. Aucun OS-6, CRM, Kanban ou dashboard secondaire n'a été sélectionné.
 - Aucun code, compte, app, WABA, numéro, clé, secret, client Graph, endpoint public, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché.
+
+## 2026-08-31 - Checkpoint Meta maintenu à 15:21 UTC
+
+- La copie active reste exclusivement `/Users/TRADIKOM/Developer/TRADIKOM-ONE`, lisible, inscriptible et synchronisée au head `c08be1b357e6ec9ecbcb96cacc98df2dacc34081` sur `codex/tradikom-one-os`; `tmp/` demeure non suivi et préservé.
+- Le PDF canonique conserve 71 pages et le SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement; les pages 29, 32, 48, 64, 69 et 71 ont été inspectées en rendu.
+- `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La CI `33402359544` et la continuité `33402359545` sont entièrement vertes sur le head exact; la PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`.
+- Le checkpoint humain Meta reste inchangé et a déjà été notifié; sans autorisation distincte, aucune tâche OS-6, CRM, Kanban ou dashboard secondaire ne doit le remplacer.
+- Aucun code, compte, app, WABA, numéro, clé, secret, client Graph, endpoint public, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché.
