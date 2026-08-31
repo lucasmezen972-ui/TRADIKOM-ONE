@@ -896,3 +896,10 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Validation locale non concluante : la suite exhaustive est restée silencieuse au-delà de deux minutes; le build a déclenché une recréation de `node_modules` puis a été bloqué par le réseau du sandbox. Les dépendances ont été restaurées exactement depuis le lockfile. La CI du nouveau head doit faire foi pour PostgreSQL/RLS, suite complète, build et Playwright.
 - Le PDF canonique a été revérifié à 71 pages avec le SHA-256 exact. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que 14, 29 et 64 ont été relues; les pages 29, 32, 48, 64, 69 et 71 ont été inspectées en rendu.
 - Aucun compte, app, WABA, numéro, token, secret, endpoint public, requête Graph réelle, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché; `tmp/` reste non suivi et préservé.
+
+## 2026-08-31 - Frontière Graph Meta publiée et prouvée à 16:53 UTC
+
+- Après fetch, le head distant était exactement le parent local `234f7ee`; la tranche a été commitée sous `02584ba0712c8593db40145fb73424d729ddd0fe` puis poussée en fast-forward sans force. Les 13 fichiers contrôlés ont été inclus et `tmp/` est resté hors index.
+- La CI `33414636126` est entièrement verte : audit production, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 141 fichiers Vitest et 646 tests réussis, build production et 20 scénarios Playwright réussis.
+- La continuité `33414636345` est verte. La PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN` sur le head exact `02584ba`.
+- Le prochain travail OS-5 non bloqué est identifié : étendre additivement `channel_provider_secret_versions` et ses services actuellement bornés à Twilio pour accepter Meta, avec rotation/révocation chiffrées, repositories provider-scoped, tenant/RLS et tests sans secret réel. Cette tranche ne devra toujours ni résoudre un credential réel, ni composer `fetch`, ni envoyer un message externe.

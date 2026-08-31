@@ -6,8 +6,8 @@
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026.
 - La réconciliation autorisée avec `main` est publiée par `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`. Les migrations `main` 067-078 / SQL 0061-0072 sont préservées et les migrations OS sont renumérotées 079-102 / SQL 0073-0096.
-- Le head local et distant publié de départ est `234f7ee4b600f339b7a42f91ce7617f8688d1b07`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33408166764` et la continuité `33408166738` sont vertes sur ce head.
-- Une tranche Graph Meta est prête dans le worktree et doit être publiée sans inclure `tmp/`, puis validée par la CI du nouveau head.
+- Le head fonctionnel local et distant publié est `02584ba0712c8593db40145fb73424d729ddd0fe`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`.
+- La CI `33414636126` et la continuité `33414636345` sont vertes sur ce head, y compris PostgreSQL/RLS, suite complète, build production et Playwright.
 
 ## Tranche livrée : flux WhatsApp Cloud Meta, sans activation
 
@@ -25,16 +25,16 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le
 
 ## Prochaine action concrète
 
-1. Vérifier que `origin/codex/tradikom-one-os` est toujours le head `234f7ee`, sans modifier le worktree ni `tmp/`.
-2. Committer uniquement la frontière Graph, ses tests, les placeholders, la procédure d'activation et les quatre documents; pousser sans force.
-3. Attendre la CI PostgreSQL/RLS, suite complète, build, Playwright et continuité sur le nouveau head; corriger tout échec de la tranche.
-4. Après preuve verte, poursuivre le prochain travail OS-5 non bloqué. Attendre une autorisation humaine distincte avant tout compte/app/WABA, numéro de test, endpoint HTTPS, secret, activation ou message Meta.
-5. Ne pas fusionner la PR #11, déployer, changer le DNS, dépenser ni envoyer de message externe sans autorisation explicite.
+1. Ajouter la migration runtime 103 et son miroir SQL 0097 pour autoriser `whatsapp_meta` dans `channel_provider_secret_versions` sans modifier les migrations déjà appliquées ni affaiblir les clés composites/RLS.
+2. Généraliser les repositories et le service de secrets actuellement figés sur `whatsapp_twilio` avec un provider explicite, tout en conservant les contrats Twilio existants.
+3. Ajouter les schémas Meta endpoint/identité et les résolveurs tenant/endpoint-scoped, testés exclusivement avec keyring et données factices; aucune lecture d'environnement ni requête Graph dans ces tests.
+4. Prouver base neuve et mise à niveau, refus cross-tenant, rotation idempotente, révocation, corruption de ciphertext et audit sans secret; publier puis attendre la CI complète.
+5. Attendre une autorisation humaine distincte avant tout compte/app/WABA, numéro de test, endpoint HTTPS, credential réel, activation ou message Meta. Ne pas fusionner, déployer, changer le DNS ou dépenser.
 
 ## Validation disponible
 
 - Tranche Graph : 3 fichiers/37 tests transport-adaptateur-registre verts. Régression Meta : 7 fichiers/55 tests verts; 1 fichier/1 test PostgreSQL/RLS ignoré faute de `DATABASE_URL` local.
-- Lint et typecheck complets verts. La suite exhaustive et le build locaux sont non conclusifs à cause du runtime local; la CI du nouveau head doit faire foi.
+- Lint et typecheck complets verts. La limite locale de suite/build est levée par la CI autoritative `33414636126` : 141 fichiers/646 tests, build production et 20 Playwright verts.
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement localement. La clé de script `tsx` dupliquée qui provoquait `EPERM` a été supprimée; la commande native Node est désormais l'unique lanceur et un test empêche sa régression. L'environnement distant avertit seulement que le PDF local est absent.
 - Validation locale du correctif : lint et typecheck complets verts; 140 fichiers Vitest, 606 tests réussis, 18 ignorés et zéro échec; build production vert avec les variables factices de la CI.
 - CI `33402359544` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright verts sur `c08be1b`.
@@ -57,9 +57,9 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le
 2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
 3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
 4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
-5. La réconciliation est publiée par 64192145; le head publié de départ 234f7ee a sa CI 33408166764 et sa continuité 33408166738 vertes. La tranche Graph locale doit être publiée puis validée sur son propre head.
+5. La réconciliation est publiée par 64192145; la frontière Graph est publiée au head 02584ba avec CI 33414636126 et continuité 33414636345 vertes.
 6. Conserver tmp/ hors index et maintenir Meta disabled/not_configured/mock : frontière Graph injectée mais aucune composition réelle, clé, app, WABA, endpoint public ou message réel.
-7. Après CI verte, continuer le prochain travail OS-5 non bloqué; la preuve fournisseur externe exige toujours une autorisation humaine distincte.
+7. Reprendre par la migration runtime 103 / SQL 0097 et la généralisation provider-scoped du coffre chiffré; la preuve fournisseur externe exige toujours une autorisation humaine distincte.
 8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.
 9. Mettre à jour les quatre documents avant arrêt. Ne pas fusionner, déployer, dépenser ni demander de secret.
 ```

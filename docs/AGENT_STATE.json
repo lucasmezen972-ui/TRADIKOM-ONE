@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T16:26:20.000Z",
+  "updatedAt": "2026-08-31T16:53:29.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "234f7ee4b600f339b7a42f91ce7617f8688d1b07",
-  "publishedHeadObserved": "234f7ee4b600f339b7a42f91ce7617f8688d1b07",
-  "status": "in_progress_ci_pending",
+  "lastCommit": "02584ba0712c8593db40145fb73424d729ddd0fe",
+  "publishedHeadObserved": "02584ba0712c8593db40145fb73424d729ddd0fe",
+  "status": "ready_for_next_os5_slice",
   "currentPhase": "OS-5",
-  "currentObjective": "Poursuivre réellement OS-5 au-delà des contrôles horaires : la frontière HTTP WhatsApp Cloud API Meta est maintenant préparée dans le worktree depuis le head publié 234f7ee. Elle reçoit des résolveurs tenant/endpoint-scoped et un fetch injecté, borne URL/payload/réponse, classe les échecs et ne lit aucun secret global. Le registre reste fail-closed et ne peut pas produire ready; aucune activation, clé, requête réseau réelle ou message externe n'a eu lieu. Les tests ciblés sont verts; la publication et la CI PostgreSQL/RLS/build/Playwright restent à obtenir sur le nouveau head.",
+  "currentObjective": "La frontière HTTP WhatsApp Cloud API Meta est publiée au head 02584ba et entièrement prouvée par la CI 33414636126 et la continuité 33414636345 : migrations/backup/RLS, 141 fichiers et 646 tests, build production et 20 Playwright verts. Elle reçoit des résolveurs tenant/endpoint-scoped et un fetch injecté, borne URL/payload/réponse, classe les échecs et ne lit aucun secret global. Le registre reste fail-closed; aucune activation, clé résolue, requête réseau réelle ou message externe n'a eu lieu. OS-5 continue par le prochain travail non bloqué : étendre le cycle de vie chiffré des secrets fournisseur à Meta avant toute composition réelle.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Poursuivre OS-5 par une tranche verticale conversation-first non bloquée : préparer la frontière de transport WhatsApp Meta Cloud API derrière l'adaptateur et le service durable existants, sans clé, compte, activation ni appel réseau réel. Les pages 14, 29, 31-32, 48, 64 et 69 imposent un adaptateur sans logique métier, un runtime passant par policy, idempotence et audit, des états fail-closed explicites et des tests sans clés couvrant not_configured, échec temporaire, échec permanent et non-fuite. Ne sélectionner ni OS-6, CRM, Kanban ni dashboard.",
-      "evidenceExpected": "PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 14, 29 et 64 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Preuve attendue : transport Graph injecté et testé sans réseau réel, URL et payload bornés, résolution éphémère des credentials et de la destination, refus avant toute résolution lorsque le provider n'est pas prêt, classification auth/rate_limit/temporary/permanent/validation, aucune fuite de token, destination, contenu ou réponse brute; adaptateur autorisant ready seulement lorsqu'un transport explicite est composé. Activation Meta et message externe restent bloqués sur autorisation humaine distincte."
+      "evidenceExpected": "Preuve obtenue au head 02584ba : PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 14, 29 et 64 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Transport Graph injecté et testé sans réseau réel, URL et payload bornés, résolution éphémère des credentials et de la destination, refus avant toute résolution lorsque le provider n'est pas prêt, classification auth/rate_limit/temporary/permanent/validation et aucune fuite de token, destination, contenu ou réponse brute. CI 33414636126 verte : migrations/backup/RLS, 141 fichiers et 646 tests, build et 20 Playwright. Activation Meta et message externe restent bloqués sur autorisation humaine distincte."
     }
   },
-  "nextAction": "Réconcilier en lecture seule origin/codex/tradikom-one-os avec le head local 234f7ee, committer uniquement la tranche Graph et les quatre documents en excluant tmp/, pousser sans force puis attendre la CI PostgreSQL/RLS/build/Playwright. Si elle est verte, reprendre le prochain travail OS-5 non bloqué; toute activation ou preuve externe Meta reste soumise à autorisation humaine distincte.",
-  "nextFile": "docs/NEXT_STEPS.md",
+  "nextAction": "Étendre de façon additive le stockage et les services de rotation/révocation chiffrés de channel_provider_secret_versions à whatsapp_meta, avec migration runtime 103 et miroir SQL 0097, repositories provider-scoped, isolation tenant/RLS et tests sans secret réel. Préserver le chemin Twilio et maintenir toute composition Meta réelle désactivée.",
+  "nextFile": "src/db/migrations/0097_os5_channel_provider_secret_versions_meta.sql",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -446,7 +446,10 @@
     "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages candidates 14, 29 et 64 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
     "transport Graph Meta éphémère, placeholders et procédure d'activation sans composition réseau réelle",
     "Vitest ciblé et régression Meta : 7 fichiers réussis, 55 tests réussis, 1 fichier/1 test PostgreSQL RLS ignoré sans DATABASE_URL; ESLint et typecheck verts",
-    "suite complète et build locaux non conclusifs : Vitest est resté silencieux; pnpm build a tenté de recréer node_modules puis le réseau sandbox a bloqué les paquets; dépendances restaurées exactement depuis le lockfile"
+    "suite complète et build locaux non conclusifs : Vitest est resté silencieux; pnpm build a tenté de recréer node_modules puis le réseau sandbox a bloqué les paquets; dépendances restaurées exactement depuis le lockfile",
+    "fetch distant sûr puis commit 02584ba et push fast-forward 234f7ee..02584ba; tmp exclu",
+    "CI 33414636126 : audit, migrations, backup/restauration, RLS, lint, typecheck, 141 fichiers/646 tests, build production et 20 Playwright verts",
+    "continuité 33414636345 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 02584ba"
   ],
   "lastValidation": [
     {
@@ -1308,6 +1311,14 @@
     {
       "command": "suite exhaustive et build local après la tranche Graph",
       "status": "inconclusive_local_vitest_silent_and_build_dependency_recreation_blocked_by_sandbox_network_ci_required"
+    },
+    {
+      "command": "publication de la frontière Graph au head 02584ba",
+      "status": "passed_safe_fetch_exact_remote_parent_fast_forward_push_tmp_excluded"
+    },
+    {
+      "command": "CI 33414636126 et continuité 33414636345 sur 02584ba",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_141_files_646_tests_build_20_playwright_continuity_ready_pr_open_draft_mergeable_clean"
     }
   ],
   "humanBlockers": [

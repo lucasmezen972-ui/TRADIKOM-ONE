@@ -1,12 +1,12 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint — 31 août 2026, 16:26 UTC
+## Checkpoint — 31 août 2026, 16:53 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN`; le head local et distant publié de départ est `234f7ee4b600f339b7a42f91ce7617f8688d1b07`.
+- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN`; le head fonctionnel local et distant publié est `02584ba0712c8593db40145fb73424d729ddd0fe`.
 - Réconciliation publiée : `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`; le commit documentaire distant observé est `7b9d4f34abc8fe6c79734f97ca7f227b22351015`.
 - Migrations `main` préservées : runtime 067-078 / SQL 0061-0072. Migrations OS renumérotées : runtime 079-102 / SQL 0073-0096.
-- CI `33408166764` et continuité `33408166738` entièrement vertes sur `234f7ee`; la CI de la tranche Graph locale reste à obtenir après publication.
+- CI `33414636126` et continuité `33414636345` entièrement vertes sur `02584ba`, y compris migrations/backup/RLS, 141 fichiers et 646 tests, build et 20 Playwright.
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**.
 
 ## Impact north star
@@ -21,10 +21,10 @@ Les pages 3-7, 13-18, 22, 26-38, 46, 48 et 64-71 du prompt maître ont été rel
 | --- | --- | --- | --- |
 | 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre d'exécution strict et continuité documentée | Tranche OS-5 Meta maintenue; réconciliation publiée; quatre documents actualisés; aucune tâche CRM/Kanban/dashboard/OS-6 sélectionnée | La prochaine preuve fournisseur est un checkpoint humain, pas une nouvelle tranche autonome |
 | 13-18, 22, 26-30 | Adaptateurs bornés, runtime provider, action durable, policy, idempotence et gouvernance | Frontière Graph injectée sans logique métier; réservation durable avant effet; policy, claim/lease, retry/backoff et clé d'idempotence conservés | Provider réel volontairement non configuré et non activé |
-| 31-33 | Definition of Done stricte : tests sans clé, états honnêtes, docs activation, PostgreSQL/RLS, build et preuve utilisable | Placeholders et procédure Meta ajoutés; 55 tests Meta verts, lint et typecheck verts | CI PostgreSQL/RLS, suite exhaustive, build et Playwright attendus sur le nouveau head |
+| 31-33 | Definition of Done stricte : tests sans clé, états honnêtes, docs activation, PostgreSQL/RLS, build et preuve utilisable | Placeholders et procédure Meta ajoutés; CI `33414636126` verte avec PostgreSQL/RLS, 646 tests, build et 20 Playwright | Activation réelle toujours soumise au checkpoint humain distinct |
 | 35-38 | Entrées non fiables, données sensibles protégées, audit sans contenu ni secret | Signature avant base côté ingress; liaisons par empreintes opaques; audit sans numéro, identité, corps ou credential; aucune clé dans le dépôt | Gestion réelle des secrets et endpoint HTTPS relèvent d'une intervention humaine ultérieure |
 | 64-68 | Runtime fournisseur uniforme, endpoint tenant-aware, états honnêtes et webhook signé | `whatsapp_meta` reste fail-closed; transport Graph à base HTTPS fixe, résolveurs tenant-aware injectés, timeout, réponse bornée et erreurs normalisées | Aucun `fetch` global composé, credential résolu ou appel réel; activation humaine non autorisée |
-| 69 | Matrice de tests provider, sécurité, intégration et isolation | 3 fichiers/37 tests transport-adaptateur-registre puis 7 fichiers/55 tests Meta verts; non-fuite token/destination/contenu/réponse testée | 1 test PostgreSQL/RLS ignoré localement sans `DATABASE_URL`; CI du nouveau head requise |
+| 69 | Matrice de tests provider, sécurité, intégration et isolation | 3 fichiers/37 tests transport-adaptateur-registre puis 7 fichiers/55 tests Meta locaux; CI : 141 fichiers/646 tests et 20 Playwright verts | 1 test PostgreSQL/RLS ignoré localement sans `DATABASE_URL`, exécuté dans la CI autoritative |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement.
 
@@ -46,15 +46,15 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 - Le dépôt stable a été vérifié courant, lisible et inscriptible au head local et distant publié `234f7ee`; aucun reset, clean, stash, changement de branche ou fusion n'a été effectué. `tmp/` reste non suivi et préservé.
 - Local : 3 fichiers/37 tests transport-adaptateur-registre puis 7 fichiers/55 tests Meta verts; 1 test PostgreSQL/RLS ignoré faute de `DATABASE_URL`. `git diff --check`, lint et typecheck sont verts.
-- La suite exhaustive locale est restée silencieuse et le build a rencontré une recréation de dépendances bloquée par le réseau sandbox; aucun succès n'est revendiqué. Les dépendances ont été restaurées depuis le lockfile et la CI du nouveau head est requise.
+- La suite exhaustive locale est restée silencieuse et le build a rencontré une recréation de dépendances bloquée par le réseau sandbox; aucun succès local n'est revendiqué. Les dépendances ont été restaurées depuis le lockfile et la CI autoritative a ensuite validé ces deux étapes.
 - `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement localement via l'unique commande Node native; l'avertissement distant sur l'absence du PDF local est attendu.
 - Test ciblé du contrôle de continuité : 1 fichier, 4 tests verts; ESLint ciblé et `git diff --check` verts.
 - Validation locale exhaustive du correctif : lint et typecheck verts; 140 fichiers Vitest, 606 tests réussis, 18 ignorés et zéro échec; build production vert avec la configuration factice de la CI.
-- CI `33408166764` et continuité `33408166738` : succès sur le head de départ `234f7ee`. PR #11 : `OPEN`, `DRAFT`, `MERGEABLE/CLEAN`.
+- CI `33414636126` : succès sur migrations, backup/restauration, RLS, lint, typecheck, 141 fichiers/646 tests, build et 20 Playwright. Continuité `33414636345` : succès. PR #11 : `OPEN`, `DRAFT`, `MERGEABLE/CLEAN`.
 
 ## Classification des états
 
-- Livré localement : ingress et sortant Meta durables, plus frontière Graph fail-closed testée sans réseau; CI du nouveau head encore attendue.
+- Livré et prouvé CI : ingress et sortant Meta durables, plus frontière Graph fail-closed testée sans réseau.
 - Réel : aucun compte, app Meta, WABA, numéro, token résolu, transport composé, endpoint public ou message fournisseur.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport synthétique uniquement dans les tests, sans réseau.
@@ -63,4 +63,4 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Écarts restants et reprise
 
-La frontière Graph est prouvée localement mais doit encore passer la CI PostgreSQL/RLS, suite exhaustive, build et Playwright sur son propre head. Après cette preuve, poursuivre les travaux OS-5 non bloqués au lieu de réduire la continuité à un contrôle horaire. L'activation externe reste un écart humain distinct : ne demander ni afficher aucun secret et ne déclencher ni compte, endpoint, message, dépense, fusion ou déploiement sans autorisation.
+La frontière Graph est prouvée localement et en CI. Le prochain écart logiciel non bloqué est le coffre chiffré encore figé sur `whatsapp_twilio` : l'étendre additivement à `whatsapp_meta`, avec migration runtime 103 / SQL 0097, repositories provider-scoped, rotation/révocation, tenant/RLS et tests sans secret réel. L'activation externe reste un écart humain distinct : ne demander ni afficher aucun secret et ne déclencher ni compte, endpoint, message, dépense, fusion ou déploiement sans autorisation.
