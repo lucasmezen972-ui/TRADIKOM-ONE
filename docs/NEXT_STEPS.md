@@ -2,56 +2,60 @@
 
 ## Situation actuelle
 
-- Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; `tmp/` est non suivi et doit rester exclu de tout commit.
+- Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; tous les changements suivis et non suivis sont à préserver. `tmp/` reste strictement exclu de tout commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48, 64-68 et 69-71 ont été relues directement; les pages runtime/provider sont bien 64-68.
-- La PR #11 est ouverte en brouillon. Au head publié `cc0335f`, CI `32262537881` et Continuité `32262537861` sont vertes. Le lot Meta courant est local et doit être revalidé par CI seulement après publication.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 30 août 2026.
+- La branche locale a été réconciliée sans perte par fast-forward strict de `787d54b` vers le head distant `33777bf`; le lot Meta sale n'avait aucun chemin en conflit avec le commit OS-6 distant et reste intégralement préservé.
+- La PR #11 est ouverte et en brouillon, mais en conflit avec `main`. Avant publication du lot Meta, la CI distante `32374109077` est rouge uniquement sur `goal-watch-service / conversation_messages_check`; la continuité `32374109126` est verte.
 
-## Dernière tranche livrée : inbound WhatsApp Cloud API Meta, sans activation
+## Dernière tranche livrée localement : flux sortant WhatsApp Cloud Meta, sans activation
 
-- Le provider `whatsapp_meta` est fail-closed : `disabled`, `not_configured` ou `awaiting_human_auth`, avec `transportEnabled: false`.
-- Le corps brut est borné à 512 Kio, signé par `X-Hub-Signature-256`, puis seulement normalisé en un événement texte strict.
-- Le WABA et le Phone Number ID sont mappés par empreinte HMAC tenant-aware; le Conversation Hub reçoit une identité pseudonymisée et une clé d'idempotence stable.
-- La migration additive `087_os2_whatsapp_meta_endpoint_provider` autorise Meta sur les bases existantes sans réécrire les migrations historiques.
-- La route `/api/webhooks/meta/whatsapp` n'est atteignable qu'en état `ready` de test : GET vérifie le challenge à jeton constant-time, POST transmet le JSON brut signé. En état réel actuel, elle retourne 503 et n'ouvre aucune base ni transport.
+- Les migrations runtime 088-090 et leurs miroirs SQL 0082-0084 autorisent les livraisons `whatsapp_meta`, ajoutent une liaison opaque endpoint-identité, une contrainte d'écriture protectrice et les politiques RLS tenant-aware.
+- L'ingress réserve cette liaison par tenant et endpoint. Un contact rattaché à un numéro Meta ne peut donc pas être envoyé depuis un autre endpoint du même tenant.
+- L'adaptateur sortant est fail-closed et ne contient aucun client Graph. Seul un transport injecté de test peut simuler un résultat `mock`.
+- Le service réserve durablement avant effet, applique la policy, respecte l'idempotence, gère claim/lease/retry/backoff et audite sans contenu sensible.
+- Le worker ne prend que les livraisons Meta dues, avec appartenance tenant vérifiée et limite bornée.
+- Aucun compte, application, WABA, numéro Meta, token, endpoint public, client Graph, message externe, dépense, fusion ou déploiement n'a été créé.
 
 ## Référence prompt maître
 
-Les pages 14, 22, 31-33, 35-38, 46, 48, 64-68 et 69 imposent la suite : conserver l'adaptateur borné, le tenant/RLS, l'idempotence, l'audit sans contenu sensible, les états fournisseur honnêtes et les tests provider/sécurité avant toute activation.
+Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcours conversation-first, action durable, réservation avant effet, tenant/RLS, idempotence, audit sans contenu sensible, provider honnête et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 restent incomplètes tant que PostgreSQL/RLS et la CI publiée du lot ne sont pas verts.
 
 ## Prochaine action concrète
 
-Reprendre la première tranche OS-5 restante : préparer le **flux sortant durable WhatsApp Cloud Meta**. Commencer par comparer les réservations, policy, idempotence et audits du flux WhatsApp existant, puis ajouter uniquement les briques Meta nécessaires avec tests. Le provider doit rester sans clé, sans client réseau et sans état `ready` hors tests.
-
-Ne pas créer d'application Meta, token, webhook public, sender, WABA, message fournisseur, paiement ou déploiement pendant cette tranche.
+1. Publier uniquement les fichiers contrôlés du lot OS-5 Meta et les quatre documents de continuité sur `codex/tradikom-one-os`, après contrôle explicite de la liste d'index; exclure `tmp/`.
+2. Surveiller la CI du nouveau head. Distinguer l'échec historique OS-6 `conversation_messages_check` d'un éventuel défaut directement causé par le lot Meta.
+3. Obtenir la preuve PostgreSQL/RLS de `channel_provider_identity_bindings` via la CI. Corriger uniquement un défaut Meta prouvé, puis relancer les validations.
+4. Ne pas reprendre CRM, Kanban, dashboard secondaire ni Goal and Watch Engine : ils ne remplacent pas la première étape OS-5 non terminée de la page 48.
 
 ## Validation disponible
 
-- 32 tests ciblés Meta verts : registre, signature, adaptateur, migration neuve/mise à niveau, ingress/replay/deuxième message, endpoint absent/désactivé, signature avant base, isolation tenant et frontière HTTP.
-- `pnpm lint`, `pnpm exec tsc --noEmit --incremental false`, `pnpm agent:continuity-check` et `git diff --check` sont verts.
-- Build de production vert avec l'environnement CI local simulé; la route Meta est inventoriée par Next.js.
-- `pnpm db:verify` est non exécutable ici faute de `DATABASE_URL` PostgreSQL. La migration PGlite de mise à niveau est néanmoins couverte par test.
-- `pnpm test` complet a été interrompu : des tests historiques du worker et du sortant Twilio dépassent le délai local de 5 s (5–12 s) sans assertion métier échouée. Ne pas présenter cette exécution comme une suite complète verte; revalider via CI PostgreSQL après publication.
+- Lot Meta : 12 fichiers verts, 65 tests verts et 1 test PostgreSQL/RLS ignoré faute de `DATABASE_URL`.
+- Régression sortante Twilio : 5 fichiers et 38 tests verts.
+- Suite exhaustive locale : 121 fichiers et 523 tests verts; 7 fichiers et 18 tests PostgreSQL ignorés faute de `DATABASE_URL`.
+- Verts : ESLint complet, TypeScript sans cache incrémental, build Next.js de production, `git diff --check` et contrôle de continuité.
+- La preuve PostgreSQL réelle, backup/restauration, RLS et Playwright relève encore de la CI publiée; aucun Docker ni `DATABASE_URL` n'est disponible localement.
 
 ## État de vérité
 
-- Livré : préparation Meta inbound complète jusqu'à la route HTTP fail-closed, avec migration, audit, idempotence et preuves locales.
+- Livré localement : flux Meta entrant et sortant durable, tenant-aware, idempotent et fail-closed, avec preuves unitaires/intégration PGlite.
 - Réel connecté : aucun fournisseur.
 - Sandbox : aucune configurée ou appelée.
-- Mock : seuls les états `ready` et les secrets factices des tests; aucun message externe.
-- Bloqué humain : toute activation Meta réelle demande un compte, les conditions de test, un endpoint HTTPS temporaire, un gestionnaire de secrets et une autorisation distincte sans paiement.
-- Hors périmètre immédiat : CRM, Kanban, dashboard secondaire, production, fusion, déploiement et dépense.
+- Mock : transport injecté uniquement dans les tests; aucun effet réseau.
+- Bloqué humain : toute activation Meta exige compte/app/WABA/numéro autorisé, endpoint HTTPS, secrets en gestionnaire et autorisation explicite.
+- Bloqué technique externe : preuve PostgreSQL/RLS et CI du head publié.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, activation réelle, production, fusion, déploiement et dépense.
 
 ## Bloc de reprise exact
 
 ```text
-1. Vérifier le PDF maître, SHA-256, 71 pages et pnpm agent:continuity-check.
-2. Lire docs/AGENT_STATE.json, docs/WORKLOG.md et docs/DRIFT_REPORT.md.
-3. Repartir de la branche codex/tradikom-one-os, sans inclure tmp/.
-4. Auditer la réservation durable et le worker sortant existants avant toute nouvelle écriture.
-5. Mettre à jour masterPrompt.alignment avant de coder le flux sortant Meta.
-6. Garder Meta disabled/not_configured/mock : aucune clé, aucun client, aucun appel réseau ou message réel.
-7. Ajouter les preuves provider, tenant, idempotence, audit, policy et migration nécessaires.
-8. Relancer les tests ciblés, lint, typecheck, build, continuity-check et documenter les limites PostgreSQL/CI.
-9. Ne fusionner, ne déployer, ne dépenser et ne demander aucun secret sans autorisation séparée.
+1. Se placer uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, y compris tmp/ non suivi.
+2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
+3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
+4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
+5. Si le lot Meta n'est pas encore publié, contrôler l'index fichier par fichier et exclure tmp/ avant commit/push.
+6. Si le lot est publié, surveiller la CI et obtenir la preuve PostgreSQL/RLS; ne corriger qu'un défaut attribuable à OS-5 Meta.
+7. Garder Meta disabled/not_configured/mock : aucune clé, client Graph, app, WABA, endpoint public ou message réel.
+8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.
+9. Mettre à jour les quatre documents avant arrêt. Ne pas fusionner, déployer, dépenser ni demander de secret.
 ```

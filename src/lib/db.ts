@@ -417,6 +417,20 @@ function getMigrations(enableRls: boolean) {
       id: "087_os2_whatsapp_meta_endpoint_provider",
       sql: os2WhatsAppMetaEndpointProviderMigrationSql,
     },
+    {
+      id: "088_os5_whatsapp_meta_outbound_provider",
+      sql: os5WhatsAppMetaOutboundProviderMigrationSql,
+    },
+    {
+      id: "089_os5_channel_provider_identity_bindings",
+      sql: os5ChannelProviderIdentityBindingsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "090_os5_channel_provider_identity_bindings_rls",
+          sql: os5ChannelProviderIdentityBindingsRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -4642,6 +4656,90 @@ alter table channel_provider_endpoints
     'slack',
     'email_resend'
   ));
+`;
+
+const os5WhatsAppMetaOutboundProviderMigrationSql = `
+create unique index if not exists uq_channel_provider_endpoints_tenant_id_provider
+  on channel_provider_endpoints (tenant_id, id, provider);
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_provider_check;
+
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_provider_check check (provider in (
+    'whatsapp_twilio',
+    'whatsapp_meta'
+  ));
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_provider_endpoint_fkey;
+
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_provider_endpoint_fkey
+  foreign key (tenant_id, endpoint_id, provider)
+  references channel_provider_endpoints (tenant_id, id, provider)
+  on delete restrict
+  not valid;
+`;
+
+const os5ChannelProviderIdentityBindingsMigrationSql = `
+create table if not exists channel_provider_identity_bindings (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  channel_identity_id text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, channel_identity_id),
+  foreign key (tenant_id, endpoint_id, provider)
+    references channel_provider_endpoints (tenant_id, id, provider)
+    on delete restrict,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities (tenant_id, id)
+    on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_meta'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (char_length(channel_identity_id) between 1 and 160)
+);
+
+create or replace function protect_channel_provider_identity_binding()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.endpoint_id <> old.endpoint_id
+     or new.channel_identity_id <> old.channel_identity_id
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_identity_binding_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_identity_bindings_protect_identity
+  on channel_provider_identity_bindings;
+create trigger channel_provider_identity_bindings_protect_identity
+before update on channel_provider_identity_bindings
+for each row execute function protect_channel_provider_identity_binding();
+
+create index if not exists idx_channel_provider_identity_bindings_tenant_endpoint
+  on channel_provider_identity_bindings (
+    tenant_id, provider, endpoint_id, channel_identity_id
+  );
+`;
+
+const os5ChannelProviderIdentityBindingsRlsMigrationSql = `
+alter table channel_provider_identity_bindings enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_identity_bindings;
+create policy tenant_isolation on channel_provider_identity_bindings
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
 
 const os4WorkflowDefinitionSnapshotsMigrationSql = `

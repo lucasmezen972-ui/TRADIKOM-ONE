@@ -1,5 +1,13 @@
 import type { DbClient } from "@/lib/db";
-import type { ChannelProviderFailureClassification } from "@/modules/channels/contracts";
+import type {
+  ChannelProviderFailureClassification,
+  ExternalChannelProvider,
+} from "@/modules/channels/contracts";
+
+export type WhatsAppOutboundProvider = Extract<
+  ExternalChannelProvider,
+  "whatsapp_twilio" | "whatsapp_meta"
+>;
 
 export type WhatsAppOutboundContextRow = {
   endpoint_id: string;
@@ -20,7 +28,7 @@ export type WhatsAppOutboundContextRow = {
 export type ChannelProviderDeliveryRow = {
   id: string;
   tenant_id: string;
-  provider: "whatsapp_twilio";
+  provider: WhatsAppOutboundProvider;
   endpoint_id: string;
   message_id: string;
   channel_identity_id: string;
@@ -60,8 +68,12 @@ export async function findWhatsAppOutboundContext(
     endpointId: string;
     messageId: string;
     channelIdentityId: string;
+    provider?: WhatsAppOutboundProvider;
+    requireIdentityBinding?: boolean;
   },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
+  const requireIdentityBinding = input.requireIdentityBinding ?? false;
   const result = await db.query<WhatsAppOutboundContextRow>(
     `select endpoint.id as endpoint_id,
             endpoint.status as endpoint_status,
@@ -92,8 +104,26 @@ export async function findWhatsAppOutboundContext(
       and identity.id = $4
      where endpoint.tenant_id = $1
        and endpoint.id = $2
-       and endpoint.provider = 'whatsapp_twilio'`,
-    [input.tenantId, input.endpointId, input.messageId, input.channelIdentityId],
+       and endpoint.provider = $5
+       and (
+         $6 = false
+         or exists (
+           select 1
+           from channel_provider_identity_bindings binding
+           where binding.tenant_id = endpoint.tenant_id
+             and binding.provider = endpoint.provider
+             and binding.endpoint_id = endpoint.id
+             and binding.channel_identity_id = identity.id
+         )
+       )`,
+    [
+      input.tenantId,
+      input.endpointId,
+      input.messageId,
+      input.channelIdentityId,
+      provider,
+      requireIdentityBinding,
+    ],
   );
   return result.rows[0] ?? null;
 }
@@ -111,8 +141,10 @@ export async function reserveWhatsAppOutboundDelivery(
     actorId: string;
     occurredAt: string;
     maxAttempts: number;
+    provider?: WhatsAppOutboundProvider;
   },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const inserted = await db.query<ChannelProviderDeliveryRow>(
     `insert into channel_provider_deliveries (
        id, tenant_id, provider, endpoint_id, message_id, channel_identity_id,
@@ -121,14 +153,15 @@ export async function reserveWhatsAppOutboundDelivery(
        max_attempts, next_attempt_at, last_attempted_at, lease_id,
        lease_expires_at, created_by, created_at, updated_at
      ) values (
-       $1, $2, 'whatsapp_twilio', $3, $4, $5, $6, $7, 'reserved', null,
-       null, null, null, 0, $8, $9, null, null, null, $10, $9, $9
+       $1, $2, $3, $4, $5, $6, $7, $8, 'reserved', null,
+       null, null, null, 0, $9, $10, null, null, null, $11, $10, $10
      )
      on conflict (tenant_id, provider, idempotency_key) do nothing
      returning *`,
     [
       input.id,
       input.tenantId,
+      provider,
       input.endpointId,
       input.messageId,
       input.channelIdentityId,
@@ -146,34 +179,49 @@ export async function reserveWhatsAppOutboundDelivery(
   const existing = await findWhatsAppOutboundDeliveryByIdempotency(db, {
     tenantId: input.tenantId,
     idempotencyKey: input.idempotencyKey,
+    provider,
   });
   return { row: existing, replayed: true };
 }
 
 export async function findWhatsAppOutboundDeliveryById(
   db: DbClient,
-  input: { tenantId: string; deliveryId: string },
+  input: {
+    tenantId: string;
+    deliveryId: string;
+    provider?: WhatsAppOutboundProvider;
+  },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const result = await db.query<ChannelProviderDeliveryRow>(
     `select *
      from channel_provider_deliveries
      where tenant_id = $1
-       and provider = 'whatsapp_twilio'
+       and provider = $3
        and id = $2`,
-    [input.tenantId, input.deliveryId],
+    [input.tenantId, input.deliveryId, provider],
   );
   return result.rows[0] ?? null;
 }
 
 export async function listDueWhatsAppOutboundDeliveries(
   db: DbClient,
-  input: { tenantId: string; dueAt: string; limit: number },
+  input: {
+    tenantId: string;
+    dueAt: string;
+    limit: number;
+    provider?: WhatsAppOutboundProvider;
+  },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
+  if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) {
+    throw new Error("La limite de reprise WhatsApp est invalide.");
+  }
   const result = await db.query<ChannelProviderDeliveryRow>(
     `select *
      from channel_provider_deliveries
      where tenant_id = $1
-       and provider = 'whatsapp_twilio'
+       and provider = $3
        and attempts < max_attempts
        and next_attempt_at <= $2
        and (lease_id is null or lease_expires_at <= $2)
@@ -184,10 +232,10 @@ export async function listDueWhatsAppOutboundDeliveries(
            and retryable = true
            and failure_classification in ('temporary', 'rate_limit')
          )
-       )
+     )
      order by next_attempt_at asc, created_at asc
-     limit ${input.limit}`,
-    [input.tenantId, input.dueAt],
+     limit $4`,
+    [input.tenantId, input.dueAt, provider, input.limit],
   );
   return result.rows;
 }
@@ -200,8 +248,10 @@ export async function claimWhatsAppOutboundDeliveryAttempt(
     leaseId: string;
     attemptedAt: string;
     leaseExpiresAt: string;
+    provider?: WhatsAppOutboundProvider;
   },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const result = await db.query<ChannelProviderDeliveryRow>(
     `update channel_provider_deliveries
      set attempts = attempts + 1,
@@ -211,7 +261,7 @@ export async function claimWhatsAppOutboundDeliveryAttempt(
          updated_at = $1
      where tenant_id = $4
        and id = $5
-       and provider = 'whatsapp_twilio'
+       and provider = $6
        and attempts < max_attempts
        and next_attempt_at <= $1
        and (lease_id is null or lease_expires_at <= $1)
@@ -230,6 +280,7 @@ export async function claimWhatsAppOutboundDeliveryAttempt(
       input.leaseExpiresAt,
       input.tenantId,
       input.deliveryId,
+      provider,
     ],
   );
   return result.rows[0] ?? null;
@@ -237,15 +288,20 @@ export async function claimWhatsAppOutboundDeliveryAttempt(
 
 export async function findWhatsAppOutboundDeliveryByIdempotency(
   db: DbClient,
-  input: { tenantId: string; idempotencyKey: string },
+  input: {
+    tenantId: string;
+    idempotencyKey: string;
+    provider?: WhatsAppOutboundProvider;
+  },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const result = await db.query<ChannelProviderDeliveryRow>(
     `select *
      from channel_provider_deliveries
      where tenant_id = $1
-       and provider = 'whatsapp_twilio'
+       and provider = $3
        and idempotency_key = $2`,
-    [input.tenantId, input.idempotencyKey],
+    [input.tenantId, input.idempotencyKey, provider],
   );
   return result.rows[0] ?? null;
 }
@@ -263,8 +319,10 @@ export async function finalizeClaimedWhatsAppOutboundDelivery(
     nextAttemptAt: string;
     leaseId: string;
     updatedAt: string;
+    provider?: WhatsAppOutboundProvider;
   },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const result = await db.query<ChannelProviderDeliveryRow>(
     `update channel_provider_deliveries
      set status = $1,
@@ -276,7 +334,7 @@ export async function finalizeClaimedWhatsAppOutboundDelivery(
          lease_id = null,
          lease_expires_at = null,
          updated_at = $7
-     where tenant_id = $8 and id = $9 and provider = 'whatsapp_twilio'
+     where tenant_id = $8 and id = $9 and provider = $11
        and lease_id = $10
        and status in ('reserved', 'failed')
      returning *`,
@@ -291,6 +349,7 @@ export async function finalizeClaimedWhatsAppOutboundDelivery(
       input.tenantId,
       input.deliveryId,
       input.leaseId,
+      provider,
     ],
   );
   return result.rows[0] ?? null;

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
+import { PGlite } from "@electric-sql/pglite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb, getMigrationIds } from "../src/lib/db";
+import { createMemoryDb, getMigrationIds, migrate } from "../src/lib/db";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const timestamp = "2026-08-08T06:00:00.000Z";
@@ -36,6 +37,10 @@ describe("migrations des livraisons fournisseur OS-5", () => {
         "os5ChannelProviderDeliveryEventsRlsMigrationSql",
         "../src/db/migrations/0074_os5_channel_provider_delivery_events_rls.sql",
       ],
+      [
+        "os5WhatsAppMetaOutboundProviderMigrationSql",
+        "../src/db/migrations/0082_os5_whatsapp_meta_outbound_provider.sql",
+      ],
     ] as const;
 
     for (const [constant, mirrorPath] of definitions) {
@@ -54,6 +59,9 @@ describe("migrations des livraisons fournisseur OS-5", () => {
     );
     expect(getMigrationIds(true)).toContain(
       "080_os5_channel_provider_delivery_events_rls",
+    );
+    expect(getMigrationIds()).toContain(
+      "088_os5_whatsapp_meta_outbound_provider",
     );
   });
 
@@ -194,6 +202,119 @@ describe("migrations des livraisons fournisseur OS-5", () => {
       ),
     ).rejects.toThrow(/foreign key|violates/i);
   });
+
+  it(
+    "autorise Meta tout en liant chaque livraison à un endpoint du même provider",
+    async () => {
+      const db = await createMemoryDb();
+      opened.push(db);
+      await seedContext(db, "a");
+      await db.query(
+        `insert into channel_provider_endpoints (
+           id, tenant_id, provider, external_account_id,
+           destination_fingerprint, status, created_by, created_at, updated_at
+         ) values (
+           'endpoint_meta', 'tenant_a', 'whatsapp_meta', '123456789',
+           $1, 'active', 'user_a', $2, $2
+         )`,
+        ["e".repeat(64), timestamp],
+      );
+      await db.query(
+        `insert into channel_provider_deliveries (
+           id, tenant_id, provider, endpoint_id, message_id,
+           channel_identity_id, idempotency_key, request_fingerprint, status,
+           external_message_id, failure_classification, safe_error_code,
+           retryable, attempts, max_attempts, next_attempt_at,
+           last_attempted_at, lease_id, lease_expires_at,
+           created_by, created_at, updated_at
+         ) values (
+           'delivery_meta', 'tenant_a', 'whatsapp_meta', 'endpoint_meta',
+           'message_a', 'identity_a', 'delivery-meta-idempotency', $1,
+           'reserved', null, null, null, null, 0, 3, $2, null, null, null,
+           'user_a', $2, $2
+         )`,
+        ["f".repeat(64), timestamp],
+      );
+      await expect(
+        db.query(
+          `insert into channel_provider_deliveries (
+             id, tenant_id, provider, endpoint_id, message_id,
+             channel_identity_id, idempotency_key, request_fingerprint, status,
+             external_message_id, failure_classification, safe_error_code,
+             retryable, attempts, max_attempts, next_attempt_at,
+             last_attempted_at, lease_id, lease_expires_at,
+             created_by, created_at, updated_at
+           ) values (
+             'delivery_wrong_provider', 'tenant_a', 'whatsapp_twilio',
+             'endpoint_meta', 'message_a', 'identity_a',
+             'delivery-wrong-provider', $1, 'reserved', null, null, null,
+             null, 0, 3, $2, null, null, null, 'user_a', $2, $2
+           )`,
+          ["a".repeat(64), timestamp],
+        ),
+      ).rejects.toThrow(/foreign key|violates/i);
+    },
+    20_000,
+  );
+
+  it(
+    "met à niveau une base existante avant d'autoriser une livraison Meta",
+    async () => {
+      const db = new PGlite();
+      opened.push(db);
+      await migrate(db, {
+        targetMigrationId: "087_os2_whatsapp_meta_endpoint_provider",
+      });
+      await seedContext(db, "a");
+      await db.query(
+        `insert into channel_provider_endpoints (
+           id, tenant_id, provider, external_account_id,
+           destination_fingerprint, status, created_by, created_at, updated_at
+         ) values (
+           'endpoint_meta_upgrade', 'tenant_a', 'whatsapp_meta', '123456789',
+           $1, 'active', 'user_a', $2, $2
+         )`,
+        ["e".repeat(64), timestamp],
+      );
+
+      await insertDelivery(
+        db,
+        "delivery_legacy_mismatch",
+        "endpoint_meta_upgrade",
+        "whatsapp_twilio",
+      );
+
+      await expect(
+        insertDelivery(
+          db,
+          "delivery_meta_before",
+          "endpoint_meta_upgrade",
+          "whatsapp_meta",
+        ),
+      ).rejects.toThrow(/check constraint|violates/i);
+
+      await migrate(db);
+      await expect(
+        insertDelivery(
+          db,
+          "delivery_wrong_provider_after",
+          "endpoint_meta_upgrade",
+          "whatsapp_twilio",
+        ),
+      ).rejects.toThrow(/foreign key|violates/i);
+      await insertDelivery(
+        db,
+        "delivery_meta_after",
+        "endpoint_meta_upgrade",
+        "whatsapp_meta",
+      );
+      const rows = await db.query<{ provider: string }>(
+        "select provider from channel_provider_deliveries where id = 'delivery_meta_after'",
+      );
+      expect(rows.rows).toEqual([{ provider: "whatsapp_meta" }]);
+    },
+    20_000,
+  );
 });
 
 type TestDb = Awaited<ReturnType<typeof createMemoryDb>>;
@@ -292,6 +413,35 @@ async function seedDelivery(db: TestDb, suffix: "a" | "b") {
       `delivery-idempotency-${suffix}`,
       suffix.repeat(64),
       `user_${suffix}`,
+      timestamp,
+    ],
+  );
+}
+
+async function insertDelivery(
+  db: TestDb,
+  deliveryId: string,
+  endpointId: string,
+  provider: "whatsapp_twilio" | "whatsapp_meta",
+) {
+  await db.query(
+    `insert into channel_provider_deliveries (
+       id, tenant_id, provider, endpoint_id, message_id, channel_identity_id,
+       idempotency_key, request_fingerprint, status, external_message_id,
+       failure_classification, safe_error_code, retryable, attempts,
+       max_attempts, next_attempt_at, last_attempted_at, lease_id,
+       lease_expires_at, created_by, created_at, updated_at
+     ) values (
+       $1, 'tenant_a', $2, $3, 'message_a', 'identity_a',
+       $4, $5, 'reserved', null, null, null, null, 0, 3, $6, null, null,
+       null, 'user_a', $6, $6
+     )`,
+    [
+      deliveryId,
+      provider,
+      endpointId,
+      `idempotency-${deliveryId}`,
+      "f".repeat(64),
       timestamp,
     ],
   );

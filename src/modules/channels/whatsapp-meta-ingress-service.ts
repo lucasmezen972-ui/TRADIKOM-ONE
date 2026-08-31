@@ -1,10 +1,12 @@
 import { createHmac } from "node:crypto";
 import { withSystemDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
-import { nowIso } from "@/lib/security";
+import { id, nowIso } from "@/lib/security";
+import { recordAuditLog } from "@/modules/audit";
 import {
   prepareVerifiedMetaWhatsAppInboundMessage,
 } from "@/modules/channels/whatsapp-meta-adapter";
+import { reserveMetaWhatsAppIdentityBinding } from "@/modules/channels/channel-provider-identity-bindings-repository";
 import { resolveActiveMetaWhatsAppEndpoint } from "@/modules/channels/provider-endpoints-service";
 import { ingestSystemConversationMessage } from "@/modules/conversation-hub";
 
@@ -41,6 +43,7 @@ export async function receivePreparedMetaWhatsAppWebhook(
 
     const subject = fingerprintSubject(
       endpoint.tenantId,
+      endpoint.endpointId,
       prepared.message.senderAddress,
       configuration.fingerprintSecret,
     );
@@ -73,6 +76,27 @@ export async function receivePreparedMetaWhatsAppWebhook(
       attachments: [],
       occurredAt: prepared.message.receivedAt,
     });
+    const binding = await reserveMetaWhatsAppIdentityBinding(transaction, {
+      id: id("channel_identity_binding"),
+      tenantId: endpoint.tenantId,
+      endpointId: endpoint.endpointId,
+      channelIdentityId: identityId,
+      createdAt: prepared.message.receivedAt,
+    });
+    if (!binding.replayed) {
+      await recordAuditLog(transaction, {
+        tenantId: endpoint.tenantId,
+        actorId: systemActorId,
+        action: "channel.provider_identity_bound",
+        targetType: "channel_provider_identity_binding",
+        targetId: binding.row.id,
+        metadata: {
+          provider: "whatsapp_meta",
+          contentStoredInAudit: false,
+          providerReferenceStoredInAudit: false,
+        },
+      });
+    }
     return {
       accepted: true as const,
       replayed: result.idempotentReplay,
@@ -85,6 +109,7 @@ export async function receivePreparedMetaWhatsAppWebhook(
 
 function fingerprintSubject(
   tenantId: string,
+  endpointId: string,
   senderAddress: string,
   fingerprintSecret: string | undefined,
 ) {
@@ -92,6 +117,6 @@ function fingerprintSubject(
     throw new Error("Channel fingerprinting is not configured.");
   }
   return createHmac("sha256", fingerprintSecret)
-    .update(`v1:whatsapp_meta_subject:${tenantId}:${senderAddress}`)
+    .update(`v2:whatsapp_meta_subject:${tenantId}:${endpointId}:${senderAddress}`)
     .digest("hex");
 }

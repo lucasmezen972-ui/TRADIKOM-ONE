@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-19T16:01:35.000Z",
+  "updatedAt": "2026-08-31T03:07:53.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "5e87c8823973e50207209d1af39ff6bccb634839",
+  "lastCommit": "33777bfc01ab08982671aa10b7e3487bdc82eb16",
   "status": "in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "Twilio est indisponible selon le propriétaire et Telegram est explicitement refusé. OS-5 prépare WhatsApp Cloud API officielle de Meta : manifeste fail-closed, signature sur corps brut, normalisation texte stricte, mapping tenant-aware, migration additive, ingestion idempotente et frontière HTTP GET/POST sont livrés sans réseau ni secret réel. Les preuves couvrent challenge, replay, deuxième message, endpoint absent/désactivé, signature avant base, absence de PII et isolation de deux tenants. Le provider reste disabled/not_configured hors tests; aucun compte, token, endpoint public ni message réel n'a été créé.",
+  "currentObjective": "OS-5 dispose localement d'une tranche verticale WhatsApp Cloud API Meta entrante et sortante : webhooks vérifiés avant la base, liaisons opaques endpoint-identité, réservation durable, policy, idempotence, reprises bornées et audit sans contenu sensible. Le provider reste volontairement fail-closed, sans client Graph, credential, compte, endpoint public ni message réel. La preuve locale est verte; la preuve PostgreSQL/RLS et la CI publiée du lot sortant restent à obtenir après publication sûre de la branche.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -27,12 +27,12 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Conserver le chemin conversation-first et ne sélectionner un provider professionnel que s'il peut fournir une preuve verticale réelle avec webhook vérifié avant la base, tenant/RLS, idempotence, actions durables, audit sans contenu sensible et états disabled/not_configured/mock. La frontière HTTP Meta doit refuser avant lecture/base quand le provider n'est pas prêt, borner strictement le JSON et ne remettre qu'un corps brut signé au service tenant-aware. Telegram est explicitement hors candidat.",
-      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 64-68 relues directement : runtime provider uniforme, webhook signé, provider sans secret réel et WebChat de référence. WhatsApp Developer Hub officiel confirme des numéros de test, webhooks et sandbox gratuits. La migration additive 087, les 32 tests ciblés Meta et le build de production prouvent le challenge GET à jeton comparé en temps constant, le POST JSON borné/signé, le 503 hors état ready, le mapping tenant-aware, le rejeu, l'audit sans PII et l'absence d'appel réseau. La prochaine preuve attendue est la préparation durable du flux sortant Meta, sans rendre le provider réel ni configurer de credential."
+      "requirement": "Conserver le chemin conversation-first et ne sélectionner un provider professionnel que s'il peut fournir une preuve verticale réelle avec webhook vérifié avant la base, tenant/RLS, idempotence, actions durables, audit sans contenu sensible et états disabled/not_configured/mock. Les pages 15-18, 22, 26-30, 35-38 et 64-68 imposent pour l'envoi Meta une exécution uniquement via le runtime provider, une réservation durable avant tout effet, une policy et une idempotency key, un état provider honnête, une route endpoint-identité tenant-aware et aucune donnée sensible dans l'audit. Telegram reste explicitement hors candidat.",
+      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue localement : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. Preuves encore attendues : exécution PostgreSQL/RLS avec DATABASE_URL et CI publiée du head du lot. Aucun compte, token, endpoint public ou message Meta ne doit être créé."
     }
   },
-  "nextAction": "Reprendre la première tranche OS-5 restante : concevoir le service sortant durable WhatsApp Cloud Meta avec réservation, policy, idempotence et états honnêtes, sans activer le provider, appeler Meta ni stocker de credential en clair.",
-  "nextFile": "src/modules/channels/whatsapp-meta-outbound-service.ts",
+  "nextAction": "Publier le lot OS-5 Meta sur la branche réconciliée, surveiller la CI PostgreSQL/RLS, puis corriger uniquement un défaut directement attribuable au lot Meta; ne pas activer le provider ni traiter le Goal and Watch Engine hors ordre.",
+  "nextFile": "tests/channel-provider-identity-bindings-postgres-rls.test.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -374,7 +374,14 @@
     "pnpm audit production sans vulnerabilite connue; pnpm why confirme nanoid 3.3.18",
     "pnpm lint et pnpm typecheck verts",
     "CI=true pnpm vitest run --maxWorkers=1 : 112 fichiers/471 tests verts, 6 fichiers/17 tests PostgreSQL ignores sans DATABASE_URL",
-    "build production local vert avec environnement CI factice; continuity-check et diff check finaux a confirmer"
+    "build production local vert avec environnement CI factice; continuity-check et diff check finaux a confirmer",
+    "pnpm agent:continuity-check le 2026-08-30 : ready avec seul avertissement de fraîcheur documentaire supérieur à sept jours",
+    "relecture directe du PDF canonique : SHA-256 exact, 71 pages, pages coeur 3-7, 31-33, 46, 48, 69-71 et pages OS-5 13-18, 22, 26-30, 35-38, 64-68",
+    "git fetch puis fast-forward strict de 787d54b vers 33777bf après preuve d'ascendance et absence de chevauchement avec le lot Meta local",
+    "tests Meta ciblés sur le head réconcilié : 12 fichiers verts, 65 tests verts et 1 test PostgreSQL/RLS ignoré sans DATABASE_URL",
+    "régression Twilio sortante : 5 fichiers et 38 tests verts",
+    "suite locale exhaustive sur le head réconcilié : 121 fichiers verts, 523 tests verts, 7 fichiers et 18 tests PostgreSQL ignorés sans DATABASE_URL",
+    "ESLint complet, TypeScript sans cache incrémental, build Next.js production et git diff --check verts sur le head réconcilié"
   ],
   "lastValidation": [
     {
@@ -1096,12 +1103,40 @@
     {
       "command": "pnpm build avec environnement CI factice après correction nanoid",
       "status": "passed_production_build"
+    },
+    {
+      "command": "prompt maître et continuity-check le 2026-08-30",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_with_stale_state_warning_then_documentation_refreshed"
+    },
+    {
+      "command": "réconciliation Git avec origin/codex/tradikom-one-os",
+      "status": "passed_fast_forward_only_787d54b_to_33777bf_dirty_meta_lot_preserved_no_path_overlap"
+    },
+    {
+      "command": "tests ciblés WhatsApp Cloud Meta sur 33777bf",
+      "status": "passed_12_files_65_tests_1_postgres_rls_test_skipped_without_database_url"
+    },
+    {
+      "command": "tests de régression sortante Twilio sur 33777bf",
+      "status": "passed_5_files_38_tests"
+    },
+    {
+      "command": "suite Vitest exhaustive sur 33777bf et lot Meta local",
+      "status": "passed_121_files_523_tests_7_files_18_postgres_tests_skipped_without_database_url"
+    },
+    {
+      "command": "ESLint complet, TypeScript sans cache, build Next.js production et git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "PR #11 et CI distante observées avant publication du lot Meta",
+      "status": "draft_open_conflicting_with_main_remote_head_33777bf_ci_failed_only_goal_watch_service_conversation_messages_check_continuity_passed"
     }
   ],
   "humanBlockers": [
-    "Compte Twilio d'essai, vérification du téléphone et acceptation des conditions Sandbox",
-    "Credentials Twilio, sender Sandbox et endpoint HTTPS temporaire stockés uniquement dans un gestionnaire de secrets",
-    "Autorisation d'au plus deux messages de preuve si les unités gratuites sont visibles",
+    "Création ou mise à disposition humaine d'un compte développeur Meta, d'une application, d'un WABA et d'un numéro de test autorisé",
+    "Token Meta et secret d'application stockés uniquement dans un gestionnaire de secrets, ainsi qu'un endpoint HTTPS contrôlé",
+    "Autorisation explicite avant toute activation réelle ou tout message de preuve Meta",
     "Toute dépense, ressource payante ou dépassement de quota",
     "Fusion, déploiement de production et changement DNS réel"
   ]

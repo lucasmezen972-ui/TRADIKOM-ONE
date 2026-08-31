@@ -1,53 +1,55 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-- Date : 19 août 2026, 15:58 UTC
+- Date : 31 août 2026, 03:07 UTC
 - Branche : `codex/tradikom-one-os`
-- PR : #11, brouillon
-- Head de départ : `394ebc871217a3db73a2dfef20c901039d2e040b`
+- PR : #11, ouverte en brouillon et en conflit avec `main`
+- Head distant réconcilié avant publication du lot : `33777bfc01ab08982671aa10b7e3487bdc82eb16`
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**
 
 ## Impact north star
 
-La tranche conserve le résultat métier prioritaire : une conversation entrante vérifiée peut être rattachée au bon tenant, rejouée sans doublon et auditée sans contenu sensible. Aucun CRM, Kanban, dashboard secondaire ou fournisseur alternatif n'a été sélectionné à la place de ce parcours conversation-first.
+La tranche complète localement le chemin prioritaire conversation → action durable : un message Meta vérifié est rattaché au bon tenant et au bon endpoint, puis une réponse sortante peut être réservée, gouvernée, rejouée et auditée sans doublon ni contenu sensible. Aucun CRM, Kanban ou dashboard secondaire n'a été choisi à la place de ce parcours.
 
 ## Alignement prompt maître
 
 | Pages relues | Exigence | Preuve obtenue | Écart restant |
 | --- | --- | --- | --- |
-| 3-7, 46, 48, 70-71 | Priorité conversation-first, pas de tâche CRM/Kanban secondaire, continuité documentée | La tranche relie un webhook entrant au Conversation Hub et laisse un bloc de reprise exact | Le flux sortant durable Meta reste à préparer |
-| 13-18, 22, 31-33 | Adapteurs bornés, tenant/RLS, action durable, Definition of Done | Mapping endpoint par HMAC, migration additive, transactions système et identité pseudonymisée par tenant | Preuve PostgreSQL/RLS du nouveau lot requiert une base et la CI |
-| 35-38 | Entrée non fiable, pas de contenu sensible dans l'audit, pas de secret dans le dépôt | Signature HMAC sur corps brut avant parsing/base, JSON borné, audit sans numéro, WABA, Phone Number ID ni corps brut | Aucun secret Meta réel n'est configuré ni validé |
-| 64-68 | Runtime provider uniforme, webhook signé, provider fail-closed | Registre `whatsapp_meta`, route GET/POST, challenge à jeton comparé en temps constant, POST 512 Kio, 503 hors `ready` | Le runtime reste volontairement `disabled`/`not_configured` hors tests |
-| 69 | Tests provider, sécurité, intégration, isolation | 32 tests ciblés verts : signature, normalisation, migration neuve/mise à niveau, replay, deuxième message, endpoint absent/désactivé, isolation de deux tenants, HTTP | Playwright et CI PostgreSQL du lot n'ont pas encore été relancés |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre d'exécution strict et continuité documentée | Flux Meta entrant puis sortant traité comme tranche OS-5; documents de reprise actualisés; aucune nouvelle tâche CRM/Kanban/dashboard sélectionnée | Le commit OS-6 distant préexistant reste hors de cette tranche et sa CI rouge n'est pas traité comme prochaine priorité |
+| 13-18, 22, 26-30 | Adaptateurs bornés, runtime provider, action durable, policy, idempotence et gouvernance | Adaptateur Meta sans client Graph; réservation durable avant effet; policy, claim/lease, retry/backoff et clé d'idempotence testés | Provider réel volontairement non configuré; preuve CI du head du lot à publier |
+| 31-33 | Definition of Done stricte : migrations neuves/mise à niveau, PostgreSQL/RLS, tests, build et preuve utilisable | Migrations runtime/SQL additives, tests PGlite de base neuve et upgrade, 65 tests Meta, régression Twilio, suite complète, lint, typecheck et build verts | Test PostgreSQL/RLS ignoré sans `DATABASE_URL`; backup/restauration, CI et Playwright restent à prouver sur le head publié |
+| 35-38 | Entrées non fiables, données sensibles protégées, audit sans contenu ni secret | Signature avant base côté ingress; liaisons par empreintes opaques; audit sans numéro, identité, corps ou credential; aucune clé dans le dépôt | Gestion réelle de secrets et endpoint HTTPS relèvent d'une autorisation humaine ultérieure |
+| 64-68 | Runtime fournisseur uniforme, endpoint tenant-aware, états honnêtes et webhook signé | `whatsapp_meta` est `disabled`/`not_configured` hors test; liaison endpoint-identité empêche le routage par un autre numéro; transport uniquement injecté en mock | Aucun client Graph ni appel réel; activation humaine non autorisée |
+| 69 | Matrice de tests provider, sécurité, intégration et isolation | 12 fichiers/65 tests Meta verts, 5 fichiers/38 tests Twilio verts, 121 fichiers/523 tests complets verts; cas d'isolation, rejeu, refus avant transport et persistance couverts | 1 test Meta PostgreSQL/RLS et 18 tests PostgreSQL globaux ignorés localement faute de base |
 
-Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages 3-7, 31-33, 46, 48, 64-68 et 69-71 ont été consultées directement; les pages runtime/provider sont 64-68.
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement; les pages 32, 48, 64 et 69 ont également été contrôlées visuellement.
 
-## Travail livré
+## Travail livré localement
 
-- Provider Meta fail-closed avec huit prérequis déclaratifs et aucun transport actif.
-- Vérification `X-Hub-Signature-256` HMAC SHA-256 en temps constant, sur corps brut UTF-8 borné.
-- Normalisation d'un seul message texte déterministe uniquement après signature.
-- Endpoint WABA + Phone Number ID résolu par empreinte HMAC tenant-aware, sans valeurs de destination en clair.
-- Ingestion Conversation Hub idempotente, auditée et pseudonymisée; le même expéditeur génère des fils/identités distincts entre tenants.
-- Migration additive `087_os2_whatsapp_meta_endpoint_provider`, prouvée sur base neuve et sur mise à niveau PGlite.
-- Route `/api/webhooks/meta/whatsapp` avec GET challenge et POST JSON; le handler n'appelle ni base ni consommateur lorsque le provider n'est pas `ready`.
+- Migration de livraison autorisant `whatsapp_meta`, sans réécriture de l'historique appliqué.
+- Table tenant-aware de liaisons opaques endpoint-identité, unicité, immutabilité et RLS.
+- Réservation de la liaison à l'ingress afin d'empêcher un envoi depuis un autre endpoint Meta du tenant.
+- Adaptateur sortant Meta fail-closed, sans SDK ni client Graph; transport mock uniquement injecté par les tests.
+- Service sortant tenant-aware : membership, contexte endpoint-identité, réservation, policy, idempotence, statut, lease, reprise et audit sûr.
+- Worker borné ne réclamant que les livraisons Meta dues.
+- Régression du repository sortant partagé avec Twilio.
 
 ## Validation honnête
 
-- Verts : 32 tests ciblés Meta, `pnpm lint`, `pnpm exec tsc --noEmit --incremental false`, `pnpm agent:continuity-check`, `git diff --check` et build de production avec l'environnement CI simulé.
-- CI connue : PR #11 au head publié `cc0335f`, CI `32262537881` et Continuité `32262537861` vertes. Elles précèdent ce lot local Meta.
-- Limite locale : `pnpm db:verify` exige une `DATABASE_URL` PostgreSQL absente. La migration est testée en PGlite, mais la vérification PostgreSQL/RLS reste à exécuter en CI ou avec une base autorisée.
-- Limite locale : `pnpm test` complet a été interrompu après des dépassements du délai de 5 s dans des suites historiques non Meta (`workflow-worker`, sortant Twilio), sans assertion métier en échec. Ce résultat n'est pas présenté comme vert.
+- Verts localement sur le head réconcilié et le lot Meta : 12 fichiers/65 tests Meta, 5 fichiers/38 tests Twilio, 121 fichiers/523 tests complets, ESLint, TypeScript sans cache, build Next.js production, `git diff --check` et continuity-check.
+- Ignorés faute d'infrastructure locale : 1 test Meta PostgreSQL/RLS; au total 7 fichiers et 18 tests PostgreSQL. Aucun `DATABASE_URL`, Docker ou serveur PostgreSQL local n'est disponible.
+- État distant avant publication : continuité `32374109126` verte; CI `32374109077` rouge uniquement sur `goal-watch-service` avec la contrainte `conversation_messages_check`, donc sur le commit OS-6 distant et non sur le lot Meta encore local.
+- Réconciliation Git : le head local `787d54b` était l'ancêtre direct du head distant `33777bf`. Un fast-forward strict d'un commit, sans chemin commun avec les modifications Meta, a préservé le worktree sale; aucun reset, clean, stash, changement de branche ou commit de fusion.
 
 ## Classification des états
 
-- Livré : préparation inbound Meta jusqu'à la route HTTP fail-closed, avec migration et preuves locales.
-- Réel : aucun compte, app Meta, WABA, sender, token, URL publique ou message fournisseur.
+- Livré localement : ingress et sortant Meta durables, fail-closed et testés.
+- Réel : aucun compte, app Meta, WABA, numéro, token, client Graph, endpoint public ou message fournisseur.
 - Sandbox : aucune configurée ou appelée.
-- Mock : uniquement les secrets/états synthétiques de test; aucun transport réseau.
-- Bloqué humain : activation réelle, endpoint HTTPS temporaire, gestionnaire de secrets et autorisation distincte sans paiement.
-- Hors périmètre : production, dépense, fusion, déploiement, CRM, Kanban, dashboard secondaire et OS-6+.
+- Mock : transport synthétique uniquement dans les tests, sans réseau.
+- Bloqué humain : compte/app/WABA/numéro de test, endpoint HTTPS, secrets en gestionnaire et autorisation explicite avant activation ou preuve externe.
+- Bloqué technique externe : PostgreSQL/RLS et CI du head publié.
+- Hors périmètre : dépense, fusion, déploiement, DNS, CRM, Kanban, dashboard secondaire et correction fonctionnelle OS-6 non liée.
 
-## Prochaine tranche non bloquée
+## Écarts restants et reprise
 
-Préparer le flux sortant durable Meta : réservation, policy, idempotence, audit sûr, statut provider et worker, sans client Meta, credential réel, activation ou appel réseau. Avant tout code, actualiser `masterPrompt.alignment` et relire les pages provider pertinentes.
+Publier le lot Meta uniquement après contrôle précis de l'index et exclusion de `tmp/`, puis surveiller la CI PostgreSQL. Si la CI échoue, attribuer chaque erreur : corriger uniquement un défaut OS-5 Meta; documenter séparément l'échec préexistant OS-6 `conversation_messages_check`. Ne pas activer Meta ni demander de secret sans autorisation distincte.

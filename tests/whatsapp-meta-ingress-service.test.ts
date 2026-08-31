@@ -106,6 +106,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
         setup.db.query("select * from conversation_channel_identities"),
         setup.db.query("select * from audit_logs"),
         setup.db.query("select * from channel_provider_endpoints"),
+        setup.db.query("select * from channel_provider_identity_bindings"),
       ]),
     );
     expect(persisted).not.toContain(sender);
@@ -126,6 +127,18 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     );
     expect(JSON.stringify(audits.rows)).not.toContain(sender);
     expect(JSON.stringify(audits.rows)).not.toContain(phoneNumberId);
+    const bindings = await setup.db.query<{
+      endpoint_id: string;
+      channel_identity_id: string;
+    }>(
+      `select endpoint_id, channel_identity_id
+       from channel_provider_identity_bindings
+       where tenant_id = $1`,
+      [setup.tenant.id],
+    );
+    expect(bindings.rows).toEqual([
+      expect.objectContaining({ endpoint_id: setup.endpointId }),
+    ]);
   }, 20_000);
 
   it("refuse un endpoint absent ou désactivé sans conversation", async () => {
@@ -243,6 +256,64 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       identities.rows[1]?.external_subject_id,
     );
     expect(JSON.stringify(identities.rows)).not.toContain(sender);
+  }, 20_000);
+
+  it("sépare le même contact entre deux endpoints du même tenant", async () => {
+    const setup = await createSetup();
+    const secondEndpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+      setup.db,
+      {
+        tenantId: setup.tenant.id,
+        actorId: setup.owner.id,
+        externalAccountId: wabaIdB,
+        phoneNumberId: phoneNumberIdB,
+      },
+      fingerprintSecret,
+    );
+
+    const first = await receivePreparedMetaWhatsAppWebhook(setup.db, webhook(), {
+      appSecret,
+      fingerprintSecret,
+      receivedAt,
+    });
+    const second = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      webhook({
+        wabaId: wabaIdB,
+        phoneNumberId: phoneNumberIdB,
+        messageId: thirdMessageId,
+      }),
+      {
+        appSecret,
+        fingerprintSecret,
+        receivedAt: "2026-07-30T16:21:00.000Z",
+      },
+    );
+
+    if (!first.accepted || !second.accepted) {
+      throw new Error("Les deux endpoints Meta doivent être résolus.");
+    }
+    expect(first.threadId).not.toBe(second.threadId);
+    const bindings = await setup.db.query<{
+      endpoint_id: string;
+      channel_identity_id: string;
+    }>(
+      `select endpoint_id, channel_identity_id
+       from channel_provider_identity_bindings
+       where tenant_id = $1
+       order by endpoint_id`,
+      [setup.tenant.id],
+    );
+    expect(bindings.rows).toHaveLength(2);
+    expect(bindings.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ endpoint_id: setup.endpointId }),
+        expect.objectContaining({ endpoint_id: secondEndpoint.endpointId }),
+      ]),
+    );
+    expect(bindings.rows[0]?.channel_identity_id).not.toBe(
+      bindings.rows[1]?.channel_identity_id,
+    );
   }, 20_000);
 });
 
