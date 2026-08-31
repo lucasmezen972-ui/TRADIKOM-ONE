@@ -8,6 +8,7 @@
 - Un doublon d'export Resend issu de l'auto-merge a été supprimé sans retirer les deux implémentations bornées utilisées directement par leurs tests.
 - Validation locale : lint et typecheck verts; 30 tests ciblés de fusion/migrations verts; continuity-check `ready`; build Next.js production vert. La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL. Son seul échec était un timeout à 5,256 s sans assertion; le `testTimeout` global prévu est passé à 60 s et le fichier repasse avec 3/3 tests verts.
 - Prochaine preuve : commit/push sans force, puis CI PostgreSQL/RLS et Playwright. Meta reste `disabled`/`not_configured` hors doubles de test.
+- La réconciliation fonctionnelle est enregistrée dans le merge commit `8ecf24f`; aucun historique n'a été réécrit.
 
 ## 2026-08-19 - Préparation WhatsApp Cloud API Meta sans activation
 

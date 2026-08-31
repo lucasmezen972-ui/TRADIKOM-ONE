@@ -4,7 +4,7 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "5111214117ab59cae676da4d6a239657536a49b1",
+  "lastCommit": "8ecf24f",
   "publishedHeadObserved": "5111214117ab59cae676da4d6a239657536a49b1",
   "status": "in_progress",
   "currentPhase": "OS-5",
@@ -32,7 +32,7 @@
       "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue et publiée : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. Preuve encore attendue : exécution PostgreSQL/RLS après réconciliation humaine du conflit de la PR #11, aucun PostgreSQL local n'étant disponible. Aucun compte, token, endpoint public ou message Meta ne doit être créé."
     }
   },
-  "nextAction": "Enregistrer et pousser le commit de réconciliation sans force, puis surveiller la CI PostgreSQL/RLS de la PR #11 et corriger immédiatement tout défaut prouvé de fusion ou d'OS-5 Meta.",
+  "nextAction": "Pousser les commits de réconciliation sans force, puis surveiller la CI PostgreSQL/RLS de la PR #11 et corriger immédiatement tout défaut prouvé de fusion ou d'OS-5 Meta.",
   "nextFile": "docs/WORKLOG.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",

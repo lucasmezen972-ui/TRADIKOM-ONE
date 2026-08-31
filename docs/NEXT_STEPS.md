@@ -25,7 +25,7 @@ Les pages 13-18, 22, 26-33, 35-38, 46, 48, 64-69 imposent cette tranche : parcou
 
 ## Prochaine action concrète
 
-1. Enregistrer le commit de fusion local et le pousser sans force sur `codex/tradikom-one-os`.
+1. Pousser le commit de fusion local `8ecf24f` sans force sur `codex/tradikom-one-os`.
 2. Laisser démarrer la CI `pull_request` et obtenir la preuve PostgreSQL/RLS de `channel_provider_identity_bindings` et des migrations renumérotées.
 3. Corriger immédiatement un défaut prouvé de réconciliation ou d'OS-5 Meta; distinguer l'échec historique OS-6 `conversation_messages_check` s'il réapparaît.
 4. Ne pas fusionner la PR #11, activer Meta, déployer ou dépenser sans autorisation humaine distincte.
