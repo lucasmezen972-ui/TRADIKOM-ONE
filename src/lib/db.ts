@@ -458,6 +458,10 @@ function getMigrations(enableRls: boolean) {
           sql: os5ChannelProviderIdentityBindingsRlsMigrationSql,
         }]
       : []),
+    {
+      id: "103_os5_channel_provider_secret_versions_meta",
+      sql: os5ChannelProviderSecretVersionsMetaMigrationSql,
+    },
   ];
 }
 
@@ -5398,6 +5402,24 @@ create policy tenant_isolation on channel_provider_secret_versions
   for all
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderSecretVersionsMetaMigrationSql = `
+alter table channel_provider_secret_versions
+  drop constraint if exists channel_provider_secret_versions_provider_check;
+
+alter table channel_provider_secret_versions
+  add constraint channel_provider_secret_versions_provider_check
+  check (provider in ('whatsapp_twilio', 'whatsapp_meta'));
+
+alter table channel_provider_secret_versions
+  drop constraint if exists channel_provider_secret_versions_tenant_id_endpoint_id_fkey;
+
+alter table channel_provider_secret_versions
+  add constraint channel_provider_secret_versions_endpoint_provider_fkey
+  foreign key (tenant_id, endpoint_id, provider)
+  references channel_provider_endpoints (tenant_id, id, provider)
+  on delete cascade;
 `;
 
 const os5ChannelProviderActivationAuthorizationsMigrationSql = `

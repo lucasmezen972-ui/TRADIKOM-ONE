@@ -12,17 +12,24 @@ import { ChannelProviderSecretError } from "@/modules/channels/channel-provider-
 import {
   findActiveEndpointSecretVersion,
   findActiveIdentitySecretVersion,
-  findActiveWhatsAppIdentity,
+  findActiveChannelProviderIdentity,
+  findChannelProviderIdentity,
   findSecretVersionByRotationKey,
-  findWhatsAppIdentity,
   insertSecretVersion,
-  lockActiveWhatsAppEndpoint,
-  lockWhatsAppEndpoint,
+  lockActiveChannelProviderEndpoint,
+  lockChannelProviderEndpoint,
   nextSecretVersion,
   revokeActiveSecretVersions,
+  type ChannelProviderSecretProvider,
   type ChannelProviderSecretScope,
   type ChannelProviderSecretVersionRow,
 } from "@/modules/channels/channel-provider-secrets-repository";
+import type {
+  WhatsAppMetaCredentialsReference,
+  WhatsAppMetaDestinationReference,
+  WhatsAppMetaResolvedCredentials,
+  WhatsAppMetaResolvedDestination,
+} from "@/modules/channels/whatsapp-meta-transport";
 import type {
   WhatsAppTwilioCredentialsReference,
   WhatsAppTwilioDestinationReference,
@@ -44,6 +51,17 @@ const whatsappAddressSchema = z
   .string()
   .trim()
   .regex(/^whatsapp:\+[1-9][0-9]{7,14}$/);
+const metaReferenceSchema = z.string().regex(/^[1-9][0-9]{5,63}$/);
+const metaAccessTokenSchema = z.string().min(20).max(4_096);
+const metaGraphApiVersionSchema = z
+  .string()
+  .regex(/^v[1-9][0-9]{0,2}\.[0-9]{1,2}$/);
+const metaAppSecretSchema = z.string().min(16).max(512);
+const metaVerifyTokenSchema = z.string().min(16).max(256);
+const internationalPhoneNumberSchema = z
+  .string()
+  .trim()
+  .regex(/^\+[1-9][0-9]{7,14}$/);
 
 const endpointSecretSchema = z
   .object({
@@ -54,6 +72,19 @@ const endpointSecretSchema = z
   .strict();
 const identitySecretSchema = z
   .object({ recipientAddress: whatsappAddressSchema })
+  .strict();
+const metaEndpointSecretSchema = z
+  .object({
+    wabaId: metaReferenceSchema,
+    accessToken: metaAccessTokenSchema,
+    phoneNumberId: metaReferenceSchema,
+    graphApiVersion: metaGraphApiVersionSchema,
+    appSecret: metaAppSecretSchema,
+    webhookVerifyToken: metaVerifyTokenSchema,
+  })
+  .strict();
+const metaIdentitySecretSchema = z
+  .object({ recipientPhoneNumber: internationalPhoneNumberSchema })
   .strict();
 const baseRotationSchema = z
   .object({
@@ -71,10 +102,18 @@ const identityRotationSchema = baseRotationSchema.extend({
   channelIdentityId: boundedIdentifierSchema,
   secret: identitySecretSchema,
 });
+const metaEndpointRotationSchema = baseRotationSchema.extend({
+  secret: metaEndpointSecretSchema,
+});
+const metaIdentityRotationSchema = baseRotationSchema.extend({
+  channelIdentityId: boundedIdentifierSchema,
+  secret: metaIdentitySecretSchema,
+});
 const revokeSchema = z
   .object({
     tenantId: boundedIdentifierSchema,
     actorId: boundedIdentifierSchema,
+    provider: z.enum(["whatsapp_twilio", "whatsapp_meta"]),
     endpointId: boundedIdentifierSchema,
     channelIdentityId: boundedIdentifierSchema.nullable(),
     scope: z.enum(["endpoint", "identity"]),
@@ -105,6 +144,7 @@ export async function rotateWhatsAppEndpointSecret(
     db,
     {
       ...parsed,
+      provider: "whatsapp_twilio",
       channelIdentityId: null,
       scope: "endpoint",
       plaintext: JSON.stringify(parsed.secret),
@@ -124,6 +164,7 @@ export async function rotateWhatsAppIdentitySecret(
     db,
     {
       ...parsed,
+      provider: "whatsapp_twilio",
       scope: "identity",
       plaintext: JSON.stringify(parsed.secret),
     },
@@ -133,10 +174,14 @@ export async function rotateWhatsAppIdentitySecret(
 
 export async function revokeWhatsAppEndpointSecret(
   db: DbClient,
-  input: Omit<z.input<typeof revokeSchema>, "scope" | "channelIdentityId">,
+  input: Omit<
+    z.input<typeof revokeSchema>,
+    "provider" | "scope" | "channelIdentityId"
+  >,
 ) {
   return revokeSecret(db, {
     ...input,
+    provider: "whatsapp_twilio",
     scope: "endpoint",
     channelIdentityId: null,
   });
@@ -144,11 +189,87 @@ export async function revokeWhatsAppEndpointSecret(
 
 export async function revokeWhatsAppIdentitySecret(
   db: DbClient,
-  input: Omit<z.input<typeof revokeSchema>, "scope" | "channelIdentityId"> & {
+  input: Omit<
+    z.input<typeof revokeSchema>,
+    "provider" | "scope" | "channelIdentityId"
+  > & {
     channelIdentityId: string;
   },
 ) {
-  return revokeSecret(db, { ...input, scope: "identity" });
+  return revokeSecret(db, {
+    ...input,
+    provider: "whatsapp_twilio",
+    scope: "identity",
+  });
+}
+
+export async function rotateMetaWhatsAppEndpointSecret(
+  db: DbClient,
+  input: z.input<typeof metaEndpointRotationSchema>,
+  keyring: ChannelProviderSecretKeyring,
+) {
+  const parsed = metaEndpointRotationSchema.parse(input);
+  return rotateSecret(
+    db,
+    {
+      ...parsed,
+      provider: "whatsapp_meta",
+      channelIdentityId: null,
+      scope: "endpoint",
+      plaintext: JSON.stringify(parsed.secret),
+      expectedExternalAccountId: parsed.secret.wabaId,
+    },
+    keyring,
+  );
+}
+
+export async function rotateMetaWhatsAppIdentitySecret(
+  db: DbClient,
+  input: z.input<typeof metaIdentityRotationSchema>,
+  keyring: ChannelProviderSecretKeyring,
+) {
+  const parsed = metaIdentityRotationSchema.parse(input);
+  return rotateSecret(
+    db,
+    {
+      ...parsed,
+      provider: "whatsapp_meta",
+      scope: "identity",
+      plaintext: JSON.stringify(parsed.secret),
+    },
+    keyring,
+  );
+}
+
+export async function revokeMetaWhatsAppEndpointSecret(
+  db: DbClient,
+  input: Omit<
+    z.input<typeof revokeSchema>,
+    "provider" | "scope" | "channelIdentityId"
+  >,
+) {
+  return revokeSecret(db, {
+    ...input,
+    provider: "whatsapp_meta",
+    scope: "endpoint",
+    channelIdentityId: null,
+  });
+}
+
+export async function revokeMetaWhatsAppIdentitySecret(
+  db: DbClient,
+  input: Omit<
+    z.input<typeof revokeSchema>,
+    "provider" | "scope" | "channelIdentityId"
+  > & {
+    channelIdentityId: string;
+  },
+) {
+  return revokeSecret(db, {
+    ...input,
+    provider: "whatsapp_meta",
+    scope: "identity",
+  });
 }
 
 export function createWhatsAppTwilioSecretResolvers(
@@ -165,6 +286,7 @@ export function createWhatsAppTwilioSecretResolvers(
           transaction,
           parsed.tenantId,
           parsed.endpointId,
+          "whatsapp_twilio",
         );
         if (!row) return null;
         const secret = decryptSecret(row, keyring, endpointSecretSchema);
@@ -184,12 +306,14 @@ export function createWhatsAppTwilioSecretResolvers(
             transaction,
             parsed.tenantId,
             parsed.endpointId,
+            "whatsapp_twilio",
           ),
           findActiveIdentitySecretVersion(
             transaction,
             parsed.tenantId,
             parsed.endpointId,
             parsed.channelIdentityId,
+            "whatsapp_twilio",
           ),
         ]);
         if (!endpointRow || !identityRow) return null;
@@ -212,6 +336,87 @@ export function createWhatsAppTwilioSecretResolvers(
   };
 }
 
+export type WhatsAppMetaResolvedWebhookSecrets = {
+  appSecret: string;
+  verifyToken: string;
+};
+
+export function createWhatsAppMetaSecretResolvers(
+  db: DbClient,
+  keyring: ChannelProviderSecretKeyring,
+) {
+  return {
+    async resolveCredentials(
+      reference: WhatsAppMetaCredentialsReference,
+    ): Promise<WhatsAppMetaResolvedCredentials | null> {
+      const parsed = credentialReferenceSchema.parse(reference);
+      return withSystemDbTransaction(db, async (transaction) => {
+        const row = await findActiveEndpointSecretVersion(
+          transaction,
+          parsed.tenantId,
+          parsed.endpointId,
+          "whatsapp_meta",
+        );
+        if (!row) return null;
+        const secret = decryptSecret(row, keyring, metaEndpointSecretSchema);
+        return {
+          accessToken: secret.accessToken,
+          phoneNumberId: secret.phoneNumberId,
+          graphApiVersion: secret.graphApiVersion,
+        };
+      });
+    },
+    async resolveDestination(
+      reference: WhatsAppMetaDestinationReference,
+    ): Promise<WhatsAppMetaResolvedDestination | null> {
+      const parsed = destinationReferenceSchema.parse(reference);
+      return withSystemDbTransaction(db, async (transaction) => {
+        const [endpointRow, identityRow] = await Promise.all([
+          findActiveEndpointSecretVersion(
+            transaction,
+            parsed.tenantId,
+            parsed.endpointId,
+            "whatsapp_meta",
+          ),
+          findActiveIdentitySecretVersion(
+            transaction,
+            parsed.tenantId,
+            parsed.endpointId,
+            parsed.channelIdentityId,
+            "whatsapp_meta",
+          ),
+        ]);
+        if (!endpointRow || !identityRow) return null;
+        const identity = decryptSecret(
+          identityRow,
+          keyring,
+          metaIdentitySecretSchema,
+        );
+        return { recipientPhoneNumber: identity.recipientPhoneNumber };
+      });
+    },
+    async resolveWebhookSecrets(
+      reference: WhatsAppMetaCredentialsReference,
+    ): Promise<WhatsAppMetaResolvedWebhookSecrets | null> {
+      const parsed = credentialReferenceSchema.parse(reference);
+      return withSystemDbTransaction(db, async (transaction) => {
+        const row = await findActiveEndpointSecretVersion(
+          transaction,
+          parsed.tenantId,
+          parsed.endpointId,
+          "whatsapp_meta",
+        );
+        if (!row) return null;
+        const secret = decryptSecret(row, keyring, metaEndpointSecretSchema);
+        return {
+          appSecret: secret.appSecret,
+          verifyToken: secret.webhookVerifyToken,
+        };
+      });
+    },
+  };
+}
+
 const credentialReferenceSchema = z
   .object({
     tenantId: boundedIdentifierSchema,
@@ -227,6 +432,7 @@ async function rotateSecret(
   input: {
     tenantId: string;
     actorId: string;
+    provider: ChannelProviderSecretProvider;
     endpointId: string;
     channelIdentityId: string | null;
     scope: ChannelProviderSecretScope;
@@ -249,6 +455,7 @@ async function rotateSecret(
       const replay = await findSecretVersionByRotationKey(
         transaction,
         input.tenantId,
+        input.provider,
         rotationKeyHash,
       );
       if (replay) {
@@ -257,10 +464,11 @@ async function rotateSecret(
         return rotationResult(replay, true);
       }
 
-      const endpoint = await lockActiveWhatsAppEndpoint(
+      const endpoint = await lockActiveChannelProviderEndpoint(
         transaction,
         input.tenantId,
         input.endpointId,
+        input.provider,
       );
       if (!endpoint) throw referenceError();
       if (
@@ -272,11 +480,12 @@ async function rotateSecret(
       if (
         input.scope === "identity" &&
         (!input.channelIdentityId ||
-          !(await findActiveWhatsAppIdentity(
-            transaction,
-            input.tenantId,
-            input.channelIdentityId,
-          )))
+          !(await findActiveChannelProviderIdentity(transaction, {
+            tenantId: input.tenantId,
+            endpointId: input.endpointId,
+            channelIdentityId: input.channelIdentityId,
+            provider: input.provider,
+          })))
       ) {
         throw referenceError();
       }
@@ -292,6 +501,7 @@ async function rotateSecret(
       const row = await insertSecretVersion(transaction, {
         id: id("channel_secret"),
         tenant_id: input.tenantId,
+        provider: input.provider,
         endpoint_id: input.endpointId,
         channel_identity_id: input.channelIdentityId,
         secret_scope: input.scope,
@@ -310,7 +520,7 @@ async function rotateSecret(
         targetType: "channel_provider_secret_version",
         targetId: row.id,
         metadata: {
-          provider: "whatsapp_twilio",
+          provider: input.provider,
           scope: input.scope,
           secretVersion,
           keyVersion: encrypted.keyVersion,
@@ -334,10 +544,11 @@ async function revokeSecret(
     async (transaction) => {
       await assertAdministrator(transaction, parsed.actorId, parsed.tenantId);
       if (
-        !(await lockWhatsAppEndpoint(
+        !(await lockChannelProviderEndpoint(
           transaction,
           parsed.tenantId,
           parsed.endpointId,
+          parsed.provider,
         ))
       ) {
         throw referenceError();
@@ -345,11 +556,12 @@ async function revokeSecret(
       if (
         parsed.scope === "identity" &&
         parsed.channelIdentityId &&
-        !(await findWhatsAppIdentity(
-          transaction,
-          parsed.tenantId,
-          parsed.channelIdentityId,
-        ))
+        !(await findChannelProviderIdentity(transaction, {
+          tenantId: parsed.tenantId,
+          endpointId: parsed.endpointId,
+          channelIdentityId: parsed.channelIdentityId,
+          provider: parsed.provider,
+        }))
       ) {
         throw referenceError();
       }
@@ -365,7 +577,7 @@ async function revokeSecret(
           targetType: "channel_provider_endpoint",
           targetId: parsed.endpointId,
           metadata: {
-            provider: "whatsapp_twilio",
+            provider: parsed.provider,
             scope: parsed.scope,
             revokedCount: revoked.length,
             sensitiveValueRecorded: false,
@@ -404,6 +616,7 @@ function decryptSecret<T extends z.ZodTypeAny>(
       secretContext(
         {
           tenantId: row.tenant_id,
+          provider: row.provider,
           endpointId: row.endpoint_id,
           channelIdentityId: row.channel_identity_id,
           scope: row.secret_scope,
@@ -420,6 +633,7 @@ function decryptSecret<T extends z.ZodTypeAny>(
 function secretContext(
   input: {
     tenantId: string;
+    provider: ChannelProviderSecretProvider;
     endpointId: string;
     channelIdentityId: string | null;
     scope: ChannelProviderSecretScope;
@@ -428,7 +642,7 @@ function secretContext(
 ) {
   return {
     tenantId: input.tenantId,
-    provider: "whatsapp_twilio" as const,
+    provider: input.provider,
     endpointId: input.endpointId,
     channelIdentityId: input.channelIdentityId,
     scope: input.scope,
@@ -439,12 +653,14 @@ function secretContext(
 function assertReplayReference(
   row: ChannelProviderSecretVersionRow,
   input: {
+    provider: ChannelProviderSecretProvider;
     endpointId: string;
     channelIdentityId: string | null;
     scope: ChannelProviderSecretScope;
   },
 ) {
   if (
+    row.provider !== input.provider ||
     row.endpoint_id !== input.endpointId ||
     row.channel_identity_id !== input.channelIdentityId ||
     row.secret_scope !== input.scope
@@ -466,6 +682,7 @@ function assertReplayPayload(
       secretContext(
         {
           tenantId: row.tenant_id,
+          provider: row.provider,
           endpointId: row.endpoint_id,
           channelIdentityId: row.channel_identity_id,
           scope: row.secret_scope,

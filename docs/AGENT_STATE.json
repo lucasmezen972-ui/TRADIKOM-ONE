@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T16:53:29.000Z",
+  "updatedAt": "2026-08-31T17:50:18.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "02584ba0712c8593db40145fb73424d729ddd0fe",
   "publishedHeadObserved": "02584ba0712c8593db40145fb73424d729ddd0fe",
-  "status": "ready_for_next_os5_slice",
+  "status": "os5_meta_secret_vault_ready_for_publication_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La frontière HTTP WhatsApp Cloud API Meta est publiée au head 02584ba et entièrement prouvée par la CI 33414636126 et la continuité 33414636345 : migrations/backup/RLS, 141 fichiers et 646 tests, build production et 20 Playwright verts. Elle reçoit des résolveurs tenant/endpoint-scoped et un fetch injecté, borne URL/payload/réponse, classe les échecs et ne lit aucun secret global. Le registre reste fail-closed; aucune activation, clé résolue, requête réseau réelle ou message externe n'a eu lieu. OS-5 continue par le prochain travail non bloqué : étendre le cycle de vie chiffré des secrets fournisseur à Meta avant toute composition réelle.",
+  "currentObjective": "La tranche locale OS-5 étend le coffre fournisseur chiffré à WhatsApp Meta : migration additive runtime 103 / SQL 0097, clé étrangère composée tenant-endpoint-provider, repositories et services provider-scoped, rotation/révocation idempotentes, résolveurs éphémères et audits sans valeur sensible. La compatibilité Twilio est préservée. La preuve locale compte 14 fichiers réussis et 2 PostgreSQL ignorés, 91 tests réussis et 2 ignorés, plus lint, typecheck et build production verts; PostgreSQL/RLS et la suite exhaustive doivent être confirmés par la CI après publication. La configuration réelle autorisée par l'utilisateur reste au checkpoint Meta for Developers : le code SMS doit être saisi directement dans Chrome, sans clé dans le chat ou le modèle. Aucun appel Graph ni message externe n'est autorisé par ce checkpoint.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,12 +28,12 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Poursuivre OS-5 par une tranche verticale conversation-first non bloquée : préparer la frontière de transport WhatsApp Meta Cloud API derrière l'adaptateur et le service durable existants, sans clé, compte, activation ni appel réseau réel. Les pages 14, 29, 31-32, 48, 64 et 69 imposent un adaptateur sans logique métier, un runtime passant par policy, idempotence et audit, des états fail-closed explicites et des tests sans clés couvrant not_configured, échec temporaire, échec permanent et non-fuite. Ne sélectionner ni OS-6, CRM, Kanban ni dashboard.",
-      "evidenceExpected": "Preuve obtenue au head 02584ba : PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 14, 29 et 64 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Transport Graph injecté et testé sans réseau réel, URL et payload bornés, résolution éphémère des credentials et de la destination, refus avant toute résolution lorsque le provider n'est pas prêt, classification auth/rate_limit/temporary/permanent/validation et aucune fuite de token, destination, contenu ou réponse brute. CI 33414636126 verte : migrations/backup/RLS, 141 fichiers et 646 tests, build et 20 Playwright. Activation Meta et message externe restent bloqués sur autorisation humaine distincte."
+      "requirement": "Poursuivre OS-5 par la première tranche logicielle non bloquée après la frontière Graph : étendre additivement le cycle de vie chiffré des secrets fournisseur de whatsapp_twilio à whatsapp_meta, sans exposer de secret dans Git, les logs, les audits, le navigateur ou le modèle. Les pages 22, 26, 29, 32, 37, 48, 64 et 69 imposent migrations tenant-scoped/RLS, rotation et révocation, résolveurs serveur éphémères, provider explicitement borné et tests sans clé réelle. L'utilisateur autorise désormais la configuration réelle Meta, mais l'inscription Meta for Developers attend son code SMS saisi directement dans Chrome; poursuivre le coffre et ne créer aucune clé, ressource payante, requête Graph ni message externe pendant ce checkpoint.",
+      "evidenceExpected": "Migration runtime 103 et miroir SQL 0097 acceptant seulement whatsapp_twilio/whatsapp_meta, repositories et services explicitement provider-scoped, compatibilité Twilio préservée, payloads Meta chiffrés avec keyring et résolus uniquement en mémoire, rotation/révocation idempotentes, audit sans contenu sensible, refus cross-tenant et tests PostgreSQL/RLS. PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages techniques 17-22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 37, 48, 64 et 69. Checkpoint humain exact : saisir le code SMS Meta dans Chrome puis reprendre la console officielle; aucune valeur secrète ne transitera dans le chat."
     }
   },
-  "nextAction": "Étendre de façon additive le stockage et les services de rotation/révocation chiffrés de channel_provider_secret_versions à whatsapp_meta, avec migration runtime 103 et miroir SQL 0097, repositories provider-scoped, isolation tenant/RLS et tests sans secret réel. Préserver le chemin Twilio et maintenir toute composition Meta réelle désactivée.",
-  "nextFile": "src/db/migrations/0097_os5_channel_provider_secret_versions_meta.sql",
+  "nextAction": "Publier en fast-forward la tranche du coffre Meta puis attendre sa CI PostgreSQL/RLS. En parallèle, l'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et préparer l'injection par références de gestionnaire de secrets sans lire, afficher, journaliser ou commiter les valeurs. Demander une confirmation au moment exact avant toute création de token persistant; ne déclencher ni requête Graph, message, endpoint public, déploiement ou dépense.",
+  "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1319,12 +1319,37 @@
     {
       "command": "CI 33414636126 et continuité 33414636345 sur 02584ba",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_141_files_646_tests_build_20_playwright_continuity_ready_pr_open_draft_mergeable_clean"
+    },
+    {
+      "command": "tranche locale du coffre chiffré WhatsApp Meta au head parent 9288aa7",
+      "status": "passed_runtime_migration_103_sql_0097_provider_scoped_repositories_services_rotation_revocation_resolvers_audit_without_sensitive_values"
+    },
+    {
+      "command": "régression Meta et coffre ciblée",
+      "status": "passed_14_files_91_tests_2_postgres_files_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "ESLint complet, TypeScript et build Next.js production avec environnement CI factice",
+      "status": "passed_build_rerun_outside_sandbox_only_for_google_fonts"
+    },
+    {
+      "command": "suite Vitest exhaustive et db:verify locaux",
+      "status": "inconclusive_full_suite_silent_interrupted_without_assertion_failure_db_verify_blocked_without_database_url_ci_required"
+    },
+    {
+      "command": "Meta for Developers dans Chrome",
+      "status": "blocked_human_sms_code_form_visible_continue_disabled_no_secret_read_or_created"
+    },
+    {
+      "command": "GitHub avant publication au head 9288aa7",
+      "status": "passed_local_remote_aligned_pr_11_open_draft_mergeable_clean_ci_33416889004_and_continuity_33416888927_green"
     }
   ],
   "humanBlockers": [
-    "Création ou mise à disposition humaine d'un compte développeur Meta, d'une application, d'un WABA et d'un numéro de test autorisé",
-    "Token Meta et secret d'application stockés uniquement dans un gestionnaire de secrets, ainsi qu'un endpoint HTTPS contrôlé",
-    "Autorisation explicite avant toute activation réelle ou tout message de preuve Meta",
+    "Saisie par l'utilisateur du code SMS à six chiffres directement dans l'onglet Meta for Developers ouvert; le code ne doit pas être transmis dans le chat",
+    "Confirmation au moment exact avant toute création d'un token Meta persistant, puis stockage uniquement via références de gestionnaire de secrets sans exposition au modèle",
+    "Mise à disposition d'une application, d'un WABA, d'un Phone Number ID et d'un endpoint HTTPS contrôlé dans la console officielle",
+    "Autorisation explicite distincte avant toute requête Graph réelle, activation ou message de preuve Meta",
     "Toute dépense, ressource payante ou dépassement de quota",
     "Fusion, déploiement de production et changement DNS réel"
   ]

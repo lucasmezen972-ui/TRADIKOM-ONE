@@ -7,7 +7,9 @@ import { createServices } from "../src/lib/services";
 import { id } from "../src/lib/security";
 import {
   createChannelProviderSecretKeyring,
+  registerAuthorizedMetaWhatsAppEndpoint,
   registerAuthorizedWhatsAppEndpoint,
+  rotateMetaWhatsAppEndpointSecret,
   rotateWhatsAppEndpointSecret,
 } from "../src/modules/channels";
 
@@ -34,7 +36,7 @@ describeIfPostgres("RLS PostgreSQL du coffre fournisseur OS-5", () => {
     const ownerDb = pgPoolAsSqlClient(ownerPool);
     await migrate(ownerDb, { enableRls: true });
     const fixtureA = await seedVaultTenant(ownerDb, "a");
-    const fixtureB = await seedVaultTenant(ownerDb, "b");
+    const fixtureB = await seedVaultTenant(ownerDb, "b", "whatsapp_meta");
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
@@ -107,7 +109,11 @@ describeIfPostgres("RLS PostgreSQL du coffre fournisseur OS-5", () => {
 
 type OwnerDb = ReturnType<typeof pgPoolAsSqlClient>;
 
-async function seedVaultTenant(db: OwnerDb, suffix: "a" | "b") {
+async function seedVaultTenant(
+  db: OwnerDb,
+  suffix: "a" | "b",
+  provider: "whatsapp_twilio" | "whatsapp_meta" = "whatsapp_twilio",
+) {
   const services = createServices(db);
   const owner = await services.registerUser({
     name: `Coffre RLS ${suffix}`,
@@ -118,17 +124,29 @@ async function seedVaultTenant(db: OwnerDb, suffix: "a" | "b") {
     name: `Coffre RLS ${suffix} ${randomUUID()}`,
     category: "Services",
   });
-  const endpoint = await registerAuthorizedWhatsAppEndpoint(
-    db,
-    {
-      tenantId: tenant.id,
-      actorId: owner.id,
-      externalAccountId: `AC${suffix.repeat(32)}`,
-      destinationAddress: `whatsapp:+59669600000${suffix === "a" ? "1" : "2"}`,
-      occurredAt: timestamp,
-    },
-    "vault-postgres-fingerprint-secret-32-bytes",
-  );
+  const endpoint = provider === "whatsapp_meta"
+    ? await registerAuthorizedMetaWhatsAppEndpoint(
+        db,
+        {
+          tenantId: tenant.id,
+          actorId: owner.id,
+          externalAccountId: "345678901234567",
+          phoneNumberId: "456789012345678",
+          occurredAt: timestamp,
+        },
+        "vault-postgres-fingerprint-secret-32-bytes",
+      )
+    : await registerAuthorizedWhatsAppEndpoint(
+        db,
+        {
+          tenantId: tenant.id,
+          actorId: owner.id,
+          externalAccountId: `AC${suffix.repeat(32)}`,
+          destinationAddress: `whatsapp:+59669600000${suffix === "a" ? "1" : "2"}`,
+          occurredAt: timestamp,
+        },
+        "vault-postgres-fingerprint-secret-32-bytes",
+      );
   const participantId = id("participant");
   const identityId = id("identity");
   await db.query(
@@ -141,29 +159,57 @@ async function seedVaultTenant(db: OwnerDb, suffix: "a" | "b") {
     `insert into conversation_channel_identities (
        id, tenant_id, participant_id, channel_kind, adapter_key,
        external_subject_id, display_name, role, state, created_at, updated_at
-     ) values ($1, $2, $3, 'messaging', 'whatsapp-twilio', $4, null,
-       'customer', 'active', $5, $5)`,
-    [identityId, tenant.id, participantId, `vault-rls-subject-${suffix}`, timestamp],
+     ) values ($1, $2, $3, 'messaging', $4, $5, null,
+       'customer', 'active', $6, $6)`,
+    [
+      identityId,
+      tenant.id,
+      participantId,
+      provider === "whatsapp_meta" ? "whatsapp-meta" : "whatsapp-twilio",
+      `vault-rls-subject-${suffix}`,
+      timestamp,
+    ],
   );
-  const rotated = await rotateWhatsAppEndpointSecret(
-    db,
-    {
-      tenantId: tenant.id,
-      actorId: owner.id,
-      endpointId: endpoint.endpointId,
-      rotationKey: `vault-rls-rotation-${suffix}`,
-      secret: {
-        accountSid: `AC${suffix.repeat(32)}`,
-        authToken: `test-auth-token-${suffix}`,
-        senderAddress: `whatsapp:+59669600000${suffix === "a" ? "1" : "2"}`,
-      },
-      occurredAt: timestamp,
-    },
-    createChannelProviderSecretKeyring({
-      activeKeyVersion: "test-v1",
-      keys: { "test-v1": Buffer.alloc(32, suffix === "a" ? 31 : 32) },
-    }),
-  );
+  const keyring = createChannelProviderSecretKeyring({
+    activeKeyVersion: "test-v1",
+    keys: { "test-v1": Buffer.alloc(32, suffix === "a" ? 31 : 32) },
+  });
+  const rotated = provider === "whatsapp_meta"
+    ? await rotateMetaWhatsAppEndpointSecret(
+        db,
+        {
+          tenantId: tenant.id,
+          actorId: owner.id,
+          endpointId: endpoint.endpointId,
+          rotationKey: `vault-rls-rotation-${suffix}`,
+          secret: {
+            wabaId: "345678901234567",
+            accessToken: "meta-postgres-test-token-never-real",
+            phoneNumberId: "456789012345678",
+            graphApiVersion: "v23.0",
+            appSecret: "meta-postgres-app-secret-never-real",
+            webhookVerifyToken: "meta-postgres-webhook-token",
+          },
+          occurredAt: timestamp,
+        },
+        keyring,
+      )
+    : await rotateWhatsAppEndpointSecret(
+        db,
+        {
+          tenantId: tenant.id,
+          actorId: owner.id,
+          endpointId: endpoint.endpointId,
+          rotationKey: `vault-rls-rotation-${suffix}`,
+          secret: {
+            accountSid: `AC${suffix.repeat(32)}`,
+            authToken: `test-auth-token-${suffix}`,
+            senderAddress: `whatsapp:+59669600000${suffix === "a" ? "1" : "2"}`,
+          },
+          occurredAt: timestamp,
+        },
+        keyring,
+      );
   return {
     ownerId: owner.id,
     tenantId: tenant.id,

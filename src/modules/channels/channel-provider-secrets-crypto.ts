@@ -5,6 +5,7 @@ import {
 } from "node:crypto";
 import { z } from "zod";
 import { ChannelProviderSecretError } from "@/modules/channels/channel-provider-secrets-errors";
+import type { ChannelProviderSecretProvider } from "@/modules/channels/channel-provider-secrets-repository";
 
 const keyVersionSchema = z
   .string()
@@ -23,7 +24,7 @@ const encryptedEnvelopeSchema = z
 
 export type ChannelProviderSecretContext = {
   tenantId: string;
-  provider: "whatsapp_twilio";
+  provider: ChannelProviderSecretProvider;
   endpointId: string;
   channelIdentityId: string | null;
   scope: "endpoint" | "identity";

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
+import { PGlite } from "@electric-sql/pglite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb, getMigrationIds } from "../src/lib/db";
+import { createMemoryDb, getMigrationIds, migrate } from "../src/lib/db";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const timestamp = "2026-08-08T12:00:00.000Z";
@@ -24,6 +25,10 @@ describe("migrations du coffre fournisseur OS-5", () => {
         "os5ChannelProviderSecretVersionsRlsMigrationSql",
         "../src/db/migrations/0088_os5_channel_provider_secret_versions_rls.sql",
       ],
+      [
+        "os5ChannelProviderSecretVersionsMetaMigrationSql",
+        "../src/db/migrations/0097_os5_channel_provider_secret_versions_meta.sql",
+      ],
     ] as const) {
       const mirror = readFileSync(new URL(path, import.meta.url), "utf8");
       expect(extractSqlTemplate(runtime, constant).trim()).toBe(mirror.trim());
@@ -33,6 +38,9 @@ describe("migrations du coffre fournisseur OS-5", () => {
     );
     expect(getMigrationIds(true)).toContain(
       "094_os5_channel_provider_secret_versions_rls",
+    );
+    expect(getMigrationIds()).toContain(
+      "103_os5_channel_provider_secret_versions_meta",
     );
   });
 
@@ -88,6 +96,29 @@ describe("migrations du coffre fournisseur OS-5", () => {
       version: 1,
       rotationHash: "a".repeat(64),
     });
+    await seedMetaVaultContext(db);
+    await insertSecret(db, {
+      id: "secret_meta",
+      tenantId: "tenant_a",
+      provider: "whatsapp_meta",
+      endpointId: "endpoint_meta_a",
+      identityId: null,
+      scope: "endpoint",
+      version: 1,
+      rotationHash: "d".repeat(64),
+    });
+    await expect(
+      insertSecret(db, {
+        id: "secret_provider_mismatch",
+        tenantId: "tenant_a",
+        provider: "whatsapp_meta",
+        endpointId: "endpoint_a",
+        identityId: null,
+        scope: "endpoint",
+        version: 1,
+        rotationHash: "e".repeat(64),
+      }),
+    ).rejects.toThrow(/foreign key|violates/i);
     await expect(
       insertSecret(db, {
         id: "secret_a_second_active",
@@ -141,6 +172,53 @@ describe("migrations du coffre fournisseur OS-5", () => {
       ).rows,
     ).toEqual([]);
   });
+
+  it("met à niveau une base existante avant d'autoriser les secrets Meta", async () => {
+    const db = new PGlite();
+    opened.push(db);
+    await migrate(db, {
+      targetMigrationId: "101_os5_channel_provider_identity_bindings",
+    });
+    await seedVaultContext(db, "a");
+    await seedMetaVaultContext(db);
+
+    await expect(
+      insertSecret(db, {
+        id: "secret_meta_before",
+        tenantId: "tenant_a",
+        provider: "whatsapp_meta",
+        endpointId: "endpoint_meta_a",
+        identityId: null,
+        scope: "endpoint",
+        version: 1,
+        rotationHash: "a".repeat(64),
+      }),
+    ).rejects.toThrow(/check constraint|violates/i);
+
+    await migrate(db);
+    await insertSecret(db, {
+      id: "secret_meta_after",
+      tenantId: "tenant_a",
+      provider: "whatsapp_meta",
+      endpointId: "endpoint_meta_a",
+      identityId: null,
+      scope: "endpoint",
+      version: 1,
+      rotationHash: "b".repeat(64),
+    });
+    await expect(
+      insertSecret(db, {
+        id: "secret_wrong_provider_after",
+        tenantId: "tenant_a",
+        provider: "whatsapp_twilio",
+        endpointId: "endpoint_meta_a",
+        identityId: null,
+        scope: "endpoint",
+        version: 1,
+        rotationHash: "c".repeat(64),
+      }),
+    ).rejects.toThrow(/foreign key|violates/i);
+  });
 });
 
 type TestDb = Awaited<ReturnType<typeof createMemoryDb>>;
@@ -192,12 +270,26 @@ async function seedVaultContext(db: TestDb, suffix: "a" | "b") {
   );
 }
 
+async function seedMetaVaultContext(db: TestDb) {
+  await db.query(
+    `insert into channel_provider_endpoints (
+       id, tenant_id, provider, external_account_id,
+       destination_fingerprint, status, created_by, created_at, updated_at
+     ) values (
+       'endpoint_meta_a', 'tenant_a', 'whatsapp_meta', '123456789012345',
+       $1, 'active', 'user_a', $2, $2
+     )`,
+    ["f".repeat(64), timestamp],
+  );
+}
+
 async function insertSecret(
   db: TestDb,
   input: {
     id: string;
     tenantId: string;
     endpointId: string;
+    provider?: "whatsapp_twilio" | "whatsapp_meta";
     identityId: string | null;
     scope: "endpoint" | "identity";
     version: number;
@@ -209,11 +301,12 @@ async function insertSecret(
        id, tenant_id, provider, endpoint_id, channel_identity_id,
        secret_scope, encrypted_payload, key_version, secret_version,
        rotation_key_hash, revoked_at, revoked_by, created_by, created_at
-     ) values ($1, $2, 'whatsapp_twilio', $3, $4, $5, $6, 'test-v1',
-       $7, $8, null, null, $9, $10)`,
+    ) values ($1, $2, $3, $4, $5, $6, $7, 'test-v1',
+       $8, $9, null, null, $10, $11)`,
     [
       input.id,
       input.tenantId,
+      input.provider ?? "whatsapp_twilio",
       input.endpointId,
       input.identityId,
       input.scope,

@@ -2,64 +2,62 @@
 
 ## Situation actuelle
 
-- Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements suivis et non suivis. `tmp/` reste strictement exclu de tout commit.
+- Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026.
-- La réconciliation autorisée avec `main` est publiée par `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`. Les migrations `main` 067-078 / SQL 0061-0072 sont préservées et les migrations OS sont renumérotées 079-102 / SQL 0073-0096.
-- Le head fonctionnel local et distant publié est `02584ba0712c8593db40145fb73424d729ddd0fe`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`.
-- La CI `33414636126` et la continuité `33414636345` sont vertes sur ce head, y compris PostgreSQL/RLS, suite complète, build production et Playwright.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 17-22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026; les pages 29, 32, 37, 48, 64 et 69 ont été contrôlées visuellement.
+- Le head local et distant de départ est `9288aa767d758c25fd7383a101a8881405f1668a`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33416889004` et la continuité `33416888927` sont vertes sur ce head.
+- L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
-## Tranche livrée : flux WhatsApp Cloud Meta, sans activation
+## Tranche locale terminée : coffre chiffré WhatsApp Meta
 
-- Les migrations runtime 100-102 et leurs miroirs SQL 0094-0096 autorisent les livraisons `whatsapp_meta`, ajoutent une liaison opaque endpoint-identité, une contrainte d'écriture protectrice et les politiques RLS tenant-aware.
-- L'ingress réserve cette liaison par tenant et endpoint; un contact rattaché à un numéro Meta ne peut pas être envoyé depuis un autre endpoint du même tenant.
-- L'adaptateur sortant est fail-closed. La frontière HTTP Graph est implémentée avec `fetch` injecté, résolveurs éphémères tenant/endpoint-scoped, URL et réponse bornées; aucune composition réseau réelle n'existe.
-- Le registre préparé reste `disabled`/`not_configured`/`awaiting_human_auth` et `transportEnabled: false`. Un état `ready` synthétique exige aussi un transport explicite, sinon l'adaptateur retourne `not_configured`.
-- Le service réserve durablement avant effet, applique la policy, respecte l'idempotence, gère claim/lease/retry/backoff et audite sans contenu sensible.
-- Le worker ne prend que les livraisons Meta dues, avec appartenance tenant vérifiée et limite bornée.
-- Aucun compte, application, WABA, numéro Meta, token, endpoint public, client Graph, message externe, dépense, fusion de PR ou déploiement n'a été créé.
+- La migration additive runtime `103_os5_channel_provider_secret_versions_meta` et son miroir SQL `0097_os5_channel_provider_secret_versions_meta.sql` autorisent uniquement `whatsapp_twilio` et `whatsapp_meta`.
+- Une clé étrangère composée `(tenant_id, endpoint_id, provider)` empêche d'attacher une version de secret Meta à un endpoint Twilio, et inversement. Les politiques RLS existantes restent inchangées; aucun grant Data API public n'est ajouté.
+- Le repository et le service sont explicitement provider-scoped. Le chemin Twilio reste compatible.
+- Les payloads endpoint Meta — WABA, token d'accès, Phone Number ID, version Graph, secret d'application et jeton de vérification — et la destination sont chiffrés en AES-256-GCM avec contexte tenant/provider/endpoint/identité/portée/version.
+- Rotation, rejeu, collision d'idempotence, révocation monotone, endpoint actif, identité Meta liée, membership administrateur et refus cross-tenant sont contrôlés.
+- Les résolveurs ne rendent les credentials et la destination qu'en mémoire serveur. Les audits n'enregistrent ni token, secret, numéro, contenu ni ciphertext.
+- Le branchement au transport Meta est prouvé uniquement avec un `fetch` factice et l'état `mock`; aucune requête Graph réelle ni message externe n'a été produit.
 
 ## Référence prompt maître
 
-Les pages 13-18, 22, 26-33, 35-38, 46, 48 et 64-69 du prompt maître imposent le parcours conversation-first, l'action durable, la réservation avant effet, tenant/RLS, l'idempotence, l'audit sans contenu sensible, un état fournisseur honnête et les tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 sont satisfaites pour la tranche logicielle et CI; elles imposent comme prochaine action d'attendre l'autorisation humaine avant toute preuve fournisseur externe.
+Les pages 17-22, 26-33, 35-38, 46, 48 et 64-69 imposent le chiffrement des credentials, tenant/RLS, rotation/révocation, action durable, états fournisseur honnêtes, audit sans contenu sensible et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 exigent encore la preuve PostgreSQL/RLS de CI et le checkpoint fournisseur avant de classer OS-5 terminé.
 
 ## Prochaine action concrète
 
-1. Ajouter la migration runtime 103 et son miroir SQL 0097 pour autoriser `whatsapp_meta` dans `channel_provider_secret_versions` sans modifier les migrations déjà appliquées ni affaiblir les clés composites/RLS.
-2. Généraliser les repositories et le service de secrets actuellement figés sur `whatsapp_twilio` avec un provider explicite, tout en conservant les contrats Twilio existants.
-3. Ajouter les schémas Meta endpoint/identité et les résolveurs tenant/endpoint-scoped, testés exclusivement avec keyring et données factices; aucune lecture d'environnement ni requête Graph dans ces tests.
-4. Prouver base neuve et mise à niveau, refus cross-tenant, rotation idempotente, révocation, corruption de ciphertext et audit sans secret; publier puis attendre la CI complète.
-5. Attendre une autorisation humaine distincte avant tout compte/app/WABA, numéro de test, endpoint HTTPS, credential réel, activation ou message Meta. Ne pas fusionner, déployer, changer le DNS ou dépenser.
+1. Enregistrer et pousser la tranche locale en fast-forward, après une dernière preuve que le distant reste le parent exact et sans inclure `tmp/`.
+2. Attendre la CI du nouveau head et exiger migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite complète, build et Playwright verts.
+3. L'utilisateur saisit le code SMS directement dans Chrome puis indique seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
+4. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
+5. Injecter les valeurs réelles par références de gestionnaire de secrets côté serveur, sans les lire, afficher, journaliser ou commiter. Conserver le provider `not_configured`/`awaiting_human_auth` tant que la composition n'est pas complète.
+6. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte; aucune de ces actions n'est couverte par l'autorisation de stocker les clés.
 
 ## Validation disponible
 
-- Tranche Graph : 3 fichiers/37 tests transport-adaptateur-registre verts. Régression Meta : 7 fichiers/55 tests verts; 1 fichier/1 test PostgreSQL/RLS ignoré faute de `DATABASE_URL` local.
-- Lint et typecheck complets verts. La limite locale de suite/build est levée par la CI autoritative `33414636126` : 141 fichiers/646 tests, build production et 20 Playwright verts.
-- `pnpm agent:continuity-check` : `ready`, zéro erreur et zéro avertissement localement. La clé de script `tsx` dupliquée qui provoquait `EPERM` a été supprimée; la commande native Node est désormais l'unique lanceur et un test empêche sa régression. L'environnement distant avertit seulement que le PDF local est absent.
-- Validation locale du correctif : lint et typecheck complets verts; 140 fichiers Vitest, 606 tests réussis, 18 ignorés et zéro échec; build production vert avec les variables factices de la CI.
-- CI `33402359544` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright verts sur `c08be1b`.
-- Continuité `33402359545` : verte sur `c08be1b`.
-- `git diff --check`, séquence des migrations 0065-0096 et absence de marqueurs de conflit : verts.
+- Régression coffre/Meta : 14 fichiers réussis, 2 fichiers PostgreSQL ignorés, 91 tests réussis et 2 ignorés faute de `DATABASE_URL`.
+- Migrations PGlite : base neuve et mise à niveau depuis runtime 101 validées; mauvais couple endpoint/provider refusé.
+- ESLint complet, TypeScript et build Next.js production verts. Le build a été relancé hors sandbox uniquement pour charger les polices Google requises.
+- `pnpm test` exhaustif est resté silencieux et a été interrompu sans assertion en échec; `pnpm db:verify` refuse correctement sans `DATABASE_URL`. La CI du nouveau head doit fournir ces preuves.
+- `git diff --check` est vert. La dernière CI publiée, antérieure à cette tranche, reste `33416889004` verte sur `9288aa7`.
 
 ## État de vérité
 
-- Livré : flux Meta entrant et sortant durable, tenant-aware, idempotent et fail-closed, avec preuve locale et CI.
-- Réel connecté : aucun fournisseur.
+- Livré localement : coffre chiffré Meta provider-scoped, migrations, rotation/révocation, résolveurs, audit sûr et tests.
+- Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
-- Mock : transport injecté uniquement dans les tests; aucun effet réseau.
-- Bloqué humain : compte/app/WABA/numéro de test, endpoint HTTPS, secrets en gestionnaire et autorisation explicite avant activation ou preuve externe.
-- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, activation réelle non autorisée, production, fusion, déploiement, DNS et dépense.
+- Mock : transport Meta injecté uniquement dans les tests, sans réseau.
+- Bloqué humain : code SMS Meta, puis création/inventaire app-WABA-numéro et stockage direct des secrets.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
 
 ## Bloc de reprise exact
 
 ```text
-1. Se placer uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, y compris tmp/ non suivi.
-2. Lire AGENT_STATE, MASTER_PROMPT_REFERENCE, WORKLOG, NEXT_STEPS, DRIFT_REPORT et la mémoire de l'automation.
-3. Vérifier PDF, SHA-256, 71 pages et pnpm agent:continuity-check; relire les pages cœur et OS-5 requises.
-4. Vérifier branche, head, PR #11 et CI sans reset, clean, stash, changement de branche ou fusion.
-5. La réconciliation est publiée par 64192145; la frontière Graph est publiée au head 02584ba avec CI 33414636126 et continuité 33414636345 vertes.
-6. Conserver tmp/ hors index et maintenir Meta disabled/not_configured/mock : frontière Graph injectée mais aucune composition réelle, clé, app, WABA, endpoint public ou message réel.
-7. Reprendre par la migration runtime 103 / SQL 0097 et la généralisation provider-scoped du coffre chiffré; la preuve fournisseur externe exige toujours une autorisation humaine distincte.
-8. Maintenir tenant/RLS, idempotence, actions durables, audit sans PII et interfaces visibles en français.
-9. Mettre à jour les quatre documents avant arrêt. Ne pas fusionner, déployer, dépenser ni demander de secret.
+1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
+2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
+3. Le parent publié observé est 9288aa7; la tranche locale ajoute runtime 103 / SQL 0097 et le coffre Meta provider-scoped.
+4. Rejouer les tests coffre/Meta, lint, typecheck et diff check; DATABASE_URL reste réservé à la CI.
+5. Réconcilier le head distant uniquement par fast-forward sûr, commiter sans tmp/, pousser sans force et suivre la CI.
+6. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
+7. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
+8. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
+9. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.
 ```
