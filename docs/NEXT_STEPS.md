@@ -6,6 +6,7 @@
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement le 30 août 2026.
 - La branche locale a été réconciliée sans perte par fast-forward strict de `787d54b` vers le head distant `33777bf`; le lot Meta sale n'avait aucun chemin en conflit avec le commit OS-6 distant et reste intégralement préservé.
+- Le lot Meta et son handoff principal sont enregistrés localement dans `eec609b`; la branche est en avance d'un commit avant le handoff final et le push.
 - La PR #11 est ouverte et en brouillon, mais en conflit avec `main`. Avant publication du lot Meta, la CI distante `32374109077` est rouge uniquement sur `goal-watch-service / conversation_messages_check`; la continuité `32374109126` est verte.
 
 ## Dernière tranche livrée localement : flux sortant WhatsApp Cloud Meta, sans activation

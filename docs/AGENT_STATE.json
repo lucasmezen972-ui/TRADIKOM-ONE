@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T03:07:53.000Z",
+  "updatedAt": "2026-08-31T03:11:59.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "33777bfc01ab08982671aa10b7e3487bdc82eb16",
+  "lastCommit": "eec609b75364a2ded1afa14ecdd71e47c75327b4",
   "status": "in_progress",
   "currentPhase": "OS-5",
   "currentObjective": "OS-5 dispose localement d'une tranche verticale WhatsApp Cloud API Meta entrante et sortante : webhooks vérifiés avant la base, liaisons opaques endpoint-identité, réservation durable, policy, idempotence, reprises bornées et audit sans contenu sensible. Le provider reste volontairement fail-closed, sans client Graph, credential, compte, endpoint public ni message réel. La preuve locale est verte; la preuve PostgreSQL/RLS et la CI publiée du lot sortant restent à obtenir après publication sûre de la branche.",
@@ -381,7 +381,8 @@
     "tests Meta ciblés sur le head réconcilié : 12 fichiers verts, 65 tests verts et 1 test PostgreSQL/RLS ignoré sans DATABASE_URL",
     "régression Twilio sortante : 5 fichiers et 38 tests verts",
     "suite locale exhaustive sur le head réconcilié : 121 fichiers verts, 523 tests verts, 7 fichiers et 18 tests PostgreSQL ignorés sans DATABASE_URL",
-    "ESLint complet, TypeScript sans cache incrémental, build Next.js production et git diff --check verts sur le head réconcilié"
+    "ESLint complet, TypeScript sans cache incrémental, build Next.js production et git diff --check verts sur le head réconcilié",
+    "commit local contrôlé eec609b du lot OS-5 Meta; 22 fichiers, tmp exclu"
   ],
   "lastValidation": [
     {
@@ -1131,6 +1132,10 @@
     {
       "command": "PR #11 et CI distante observées avant publication du lot Meta",
       "status": "draft_open_conflicting_with_main_remote_head_33777bf_ci_failed_only_goal_watch_service_conversation_messages_check_continuity_passed"
+    },
+    {
+      "command": "commit eec609b75364a2ded1afa14ecdd71e47c75327b4",
+      "status": "passed_22_controlled_os5_meta_and_continuity_files_tmp_excluded"
     }
   ],
   "humanBlockers": [

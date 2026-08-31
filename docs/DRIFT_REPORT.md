@@ -4,6 +4,7 @@
 - Branche : `codex/tradikom-one-os`
 - PR : #11, ouverte en brouillon et en conflit avec `main`
 - Head distant réconcilié avant publication du lot : `33777bfc01ab08982671aa10b7e3487bdc82eb16`
+- Commit local du lot OS-5 Meta : `eec609b75364a2ded1afa14ecdd71e47c75327b4`
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**
 
 ## Impact north star
@@ -39,6 +40,7 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Ignorés faute d'infrastructure locale : 1 test Meta PostgreSQL/RLS; au total 7 fichiers et 18 tests PostgreSQL. Aucun `DATABASE_URL`, Docker ou serveur PostgreSQL local n'est disponible.
 - État distant avant publication : continuité `32374109126` verte; CI `32374109077` rouge uniquement sur `goal-watch-service` avec la contrainte `conversation_messages_check`, donc sur le commit OS-6 distant et non sur le lot Meta encore local.
 - Réconciliation Git : le head local `787d54b` était l'ancêtre direct du head distant `33777bf`. Un fast-forward strict d'un commit, sans chemin commun avec les modifications Meta, a préservé le worktree sale; aucun reset, clean, stash, changement de branche ou commit de fusion.
+- Publication préparée : le commit local `eec609b` contient exactement les 22 fichiers contrôlés du lot et de continuité; `tmp/` est exclu.
 
 ## Classification des états
 
