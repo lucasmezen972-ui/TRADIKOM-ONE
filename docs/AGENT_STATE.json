@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T05:11:31.000Z",
+  "updatedAt": "2026-08-31T05:39:04.862Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "8ecf24f",
-  "publishedHeadObserved": "5111214117ab59cae676da4d6a239657536a49b1",
-  "status": "in_progress",
+  "lastCommit": "64192145e13f4fb0e61fe3e6bea7eb95548b4ede",
+  "publishedHeadObserved": "575c3210a2ec395687f437cbeba292596d9b56e1",
+  "status": "ready_for_human_checkpoint",
   "currentPhase": "OS-5",
-  "currentObjective": "La réconciliation autorisée de la PR #11 avec main est résolue localement sans perte : les migrations main 067-078 restent immuables, les migrations OS sont décalées en 079-102 avec miroirs SQL 0073-0096, les historiques documentaires et les services tenant/Meta sont conservés. Lint, typecheck, 30 tests ciblés, le test de délai corrigé, continuity-check et build production sont verts. La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL; son seul échec était un dépassement de 256 ms du délai Vitest historique, corrigé par le testTimeout global prévu puis revalidé. Le provider Meta reste fail-closed et aucune activation réelle n'est autorisée.",
+  "currentObjective": "La réconciliation autorisée de la PR #11 avec main est publiée sans perte par le commit 64192145 : les migrations main 067-078 restent immuables, les migrations OS sont décalées en 079-102 avec miroirs SQL 0073-0096, et les historiques documentaires ainsi que les services tenant/Meta sont conservés. La PR #11 est ouverte, brouillon, MERGEABLE/CLEAN au head 7b9d4f3. La CI 33359971937 et la continuité 33359971941 sont entièrement vertes, y compris migrations PostgreSQL, backup/restauration, RLS, tests, build et Playwright. Le provider Meta reste fail-closed; aucune activation réelle, clé, client Graph ou message externe n'est autorisé.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,11 +29,11 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Conserver le chemin conversation-first et ne sélectionner un provider professionnel que s'il peut fournir une preuve verticale réelle avec webhook vérifié avant la base, tenant/RLS, idempotence, actions durables, audit sans contenu sensible et états disabled/not_configured/mock. Les pages 15-18, 22, 26-30, 35-38 et 64-68 imposent pour l'envoi Meta une exécution uniquement via le runtime provider, une réservation durable avant tout effet, une policy et une idempotency key, un état provider honnête, une route endpoint-identité tenant-aware et aucune donnée sensible dans l'audit. Telegram reste explicitement hors candidat.",
-      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue et publiée : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. Preuve encore attendue : exécution PostgreSQL/RLS après réconciliation humaine du conflit de la PR #11, aucun PostgreSQL local n'étant disponible. Aucun compte, token, endpoint public ou message Meta ne doit être créé."
+      "evidenceExpected": "PDF canonique 71 pages et SHA-256 exact; pages 15-18, 22, 26-30, 35-38 et 64-68 relues directement. Preuve obtenue et publiée : migrations additives de livraison et de liaison opaque endpoint-identité, adaptateur Meta fail-closed sans client Graph, service tenant-aware qui réserve avant effet, applique la policy, rejoue de façon idempotente, reprend avec lease et backoff, et audite sans PII; tests de refus avant transport, isolation et persistance durable. La CI 33359971937 apporte la preuve PostgreSQL/RLS, migrations, backup/restauration, build et Playwright sur le head réconcilié 7b9d4f3; la continuité 33359971941 est verte. Preuve encore attendue uniquement après autorisation humaine distincte : fournisseur Meta configuré et preuve externe bornée. Aucun compte, token, endpoint public ou message Meta ne doit être créé sans cette autorisation."
     }
   },
-  "nextAction": "Pousser les commits de réconciliation sans force, puis surveiller la CI PostgreSQL/RLS de la PR #11 et corriger immédiatement tout défaut prouvé de fusion ou d'OS-5 Meta.",
-  "nextFile": "docs/WORKLOG.md",
+  "nextAction": "Maintenir le checkpoint OS-5 sans sélectionner OS-6, CRM, Kanban ou dashboard. Attendre une autorisation humaine distincte avant tout compte/app/WABA, endpoint HTTPS, secret, activation ou message de preuve Meta; continuer seulement les contrôles de continuité non mutatifs entre-temps.",
+  "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -391,7 +391,16 @@
     "GitHub au head b3642e3 : PR #11 OPEN DRAFT CONFLICTING/DIRTY, aucun statusCheckRollup ni run Actions créé; dernier run inchangé sur 33777bf",
     "heartbeat 2026-08-31T04:18Z : PDF 71 pages et SHA-256 exact, pages coeur et OS-5 relues directement, continuity-check ready sans avertissement",
     "fetch read-only : branche locale et origin synchronisées sur 39002dd; origin/main 2a73d05, divergence 24 commits main et 90 commits branche depuis aa46bb1",
-    "git merge-tree read-only : 16 fichiers conflictuels, dont 14 hunks pnpm-lock, 4 workflow, 4 db.ts, 2 continuity-check, 2 tenant service et un hunk dans chacun des autres fichiers"
+    "git merge-tree read-only : 16 fichiers conflictuels, dont 14 hunks pnpm-lock, 4 workflow, 4 db.ts, 2 continuity-check, 2 tenant service et un hunk dans chacun des autres fichiers",
+    "heartbeat 2026-08-31T05:18Z : dépôt stable lisible et inscriptible, PDF 71 pages et SHA-256 exact, pages coeur et OS-5 relues directement, tmp préservé",
+    "fast-forward strict 5111214 vers 7b9d4f3 après fetch, preuve d'ascendance et absence de chevauchement avec tmp; réconciliation publiée par 64192145 sans reset, clean, stash ou changement de branche",
+    "tests Meta post-réconciliation : 12 fichiers/65 tests verts et 2 fichiers PostgreSQL/RLS ignorés localement sans DATABASE_URL",
+    "pnpm agent:continuity-check relancé hors sandbox après EPERM du socket tsx : ready, zéro erreur et zéro avertissement",
+    "CI 33359971937 verte sur 7b9d4f3 : migrations PostgreSQL, backup/restauration, lint, typecheck, tests unitaires/intégration, build production et Playwright",
+    "continuité 33359971941 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN au head 7b9d4f3",
+    "continuity-check documentaire initial bloqué sur deux balises textuelles explicites dans DRIFT_REPORT et NEXT_STEPS, corrigées sans changement produit",
+    "pnpm agent:continuity-check final 2026-08-31T05:39:04Z : ready, zéro erreur et zéro avertissement",
+    "fetch final : origin a avancé de 7b9d4f3 à 575c321 par un commit strictement documentaire sur les quatre handoffs; continuité 33361142814 verte et CI 33361142777 en cours avant réconciliation locale"
   ],
   "lastValidation": [
     {
@@ -1177,10 +1186,29 @@
     {
       "command": "git merge-tree aa46bb1 HEAD origin/main en lecture seule",
       "status": "passed_16_conflicted_paths_inventory_recorded_no_merge_no_index_or_worktree_change"
+    },
+    {
+      "command": "fast-forward local vers le head réconcilié publié 7b9d4f3",
+      "status": "passed_origin_direct_descendant_tmp_preserved_no_local_merge_reset_clean_stash_or_branch_change"
+    },
+    {
+      "command": "tests Meta ciblés post-réconciliation",
+      "status": "passed_12_files_65_tests_2_postgres_rls_files_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm agent:continuity-check au heartbeat 2026-08-31T05:18Z",
+      "status": "passed_ready_zero_errors_zero_warnings_after_escalated_rerun_required_by_sandbox_tsx_socket_eperm"
+    },
+    {
+      "command": "CI 33359971937 et continuité 33359971941 sur 7b9d4f3",
+      "status": "passed_postgres_migrations_backup_restore_rls_lint_typecheck_tests_production_build_playwright_and_continuity_pr_open_draft_mergeable_clean"
+    },
+    {
+      "command": "pnpm agent:continuity-check final après mise à jour des quatre documents",
+      "status": "passed_ready_zero_errors_zero_warnings_at_2026_08_31T05_39_04Z"
     }
   ],
   "humanBlockers": [
-    "Réconciliation autorisée du conflit entre la PR #11 et main afin que les workflows pull_request puissent vérifier le head Meta publié",
     "Création ou mise à disposition humaine d'un compte développeur Meta, d'une application, d'un WABA et d'un numéro de test autorisé",
     "Token Meta et secret d'application stockés uniquement dans un gestionnaire de secrets, ainsi qu'un endpoint HTTPS contrôlé",
     "Autorisation explicite avant toute activation réelle ou tout message de preuve Meta",

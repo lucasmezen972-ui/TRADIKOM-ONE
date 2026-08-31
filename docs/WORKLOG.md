@@ -7,8 +7,8 @@
 - Les évolutions tenant de `main` et le lot OS-5 Meta sont combinés : journal des livraisons Resend, liste de suppression sur échec définitif, endpoints opaques, réservation durable, policy, idempotence, lease, retry et audit sans PII.
 - Un doublon d'export Resend issu de l'auto-merge a été supprimé sans retirer les deux implémentations bornées utilisées directement par leurs tests.
 - Validation locale : lint et typecheck verts; 30 tests ciblés de fusion/migrations verts; continuity-check `ready`; build Next.js production vert. La suite exhaustive a validé 604 tests et ignoré 18 tests PostgreSQL. Son seul échec était un timeout à 5,256 s sans assertion; le `testTimeout` global prévu est passé à 60 s et le fichier repasse avec 3/3 tests verts.
-- Prochaine preuve : commit/push sans force, puis CI PostgreSQL/RLS et Playwright. Meta reste `disabled`/`not_configured` hors doubles de test.
-- La réconciliation fonctionnelle est enregistrée dans le merge commit `8ecf24f`; aucun historique n'a été réécrit.
+- La preuve suivante a été obtenue après publication : CI PostgreSQL/RLS et Playwright verts. Meta reste `disabled`/`not_configured` hors doubles de test.
+- La réconciliation fonctionnelle est enregistrée dans le merge commit publié `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`; aucun historique n'a été réécrit. La référence transitoire `8ecf24f` du handoff précédent n'existe pas dans l'historique publié et est remplacée ici par le commit observé.
 
 ## 2026-08-19 - Préparation WhatsApp Cloud API Meta sans activation
 
@@ -782,3 +782,16 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Une analyse `git merge-tree` en lecture seule a réduit l'incertitude sans modifier le dépôt. La base commune est `aa46bb1`, `origin/main` est `2a73d05`, avec 24 commits exclusifs côté main et 90 côté branche. Seize fichiers présentent des conflits; `pnpm-lock.yaml` compte 14 hunks, le workflow et `src/lib/db.ts` 4 chacun, le script de continuité et le service tenant 2 chacun.
 - Les chemins conflictuels sont consignés dans `NEXT_STEPS.md`. La stratégie préparée est de combiner les configurations et historiques, préserver Meta et les évolutions tenant, puis régénérer le lockfile. Cette stratégie n'a pas été exécutée faute d'autorisation de réconcilier avec `main`.
 - Aucun code, merge, reset, clean, stash, changement de branche, provider, secret, message externe, dépense ou déploiement n'a été produit.
+
+## 2026-08-31 - Réconciliation publiée et CI OS-5 entièrement verte à 05:34 UTC
+
+- La copie active a été vérifiée courante, lisible et inscriptible exclusivement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`. `tmp/` est resté le seul élément non suivi, préservé et hors index; la copie iCloud n'a pas été utilisée.
+- Le PDF canonique a été revérifié : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que les pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 ont été relues directement.
+- Le distant a avancé pendant le heartbeat : le commit de réconciliation `64192145e13f4fb0e61fe3e6bea7eb95548b4ede` a fusionné `main` dans la branche, puis `7b9d4f34abc8fe6c79734f97ca7f227b22351015` a actualisé le handoff. L'ancien head local `5111214` était son ancêtre direct; un fast-forward strict a donc été appliqué sans reset, clean, stash, changement de branche ni commit de fusion local.
+- La réconciliation conserve les migrations `main` 067-078 / SQL 0061-0072 et renumérote les migrations OS en 079-102 / SQL 0073-0096. Le flux Meta sortant occupe runtime 100-102 / SQL 0094-0096.
+- Validation locale post-réconciliation : 12 fichiers/65 tests Meta verts; 2 fichiers PostgreSQL/RLS ignorés faute de `DATABASE_URL`. La séquence des migrations, l'absence de marqueurs de conflit et `git diff --check` sont verts.
+- `pnpm agent:continuity-check` a d'abord rencontré `EPERM` sur le socket `tsx` dans le sandbox; le même contrôle obligatoire a été relancé hors sandbox. Après correction de deux balises documentaires explicites exigées par le script, le contrôle final retourne `ready`, zéro erreur et zéro avertissement à 05:39 UTC.
+- GitHub apporte la preuve manquante : CI `33359971937` verte en 17 min 24 s avec migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, tests unitaires/intégration, build production et Playwright. La continuité `33359971941` est verte.
+- La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN` au head `7b9d4f3` avant le présent commit documentaire. Elle n'a pas été fusionnée ni déployée.
+- Pendant la vérification finale, le distant a avancé d'un commit documentaire direct `575c321` sur les mêmes quatre handoffs. Son contenu a été comparé avant réconciliation : il confirme la CI verte et le checkpoint humain, sans fichier applicatif. Sa continuité `33361142814` est verte; sa CI `33361142777` était en cours au moment du checkpoint.
+- Le lot Meta reste fail-closed : aucun compte, app, WABA, numéro, token, client Graph, endpoint public, Sandbox, message externe, dépense ou activation réelle. La prochaine preuve fournisseur exige une autorisation humaine distincte; aucune tâche OS-6, CRM, Kanban ou dashboard secondaire n'est sélectionnée.
