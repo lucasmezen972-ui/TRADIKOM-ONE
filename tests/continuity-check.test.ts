@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,6 +7,16 @@ import { checkContinuity } from "../scripts/agent/continuity-check";
 const now = new Date("2026-07-30T03:51:02.000Z");
 
 describe("contrôle de continuité", () => {
+  it("utilise l'exécution TypeScript native sans socket tsx", () => {
+    const packageJson = JSON.parse(
+      readFileSync(join(process.cwd(), "package.json"), "utf8"),
+    ) as { scripts?: Record<string, string> };
+
+    expect(packageJson.scripts?.["agent:continuity-check"]).toBe(
+      "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/agent/continuity-check.ts",
+    );
+  });
+
   it("bloque quand les fichiers obligatoires manquent", () => {
     const root = mkdtempSync(join(tmpdir(), "tradikom-continuity-missing-"));
     const result = checkContinuity(root, now);

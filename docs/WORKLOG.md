@@ -1,5 +1,13 @@
 # Journal de travail TRADIKOM ONE OS
 
+## 2026-08-31 - Correction du lanceur de continuité et reprise du checkpoint Meta
+
+- Le head distant de départ `50e7cfadd3c7b9c4def73e6c570397bd79c5b145` est vérifié : PR #11 ouverte, brouillon et mergeable; CI `33361459789` et continuité `33361459787` entièrement vertes, avec 623 tests et 20 scénarios Playwright.
+- `package.json` contenait deux clés `agent:continuity-check`; la seconde réactivait `tsx` et provoquait `listen EPERM` sur son socket dans l'environnement restreint. Le doublon est supprimé, la commande Node native retourne `ready` et un test de contrat verrouille le lanceur.
+- La roadmap reflète désormais les clôtures probantes OS-3 et OS-4. Le document de sélection Twilio est explicitement marqué historique depuis le basculement vers WhatsApp Cloud API directe de Meta.
+- Validation locale : lint et typecheck complets verts; 140 fichiers Vitest, 606 tests réussis, 18 ignorés et zéro échec; build Next.js production vert avec les variables factices exactes de la CI.
+- Le portail officiel Meta a été atteint jusqu'au checkpoint de vérification humaine. Le formulaire sécurisé n'a pas été complété : aucune donnée personnelle, clé ou secret n'a été transmise et aucun SMS, message fournisseur, endpoint, dépense, fusion ou déploiement n'a été déclenché.
+
 ## 2026-08-31 - Réconciliation autorisée de la PR #11 avec main
 
 - Les 16 conflits annoncés ont été reproduits puis résolus sans force-push, fusion de PR, activation fournisseur ni déploiement.

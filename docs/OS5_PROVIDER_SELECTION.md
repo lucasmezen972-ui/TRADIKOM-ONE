@@ -1,9 +1,11 @@
-# Sélection du premier provider réel - OS-5
+# Historique de sélection WhatsApp via Twilio - OS-5
+
+> **Décision remplacée le 19 août 2026.** L'essai Twilio ayant échoué en Martinique, la trajectoire actuelle est WhatsApp Cloud API directe de Meta. Ce document conserve la décision Twilio du 8 août comme trace d'audit; il ne doit plus servir de runbook actif. L'état courant et le checkpoint humain Meta sont dans `docs/AGENT_STATE.json`, `docs/NEXT_STEPS.md` et `docs/DRIFT_REPORT.md`.
 
 - Date : 8 août 2026
 - Branche : `codex/tradikom-one-os`
 - PR : brouillon #11
-- Décision : préparer puis valider **WhatsApp via Twilio Sandbox** comme premier provider réel
+- Décision historique : préparer puis valider **WhatsApp via Twilio Sandbox** comme premier provider réel
 - État à ce checkpoint : `disabled`; il ne pourra passer à `awaiting_human_auth` qu'après configuration explicite, sans compte, credential, endpoint public, message externe ni dépense dans ce checkpoint
 - Source normative : prompt maître PDF, pages 3-7, 13-15, 26-33, 46, 48 et 64-71
 

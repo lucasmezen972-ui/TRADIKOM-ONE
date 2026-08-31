@@ -3,10 +3,10 @@
 ## Checkpoint — 31 août 2026, 06:21 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` au head synchronisé `50e7cfadd3c7b9c4def73e6c570397bd79c5b145`.
+- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN`; le head distant de reprise est `d784196f1c9cdfa72b436431c4f05b1b6f714fe3`, descendant documentaire de `50e7cfa`.
 - Réconciliation publiée : `64192145e13f4fb0e61fe3e6bea7eb95548b4ede`; le commit documentaire distant observé est `7b9d4f34abc8fe6c79734f97ca7f227b22351015`.
 - Migrations `main` préservées : runtime 067-078 / SQL 0061-0072. Migrations OS renumérotées : runtime 079-102 / SQL 0073-0096.
-- CI `33361459789` et continuité `33361459787` entièrement vertes sur le head exact `50e7cfa`.
+- CI `33361459789` et continuité `33361459787` entièrement vertes sur `50e7cfa`, avec 623 tests et 20 scénarios Playwright; `d784196` ne modifie que les quatre documents de continuité.
 - Provider examiné : WhatsApp Cloud API directe de Meta, **non activé**.
 
 ## Impact north star
@@ -37,12 +37,16 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Service sortant tenant-aware : membership, contexte endpoint-identité, réservation, policy, idempotence, statut, lease, reprise et audit sûr.
 - Worker borné ne réclamant que les livraisons Meta dues.
 - Réconciliation avec `main` publiée sans collision de migrations ni perte de l'historique de continuité.
+- Lanceur de continuité corrigé : la clé `package.json` dupliquée qui réactivait `tsx` a été supprimée, la commande Node native fonctionne dans l'environnement restreint et un test de contrat empêche la régression.
+- Roadmap remise en cohérence avec les clôtures probantes OS-3/OS-4; l'ancien choix Twilio est explicitement classé comme historique au profit de la trajectoire Meta actuelle.
 
 ## Validation honnête
 
 - Le dépôt stable a été vérifié courant, lisible et inscriptible. Le fast-forward local `5111214` → `7b9d4f3` a été effectué uniquement après preuve d'ascendance et absence de chevauchement; aucun reset, clean, stash, changement de branche ou commit de fusion local. `tmp/` reste non suivi et préservé.
 - Local : 12 fichiers/65 tests Meta verts; 2 fichiers PostgreSQL/RLS ignorés faute de `DATABASE_URL`. `git diff --check`, séquence des migrations et absence de marqueurs de conflit sont verts.
-- `pnpm agent:continuity-check` : `ready`, zéro erreur, zéro avertissement. Le premier passage sandbox a échoué sur un socket `tsx` avec `EPERM`; le même contrôle a réussi hors sandbox.
+- `pnpm agent:continuity-check` : `ready`, zéro erreur via l'unique commande Node native; avertissement attendu sur l'absence du PDF local dans cet environnement.
+- Test ciblé du contrôle de continuité : 1 fichier, 4 tests verts; ESLint ciblé et `git diff --check` verts.
+- Validation locale exhaustive du correctif : lint et typecheck verts; 140 fichiers Vitest, 606 tests réussis, 18 ignorés et zéro échec; build production vert avec la configuration factice de la CI.
 - CI `33361459789` : succès en 16 min 10 s sur migrations, backup/restauration, lint, typecheck, tests unitaires/intégration, build production et Playwright.
 - Continuité `33361459787` : succès. PR #11 : `OPEN`, `DRAFT`, `MERGEABLE/CLEAN`.
 
