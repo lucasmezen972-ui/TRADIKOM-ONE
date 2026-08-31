@@ -65,6 +65,7 @@ describe("registre des canaux fournisseurs OS-2", () => {
       missingEnvironment: [
         "META_WHATSAPP_ACCESS_TOKEN",
         "META_WHATSAPP_PHONE_NUMBER_ID",
+        "META_WHATSAPP_GRAPH_API_VERSION",
         "META_WHATSAPP_WABA_ID",
         "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN",
         "META_WHATSAPP_WEBHOOK_URL",
@@ -91,6 +92,7 @@ describe("registre des canaux fournisseurs OS-2", () => {
       META_WHATSAPP_APP_SECRET: "app_secret_test",
       META_WHATSAPP_ACCESS_TOKEN: "access_token_test",
       META_WHATSAPP_PHONE_NUMBER_ID: "phone_number_test",
+      META_WHATSAPP_GRAPH_API_VERSION: "v23.0",
       META_WHATSAPP_WABA_ID: "waba_test",
       META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verify_token_test",
       META_WHATSAPP_WEBHOOK_URL:

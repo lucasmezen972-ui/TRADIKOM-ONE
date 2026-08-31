@@ -36,8 +36,8 @@ export class WhatsAppMetaTransportError extends Error {
 }
 
 /**
- * Prépare le contrat sortant Meta sans installer de client Graph API.
- * Un transport ne peut être injecté que par une composition explicite (tests/mock).
+ * Prépare le contrat sortant Meta. Le transport reste une dépendance explicite :
+ * le registre préparé ne peut pas activer Graph API à lui seul.
  */
 export function createWhatsAppMetaOutboundAdapter(input: {
   manifest: ChannelAdapterManifest;
@@ -105,18 +105,16 @@ export function normalizeWhatsAppMetaError(
 function unavailableResult(
   state: ChannelAdapterManifest["state"],
 ): ChannelDeliveryResult | null {
-  // Aucun client Graph API n'existe dans cette tranche. `ready` est donc
-  // explicitement refusé jusqu'à une activation durable distincte.
-  if (state === "mock") return null;
+  if (state === "mock" || state === "ready") return null;
 
   const errorCode =
     state === "disabled"
       ? "channel_disabled"
-      : state === "awaiting_human_auth" || state === "ready"
+      : state === "awaiting_human_auth"
         ? "awaiting_human_auth"
         : "channel_not_configured";
   return channelDeliveryResultSchema.parse({
-    status: state === "ready" ? "awaiting_human_auth" : state,
+    status: state,
     provider: "whatsapp_meta",
     errorCode,
     classification: "not_configured",

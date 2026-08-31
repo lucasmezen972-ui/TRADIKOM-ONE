@@ -64,8 +64,13 @@ describe("adaptateur sortant WhatsApp Meta préparé", () => {
     expect(sendMessage).toHaveBeenCalledWith(request);
   });
 
-  it("refuse même un état ready injecté avant une activation dédiée", async () => {
-    const sendMessage = vi.fn();
+  it("autorise ready uniquement avec un transport explicitement composé", async () => {
+    const sendMessage = vi.fn().mockResolvedValue({
+      status: "accepted",
+      provider: "whatsapp_meta",
+      externalMessageId: `wamid.${"r".repeat(32)}`,
+      retryable: false,
+    });
     const base = getPreparedChannelProvider("whatsapp_meta", {});
     const adapter = createWhatsAppMetaOutboundAdapter({
       manifest: channelAdapterManifestSchema.parse({
@@ -78,12 +83,30 @@ describe("adaptateur sortant WhatsApp Meta préparé", () => {
     });
 
     await expect(adapter.sendMessage(request)).resolves.toMatchObject({
-      status: "awaiting_human_auth",
-      classification: "not_configured",
-      errorCode: "awaiting_human_auth",
+      status: "accepted",
+      provider: "whatsapp_meta",
       retryable: false,
     });
-    expect(sendMessage).not.toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledOnce();
+  });
+
+  it("refuse ready lorsqu'aucun transport explicite n'est composé", async () => {
+    const base = getPreparedChannelProvider("whatsapp_meta", {});
+    const adapter = createWhatsAppMetaOutboundAdapter({
+      manifest: channelAdapterManifestSchema.parse({
+        ...base,
+        state: "ready",
+        missingEnvironment: [],
+        transportEnabled: true,
+      }),
+    });
+
+    await expect(adapter.sendMessage(request)).resolves.toMatchObject({
+      status: "not_configured",
+      classification: "not_configured",
+      errorCode: "channel_not_configured",
+      retryable: false,
+    });
   });
 
   it("refuse un contenu invalide avant le transport", async () => {
@@ -133,6 +156,7 @@ function readyEnvironment() {
     META_WHATSAPP_APP_SECRET: "test-app-secret",
     META_WHATSAPP_ACCESS_TOKEN: "test-access-token",
     META_WHATSAPP_PHONE_NUMBER_ID: "123456789",
+    META_WHATSAPP_GRAPH_API_VERSION: "v23.0",
     META_WHATSAPP_WABA_ID: "987654321",
     META_WHATSAPP_WEBHOOK_VERIFY_TOKEN: "test-verify-token",
     META_WHATSAPP_WEBHOOK_URL:

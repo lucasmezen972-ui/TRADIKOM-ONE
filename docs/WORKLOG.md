@@ -884,3 +884,15 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm agent:continuity-check` retourne `ready`, zéro erreur et zéro avertissement. La CI `33402359544` et la continuité `33402359545` sont entièrement vertes sur le head exact; la PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN`.
 - Le checkpoint humain Meta reste inchangé et a déjà été notifié; sans autorisation distincte, aucune tâche OS-6, CRM, Kanban ou dashboard secondaire ne doit le remplacer.
 - Aucun code, compte, app, WABA, numéro, clé, secret, client Graph, endpoint public, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché.
+
+## 2026-08-31 - Frontière HTTP Meta préparée à 16:26 UTC
+
+- Le checkpoint humain n'a pas été traité comme un arrêt global : la première tranche OS-5 non bloquée a préparé le transport HTTP de WhatsApp Cloud API derrière l'adaptateur et le service durable existants, sans sélectionner OS-6, CRM, Kanban ou dashboard.
+- `createWhatsAppMetaTransport` utilise une base Graph HTTPS fixe, une version explicitement épinglée, un Phone Number ID borné, un payload texte individuel et une réponse limitée à 64 Kio. Les credentials et la destination sont résolus en mémoire par références tenant/endpoint-scoped; aucun secret global n'est lu.
+- Le transport refuse `disabled`, `not_configured` et `awaiting_human_auth` avant tout résolveur ou appel. `ready` ne fonctionne qu'avec un transport explicitement composé; le registre préparé reste `transportEnabled: false` et ne produit toujours pas `ready`.
+- Les statuts HTTP sont normalisés en `auth`, `rate_limit`, `temporary` ou `permanent`; les erreurs de validation, timeout et réseau restent bornées et ne propagent ni token, numéro, contenu ni réponse brute. Le service/worker existant conserve réservation, idempotence, policy, lease, backoff et audit sans PII.
+- `.env.example` expose uniquement des placeholders Meta, dont une version Graph explicite. `docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md` documente états, variables, permissions minimales, webhook, retries, quotas, preuve et rollback sans autoriser d'effet externe.
+- Validation locale concluante : 3 fichiers/37 tests transport-adaptateur-registre verts; régression Meta étendue 7 fichiers/55 tests verts et 1 test PostgreSQL/RLS ignoré faute de `DATABASE_URL`; ESLint et typecheck verts; `git diff --check` vert.
+- Validation locale non concluante : la suite exhaustive est restée silencieuse au-delà de deux minutes; le build a déclenché une recréation de `node_modules` puis a été bloqué par le réseau du sandbox. Les dépendances ont été restaurées exactement depuis le lockfile. La CI du nouveau head doit faire foi pour PostgreSQL/RLS, suite complète, build et Playwright.
+- Le PDF canonique a été revérifié à 71 pages avec le SHA-256 exact. Les pages cœur 3-7, 31-33, 46, 48 et 69-71 ainsi que 14, 29 et 64 ont été relues; les pages 29, 32, 48, 64, 69 et 71 ont été inspectées en rendu.
+- Aucun compte, app, WABA, numéro, token, secret, endpoint public, requête Graph réelle, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché; `tmp/` reste non suivi et préservé.

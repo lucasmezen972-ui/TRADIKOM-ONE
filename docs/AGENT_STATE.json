@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T15:21:00.000Z",
+  "updatedAt": "2026-08-31T16:26:20.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "c08be1b357e6ec9ecbcb96cacc98df2dacc34081",
-  "publishedHeadObserved": "c08be1b357e6ec9ecbcb96cacc98df2dacc34081",
-  "status": "ready_for_human_checkpoint",
+  "lastCommit": "234f7ee4b600f339b7a42f91ce7617f8688d1b07",
+  "publishedHeadObserved": "234f7ee4b600f339b7a42f91ce7617f8688d1b07",
+  "status": "in_progress_ci_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche OS-5 Meta et sa réconciliation avec main sont publiées et entièrement prouvées au head c08be1b : migrations main 067-078 immuables, migrations OS 079-102 avec miroirs SQL 0073-0096, historiques documentaires et services tenant/Meta conservés. La PR #11 est ouverte, brouillon et MERGEABLE/CLEAN. La CI 33402359544 et la continuité 33402359545 sont entièrement vertes, y compris migrations PostgreSQL, backup/restauration, RLS, tests, build et Playwright. Le provider Meta reste fail-closed; la prochaine preuve est bloquée sur une autorisation humaine distincte, sans activation réelle, clé, client Graph ou message externe.",
+  "currentObjective": "Poursuivre réellement OS-5 au-delà des contrôles horaires : la frontière HTTP WhatsApp Cloud API Meta est maintenant préparée dans le worktree depuis le head publié 234f7ee. Elle reçoit des résolveurs tenant/endpoint-scoped et un fetch injecté, borne URL/payload/réponse, classe les échecs et ne lit aucun secret global. Le registre reste fail-closed et ne peut pas produire ready; aucune activation, clé, requête réseau réelle ou message externe n'a eu lieu. Les tests ciblés sont verts; la publication et la CI PostgreSQL/RLS/build/Playwright restent à obtenir sur le nouveau head.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,11 +28,11 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Maintenir le parcours conversation-first OS-5 jusqu'à une preuve fournisseur honnête. Les pages 13-18, 22, 26-30, 31-32, 35-38, 48 et 64-69 imposent webhook vérifié avant la base, tenant/RLS, idempotence, action durable, policy, audit sans contenu sensible et états disabled/not_configured/mock. La chaîne logicielle étant entièrement prouvée, ne sélectionner ni OS-6, CRM, Kanban ni dashboard : s'arrêter uniquement sur l'autorisation humaine minimale requise pour Meta.",
-      "evidenceExpected": "PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Preuve publiée au head c08be1b : migrations additives et RLS, adaptateur Meta sans client Graph, réservation durable, policy, idempotence, lease/backoff, audit sans PII et continuité Node native; CI 33402359544 et continuité 33402359545 entièrement vertes. Preuve encore attendue uniquement après autorisation humaine distincte : configuration Meta bornée et message externe de démonstration, explicitement classés sandbox ou réel."
+      "requirement": "Poursuivre OS-5 par une tranche verticale conversation-first non bloquée : préparer la frontière de transport WhatsApp Meta Cloud API derrière l'adaptateur et le service durable existants, sans clé, compte, activation ni appel réseau réel. Les pages 14, 29, 31-32, 48, 64 et 69 imposent un adaptateur sans logique métier, un runtime passant par policy, idempotence et audit, des états fail-closed explicites et des tests sans clés couvrant not_configured, échec temporaire, échec permanent et non-fuite. Ne sélectionner ni OS-6, CRM, Kanban ni dashboard.",
+      "evidenceExpected": "PDF canonique vérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 14, 29 et 64 relues directement, avec inspection visuelle des pages 29, 32, 48, 64, 69 et 71. Preuve attendue : transport Graph injecté et testé sans réseau réel, URL et payload bornés, résolution éphémère des credentials et de la destination, refus avant toute résolution lorsque le provider n'est pas prêt, classification auth/rate_limit/temporary/permanent/validation, aucune fuite de token, destination, contenu ou réponse brute; adaptateur autorisant ready seulement lorsqu'un transport explicite est composé. Activation Meta et message externe restent bloqués sur autorisation humaine distincte."
     }
   },
-  "nextAction": "Maintenir le checkpoint OS-5 sans sélectionner OS-6, CRM, Kanban ou dashboard. Attendre une autorisation humaine distincte avant tout compte/app/WABA, endpoint HTTPS, secret, activation ou message de preuve Meta; continuer seulement les contrôles de continuité non mutatifs entre-temps.",
+  "nextAction": "Réconcilier en lecture seule origin/codex/tradikom-one-os avec le head local 234f7ee, committer uniquement la tranche Graph et les quatre documents en excluant tmp/, pousser sans force puis attendre la CI PostgreSQL/RLS/build/Playwright. Si elle est verte, reprendre le prochain travail OS-5 non bloqué; toute activation ou preuve externe Meta reste soumise à autorisation humaine distincte.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -441,7 +441,12 @@
     "heartbeat 2026-08-31T15:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
     "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
     "pnpm agent:continuity-check 2026-08-31T15:19:44Z : ready, zéro erreur et zéro avertissement",
-    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur c08be1b; CI 33402359544 et continuité 33402359545 entièrement vertes"
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur c08be1b; CI 33402359544 et continuité 33402359545 entièrement vertes",
+    "run manuel 2026-08-31T16:02Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages candidates 14, 29 et 64 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "transport Graph Meta éphémère, placeholders et procédure d'activation sans composition réseau réelle",
+    "Vitest ciblé et régression Meta : 7 fichiers réussis, 55 tests réussis, 1 fichier/1 test PostgreSQL RLS ignoré sans DATABASE_URL; ESLint et typecheck verts",
+    "suite complète et build locaux non conclusifs : Vitest est resté silencieux; pnpm build a tenté de recréer node_modules puis le réseau sandbox a bloqué les paquets; dépendances restaurées exactement depuis le lockfile"
   ],
   "lastValidation": [
     {
@@ -1287,6 +1292,22 @@
     {
       "command": "heartbeat normatif et GitHub au head c08be1b le 2026-08-31T15:18Z",
       "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33402359544_and_continuity_33402359545_green_tmp_preserved"
+    },
+    {
+      "command": "PR #11 avant la tranche Graph au head 234f7ee",
+      "status": "passed_open_draft_mergeable_clean_ci_33408166764_and_continuity_33408166738_green"
+    },
+    {
+      "command": "tests Graph Meta ciblés et régression durable",
+      "status": "passed_7_files_55_tests_1_postgres_rls_test_skipped_without_database_url_no_real_network"
+    },
+    {
+      "command": "pnpm lint et pnpm typecheck après la tranche Graph",
+      "status": "passed"
+    },
+    {
+      "command": "suite exhaustive et build local après la tranche Graph",
+      "status": "inconclusive_local_vitest_silent_and_build_dependency_recreation_blocked_by_sandbox_network_ci_required"
     }
   ],
   "humanBlockers": [
