@@ -39,12 +39,14 @@ export type PreparedMetaWhatsAppInboundMessage = {
 };
 
 export type MetaWhatsAppInboundPreparationResult =
-  | { ok: true; message: PreparedMetaWhatsAppInboundMessage }
+  | { ok: true; messages: PreparedMetaWhatsAppInboundMessage[] }
   | Extract<MetaWebhookVerificationResult, { ok: false }>
   | { ok: false; code: "whatsapp_payload_invalid" };
 
-/** Normalise un seul événement texte Meta, exclusivement après signature. */
-export function prepareVerifiedMetaWhatsAppInboundMessage(
+const maxBatchMessages = 100;
+
+/** Normalise un lot borné d'événements texte Meta, exclusivement après signature. */
+export function prepareVerifiedMetaWhatsAppInboundMessages(
   input: unknown,
   appSecret: string | undefined,
   receivedAt: string,
@@ -74,74 +76,91 @@ function normalizeMetaPayload(
   value: unknown,
   receivedAt: string,
 ): MetaWhatsAppInboundPreparationResult {
-  const root = z
+  const parsed = z
     .object({
       object: z.literal("whatsapp_business_account"),
-      entry: z.array(z.unknown()).length(1),
+      entry: z
+        .array(
+          z
+            .object({
+              id: numericReferenceSchema,
+              changes: z
+                .array(
+                  z
+                    .object({
+                      field: z.literal("messages"),
+                      value: z
+                        .object({
+                          messaging_product: z.literal("whatsapp").optional(),
+                          metadata: z
+                            .object({
+                              display_phone_number:
+                                displayPhoneNumberSchema.optional(),
+                              phone_number_id: numericReferenceSchema,
+                            })
+                            .strict(),
+                          contacts: z
+                            .array(contactSchema)
+                            .min(1)
+                            .max(10)
+                            .optional(),
+                          messages: z
+                            .array(
+                              z
+                                .object({
+                                  id: messageIdSchema,
+                                  from: senderSchema,
+                                  timestamp: messageTimestampSchema.optional(),
+                                  type: z.literal("text"),
+                                  text: z.object({ body: textSchema }).strict(),
+                                })
+                                .strict(),
+                            )
+                            .min(1)
+                            .max(10),
+                        })
+                        .strict(),
+                    })
+                    .strict(),
+                )
+                .min(1)
+                .max(10),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(10),
     })
     .strict()
     .safeParse(value);
-  if (!root.success) return { ok: false, code: "whatsapp_payload_invalid" };
+  if (!parsed.success) return { ok: false, code: "whatsapp_payload_invalid" };
 
-  const entry = z
-    .object({
-      id: numericReferenceSchema,
-      changes: z.array(z.unknown()).length(1),
-    })
-    .strict()
-    .safeParse(root.data.entry[0]);
-  if (!entry.success) return { ok: false, code: "whatsapp_payload_invalid" };
-
-  const change = z
-    .object({
-      field: z.literal("messages"),
-      value: z
-        .object({
-          messaging_product: z.literal("whatsapp").optional(),
-          metadata: z
-            .object({
-              display_phone_number: displayPhoneNumberSchema.optional(),
-              phone_number_id: numericReferenceSchema,
-            })
-            .strict(),
-          contacts: z.array(contactSchema).min(1).max(10).optional(),
-          messages: z
-            .array(
-              z
-                .object({
-                  id: messageIdSchema,
-                  from: senderSchema,
-                  timestamp: messageTimestampSchema.optional(),
-                  type: z.literal("text"),
-                  text: z.object({ body: textSchema }).strict(),
-                })
-                .strict(),
-            )
-            .length(1),
-        })
-        .strict(),
-    })
-    .strict()
-    .safeParse(entry.data.changes[0]);
-  if (!change.success) return { ok: false, code: "whatsapp_payload_invalid" };
-
-  const message = change.data.value.messages[0];
-  const messageFingerprint = createHash("sha256")
-    .update(message.id, "utf8")
-    .digest("hex");
+  const messages = parsed.data.entry.flatMap((entry) =>
+    entry.changes.flatMap((change) =>
+      change.value.messages.map((message) => {
+        const messageFingerprint = createHash("sha256")
+          .update(message.id, "utf8")
+          .digest("hex");
+        return {
+          provider: "whatsapp_meta" as const,
+          adapterKey: "whatsapp-meta" as const,
+          externalMessageId: message.id,
+          safeAccountReference: entry.id,
+          senderAddress: `whatsapp:+${message.from}`,
+          recipientAddress: `whatsapp:+${change.value.metadata.phone_number_id}`,
+          text: message.text.body,
+          idempotencyKey: `ingress:whatsapp_meta:${messageFingerprint}`,
+          correlationId: `meta_${messageFingerprint}`,
+          receivedAt,
+        };
+      }),
+    ),
+  );
+  if (messages.length > maxBatchMessages) {
+    return { ok: false, code: "whatsapp_payload_invalid" };
+  }
   return {
     ok: true,
-    message: {
-      provider: "whatsapp_meta",
-      adapterKey: "whatsapp-meta",
-      externalMessageId: message.id,
-      safeAccountReference: entry.data.id,
-      senderAddress: `whatsapp:+${message.from}`,
-      recipientAddress: `whatsapp:+${change.data.value.metadata.phone_number_id}`,
-      text: message.text.body,
-      idempotencyKey: `ingress:whatsapp_meta:${messageFingerprint}`,
-      correlationId: `meta_${messageFingerprint}`,
-      receivedAt,
-    },
+    messages,
   };
 }

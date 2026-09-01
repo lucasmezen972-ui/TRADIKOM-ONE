@@ -141,6 +141,160 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     ]);
   }, 20_000);
 
+  it("ingère et rejoue chaque message d'un lot signé dans l'ordre", async () => {
+    const setup = await createSetup();
+    const batch = payload();
+    batch.entry[0].changes[0].value.messages.push(
+      {
+        ...batch.entry[0].changes[0].value.messages[0],
+        id: secondMessageId,
+        text: { body: "Deuxième message du lot" },
+      },
+      {
+        ...batch.entry[0].changes[0].value.messages[0],
+        id: thirdMessageId,
+        text: { body: "Troisième message du lot" },
+      },
+    );
+    const input = signedPayload(batch);
+
+    await expect(
+      receivePreparedMetaWhatsAppWebhook(setup.db, input, {
+        appSecret,
+        fingerprintSecret,
+        receivedAt,
+      }),
+    ).resolves.toMatchObject({
+      accepted: true,
+      processed: 3,
+      replayed: false,
+      replayedCount: 0,
+    });
+    const replay = await receivePreparedMetaWhatsAppWebhook(setup.db, input, {
+      appSecret,
+      fingerprintSecret,
+      receivedAt,
+    });
+    expect(replay).toMatchObject({
+      accepted: true,
+      processed: 3,
+      replayed: true,
+      replayedCount: 3,
+    });
+    if (!replay.accepted) throw new Error("Le rejeu du lot doit être accepté.");
+    const thread = await getConversationThread(
+      setup.db,
+      setup.owner.id,
+      setup.tenant.id,
+      replay.messages[0].threadId,
+    );
+    expect(thread.messages.map((message) => message.text)).toEqual([
+      "Bonjour depuis Meta",
+      "Deuxième message du lot",
+      "Troisième message du lot",
+    ]);
+    expect((await setup.db.query("select id from conversation_messages")).rows).toHaveLength(3);
+    expect(
+      (await setup.db.query("select id from channel_provider_identity_bindings")).rows,
+    ).toHaveLength(1);
+  }, 20_000);
+
+  it("prévalide tout le lot et n'écrit rien si un endpoint ultérieur est inconnu", async () => {
+    const setup = await createSetup();
+    const batch = payload();
+    const unknownEntry = structuredClone(batch.entry[0]);
+    unknownEntry.id = wabaIdB;
+    unknownEntry.changes[0].value.metadata.phone_number_id = phoneNumberIdB;
+    unknownEntry.changes[0].value.messages[0].id = secondMessageId;
+    batch.entry.push(unknownEntry);
+
+    await expect(
+      receivePreparedMetaWhatsAppWebhook(setup.db, signedPayload(batch), {
+        appSecret,
+        fingerprintSecret,
+        receivedAt,
+      }),
+    ).resolves.toEqual({
+      accepted: false,
+      code: "channel_provider_endpoint_not_found",
+    });
+    expect((await setup.db.query("select id from conversation_messages")).rows).toEqual([]);
+    expect(
+      (await setup.db.query("select id from channel_provider_identity_bindings")).rows,
+    ).toEqual([]);
+    expect(
+      (
+        await setup.db.query(
+          "select id from audit_logs where action like 'conversation.message_%'",
+        )
+      ).rows,
+    ).toEqual([]);
+  }, 20_000);
+
+  it("isole deux tenants même lorsqu'ils partagent la même enveloppe Meta", async () => {
+    const setup = await createSetup();
+    const ownerB = await setup.services.registerUser({
+      name: "Propriétaire Meta lot B",
+      email: "owner-meta-batch-b@example.test",
+      password: "Password!1",
+    });
+    const tenantB = await setup.services.createTenant(ownerB.id, {
+      name: "Organisation Meta lot B",
+      category: "Services",
+    });
+    await registerAuthorizedMetaWhatsAppEndpoint(
+      setup.db,
+      {
+        tenantId: tenantB.id,
+        actorId: ownerB.id,
+        externalAccountId: wabaIdB,
+        phoneNumberId: phoneNumberIdB,
+      },
+      fingerprintSecret,
+    );
+    const batch = payload();
+    const tenantBEntry = structuredClone(batch.entry[0]);
+    tenantBEntry.id = wabaIdB;
+    tenantBEntry.changes[0].value.metadata.phone_number_id = phoneNumberIdB;
+    tenantBEntry.changes[0].value.messages[0].id = secondMessageId;
+    tenantBEntry.changes[0].value.messages[0].text.body = "Message tenant B";
+    batch.entry.push(tenantBEntry);
+
+    const result = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(batch),
+      { appSecret, fingerprintSecret, receivedAt },
+    );
+    expect(result).toMatchObject({
+      accepted: true,
+      processed: 2,
+      replayedCount: 0,
+    });
+    if (!result.accepted) throw new Error("Le lot multi-tenant doit être accepté.");
+    expect(result.messages.map((message) => message.tenantId)).toEqual([
+      setup.tenant.id,
+      tenantB.id,
+    ]);
+    await expect(
+      getConversationThread(
+        setup.db,
+        ownerB.id,
+        tenantB.id,
+        result.messages[0].threadId,
+      ),
+    ).rejects.toMatchObject({ code: "conversation_thread_not_found" });
+    expect(
+      await getConversationThread(
+        setup.db,
+        ownerB.id,
+        tenantB.id,
+        result.messages[1].threadId,
+      ),
+    ).toMatchObject({
+      messages: [expect.objectContaining({ text: "Message tenant B" })],
+    });
+  }, 20_000);
+
   it("ingère l'enveloppe officielle complète sans diffuser ses données fournisseur", async () => {
     const officialPhoneNumberId = "7000000000000001";
     const officialDisplayPhoneNumber = "15550001111";
@@ -457,7 +611,11 @@ function payload(overrides: PayloadOverrides = {}) {
 }
 
 function webhook(overrides: PayloadOverrides = {}) {
-  const rawBody = JSON.stringify(payload(overrides));
+  return signedPayload(payload(overrides));
+}
+
+function signedPayload(value: ReturnType<typeof payload>) {
+  const rawBody = JSON.stringify(value);
   return {
     rawBody,
     signature: `sha256=${createHmac("sha256", appSecret)

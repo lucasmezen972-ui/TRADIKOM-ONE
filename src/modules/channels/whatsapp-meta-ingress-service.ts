@@ -4,7 +4,8 @@ import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import {
-  prepareVerifiedMetaWhatsAppInboundMessage,
+  prepareVerifiedMetaWhatsAppInboundMessages,
+  type PreparedMetaWhatsAppInboundMessage,
 } from "@/modules/channels/whatsapp-meta-adapter";
 import { reserveMetaWhatsAppIdentityBinding } from "@/modules/channels/channel-provider-identity-bindings-repository";
 import { resolveActiveMetaWhatsAppEndpoint } from "@/modules/channels/provider-endpoints-service";
@@ -21,90 +22,152 @@ export async function receivePreparedMetaWhatsAppWebhook(
     receivedAt?: string;
   },
 ) {
-  const prepared = prepareVerifiedMetaWhatsAppInboundMessage(
+  const prepared = prepareVerifiedMetaWhatsAppInboundMessages(
     input,
     configuration.appSecret,
     configuration.receivedAt ?? nowIso(),
   );
   if (!prepared.ok) return { accepted: false as const, code: prepared.code };
 
-  return withSystemDbTransaction(db, async (transaction) => {
-    const endpoint = await resolveActiveMetaWhatsAppEndpoint(
-      transaction,
-      {
-        externalAccountId: prepared.message.safeAccountReference,
-        phoneNumberId: prepared.message.recipientAddress.replace("whatsapp:+", ""),
-      },
-      configuration.fingerprintSecret,
-    );
-    if (!endpoint) {
-      return { accepted: false as const, code: "channel_provider_endpoint_not_found" as const };
-    }
+  try {
+    return await withSystemDbTransaction(db, async (transaction) => {
+      const resolved = [];
+      for (const message of prepared.messages) {
+        const endpoint = await resolveActiveMetaWhatsAppEndpoint(
+          transaction,
+          {
+            externalAccountId: message.safeAccountReference,
+            phoneNumberId: message.recipientAddress.replace("whatsapp:+", ""),
+          },
+          configuration.fingerprintSecret,
+        );
+        if (!endpoint) {
+          throw new MetaInboundMessageBatchRejection(
+            "channel_provider_endpoint_not_found",
+          );
+        }
 
-    const subject = fingerprintSubject(
-      endpoint.tenantId,
-      endpoint.endpointId,
-      prepared.message.senderAddress,
-      configuration.fingerprintSecret,
-    );
-    const identityId = `meta_identity_${subject.slice(0, 32)}`;
-    const result = await ingestSystemConversationMessage(transaction, systemActorId, {
-      tenantId: endpoint.tenantId,
-      threadId: `conversation_thread_meta_${subject.slice(0, 32)}`,
-      channelIdentity: {
-        id: identityId,
-        tenantId: endpoint.tenantId,
-        participantId: `meta_participant_${subject.slice(0, 32)}`,
-        channelKind: "messaging",
-        adapterKey: "whatsapp-meta",
-        externalSubjectId: `meta_subject_${subject}`,
-        displayName: "Contact WhatsApp",
-        role: "customer",
-        state: "active",
-        createdAt: prepared.message.receivedAt,
-        updatedAt: prepared.message.receivedAt,
-      },
-      externalMessageId: prepared.message.externalMessageId,
-      idempotencyKey: prepared.message.idempotencyKey,
-      correlationId: prepared.message.correlationId,
-      routeTrace: [{
-        adapterKey: "whatsapp-meta",
-        channelIdentityId: identityId,
-        externalMessageId: prepared.message.externalMessageId,
-      }],
-      text: prepared.message.text,
-      attachments: [],
-      occurredAt: prepared.message.receivedAt,
+        const subject = fingerprintSubject(
+          endpoint.tenantId,
+          endpoint.endpointId,
+          message.senderAddress,
+          configuration.fingerprintSecret,
+        );
+        resolved.push({
+          endpoint,
+          identityId: `meta_identity_${subject.slice(0, 32)}`,
+          message,
+          subject,
+        });
+      }
+
+      const outcomes = [];
+      for (const { endpoint, identityId, message, subject } of resolved) {
+        outcomes.push(
+          await persistPreparedMetaWhatsAppMessage(transaction, {
+            endpoint,
+            identityId,
+            message,
+            subject,
+          }),
+        );
+      }
+
+      const first = outcomes[0];
+      if (!first) {
+        throw new Error("Le lot de messages WhatsApp Meta est vide.");
+      }
+      return {
+        accepted: true as const,
+        processed: outcomes.length,
+        replayed: outcomes.every((outcome) => outcome.replayed),
+        replayedCount: outcomes.filter((outcome) => outcome.replayed).length,
+        messages: outcomes,
+        messageId: first.messageId,
+        threadId: first.threadId,
+        tenantId: first.tenantId,
+      };
     });
-    const binding = await reserveMetaWhatsAppIdentityBinding(transaction, {
-      id: id("channel_identity_binding"),
-      tenantId: endpoint.tenantId,
-      endpointId: endpoint.endpointId,
-      channelIdentityId: identityId,
-      createdAt: prepared.message.receivedAt,
-    });
-    if (!binding.replayed) {
-      await recordAuditLog(transaction, {
-        tenantId: endpoint.tenantId,
-        actorId: systemActorId,
-        action: "channel.provider_identity_bound",
-        targetType: "channel_provider_identity_binding",
-        targetId: binding.row.id,
-        metadata: {
-          provider: "whatsapp_meta",
-          contentStoredInAudit: false,
-          providerReferenceStoredInAudit: false,
-        },
-      });
+  } catch (error) {
+    if (error instanceof MetaInboundMessageBatchRejection) {
+      return { accepted: false as const, code: error.code };
     }
-    return {
-      accepted: true as const,
-      replayed: result.idempotentReplay,
-      messageId: result.messageId,
-      threadId: result.threadId,
+    throw error;
+  }
+}
+
+async function persistPreparedMetaWhatsAppMessage(
+  transaction: DbClient,
+  input: {
+    endpoint: { endpointId: string; tenantId: string };
+    identityId: string;
+    message: PreparedMetaWhatsAppInboundMessage;
+    subject: string;
+  },
+) {
+  const { endpoint, identityId, message, subject } = input;
+  const result = await ingestSystemConversationMessage(transaction, systemActorId, {
+    tenantId: endpoint.tenantId,
+    threadId: `conversation_thread_meta_${subject.slice(0, 32)}`,
+    channelIdentity: {
+      id: identityId,
       tenantId: endpoint.tenantId,
-    };
+      participantId: `meta_participant_${subject.slice(0, 32)}`,
+      channelKind: "messaging",
+      adapterKey: "whatsapp-meta",
+      externalSubjectId: `meta_subject_${subject}`,
+      displayName: "Contact WhatsApp",
+      role: "customer",
+      state: "active",
+      createdAt: message.receivedAt,
+      updatedAt: message.receivedAt,
+    },
+    externalMessageId: message.externalMessageId,
+    idempotencyKey: message.idempotencyKey,
+    correlationId: message.correlationId,
+    routeTrace: [{
+      adapterKey: "whatsapp-meta",
+      channelIdentityId: identityId,
+      externalMessageId: message.externalMessageId,
+    }],
+    text: message.text,
+    attachments: [],
+    occurredAt: message.receivedAt,
   });
+  const binding = await reserveMetaWhatsAppIdentityBinding(transaction, {
+    id: id("channel_identity_binding"),
+    tenantId: endpoint.tenantId,
+    endpointId: endpoint.endpointId,
+    channelIdentityId: identityId,
+    createdAt: message.receivedAt,
+  });
+  if (!binding.replayed) {
+    await recordAuditLog(transaction, {
+      tenantId: endpoint.tenantId,
+      actorId: systemActorId,
+      action: "channel.provider_identity_bound",
+      targetType: "channel_provider_identity_binding",
+      targetId: binding.row.id,
+      metadata: {
+        provider: "whatsapp_meta",
+        contentStoredInAudit: false,
+        providerReferenceStoredInAudit: false,
+      },
+    });
+  }
+  return {
+    replayed: result.idempotentReplay,
+    messageId: result.messageId,
+    threadId: result.threadId,
+    tenantId: endpoint.tenantId,
+  };
+}
+
+class MetaInboundMessageBatchRejection extends Error {
+  constructor(readonly code: "channel_provider_endpoint_not_found") {
+    super("Le lot de messages WhatsApp Meta est refusé.");
+    this.name = "MetaInboundMessageBatchRejection";
+  }
 }
 
 function fingerprintSubject(

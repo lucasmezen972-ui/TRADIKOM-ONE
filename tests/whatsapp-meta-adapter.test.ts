@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { prepareVerifiedMetaWhatsAppInboundMessage } from "../src/modules/channels";
+import { prepareVerifiedMetaWhatsAppInboundMessages } from "../src/modules/channels";
 
 const secret = "meta_app_secret_for_adapter_tests_123456";
 const receivedAt = "2026-08-19T15:40:00.000Z";
@@ -71,45 +71,120 @@ function officialEnvelopePayload() {
 }
 function prepare(value = payload()) {
   const rawBody = JSON.stringify(value);
-  return prepareVerifiedMetaWhatsAppInboundMessage({ rawBody, signature: `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}` }, secret, receivedAt);
+  return prepareVerifiedMetaWhatsAppInboundMessages({ rawBody, signature: `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}` }, secret, receivedAt);
 }
 
 describe("préparation entrante WhatsApp Cloud Meta", () => {
   it("normalise seulement après signature", () => {
-    expect(prepare()).toMatchObject({ ok: true, message: { provider: "whatsapp_meta", adapterKey: "whatsapp-meta", senderAddress: "whatsapp:+596696000000", recipientAddress: "whatsapp:+987654321", text: "Bonjour Meta" } });
+    expect(prepare()).toMatchObject({ ok: true, messages: [{ provider: "whatsapp_meta", adapterKey: "whatsapp-meta", senderAddress: "whatsapp:+596696000000", recipientAddress: "whatsapp:+987654321", text: "Bonjour Meta" }] });
   });
 
   it("accepte l'enveloppe officielle complète et dérive des clés internes sûres", () => {
     const result = prepare(officialEnvelopePayload());
     expect(result).toMatchObject({
       ok: true,
-      message: {
+      messages: [{
         externalMessageId:
           "wamid.HBgLMTU1NTAwMDIyMjIVAGHAYWZha2VfZXhhbXBsZQA=",
         senderAddress: "whatsapp:+15550002222",
         recipientAddress: "whatsapp:+7000000000000001",
         text: "Bonjour",
-      },
+      }],
     });
     if (!result.ok) throw new Error("Le payload officiel doit être accepté.");
-    expect(result.message.idempotencyKey).toMatch(
+    expect(result.messages[0].idempotencyKey).toMatch(
       /^ingress:whatsapp_meta:[a-f0-9]{64}$/,
     );
-    expect(result.message.correlationId).toMatch(/^meta_[a-f0-9]{64}$/);
-    expect(result.message.idempotencyKey).not.toContain(
-      result.message.externalMessageId,
+    expect(result.messages[0].correlationId).toMatch(/^meta_[a-f0-9]{64}$/);
+    expect(result.messages[0].idempotencyKey).not.toContain(
+      result.messages[0].externalMessageId,
     );
-    const serialized = JSON.stringify(result.message);
+    const serialized = JSON.stringify(result.messages);
     expect(serialized).not.toContain("Contact Exemple");
     expect(serialized).not.toContain("15550001111");
     expect(serialized).not.toContain("1760000000");
   });
 
-  it("refuse le corps altéré et les lots ambigus", () => {
+  it("normalise tous les messages des tableaux entry et changes dans leur ordre", () => {
+    const batch = payload();
+    batch.entry[0].changes[0].value.messages.push({
+      ...batch.entry[0].changes[0].value.messages[0],
+      id: "wamid.batch_message_2",
+      text: { body: "Deux" },
+    });
+    const secondChange = structuredClone(batch.entry[0].changes[0]);
+    secondChange.value.metadata.phone_number_id = "987654322";
+    secondChange.value.messages = [{
+      ...secondChange.value.messages[0],
+      id: "wamid.batch_message_3",
+      text: { body: "Trois" },
+    }];
+    batch.entry[0].changes.push(secondChange);
+    const secondEntry = structuredClone(batch.entry[0]);
+    secondEntry.id = "123456790";
+    secondEntry.changes = [structuredClone(secondChange)];
+    secondEntry.changes[0].value.messages[0].id = "wamid.batch_message_4";
+    secondEntry.changes[0].value.messages[0].text.body = "Quatre";
+    batch.entry.push(secondEntry);
+
+    const result = prepare(batch);
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) throw new Error("Le lot Meta doit être accepté.");
+    expect(result.messages.map((message) => message.text)).toEqual([
+      "Bonjour Meta",
+      "Deux",
+      "Trois",
+      "Quatre",
+    ]);
+    expect(result.messages.map((message) => message.safeAccountReference)).toEqual([
+      "123456789",
+      "123456789",
+      "123456789",
+      "123456790",
+    ]);
+  });
+
+  it("refuse le corps altéré et les tableaux hors borne", () => {
     const rawBody = JSON.stringify(payload());
-    expect(prepareVerifiedMetaWhatsAppInboundMessage({ rawBody: `${rawBody} `, signature: `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}` }, secret, receivedAt)).toEqual({ ok: false, code: "invalid_signature" });
-    const invalid = payload();
-    invalid.entry.push(invalid.entry[0]);
-    expect(prepare(invalid)).toEqual({ ok: false, code: "whatsapp_payload_invalid" });
+    expect(prepareVerifiedMetaWhatsAppInboundMessages({ rawBody: `${rawBody} `, signature: `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}` }, secret, receivedAt)).toEqual({ ok: false, code: "invalid_signature" });
+
+    const entriesOverflow = payload();
+    entriesOverflow.entry = Array.from(
+      { length: 11 },
+      () => entriesOverflow.entry[0],
+    );
+    const changesOverflow = payload();
+    changesOverflow.entry[0].changes = Array.from(
+      { length: 11 },
+      () => changesOverflow.entry[0].changes[0],
+    );
+    const messagesOverflow = payload();
+    messagesOverflow.entry[0].changes[0].value.messages = Array.from(
+      { length: 11 },
+      () => messagesOverflow.entry[0].changes[0].value.messages[0],
+    );
+    const totalOverflow = payload();
+    const fullChange = structuredClone(totalOverflow.entry[0].changes[0]);
+    fullChange.value.messages = Array.from(
+      { length: 10 },
+      () => structuredClone(fullChange.value.messages[0]),
+    );
+    totalOverflow.entry[0].changes = Array.from(
+      { length: 10 },
+      () => structuredClone(fullChange),
+    );
+    totalOverflow.entry.push(structuredClone(payload().entry[0]));
+
+    for (const invalid of [
+      entriesOverflow,
+      changesOverflow,
+      messagesOverflow,
+      totalOverflow,
+    ]) {
+      expect(prepare(invalid)).toEqual({
+        ok: false,
+        code: "whatsapp_payload_invalid",
+      });
+    }
   });
 });
