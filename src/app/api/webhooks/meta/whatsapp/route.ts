@@ -1,6 +1,7 @@
 import {
   getPreparedChannelProvider,
   handlePreparedMetaWhatsAppWebhookRequest,
+  receivePreparedMetaWhatsAppDeliveryStatus,
   receivePreparedMetaWhatsAppWebhook,
 } from "@/modules/channels";
 import { getDb } from "@/lib/db";
@@ -30,11 +31,25 @@ async function handleMetaWhatsAppWebhookRequest(request: Request) {
       state: manifest.state,
       appSecret: process.env.META_WHATSAPP_APP_SECRET,
       verifyToken: process.env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN,
-      receive: async (input) =>
-        receivePreparedMetaWhatsAppWebhook(await getDb(), input, {
+      receive: async (input) => {
+        const db = await getDb();
+        const configuration = {
           appSecret: process.env.META_WHATSAPP_APP_SECRET,
           fingerprintSecret: process.env.CONNECTOR_ENCRYPTION_KEY,
-        }),
+        };
+        const status = await receivePreparedMetaWhatsAppDeliveryStatus(
+          db,
+          input,
+          configuration,
+        );
+        if (
+          status.accepted ||
+          status.code !== "whatsapp_payload_invalid"
+        ) {
+          return status;
+        }
+        return receivePreparedMetaWhatsAppWebhook(db, input, configuration);
+      },
     });
     response.headers.set("x-correlation-id", correlationId);
     return response;

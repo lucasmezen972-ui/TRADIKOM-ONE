@@ -4,7 +4,6 @@ import { hashToken, id, nowIso } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import {
   verifyWhatsAppTwilioDeliveryStatus,
-  type VerifiedWhatsAppTwilioDeliveryStatus,
 } from "@/modules/channels/whatsapp-twilio-delivery-status";
 import {
   findWhatsAppOutboundDeliveryForStatusUpdate,
@@ -13,7 +12,15 @@ import {
   updateWhatsAppOutboundMessageFromStatus,
   type ChannelProviderDeliveryEventRow,
   type ChannelProviderDeliveryRow,
+  type WhatsAppOutboundProvider,
 } from "@/modules/channels/whatsapp-twilio-outbound-repository";
+
+export type VerifiedWhatsAppDeliveryStatus = {
+  providerMessageId: string;
+  sourceStatus: string;
+  status: "accepted" | "delivered" | "failed";
+  safeErrorCode: string | null;
+};
 
 export async function receivePreparedWhatsAppDeliveryStatus(
   db: DbClient,
@@ -29,16 +36,24 @@ export async function receivePreparedWhatsAppDeliveryStatus(
   }
 
   return withSystemDbTransaction(db, (transaction) =>
-    persistVerifiedDeliveryStatus(transaction, verification.event),
+    persistVerifiedWhatsAppDeliveryStatus(transaction, verification.event, {
+      provider: "whatsapp_twilio",
+    }),
   );
 }
 
-async function persistVerifiedDeliveryStatus(
+export async function persistVerifiedWhatsAppDeliveryStatus(
   db: DbClient,
-  event: VerifiedWhatsAppTwilioDeliveryStatus,
+  event: VerifiedWhatsAppDeliveryStatus,
+  options: {
+    provider: WhatsAppOutboundProvider;
+    endpointId?: string;
+  },
 ) {
   const delivery = await findWhatsAppOutboundDeliveryForStatusUpdate(db, {
     externalMessageId: event.providerMessageId,
+    provider: options.provider,
+    endpointId: options.endpointId,
   });
   if (!delivery) {
     return {
@@ -64,6 +79,7 @@ async function persistVerifiedDeliveryStatus(
     status: event.status,
     safeErrorCode: event.safeErrorCode,
     receivedAt,
+    provider: options.provider,
   });
   if (!reservation.row) {
     return {
@@ -97,6 +113,7 @@ async function persistVerifiedDeliveryStatus(
       status: event.status,
       safeErrorCode: event.safeErrorCode,
       updatedAt: receivedAt,
+      provider: options.provider,
     });
     if (!updated) {
       throw new Error("La livraison WhatsApp ne peut pas être réconciliée.");
@@ -142,7 +159,7 @@ async function persistVerifiedDeliveryStatus(
 function sameEvent(
   existing: ChannelProviderDeliveryEventRow,
   delivery: ChannelProviderDeliveryRow,
-  event: VerifiedWhatsAppTwilioDeliveryStatus,
+  event: VerifiedWhatsAppDeliveryStatus,
   eventKey: string,
 ) {
   return (
@@ -157,7 +174,7 @@ function sameEvent(
 
 function shouldUpdateState(
   current: ChannelProviderDeliveryRow["status"],
-  candidate: VerifiedWhatsAppTwilioDeliveryStatus["status"],
+  candidate: VerifiedWhatsAppDeliveryStatus["status"],
 ) {
   const ranks: Record<ChannelProviderDeliveryRow["status"], number> = {
     reserved: 0,
@@ -170,7 +187,7 @@ function shouldUpdateState(
 }
 
 function messageStatus(
-  status: VerifiedWhatsAppTwilioDeliveryStatus["status"],
+  status: VerifiedWhatsAppDeliveryStatus["status"],
 ) {
   return status === "accepted" ? "sent" : status;
 }

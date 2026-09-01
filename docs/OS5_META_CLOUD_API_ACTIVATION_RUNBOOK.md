@@ -51,6 +51,16 @@ Sans ces cinq validations, l'état reste `awaiting_human_auth` ou inférieur et 
 
 La requête sortante est bornée à `POST https://graph.facebook.com/{version}/{phone-number-id}/messages`, avec `Authorization: Bearer`, `Content-Type: application/json` et un message texte individuel. La réponse est limitée à 64 Kio et seul l'identifiant `messages[0].id` est conservé comme référence fournisseur sûre.
 
+## Notifications de statut
+
+Le même endpoint webhook signé accepte les [notifications officielles de statut](https://www.postman.com/meta/whatsapp-business-platform/request/rgtfq23/message-status-update-notifications) `statuses` pour `sent`, `delivered`, `read`, `failed` et `deleted`. La signature du corps brut est vérifiée avant tout parsing. Le WABA et le Phone Number ID doivent résoudre exactement un endpoint Meta actif; l'identifiant `wamid` doit déjà correspondre à une livraison sortante de ce même endpoint et du même provider.
+
+- `sent` devient `accepted`; `delivered` et `read` deviennent `delivered`; `failed` et `deleted` deviennent `failed` avec un code interne générique.
+- Les callbacks peuvent arriver hors ordre. La projection est monotone : `delivered` ne régresse jamais vers `accepted` ou `failed`, tandis qu'un `read` tardif peut faire converger un échec antérieur vers `delivered`.
+- Chaque événement est réservé par empreinte interne et reste immuable. Un replay identique ne crée ni second événement ni second audit.
+- Le timestamp, le destinataire, le WABA, le Phone Number ID, le `wamid`, les détails d'erreur et le payload brut ne sont enregistrés ni dans l'événement ni dans l'audit.
+- Une signature invalide, un endpoint absent/désactivé, un mauvais tenant/provider ou une référence inconnue échoue avant toute mutation.
+
 ## Erreurs, quotas et audit
 
 - `401`/`403` : `auth`, sans retry automatique.

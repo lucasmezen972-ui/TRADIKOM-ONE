@@ -41,6 +41,10 @@ describe("migrations des livraisons fournisseur OS-5", () => {
         "os5WhatsAppMetaOutboundProviderMigrationSql",
         "../src/db/migrations/0094_os5_whatsapp_meta_outbound_provider.sql",
       ],
+      [
+        "os5WhatsAppMetaDeliveryEventsMigrationSql",
+        "../src/db/migrations/0098_os5_whatsapp_meta_delivery_events.sql",
+      ],
     ] as const;
 
     for (const [constant, mirrorPath] of definitions) {
@@ -62,6 +66,9 @@ describe("migrations des livraisons fournisseur OS-5", () => {
     );
     expect(getMigrationIds()).toContain(
       "100_os5_whatsapp_meta_outbound_provider",
+    );
+    expect(getMigrationIds()).toContain(
+      "104_os5_whatsapp_meta_delivery_events",
     );
   });
 
@@ -251,6 +258,28 @@ describe("migrations des livraisons fournisseur OS-5", () => {
              null, 0, 3, $2, null, null, null, 'user_a', $2, $2
            )`,
           ["a".repeat(64), timestamp],
+        ),
+      ).rejects.toThrow(/foreign key|violates/i);
+      await db.query(
+        `insert into channel_provider_delivery_events (
+           id, tenant_id, delivery_id, provider, event_key, status,
+           safe_error_code, received_at
+         ) values (
+           'event_meta', 'tenant_a', 'delivery_meta', 'whatsapp_meta', $1,
+           'accepted', null, $2
+         )`,
+        ["b".repeat(64), timestamp],
+      );
+      await expect(
+        db.query(
+          `insert into channel_provider_delivery_events (
+             id, tenant_id, delivery_id, provider, event_key, status,
+             safe_error_code, received_at
+           ) values (
+             'event_meta_wrong_provider', 'tenant_a', 'delivery_meta',
+             'whatsapp_twilio', $1, 'accepted', null, $2
+           )`,
+          ["c".repeat(64), timestamp],
         ),
       ).rejects.toThrow(/foreign key|violates/i);
     },

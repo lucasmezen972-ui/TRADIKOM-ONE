@@ -4,8 +4,8 @@
 
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 17-22, 26-30, 35-38 et 64-68 ont été relues directement le 31 août 2026; les pages 29, 32, 37, 48, 64 et 69 ont été contrôlées visuellement.
-- Le head local et distant publié est `cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33427555175` et la continuité `33427555275` sont vertes sur ce head.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 13-22, 26-38 et 64-68 ont été relues directement le 1er septembre 2026; les pages 48 et 69 ont été contrôlées visuellement.
+- Le parent local et distant publié est `b5a0fe3ec870f34969b60750987481a159755cab`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33430233674` et la continuité `33430233673` sont vertes sur ce head.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -25,16 +25,25 @@
 - Une fixture entièrement anonymisée prouve signature, endpoint à 16 chiffres, ingestion, rejeu idempotent et non-fuite du nom, des numéros, du timestamp et du `wamid` dans les audits, identités et liaisons fournisseur. La CI complète confirme cette tranche.
 - Les données et identifiants fournis par l'utilisateur n'ont pas été persistés, documentés ou rejoués; aucun appel Graph n'a été effectué.
 
+## Tranche locale prête à publier : notifications de statut Meta
+
+- Le webhook signé accepte les notifications `statuses` officielles et sépare leur traitement des messages entrants sans parser avant vérification HMAC.
+- WABA et Phone Number ID doivent résoudre un endpoint Meta actif; le `wamid` doit référencer une livraison du même endpoint et du même provider.
+- La migration runtime `104_os5_whatsapp_meta_delivery_events` et le miroir SQL `0098_os5_whatsapp_meta_delivery_events.sql` étendent les événements immuables à Meta et verrouillent la relation tenant/livraison/provider.
+- `sent`, `delivered`, `read`, `failed` et `deleted` convergent vers les états internes sans régression malgré les callbacks tardifs. Les replays ne créent ni événement ni audit supplémentaires.
+- Aucun timestamp, destinataire, WABA, Phone Number ID, `wamid`, détail d'erreur ou payload brut n'est persisté dans l'événement ou l'audit.
+
 ## Référence prompt maître
 
 Les pages 13-22, 26-33, 35-38, 46, 48 et 64-69 imposent signature avant parsing, schémas d'entrée bornés, identité opaque tenant-aware, chiffrement des credentials, action durable, idempotence, audit sans contenu sensible et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 exigent encore le checkpoint fournisseur avant de classer OS-5 terminé.
 
 ## Prochaine action concrète
 
-1. L'utilisateur saisit le code SMS directement dans Chrome puis indique seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
-2. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
-3. Injecter les valeurs réelles par références de gestionnaire de secrets côté serveur, sans les lire, afficher, journaliser ou commiter. Conserver le provider `not_configured`/`awaiting_human_auth` tant que la composition n'est pas complète.
-4. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte; aucune de ces actions n'est couverte par l'autorisation de stocker les clés.
+1. Réconcilier une dernière fois le head distant avec le parent `b5a0fe3`, commiter uniquement les fichiers contrôlés de la tranche statut Meta et pousser en fast-forward sans `tmp/`.
+2. Attendre la CI PostgreSQL/RLS, la suite complète, le build et Playwright du nouveau head; ne pas déclarer la tranche prouvée CI avant ces résultats.
+3. Après CI verte, l'utilisateur saisit le code SMS directement dans Chrome puis indique seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
+4. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
+5. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
 
 ## Validation disponible
 
@@ -46,12 +55,15 @@ Les pages 13-22, 26-33, 35-38, 46, 48 et 64-69 imposent signature avant parsing,
 - Correctif enveloppe : 4 fichiers/24 tests ciblés puis 17 fichiers/108 tests de régression verts localement; ESLint complet, TypeScript, build production, continuity-check et `git diff --check` verts.
 - La CI `33425435804` est verte : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/653 tests, build production et 20 Playwright. La continuité `33425435724` est verte.
 - Le head documentaire final `cb3e50b` est également entièrement prouvé par la CI `33427555175` et la continuité `33427555275`; la PR est revenue à `CLEAN`.
+- Le checkpoint publié `b5a0fe3` est entièrement prouvé par la CI `33430233674` et la continuité `33430233673`.
+- Tranche statut locale : 4 fichiers/27 tests statut-migrations-HTTP puis 15 fichiers/97 tests Meta verts; ESLint ciblé et complet, TypeScript, build production, continuity-check et `git diff --check` verts. PostgreSQL/RLS et la suite exhaustive restent à confirmer par CI sur le futur head.
 - `git diff --check` est vert.
 
 ## État de vérité
 
 - Livré et prouvé CI : coffre chiffré Meta provider-scoped, migrations, rotation/révocation, résolveurs, audit sûr et tests.
 - Livré et prouvé CI : compatibilité de l'enveloppe webhook officielle et clés internes hashées.
+- Livré localement, preuve CI en attente : notifications de statut Meta signées, idempotentes, monotones et sans PII.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -63,8 +75,8 @@ Les pages 13-22, 26-33, 35-38, 46, 48 et 64-69 imposent signature avant parsing,
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head final est cb3e50b; CI 33427555175 et continuité 33427555275 sont vertes avec PostgreSQL/RLS, 142 fichiers/653 tests, build et 20 Playwright. La PR #11 est ouverte, brouillon et MERGEABLE/CLEAN.
-4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
+3. Le parent publié b5a0fe3 est vert (CI 33430233674, continuité 33430233673). La tranche locale de notifications Meta doit être publiée en fast-forward sans tmp/, puis prouvée en CI PostgreSQL/RLS.
+4. Après CI verte, l'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
 7. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.

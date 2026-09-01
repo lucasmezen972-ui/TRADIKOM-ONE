@@ -1,21 +1,21 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T19:20:00.000Z",
+  "updatedAt": "2026-09-01T02:00:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3",
-  "publishedHeadObserved": "cb3e50b5cabbe2dc8bc950e1cb1ef2bbb9198fa3",
-  "status": "os5_meta_official_webhook_envelope_compatibility_ci_proven_human_otp_pending",
+  "lastCommit": "b5a0fe3ec870f34969b60750987481a159755cab",
+  "publishedHeadObserved": "b5a0fe3ec870f34969b60750987481a159755cab",
+  "status": "os5_meta_delivery_status_local_proven_ci_pending_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le head final cb3e50b est publié, la PR #11 est ouverte, brouillon, MERGEABLE/CLEAN, et la CI 33427555175 ainsi que la continuité 33427555275 sont vertes. La compatibilité d'enveloppe WhatsApp Cloud, le coffre chiffré Meta, PostgreSQL/RLS, 142 fichiers/653 tests, le build et 20 Playwright sont prouvés. La page 31 impose maintenant le checkpoint fournisseur : Meta for Developers attend le code SMS saisi directement dans Chrome. Aucun secret, appel Graph, message externe, déploiement ou dépense.",
+  "currentObjective": "Sur le parent publié b5a0fe3 entièrement vert, la tranche OS-5 non bloquée accepte maintenant les notifications officielles de statut WhatsApp Cloud, les déduplique et réconcilie durablement livraison et message sans PII ni secret. La migration 104 et son miroir 0098 imposent le même tenant, endpoint et provider; 15 fichiers/97 tests Meta sont verts avec lint, typecheck, build et continuity-check. La CI PostgreSQL/RLS du futur head reste la preuve manquante avant de revenir au checkpoint humain SMS.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 13, 14, 15, 16, 17, 18, 22, 26, 27, 28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 13, 14, 15, 16, 17, 18, 22, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "8-13 Identité omnicanale, adaptateurs, Connector Fabric, policy et missions durables",
@@ -28,11 +28,11 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48 et la Definition of Done page 32 : OS-5 ne passe au fournisseur réel qu'après l'intervention humaine minimale prévue pages 6, 29 et 31. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard en substitution. L'utilisateur saisit le code SMS directement dans l'interface officielle; les secrets ne transitent jamais dans le chat, les logs, Git ou le modèle. Toute création de token persistant et toute requête Graph, activation ou message externe exigent une confirmation distincte au moment exact.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Dépôt local/distant aligné sur cb3e50b, PR #11 MERGEABLE/CLEAN, CI 33427555175 et continuité 33427555275 vertes. Checkpoint exact : saisie du SMS directement dans Chrome, puis confirmation juste avant token persistant; zéro secret, Graph, message, endpoint public, déploiement ou dépense avant ces validations."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive la réception des notifications officielles de statut WhatsApp Cloud : signature avant parsing, schéma borné, déduplication, ordre tardif monotone, isolation tenant, réconciliation durable et audit sans contenu ni identifiant sensible. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Documentation officielle Meta relue pour les statuts sent/delivered/read/failed et leur possible arrivée hors ordre. Obtenu localement : 4 fichiers/27 tests statut-migrations-HTTP et régression Meta 15 fichiers/97 tests verts, lint, typecheck, build, continuity-check et diff check verts. Reste attendu : CI PostgreSQL/RLS, suite exhaustive et Playwright du futur head. Le checkpoint humain SMS reste exact; zéro secret, Graph, message, endpoint public, déploiement ou dépense."
     }
   },
-  "nextAction": "L'utilisateur saisit lui-même le code SMS dans l'onglet Meta for Developers déjà ouvert. Après validation, reprendre la console officielle, inventorier app/WABA/Phone Number ID et demander une confirmation au moment exact avant toute création de token persistant; injecter ensuite par références serveur sans lire, afficher, journaliser ou commiter les valeurs. Ne déclencher ni Graph, message, endpoint public, déploiement ou dépense sans autorisation distincte.",
+  "nextAction": "Réconcilier une dernière fois le head distant avec le parent b5a0fe3, publier en fast-forward la tranche de notifications de statut Meta sans tmp/, puis attendre la CI PostgreSQL/RLS complète. Après preuve verte, le checkpoint suivant redevient la saisie directe du code SMS Meta par l'utilisateur; ne déclencher ni Graph, message, endpoint public, déploiement ou dépense sans autorisation distincte.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",

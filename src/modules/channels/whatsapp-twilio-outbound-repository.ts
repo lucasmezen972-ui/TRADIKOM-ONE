@@ -54,7 +54,7 @@ export type ChannelProviderDeliveryEventRow = {
   id: string;
   tenant_id: string;
   delivery_id: string;
-  provider: "whatsapp_twilio";
+  provider: WhatsAppOutboundProvider;
   event_key: string;
   status: "accepted" | "delivered" | "failed";
   safe_error_code: string | null;
@@ -383,15 +383,21 @@ export async function updateWhatsAppOutboundMessageState(
 
 export async function findWhatsAppOutboundDeliveryForStatusUpdate(
   db: DbClient,
-  input: { externalMessageId: string },
+  input: {
+    externalMessageId: string;
+    provider?: WhatsAppOutboundProvider;
+    endpointId?: string;
+  },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const result = await db.query<ChannelProviderDeliveryRow>(
     `select *
      from channel_provider_deliveries
-     where provider = 'whatsapp_twilio'
+     where provider = $2
        and external_message_id = $1
+       and ($3::text is null or endpoint_id = $3)
      for update`,
-    [input.externalMessageId],
+    [input.externalMessageId, provider, input.endpointId ?? null],
   );
   return result.rows[0] ?? null;
 }
@@ -406,13 +412,15 @@ export async function reserveWhatsAppOutboundDeliveryEvent(
     status: ChannelProviderDeliveryEventRow["status"];
     safeErrorCode: string | null;
     receivedAt: string;
+    provider?: WhatsAppOutboundProvider;
   },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const inserted = await db.query<ChannelProviderDeliveryEventRow>(
     `insert into channel_provider_delivery_events (
        id, tenant_id, delivery_id, provider, event_key, status,
        safe_error_code, received_at
-     ) values ($1, $2, $3, 'whatsapp_twilio', $4, $5, $6, $7)
+     ) values ($1, $2, $3, $8, $4, $5, $6, $7)
      on conflict (provider, event_key) do nothing
      returning *`,
     [
@@ -423,6 +431,7 @@ export async function reserveWhatsAppOutboundDeliveryEvent(
       input.status,
       input.safeErrorCode,
       input.receivedAt,
+      provider,
     ],
   );
   if (inserted.rows[0]) {
@@ -434,9 +443,9 @@ export async function reserveWhatsAppOutboundDeliveryEvent(
      from channel_provider_delivery_events
      where tenant_id = $1
        and delivery_id = $2
-       and provider = 'whatsapp_twilio'
+       and provider = $4
        and event_key = $3`,
-    [input.tenantId, input.deliveryId, input.eventKey],
+    [input.tenantId, input.deliveryId, input.eventKey, provider],
   );
   return { row: existing.rows[0] ?? null, replayed: true };
 }
@@ -450,8 +459,10 @@ export async function updateWhatsAppOutboundDeliveryFromStatus(
     status: "accepted" | "delivered" | "failed";
     safeErrorCode: string | null;
     updatedAt: string;
+    provider?: WhatsAppOutboundProvider;
   },
 ) {
+  const provider = input.provider ?? "whatsapp_twilio";
   const failed = input.status === "failed";
   const result = await db.query<ChannelProviderDeliveryRow>(
     `update channel_provider_deliveries
@@ -465,7 +476,7 @@ export async function updateWhatsAppOutboundDeliveryFromStatus(
          updated_at = $4
      where tenant_id = $5
        and id = $6
-       and provider = 'whatsapp_twilio'
+       and provider = $8
        and external_message_id = $7
      returning *`,
     [
@@ -476,6 +487,7 @@ export async function updateWhatsAppOutboundDeliveryFromStatus(
       input.tenantId,
       input.deliveryId,
       input.externalMessageId,
+      provider,
     ],
   );
   return result.rows[0] ?? null;

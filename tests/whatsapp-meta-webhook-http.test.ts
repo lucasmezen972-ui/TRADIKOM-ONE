@@ -107,6 +107,7 @@ describe("point d'entrée HTTP WhatsApp Cloud Meta", () => {
     ["payload_too_large", 413],
     ["not_configured", 503],
     ["channel_provider_endpoint_not_found", 503],
+    ["channel_provider_delivery_not_found", 503],
     ["whatsapp_payload_invalid", 400],
   ] as const)("normalise %s sans exposer la cause interne", async (code, status) => {
     const privateBody = '{"contenu":"privé"}';
@@ -125,7 +126,10 @@ describe("point d'entrée HTTP WhatsApp Cloud Meta", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(body).not.toContain(code);
     expect(body).not.toContain(privateBody);
-    if (code === "channel_provider_endpoint_not_found") {
+    if (
+      code === "channel_provider_endpoint_not_found" ||
+      code === "channel_provider_delivery_not_found"
+    ) {
       expect(response.headers.get("retry-after")).toBe("60");
     }
   });

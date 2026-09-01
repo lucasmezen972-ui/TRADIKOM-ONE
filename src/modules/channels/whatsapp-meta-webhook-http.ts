@@ -182,7 +182,10 @@ async function readBoundedUtf8Body(request: Request) {
 
 function rejectedResponse(code: string) {
   if (code === "not_configured") return unavailableResponse();
-  if (code === "channel_provider_endpoint_not_found") {
+  if (
+    code === "channel_provider_endpoint_not_found" ||
+    code === "channel_provider_delivery_not_found"
+  ) {
     return jsonResponse(
       { ok: false, error: "Webhook temporairement non attribué." },
       { status: 503, headers: { "retry-after": "60" } },
