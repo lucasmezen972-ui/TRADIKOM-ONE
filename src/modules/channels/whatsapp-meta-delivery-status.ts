@@ -70,9 +70,11 @@ export type VerifiedMetaWhatsAppDeliveryStatus = {
 };
 
 export type MetaWhatsAppDeliveryStatusPreparationResult =
-  | { ok: true; event: VerifiedMetaWhatsAppDeliveryStatus }
+  | { ok: true; events: VerifiedMetaWhatsAppDeliveryStatus[] }
   | Extract<MetaWebhookVerificationResult, { ok: false }>
   | { ok: false; code: "whatsapp_payload_invalid" };
+
+const maxBatchEvents = 100;
 
 /** Vérifie puis normalise une notification de statut WhatsApp Cloud. */
 export function prepareVerifiedMetaWhatsAppDeliveryStatus(
@@ -119,17 +121,19 @@ function normalizeStatusPayload(
                               phone_number_id: numericReferenceSchema,
                             })
                             .strict(),
-                          statuses: z.array(statusSchema).length(1),
+                          statuses: z.array(statusSchema).min(1).max(10),
                         })
                         .strict(),
                     })
                     .strict(),
                 )
-                .length(1),
+                .min(1)
+                .max(10),
             })
             .strict(),
         )
-        .length(1),
+        .min(1)
+        .max(10),
     })
     .strict()
     .safeParse(value);
@@ -137,22 +141,27 @@ function normalizeStatusPayload(
     return { ok: false, code: "whatsapp_payload_invalid" };
   }
 
-  const entry = parsed.data.entry[0];
-  const change = entry.changes[0];
-  const status = change.value.statuses[0];
+  const events = parsed.data.entry.flatMap((entry) =>
+    entry.changes.flatMap((change) =>
+      change.value.statuses.map((status) => ({
+        safeAccountReference: entry.id,
+        phoneNumberId: change.value.metadata.phone_number_id,
+        providerMessageId: status.id,
+        sourceStatus: status.status,
+        status: normalizeStatus(status.status),
+        safeErrorCode:
+          status.status === "failed" || status.status === "deleted"
+            ? "provider_delivery_failed"
+            : null,
+      })),
+    ),
+  );
+  if (events.length > maxBatchEvents) {
+    return { ok: false, code: "whatsapp_payload_invalid" };
+  }
   return {
     ok: true,
-    event: {
-      safeAccountReference: entry.id,
-      phoneNumberId: change.value.metadata.phone_number_id,
-      providerMessageId: status.id,
-      sourceStatus: status.status,
-      status: normalizeStatus(status.status),
-      safeErrorCode:
-        status.status === "failed" || status.status === "deleted"
-          ? "provider_delivery_failed"
-          : null,
-    },
+    events,
   };
 }
 

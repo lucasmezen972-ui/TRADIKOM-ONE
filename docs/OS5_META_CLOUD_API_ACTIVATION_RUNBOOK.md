@@ -55,6 +55,9 @@ La requête sortante est bornée à `POST https://graph.facebook.com/{version}/{
 
 Le même endpoint webhook signé accepte les [notifications officielles de statut](https://www.postman.com/meta/whatsapp-business-platform/request/rgtfq23/message-status-update-notifications) `statuses` pour `sent`, `delivered`, `read`, `failed` et `deleted`. La signature du corps brut est vérifiée avant tout parsing. Le WABA et le Phone Number ID doivent résoudre exactement un endpoint Meta actif; l'identifiant `wamid` doit déjà correspondre à une livraison sortante de ce même endpoint et du même provider.
 
+- Les tableaux `entry`, `changes` et `statuses` sont acceptés dans des bornes strictes : dix éléments maximum par niveau et cent statuts maximum par requête.
+- Toutes les références endpoint/livraison d'un lot sont prévalidées avant la première mutation. Une référence inconnue refuse le lot entier; Meta peut alors le rejouer sans laisser de statut partiellement enregistré.
+- Chaque statut du lot conserve sa propre clé d'événement, son propre replay idempotent et sa propre projection monotone. La réponse HTTP n'expose ni compteur détaillé, ni référence fournisseur, ni donnée personnelle.
 - `sent` devient `accepted`; `delivered` et `read` deviennent `delivered`; `failed` et `deleted` deviennent `failed` avec un code interne générique.
 - Les callbacks peuvent arriver hors ordre. La projection est monotone : `delivered` ne régresse jamais vers `accepted` ou `failed`, tandis qu'un `read` tardif peut faire converger un échec antérieur vers `delivered`.
 - Chaque événement est réservé par empreinte interne et reste immuable. Un replay identique ne crée ni second événement ni second audit.

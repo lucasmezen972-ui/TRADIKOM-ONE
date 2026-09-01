@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-01T02:00:00.000Z",
+  "updatedAt": "2026-09-01T02:38:34.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "b5a0fe3ec870f34969b60750987481a159755cab",
-  "publishedHeadObserved": "b5a0fe3ec870f34969b60750987481a159755cab",
-  "status": "os5_meta_delivery_status_local_proven_ci_pending_human_otp_pending",
+  "lastCommit": "9551f608203db2671fdc5d853a8c2c11231efd2a",
+  "publishedHeadObserved": "9551f608203db2671fdc5d853a8c2c11231efd2a",
+  "status": "os5_meta_delivery_status_batch_local_proven_ci_pending_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Sur le parent publié b5a0fe3 entièrement vert, la tranche OS-5 non bloquée accepte maintenant les notifications officielles de statut WhatsApp Cloud, les déduplique et réconcilie durablement livraison et message sans PII ni secret. La migration 104 et son miroir 0098 imposent le même tenant, endpoint et provider; 15 fichiers/97 tests Meta sont verts avec lint, typecheck, build et continuity-check. La CI PostgreSQL/RLS du futur head reste la preuve manquante avant de revenir au checkpoint humain SMS.",
+  "currentObjective": "Le head publié 9551f60 est entièrement vert : notifications de statut WhatsApp Cloud signées, dédupliquées, monotones et isolées par tenant/provider, avec migrations PostgreSQL/RLS, suite complète, build et Playwright prouvés par CI 33460999183. La tranche non bloquée suivante traite maintenant un lot officiel borné de plusieurs statuts après prévalidation complète, sans perte d'événement, mutation partielle silencieuse ou PII. La régression Meta compte 14 fichiers/96 tests verts et 1 test PostgreSQL ignoré sans DATABASE_URL; lint, typecheck, build et continuity-check sont verts. La CI du futur head reste la preuve manquante avant le checkpoint SMS Meta.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,11 +28,11 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive la réception des notifications officielles de statut WhatsApp Cloud : signature avant parsing, schéma borné, déduplication, ordre tardif monotone, isolation tenant, réconciliation durable et audit sans contenu ni identifiant sensible. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Documentation officielle Meta relue pour les statuts sent/delivered/read/failed et leur possible arrivée hors ordre. Obtenu localement : 4 fichiers/27 tests statut-migrations-HTTP et régression Meta 15 fichiers/97 tests verts, lint, typecheck, build, continuity-check et diff check verts. Reste attendu : CI PostgreSQL/RLS, suite exhaustive et Playwright du futur head. Le checkpoint humain SMS reste exact; zéro secret, Graph, message, endpoint public, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive la réception conversationnelle WhatsApp : vérifier la signature avant parsing, borner entry/changes/statuses, normaliser chaque statut canonique, dédupliquer chaque événement, préserver l'ordre monotone et l'isolation tenant/provider, puis répondre sans PII ni secret. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. La documentation officielle Meta représente entry, changes et statuses comme des tableaux; l'inférence de robustesse prouvée localement est qu'un lot borné ne perd aucun élément après le premier : 2 fichiers/20 tests ciblés, lot multiple, replay, borne, ordre et refus atomique; régression Meta 14 fichiers/96 tests verts et 1 PostgreSQL ignoré. ESLint complet, TypeScript, build production, continuity-check et diff check sont verts. Reste attendu : CI PostgreSQL/RLS, suite exhaustive et Playwright du futur head. Le checkpoint humain SMS reste exact; zéro secret, Graph, message, endpoint public, déploiement ou dépense."
     }
   },
-  "nextAction": "Réconcilier une dernière fois le head distant avec le parent b5a0fe3, publier en fast-forward la tranche de notifications de statut Meta sans tmp/, puis attendre la CI PostgreSQL/RLS complète. Après preuve verte, le checkpoint suivant redevient la saisie directe du code SMS Meta par l'utilisateur; ne déclencher ni Graph, message, endpoint public, déploiement ou dépense sans autorisation distincte.",
+  "nextAction": "Réconcilier le head distant exact 9551f60, commiter uniquement les fichiers contrôlés de la tranche lot Meta, pousser en fast-forward sans tmp/, puis attendre CI PostgreSQL/RLS, suite complète, build et Playwright. Après preuve verte, revenir au checkpoint humain de saisie directe du code SMS Meta.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -449,7 +449,14 @@
     "suite complète et build locaux non conclusifs : Vitest est resté silencieux; pnpm build a tenté de recréer node_modules puis le réseau sandbox a bloqué les paquets; dépendances restaurées exactement depuis le lockfile",
     "fetch distant sûr puis commit 02584ba et push fast-forward 234f7ee..02584ba; tmp exclu",
     "CI 33414636126 : audit, migrations, backup/restauration, RLS, lint, typecheck, 141 fichiers/646 tests, build production et 20 Playwright verts",
-    "continuité 33414636345 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 02584ba"
+    "continuité 33414636345 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 02584ba",
+    "heartbeat 2026-09-01T02:24Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement; pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-09-01T02:26Z et 02:38Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 9551f60; CI 33460999183 et continuité 33460999408 entièrement vertes",
+    "durcissement local des lots statuses Meta : bornes entry/changes/statuses, prévalidation endpoint/livraison, replay et projection monotone",
+    "Vitest ciblé 2 fichiers/20 tests puis régression Meta 14 fichiers/96 tests verts; 1 test PostgreSQL ignoré sans DATABASE_URL",
+    "ESLint ciblé et complet, TypeScript, build Next.js production et git diff --check verts; build hors sandbox uniquement pour les polices Google"
   ],
   "lastValidation": [
     {
@@ -1359,6 +1366,18 @@
     {
       "command": "heartbeat normatif et GitHub au head final cb3e50b le 2026-08-31T19:20Z",
       "status": "passed_pdf_sha256_exact_71_pages_required_and_os5_pages_reviewed_pages_48_69_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33427555175_and_continuity_33427555275_green_tmp_preserved_human_sms_checkpoint"
+    },
+    {
+      "command": "publication des statuts Meta au head 9551f60 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33460999183_green_migrations_backup_restore_rls_lint_typecheck_full_suite_build_playwright_continuity_33460999408_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "lots de statuts Meta ciblés et régression provider",
+      "status": "passed_2_files_20_tests_then_14_files_96_tests_1_postgres_test_skipped_without_database_url_batch_replay_bounds_atomic_prevalidation_monotonicity_no_sensitive_audit"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après lots Meta",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
     }
   ],
   "humanBlockers": [

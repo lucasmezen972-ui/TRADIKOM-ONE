@@ -45,6 +45,90 @@ describe("notifications de statut WhatsApp Cloud Meta", () => {
     ).toBe(1);
   });
 
+  it("traite et rejoue atomiquement un lot borné de plusieurs statuts", async () => {
+    const setup = await createSetup();
+    const input = signedStatuses(["sent", "delivered"]);
+
+    await expect(receive(setup.db, input)).resolves.toMatchObject({
+      accepted: true,
+      processed: 2,
+      replayed: false,
+      replayedCount: 0,
+      stateUpdated: true,
+      stateUpdatedCount: 1,
+    });
+    await expect(receive(setup.db, input)).resolves.toMatchObject({
+      accepted: true,
+      processed: 2,
+      replayed: true,
+      replayedCount: 2,
+      stateUpdated: false,
+      stateUpdatedCount: 0,
+    });
+
+    expect(await count(setup.db, "channel_provider_delivery_events")).toBe(2);
+    expect(
+      await count(
+        setup.db,
+        "audit_logs",
+        "action = 'channel.whatsapp_delivery_status_received'",
+      ),
+    ).toBe(2);
+    expect(await deliveryState(setup.db)).toEqual({
+      status: "delivered",
+      safe_error_code: null,
+    });
+  });
+
+  it("annule tout le lot quand une référence ultérieure est inconnue", async () => {
+    const setup = await createSetup();
+    const input = signedStatuses([
+      "sent",
+      {
+        status: "delivered",
+        providerMessageId:
+          "wamid.HBgLMTU1NTAwMDIyMjIVAGHAYWZha2VfbWlzc2luZw==",
+      },
+    ]);
+
+    await expect(receive(setup.db, input)).resolves.toEqual({
+      accepted: false,
+      code: "channel_provider_delivery_not_found",
+    });
+    expect(await count(setup.db, "channel_provider_delivery_events")).toBe(0);
+    expect(
+      await count(
+        setup.db,
+        "audit_logs",
+        "action = 'channel.whatsapp_delivery_status_received'",
+      ),
+    ).toBe(0);
+    expect(await deliveryState(setup.db)).toEqual({
+      status: "accepted",
+      safe_error_code: null,
+    });
+  });
+
+  it("refuse un tableau de statuts hors borne avant toute mutation", async () => {
+    const setup = await createSetup();
+    const input = signedStatuses(
+      Array.from({ length: 11 }, () => "sent" as const),
+    );
+
+    await expect(receive(setup.db, input)).resolves.toEqual({
+      accepted: false,
+      code: "whatsapp_payload_invalid",
+    });
+    expect(await count(setup.db, "channel_provider_delivery_events")).toBe(0);
+    expect(
+      await count(
+        setup.db,
+        "audit_logs",
+        "action = 'channel.whatsapp_delivery_status_received'",
+      ),
+    ).toBe(0);
+  });
+
   it("reste monotone quand Meta livre les statuts hors ordre", async () => {
     const setup = await createSetup();
 
@@ -218,6 +302,31 @@ function signedStatus(
   status: "sent" | "delivered" | "read" | "failed",
   overrides: { phoneNumberId?: string; providerMessageId?: string } = {},
 ) {
+  return signedStatuses(
+    [
+      {
+        status,
+        providerMessageId: overrides.providerMessageId,
+      },
+    ],
+    overrides,
+  );
+}
+
+type StatusInput =
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed"
+  | {
+      status: "sent" | "delivered" | "read" | "failed";
+      providerMessageId?: string;
+    };
+
+function signedStatuses(
+  inputs: StatusInput[],
+  overrides: { phoneNumberId?: string } = {},
+) {
   const rawBody = JSON.stringify({
     object: "whatsapp_business_account",
     entry: [
@@ -231,13 +340,15 @@ function signedStatus(
                 display_phone_number: "15550001111",
                 phone_number_id: overrides.phoneNumberId ?? phoneNumberId,
               },
-              statuses: [
-                {
-                  id: overrides.providerMessageId ?? providerMessageId,
-                  status,
+              statuses: inputs.map((input) => {
+                const item =
+                  typeof input === "string" ? { status: input } : input;
+                return {
+                  id: item.providerMessageId ?? providerMessageId,
+                  status: item.status,
                   timestamp: "1760000000",
                   recipient_id: recipientId,
-                  ...(status === "failed"
+                  ...(item.status === "failed"
                     ? {
                         errors: [
                           {
@@ -248,8 +359,8 @@ function signedStatus(
                         ],
                       }
                     : {}),
-                },
-              ],
+                };
+              }),
             },
             field: "messages",
           },
