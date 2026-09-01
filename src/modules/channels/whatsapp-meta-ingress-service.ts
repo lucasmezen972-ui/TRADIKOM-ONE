@@ -96,7 +96,7 @@ export async function receivePreparedMetaWhatsAppWebhook(
   }
 }
 
-async function persistPreparedMetaWhatsAppMessage(
+export async function persistPreparedMetaWhatsAppMessage(
   transaction: DbClient,
   input: {
     endpoint: { endpointId: string; tenantId: string };

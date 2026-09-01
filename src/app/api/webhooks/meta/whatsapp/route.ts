@@ -1,8 +1,7 @@
 import {
   getPreparedChannelProvider,
   handlePreparedMetaWhatsAppWebhookRequest,
-  receivePreparedMetaWhatsAppDeliveryStatus,
-  receivePreparedMetaWhatsAppWebhook,
+  receivePreparedMetaWhatsAppWebhookBatch,
 } from "@/modules/channels";
 import { getDb } from "@/lib/db";
 import {
@@ -37,18 +36,11 @@ async function handleMetaWhatsAppWebhookRequest(request: Request) {
           appSecret: process.env.META_WHATSAPP_APP_SECRET,
           fingerprintSecret: process.env.CONNECTOR_ENCRYPTION_KEY,
         };
-        const status = await receivePreparedMetaWhatsAppDeliveryStatus(
+        return receivePreparedMetaWhatsAppWebhookBatch(
           db,
           input,
           configuration,
         );
-        if (
-          status.accepted ||
-          status.code !== "whatsapp_payload_invalid"
-        ) {
-          return status;
-        }
-        return receivePreparedMetaWhatsAppWebhook(db, input, configuration);
       },
     });
     response.headers.set("x-correlation-id", correlationId);

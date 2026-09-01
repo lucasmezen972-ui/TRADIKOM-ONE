@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 10-18, 22, 26-38 et 64-68 ont été relues directement le 1er septembre 2026; les pages 48 et 69 ont été contrôlées visuellement.
-- Le head local et distant publié est `159dc13c36ff1c203aae03fe023ba1819709b537`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33463499865` et la continuité `33463499881` sont vertes sur ce head.
+- Le head local et distant publié est `4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33473526862` et la continuité `33473526866` sont vertes sur ce head.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -40,7 +40,7 @@
 - Toutes les références endpoint/livraison sont prévalidées avant la première écriture. Une référence inconnue dans le lot refuse l'ensemble sans événement ni audit partiel.
 - Le replay du lot ne crée aucun doublon; les projections restent monotones et chaque événement conserve sa clé durable propre.
 
-## Tranche locale en validation : lots de messages entrants Meta
+## Tranche publiée et prouvée : lots de messages entrants Meta
 
 - Les tableaux `entry`, `changes` et `messages` acceptent maintenant plusieurs messages texte avec dix éléments maximum par niveau et cent messages maximum par requête.
 - La signature HMAC du corps brut est vérifiée avant parsing. Tous les couples WABA/Phone Number ID sont prévalidés avant la première mutation; un endpoint ultérieur inconnu refuse le lot entier.
@@ -48,14 +48,23 @@
 - Une même enveloppe peut résoudre plusieurs endpoints et tenants sans fusion d'identité. Les sujets restent HMAC-scopés par tenant et endpoint, et les audits ne contiennent ni numéro, contenu, timestamp ni référence fournisseur.
 - La documentation officielle Meta décrit `entry`, `changes` et `messages` comme des tableaux. Le support de lots est une mesure de robustesse déduite de ce contrat; il ne prétend pas que Meta regroupera systématiquement plusieurs messages dans une requête.
 
+## Tranche locale en validation : enveloppe mixte messages + statuts Meta
+
+- La route Meta n'essaie plus de traiter toute la requête comme un lot de statuts puis comme un lot de messages. Elle vérifie désormais le HMAC du corps brut une seule fois et distribue chaque `change` vers son schéma strict.
+- Les tableaux `entry` et `changes` conservent leurs bornes de dix éléments et le total combiné messages + statuts est limité à cent événements par requête. Un changement contenant les deux familles ou aucune est refusé.
+- Tous les endpoints et toutes les livraisons des deux familles sont résolus avant la première écriture. Messages entrants, bindings, événements de livraison et projections sont ensuite persistés dans une transaction système unique.
+- Le rejeu complet est idempotent. Une signature altérée ne touche pas la base et une livraison inconnue annule aussi le message entrant valide du même lot.
+- La réponse HTTP reste réduite à `{ ok: true }`; les audits testés ne contiennent ni contenu, numéro, Phone Number ID, `wamid` entrant ou sortant.
+- Le support d'une enveloppe mixte est une mesure de robustesse fondée sur l'enveloppe générique Meta et ses tableaux; il ne prétend pas que Meta regroupera systématiquement les deux familles dans une requête.
+
 ## Référence prompt maître
 
 Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canonique, signature avant parsing, schémas d'entrée bornés, identité opaque tenant-aware, chiffrement des credentials, action durable, idempotence, audit sans contenu sensible et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 exigent encore la CI complète de la tranche puis le checkpoint fournisseur avant de classer OS-5 terminé.
 
 ## Prochaine action concrète
 
-1. Réconcilier le head distant exact `159dc13`, commiter uniquement les fichiers contrôlés de la tranche de messages entrants Meta et pousser en fast-forward sans `tmp/`.
-2. Attendre la CI PostgreSQL/RLS, la suite complète, le build et Playwright du nouveau head; ne pas déclarer la tranche entrante prouvée CI avant ces résultats.
+1. Réconcilier le head distant exact `4e9f35d`, commiter uniquement les fichiers contrôlés de la tranche webhook Meta mixte et pousser en fast-forward sans `tmp/`.
+2. Attendre la CI PostgreSQL/RLS, la suite complète, le build et Playwright du nouveau head; ne pas déclarer la tranche mixte prouvée CI avant ces résultats.
 3. Le checkpoint fournisseur reste la saisie du code SMS directement dans Chrome par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 4. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 5. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
@@ -75,6 +84,8 @@ Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - La tranche statut publiée est prouvée par CI `33460999183` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite exhaustive, build production et Playwright verts; continuité `33460999408` verte.
 - La tranche de lots de statuts publiée est prouvée par CI `33463499865` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite exhaustive, build production et Playwright verts; continuité `33463499881` verte.
 - Tranche entrante locale : 2 fichiers/13 tests ciblés verts; régression Meta 13 fichiers réussis, 3 fichiers PostgreSQL ignorés, 96 tests réussis et 3 ignorés faute de `DATABASE_URL`. ESLint ciblé et complet, TypeScript, build production, continuity-check et `git diff --check` sont verts.
+- La tranche entrante publiée est prouvée par CI `33473526862` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite exhaustive, build production et Playwright verts; continuité `33473526866` verte.
+- Tranche mixte locale : test dédié 5/5 vert; régression ingress/webhook 6 fichiers/41 tests verts; régression Meta/coffre 18 fichiers/120 tests verts et 2 fichiers/2 tests PostgreSQL ignorés faute de `DATABASE_URL`. ESLint complet, TypeScript, build production, continuity-check et `git diff --check` sont verts.
 - `pnpm test` exhaustif local est resté silencieux plus de trois minutes et a été interrompu sans assertion en échec; il n'est pas présenté comme vert. La CI du futur head doit apporter la preuve exhaustive, PostgreSQL/RLS et Playwright.
 - `git diff --check` est vert.
 
@@ -84,7 +95,8 @@ Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Livré et prouvé CI : compatibilité de l'enveloppe webhook officielle et clés internes hashées.
 - Livré et prouvé CI : notifications de statut Meta signées, idempotentes, monotones et sans PII.
 - Livré et prouvé CI : traitement borné et atomique des lots `statuses` Meta.
-- Livré localement, preuve CI en attente : traitement borné, prévalidé, atomique et multi-tenant des lots de messages entrants Meta.
+- Livré et prouvé CI : traitement borné, prévalidé, atomique et multi-tenant des lots de messages entrants Meta.
+- Livré localement, preuve CI en attente : dispatch mixte messages/statuts après un seul HMAC, borne globale, prévalidation commune et transaction unique.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -96,7 +108,7 @@ Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head publié 159dc13 est vert (CI 33463499865, continuité 33463499881). La tranche locale de lots de messages entrants Meta doit être publiée en fast-forward sans tmp/, puis être prouvée en CI PostgreSQL/RLS, suite complète, build et Playwright.
+3. Le head publié 4e9f35d est vert (CI 33473526862, continuité 33473526866). La tranche locale d'enveloppe mixte Meta doit être publiée en fast-forward sans tmp/, puis être prouvée en CI PostgreSQL/RLS, suite complète, build et Playwright.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.

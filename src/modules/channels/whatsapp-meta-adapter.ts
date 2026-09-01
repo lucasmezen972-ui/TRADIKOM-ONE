@@ -43,6 +43,10 @@ export type MetaWhatsAppInboundPreparationResult =
   | Extract<MetaWebhookVerificationResult, { ok: false }>
   | { ok: false; code: "whatsapp_payload_invalid" };
 
+export type MetaWhatsAppInboundNormalizationResult =
+  | { ok: true; messages: PreparedMetaWhatsAppInboundMessage[] }
+  | { ok: false; code: "whatsapp_payload_invalid" };
+
 const maxBatchMessages = 100;
 
 /** Normalise un lot borné d'événements texte Meta, exclusivement après signature. */
@@ -60,7 +64,10 @@ export function prepareVerifiedMetaWhatsAppInboundMessages(
   const rawBody = readRawBody(input);
   if (!rawBody) return { ok: false, code: "whatsapp_payload_invalid" };
   try {
-    return normalizeMetaPayload(JSON.parse(rawBody), receivedAt);
+    return normalizeVerifiedMetaWhatsAppInboundPayload(
+      JSON.parse(rawBody),
+      receivedAt,
+    );
   } catch {
     return { ok: false, code: "whatsapp_payload_invalid" };
   }
@@ -72,10 +79,11 @@ function readRawBody(input: unknown) {
   return typeof value === "string" ? value : null;
 }
 
-function normalizeMetaPayload(
+/** Normalise un fragment déjà couvert par une vérification HMAC réussie. */
+export function normalizeVerifiedMetaWhatsAppInboundPayload(
   value: unknown,
   receivedAt: string,
-): MetaWhatsAppInboundPreparationResult {
+): MetaWhatsAppInboundNormalizationResult {
   const parsed = z
     .object({
       object: z.literal("whatsapp_business_account"),

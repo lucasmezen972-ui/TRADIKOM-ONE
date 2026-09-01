@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-01T05:22:00.000Z",
+  "updatedAt": "2026-09-01T06:02:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "159dc13c36ff1c203aae03fe023ba1819709b537",
-  "publishedHeadObserved": "159dc13c36ff1c203aae03fe023ba1819709b537",
-  "status": "os5_meta_inbound_message_batch_local_proven_ci_pending_human_otp_pending",
+  "lastCommit": "4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6",
+  "publishedHeadObserved": "4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6",
+  "status": "os5_meta_mixed_webhook_dispatch_local_proven_ci_pending_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le head local et distant 159dc13 est entièrement vert en CI 33463499865 et continuité 33463499881 : les lots de statuts Meta sont bornés, prévalidés, atomiques et idempotents. La tranche conversationnelle non bloquée suivante est maintenant prouvée localement : elle empêche la perte silencieuse de messages entrants quand l'enveloppe Meta contient plusieurs entry, changes ou messages, avec signature avant parsing, bornes explicites, prévalidation de tous les endpoints, ingestion atomique et idempotence par message, sans PII ni appel Graph. La CI complète du futur head reste requise avant retour au checkpoint SMS.",
+  "currentObjective": "Le head local et distant 4e9f35d est entièrement vert en CI 33473526862 et continuité 33473526866 : les lots entrants Meta sont prouvés. La tranche suivante est prouvée localement : une enveloppe Meta signée contenant à la fois des changements messages et statuses est vérifiée une seule fois, strictement dispatchée, globalement bornée, entièrement prévalidée puis persistée dans une transaction unique. Rejeu, signature invalide, livraison inconnue et audit sans PII sont couverts; la CI complète du futur head reste requise.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,11 +28,11 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive le Conversation Hub WhatsApp : vérifier la signature avant tout parsing, accepter des tableaux entry/changes/messages strictement bornés, normaliser chaque message texte, prévalider tous les couples WABA/Phone Number ID avant la première mutation, puis ingérer atomiquement avec isolation tenant/provider, identité opaque, provenance et idempotence par wamid hashé. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. La documentation officielle Meta représente entry, changes et messages comme des tableaux; l'inférence de robustesse est prouvée localement : 2 fichiers/13 tests ciblés, normalisation multiple et bornes par niveau/globales, replay par événement, deux tenants dans une enveloppe et refus atomique d'un endpoint ultérieur inconnu; régression Meta 13 fichiers/96 tests verts et 3 fichiers/3 tests PostgreSQL ignorés sans DATABASE_URL; ESLint, TypeScript, build, continuity-check et diff check verts. La suite exhaustive locale silencieuse n'est pas revendiquée; CI PostgreSQL/RLS/Playwright du futur head attendue. Écart connu : enveloppe mixte messages + statuts à dispatcher ultérieurement. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive le service d'ingestion du Conversation Hub : pour une enveloppe Meta pouvant contenir des changements de messages entrants et de statuts sortants, vérifier HMAC avant tout parsing et une seule fois, appliquer des schémas stricts et des bornes par niveau et globales, prévalider tous les endpoints et toutes les livraisons avant la première mutation, puis ingérer messages et statuts atomiquement avec isolation tenant/provider, identité opaque, provenance et idempotence. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Preuve attendue : une enveloppe signée mixte traite messages et statuts dans une seule transaction; le rejeu complet reste idempotent; une signature invalide n'accède pas à la base; un endpoint ou une livraison inconnus dans n'importe quelle position annulent l'ensemble; bornes mixtes et réponses/audits sans PII sont testés. Régression Meta, ESLint, TypeScript, build, continuity-check, diff check, puis CI PostgreSQL/RLS/suite complète/Playwright du futur head. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Réconcilier le head distant exact 159dc13, commiter uniquement les fichiers contrôlés de la tranche de lots entrants Meta, pousser en fast-forward sans tmp/, puis attendre CI PostgreSQL/RLS, suite complète, build et Playwright. Après preuve verte, revenir au checkpoint humain de saisie directe du code SMS Meta.",
+  "nextAction": "Réconcilier le head distant exact 4e9f35d, commiter uniquement la tranche webhook Meta mixte et les quatre handoffs, pousser en fast-forward sans tmp/, puis attendre CI PostgreSQL/RLS, suite complète, build et Playwright.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -456,7 +456,13 @@
     "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 9551f60; CI 33460999183 et continuité 33460999408 entièrement vertes",
     "durcissement local des lots statuses Meta : bornes entry/changes/statuses, prévalidation endpoint/livraison, replay et projection monotone",
     "Vitest ciblé 2 fichiers/20 tests puis régression Meta 14 fichiers/96 tests verts; 1 test PostgreSQL ignoré sans DATABASE_URL",
-    "ESLint ciblé et complet, TypeScript, build Next.js production et git diff --check verts; build hors sandbox uniquement pour les polices Google"
+    "ESLint ciblé et complet, TypeScript, build Next.js production et git diff --check verts; build hors sandbox uniquement pour les polices Google",
+    "heartbeat 2026-09-01T05:46Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22, 26-38 et 64-68 relues directement; pages 48 et 69 inspectées en rendu",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 4e9f35d; CI 33473526862 et continuité 33473526866 entièrement vertes",
+    "dispatch local d'une enveloppe Meta mixte : HMAC unique, schémas stricts, borne globale 100, prévalidation complète et transaction unique",
+    "Vitest ciblé 6 fichiers/41 tests puis régression Meta/coffre 18 fichiers/120 tests verts; 2 fichiers/2 tests PostgreSQL ignorés sans DATABASE_URL",
+    "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check verts; build hors sandbox uniquement pour les polices Google"
   ],
   "lastValidation": [
     {
@@ -1394,6 +1400,18 @@
     {
       "command": "suite Vitest exhaustive locale après lots entrants Meta",
       "status": "inconclusive_silent_over_three_minutes_interrupted_without_assertion_failure_ci_required"
+    },
+    {
+      "command": "publication des lots entrants Meta au head 4e9f35d et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33473526862_green_migrations_backup_restore_rls_lint_typecheck_full_suite_build_playwright_continuity_33473526866_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "enveloppe webhook Meta mixte ciblée et régression provider",
+      "status": "passed_6_files_41_tests_then_18_files_120_tests_2_postgres_files_2_tests_skipped_without_database_url_hmac_once_mixed_dispatch_replay_global_bounds_atomic_prevalidation_no_sensitive_audit"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après enveloppe mixte",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
     }
   ],
   "humanBlockers": [

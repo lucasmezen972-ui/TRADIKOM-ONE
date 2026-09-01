@@ -74,6 +74,10 @@ export type MetaWhatsAppDeliveryStatusPreparationResult =
   | Extract<MetaWebhookVerificationResult, { ok: false }>
   | { ok: false; code: "whatsapp_payload_invalid" };
 
+export type MetaWhatsAppDeliveryStatusNormalizationResult =
+  | { ok: true; events: VerifiedMetaWhatsAppDeliveryStatus[] }
+  | { ok: false; code: "whatsapp_payload_invalid" };
+
 const maxBatchEvents = 100;
 
 /** Vérifie puis normalise une notification de statut WhatsApp Cloud. */
@@ -87,15 +91,18 @@ export function prepareVerifiedMetaWhatsAppDeliveryStatus(
   const rawBody = readRawBody(input);
   if (!rawBody) return { ok: false, code: "whatsapp_payload_invalid" };
   try {
-    return normalizeStatusPayload(JSON.parse(rawBody));
+    return normalizeVerifiedMetaWhatsAppDeliveryStatusPayload(
+      JSON.parse(rawBody),
+    );
   } catch {
     return { ok: false, code: "whatsapp_payload_invalid" };
   }
 }
 
-function normalizeStatusPayload(
+/** Normalise un fragment déjà couvert par une vérification HMAC réussie. */
+export function normalizeVerifiedMetaWhatsAppDeliveryStatusPayload(
   value: unknown,
-): MetaWhatsAppDeliveryStatusPreparationResult {
+): MetaWhatsAppDeliveryStatusNormalizationResult {
   const parsed = z
     .object({
       object: z.literal("whatsapp_business_account"),

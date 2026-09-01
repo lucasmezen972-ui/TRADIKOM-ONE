@@ -5,6 +5,8 @@ export * from "@/modules/channels/test-channel";
 export * from "@/modules/channels/web-channel";
 export * from "@/modules/channels/whatsapp-twilio-webhook";
 export * from "@/modules/channels/whatsapp-meta-webhook";
+export * from "@/modules/channels/whatsapp-meta-webhook-batch";
+export * from "@/modules/channels/whatsapp-meta-webhook-service";
 export * from "@/modules/channels/whatsapp-meta-adapter";
 export * from "@/modules/channels/whatsapp-meta-delivery-status";
 export * from "@/modules/channels/whatsapp-meta-delivery-status-service";
