@@ -1011,3 +1011,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - `pnpm-workspace.yaml` verrouille désormais la dépendance transitive à `browserslist 4.28.7`, version corrigée annoncée par l'avis, et le lockfile a été régénéré sans modifier les dépendances applicatives directes.
 - `pnpm audit --prod --audit-level high` retourne « No known vulnerabilities found ». La publication du correctif puis une nouvelle CI complète restent nécessaires avant de classer la tranche média prouvée CI.
 - Aucun fournisseur, secret, message externe, requête Graph, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## 2026-09-02 - Médias Meta et correctif de sécurité prouvés en CI
+
+- Le correctif final `44350ec2a97c1cf664fcf5132d6a3523fdc8f634` est publié sur `codex/tradikom-one-os`. La PR #11 reste ouverte, brouillon et `MERGEABLE/CLEAN` sur ce head.
+- La CI `33661150567` est entièrement verte : audit des dépendances, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/674 tests, build production et 20 Playwright. La continuité `33661150706` est également verte.
+- Les cinq types média Meta entrants sont donc prouvés dans la conversation avec notice française, non-fuite et idempotence, sans téléchargement Graph, stockage fictif ni pièce jointe canonique prématurée.
+- La prochaine tranche non bloquée est la réservation durable tenant/RLS de l'import média, avec référence fournisseur chiffrée, états explicites, idempotence et audit sans contenu. Elle restera sans appel Graph tant qu'une autorisation distincte n'aura pas été donnée.
+- Aucun fournisseur, secret, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché. `tmp/` est resté non suivi, préservé et hors index.

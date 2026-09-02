@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-02T12:25:00.000Z",
+  "updatedAt": "2026-09-02T17:50:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "41c2fc85d571842919756432737771162d8e0af6",
-  "publishedHeadObserved": "41c2fc85d571842919756432737771162d8e0af6",
-  "status": "os5_meta_inbound_media_published_ci_dependency_audit_fix_local_pending_human_otp",
+  "lastCommit": "44350ec2a97c1cf664fcf5132d6a3523fdc8f634",
+  "publishedHeadObserved": "44350ec2a97c1cf664fcf5132d6a3523fdc8f634",
+  "status": "os5_meta_inbound_media_ci_proven_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche média Meta est publiée au head 41c2fc8 et la continuité 33628923623 est verte. La CI 33628923602 s'est arrêtée avant les tests sur deux nouvelles alertes de sécurité browserslist <=4.28.6, sans échec applicatif. Le correctif minimal verrouille transitivement browserslist 4.28.7; l'audit production local ne trouve plus de vulnérabilité connue. Publier ce correctif documentaire/lockfile en fast-forward puis obtenir la CI PostgreSQL/RLS, suite complète, build et Playwright du nouveau head.",
+  "currentObjective": "Le head local et distant 44350ec est entièrement vert en CI 33661150567 et continuité 33661150706 : les cinq types média Meta sont représentés dans la conversation sans téléchargement ni stockage fictif, et le correctif browserslist 4.28.7 est validé. Tant que l'activation Meta reste bloquée par le code SMS humain, la prochaine tranche non bloquée du service d'ingestion est de préparer une réservation durable tenant/RLS pour l'import média, avec référence fournisseur chiffrée, états explicites et aucun appel Graph sans autorisation.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,8 +32,8 @@
       "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-14, 22-24, 26-29, 34-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Preuve attendue : les cinq types média officiels sont acceptés seulement après HMAC, bornés et normalisés sans URL, media ID, checksum, nom de fichier ni contenu binaire persistés; caption et notice française sont conservées; aucun fetch ni ligne conversation_message_attachments; lot mixte texte+média+statut atomique et rejouable; média invalide et endpoint inconnu refusés avant mutation. Régression Meta, ESLint, TypeScript, build, continuity-check, diff check, puis CI PostgreSQL/RLS/suite complète/Playwright du futur head. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Réconcilier le head distant exact 41c2fc8, commiter uniquement pnpm-workspace.yaml, pnpm-lock.yaml et les quatre handoffs du correctif browserslist 4.28.7, pousser en fast-forward sans tmp/, puis attendre la CI complète.",
-  "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
+  "nextAction": "Avant de coder, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69, puis concevoir la réservation durable d'import média Meta : tenant/RLS, référence fournisseur chiffrée, idempotence, audit sans contenu et états not_configured/pending/failed, sans téléchargement Graph.",
+  "nextFile": "src/modules/channels/channel-provider-media-imports-service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1432,6 +1432,10 @@
     {
       "command": "override transitif browserslist 4.28.7 et audit production",
       "status": "passed_lockfile_only_no_known_vulnerabilities_no_source_or_runtime_behavior_change"
+    },
+    {
+      "command": "publication du correctif 44350ec, CI 33661150567 et continuité 33661150706",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_144_files_674_tests_build_20_playwright_continuity_ready_pr_11_open_draft_mergeable_clean_tmp_preserved"
     }
   ],
   "humanBlockers": [
