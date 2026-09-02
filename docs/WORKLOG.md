@@ -1003,3 +1003,11 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Les nouveaux tests couvrent cinq types, média invalide, non-fuite, zéro réseau, zéro pièce jointe, replay et lot atomique texte+média+statut. La régression élargie a produit 122 tests réussis et 2 PostgreSQL ignorés; deux scénarios ont subi des timeouts lors de sauts d'horloge locaux puis ont réussi isolément en quelques secondes. ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` sont verts.
 - `pnpm agent:continuity-check` a été exécuté comme requis mais son lanceur fourni a voulu réinstaller des dépendances sans TTY/réseau. Le script versionné équivalent a ensuite retourné `ready`, zéro erreur et zéro avertissement. Aucun lockfile ni dépendance n'a été modifié.
 - Aucun secret, code SMS, compte finalisé, app, WABA, numéro réel, endpoint public, requête Graph, message externe, dépense, fusion ou déploiement n'a été créé ou déclenché. `tmp/` reste non suivi, préservé et hors index; la CI complète du futur head est encore requise.
+
+## 2026-09-02 - Publication média et correction de l'audit de dépendances
+
+- Après fetch, le parent local et distant `0e92f38` était exact. Le commit fonctionnel `41c2fc85d571842919756432737771162d8e0af6` a été poussé en fast-forward sans force; seuls les neuf fichiers contrôlés ont été indexés et `tmp/` est resté non suivi.
+- La continuité `33628923623` est verte. La CI `33628923602` s'est arrêtée au contrôle préalable `pnpm audit`, avant migrations, tests ou build, sur deux nouveaux avis élevés affectant `browserslist <= 4.28.6`; aucun échec applicatif n'a été observé.
+- `pnpm-workspace.yaml` verrouille désormais la dépendance transitive à `browserslist 4.28.7`, version corrigée annoncée par l'avis, et le lockfile a été régénéré sans modifier les dépendances applicatives directes.
+- `pnpm audit --prod --audit-level high` retourne « No known vulnerabilities found ». La publication du correctif puis une nouvelle CI complète restent nécessaires avant de classer la tranche média prouvée CI.
+- Aucun fournisseur, secret, message externe, requête Graph, endpoint public, fusion, déploiement ou dépense n'a été déclenché.

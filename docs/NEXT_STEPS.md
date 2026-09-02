@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 10-14, 22-24, 26-29, 34-38 et 64-68 ont été relues directement le 2 septembre 2026; les pages 48 et 69 ont été contrôlées visuellement.
-- Le head local et distant publié est `0e92f38cad78b14ec80bafa9444658b49e8169a2`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33523760105` et la continuité `33523760887` sont vertes sur ce head.
+- Le head local et distant publié est `41c2fc85d571842919756432737771162d8e0af6`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la continuité `33628923623` est verte. La CI `33628923602` s'est arrêtée avant les tests sur les nouveaux avis de sécurité `browserslist` et non sur la tranche applicative.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -57,7 +57,7 @@
 - La réponse HTTP reste réduite à `{ ok: true }`; les audits testés ne contiennent ni contenu, numéro, Phone Number ID, `wamid` entrant ou sortant.
 - Le support d'une enveloppe mixte est une mesure de robustesse fondée sur l'enveloppe générique Meta et ses tableaux; il ne prétend pas que Meta regroupera systématiquement les deux familles dans une requête.
 
-## Tranche locale en validation : médias entrants Meta sans téléchargement
+## Tranche publiée, CI fonctionnelle en attente : médias entrants Meta sans téléchargement
 
 - Les messages signés `image`, `audio`, `document`, `video` et `sticker` sont maintenant reconnus par des schémas stricts et bornés conformes aux objets média documentés par Meta.
 - L'adaptateur ne propage après normalisation que le type média et la légende utile éventuelle. Media ID, checksum, nom de fichier, type MIME, numéro et URL fournisseur ne sont ni journalisés ni persistés.
@@ -65,13 +65,19 @@
 - Un lot signé texte + média + statut est prévalidé puis persisté atomiquement et se rejoue sans doublon. Les tests prouvent zéro appel `fetch`, zéro pièce jointe fictive et zéro métadonnée média dans les audits ou tables conversationnelles.
 - Cette tranche ne prétend pas avoir importé ou analysé le fichier. Le téléchargement Graph, les contrôles effectifs de taille/type, le stockage Supabase avec ACL/checksum, l'antivirus, la transcription et l'OCR restent à réaliser avant toute activation réelle.
 
+## Correctif de sécurité CI local
+
+- La CI `33628923602` du head média s'est arrêtée au contrôle des dépendances, avant migrations, tests ou build, sur deux avis élevés affectant `browserslist <= 4.28.6`.
+- Une surcharge locale et bornée verrouille la dépendance transitive à `browserslist 4.28.7`, version corrigée indiquée par l'avis. Le lockfile ne modifie aucune API applicative.
+- `pnpm audit --prod --audit-level high` retourne désormais « No known vulnerabilities found ». Le correctif doit être publié puis la CI complète relancée; l'échec précédent ne constitue pas une preuve fonctionnelle négative de la tranche média.
+
 ## Référence prompt maître
 
 Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canonique, signature avant parsing, schémas d'entrée bornés, médias externes non fiables, identité opaque tenant-aware, action durable, idempotence, audit sans contenu sensible et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 exigent encore la CI complète de la tranche puis le checkpoint fournisseur avant de classer OS-5 terminé.
 
 ## Prochaine action concrète
 
-1. Réconcilier le head distant exact `0e92f38`, commiter uniquement les fichiers contrôlés de la tranche média entrante Meta et pousser en fast-forward sans `tmp/`.
+1. Réconcilier le head distant exact `41c2fc8`, commiter uniquement `pnpm-workspace.yaml`, `pnpm-lock.yaml` et les quatre handoffs du correctif `browserslist 4.28.7`, puis pousser en fast-forward sans `tmp/`.
 2. Attendre la CI PostgreSQL/RLS, la suite complète, le build et Playwright du nouveau head; ne pas déclarer la tranche média prouvée CI avant ces résultats.
 3. Le checkpoint fournisseur reste la saisie du code SMS directement dans Chrome par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 4. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
@@ -96,6 +102,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Tranche mixte locale : test dédié 5/5 vert; régression ingress/webhook 6 fichiers/41 tests verts; régression Meta/coffre 18 fichiers/120 tests verts et 2 fichiers/2 tests PostgreSQL ignorés faute de `DATABASE_URL`. ESLint complet, TypeScript, build production, continuity-check et `git diff --check` sont verts.
 - La tranche mixte publiée est prouvée par la CI `33523760105` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/670 tests, build production et 20 Playwright verts; continuité `33523760887` verte.
 - Tranche média locale : les nouveaux tests des cinq types, du média invalide, du non-téléchargement, de l'absence de pièce jointe et du lot texte+média+statut passent. La régression élargie compte 122 tests réussis et 2 PostgreSQL ignorés; deux timeouts dus aux sauts d'horloge locaux ont été relancés isolément et passent. ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` sont verts.
+- Publication média `41c2fc8` : continuité `33628923623` verte; CI `33628923602` rouge uniquement au contrôle préalable des dépendances sur `browserslist 4.28.5`. Correctif local `4.28.7` et audit production sans vulnérabilité connue; nouvelle CI requise.
 - `pnpm test` exhaustif local est resté silencieux plus de trois minutes et a été interrompu sans assertion en échec; il n'est pas présenté comme vert. La CI du futur head doit apporter la preuve exhaustive, PostgreSQL/RLS et Playwright.
 - `git diff --check` est vert.
 
@@ -107,7 +114,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Livré et prouvé CI : traitement borné et atomique des lots `statuses` Meta.
 - Livré et prouvé CI : traitement borné, prévalidé, atomique et multi-tenant des lots de messages entrants Meta.
 - Livré et prouvé CI : dispatch mixte messages/statuts après un seul HMAC, borne globale, prévalidation commune et transaction unique.
-- Livré localement, preuve CI en attente : notices françaises pour cinq types média signés, sans téléchargement Graph, pièce jointe fictive ni métadonnée média persistée.
+- Livré et publié, preuve CI fonctionnelle en attente : notices françaises pour cinq types média signés, sans téléchargement Graph, pièce jointe fictive ni métadonnée média persistée.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -119,7 +126,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head publié 0e92f38 est vert (CI 33523760105, continuité 33523760887). La tranche locale média Meta doit être publiée en fast-forward sans tmp/, puis être prouvée en CI PostgreSQL/RLS, suite complète, build et Playwright.
+3. Le head média publié 41c2fc8 a une continuité verte; sa CI s'arrête avant tests sur l'avis browserslist. Publier le correctif 4.28.7 en fast-forward sans tmp/, puis prouver la tranche en CI PostgreSQL/RLS, suite complète, build et Playwright.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.

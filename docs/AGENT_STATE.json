@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-02T02:20:00.000Z",
+  "updatedAt": "2026-09-02T12:25:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "0e92f38cad78b14ec80bafa9444658b49e8169a2",
-  "publishedHeadObserved": "0e92f38cad78b14ec80bafa9444658b49e8169a2",
-  "status": "os5_meta_inbound_media_placeholder_local_proven_ci_pending_human_otp_pending",
+  "lastCommit": "41c2fc85d571842919756432737771162d8e0af6",
+  "publishedHeadObserved": "41c2fc85d571842919756432737771162d8e0af6",
+  "status": "os5_meta_inbound_media_published_ci_dependency_audit_fix_local_pending_human_otp",
   "currentPhase": "OS-5",
-  "currentObjective": "Le head local et distant 0e92f38 est entièrement vert en CI 33523760105 et continuité 33523760887 : l'enveloppe Meta mixte messages/statuts est prouvée. La tranche suivante est prouvée localement : les messages média Meta signés image, audio, document, vidéo et sticker produisent une notice française honnête et conservent la caption utile, sans téléchargement Graph, stockage fictif, ligne de pièce jointe ni persistance de métadonnées média. Provenance, idempotence, isolation tenant, prévalidation et atomicité du lot texte+média+statut restent intactes; la CI complète du futur head est requise.",
+  "currentObjective": "La tranche média Meta est publiée au head 41c2fc8 et la continuité 33628923623 est verte. La CI 33628923602 s'est arrêtée avant les tests sur deux nouvelles alertes de sécurité browserslist <=4.28.6, sans échec applicatif. Le correctif minimal verrouille transitivement browserslist 4.28.7; l'audit production local ne trouve plus de vulnérabilité connue. Publier ce correctif documentaire/lockfile en fast-forward puis obtenir la CI PostgreSQL/RLS, suite complète, build et Playwright du nouveau head.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,7 +32,7 @@
       "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-14, 22-24, 26-29, 34-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Preuve attendue : les cinq types média officiels sont acceptés seulement après HMAC, bornés et normalisés sans URL, media ID, checksum, nom de fichier ni contenu binaire persistés; caption et notice française sont conservées; aucun fetch ni ligne conversation_message_attachments; lot mixte texte+média+statut atomique et rejouable; média invalide et endpoint inconnu refusés avant mutation. Régression Meta, ESLint, TypeScript, build, continuity-check, diff check, puis CI PostgreSQL/RLS/suite complète/Playwright du futur head. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Réconcilier le head distant exact 0e92f38, commiter uniquement la tranche média entrante Meta et les quatre handoffs, pousser en fast-forward sans tmp/, puis attendre CI PostgreSQL/RLS, suite complète, build et Playwright.",
+  "nextAction": "Réconcilier le head distant exact 41c2fc8, commiter uniquement pnpm-workspace.yaml, pnpm-lock.yaml et les quatre handoffs du correctif browserslist 4.28.7, pousser en fast-forward sans tmp/, puis attendre la CI complète.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1424,6 +1424,14 @@
     {
       "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après médias entrants Meta",
       "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
+    },
+    {
+      "command": "publication de la tranche médias Meta au head 41c2fc8 et workflows distants",
+      "status": "ci_33628923602_failed_before_tests_only_on_new_browserslist_security_advisories_continuity_33628923623_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "override transitif browserslist 4.28.7 et audit production",
+      "status": "passed_lockfile_only_no_known_vulnerabilities_no_source_or_runtime_behavior_change"
     }
   ],
   "humanBlockers": [
