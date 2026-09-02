@@ -4,8 +4,8 @@
 
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 10-18, 22, 26-38 et 64-68 ont été relues directement le 1er septembre 2026; les pages 48 et 69 ont été contrôlées visuellement.
-- Le head local et distant publié est `4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33473526862` et la continuité `33473526866` sont vertes sur ce head.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages OS-5 10-14, 22-24, 26-29, 34-38 et 64-68 ont été relues directement le 2 septembre 2026; les pages 48 et 69 ont été contrôlées visuellement.
+- Le head local et distant publié est `0e92f38cad78b14ec80bafa9444658b49e8169a2`. La PR #11 est ouverte, brouillon et `MERGEABLE/CLEAN`; la CI `33523760105` et la continuité `33523760887` sont vertes sur ce head.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -48,7 +48,7 @@
 - Une même enveloppe peut résoudre plusieurs endpoints et tenants sans fusion d'identité. Les sujets restent HMAC-scopés par tenant et endpoint, et les audits ne contiennent ni numéro, contenu, timestamp ni référence fournisseur.
 - La documentation officielle Meta décrit `entry`, `changes` et `messages` comme des tableaux. Le support de lots est une mesure de robustesse déduite de ce contrat; il ne prétend pas que Meta regroupera systématiquement plusieurs messages dans une requête.
 
-## Tranche locale en validation : enveloppe mixte messages + statuts Meta
+## Tranche publiée et prouvée : enveloppe mixte messages + statuts Meta
 
 - La route Meta n'essaie plus de traiter toute la requête comme un lot de statuts puis comme un lot de messages. Elle vérifie désormais le HMAC du corps brut une seule fois et distribue chaque `change` vers son schéma strict.
 - Les tableaux `entry` et `changes` conservent leurs bornes de dix éléments et le total combiné messages + statuts est limité à cent événements par requête. Un changement contenant les deux familles ou aucune est refusé.
@@ -57,14 +57,22 @@
 - La réponse HTTP reste réduite à `{ ok: true }`; les audits testés ne contiennent ni contenu, numéro, Phone Number ID, `wamid` entrant ou sortant.
 - Le support d'une enveloppe mixte est une mesure de robustesse fondée sur l'enveloppe générique Meta et ses tableaux; il ne prétend pas que Meta regroupera systématiquement les deux familles dans une requête.
 
+## Tranche locale en validation : médias entrants Meta sans téléchargement
+
+- Les messages signés `image`, `audio`, `document`, `video` et `sticker` sont maintenant reconnus par des schémas stricts et bornés conformes aux objets média documentés par Meta.
+- L'adaptateur ne propage après normalisation que le type média et la légende utile éventuelle. Media ID, checksum, nom de fichier, type MIME, numéro et URL fournisseur ne sont ni journalisés ni persistés.
+- Le Conversation Hub conserve une notice française explicite — par exemple « Document WhatsApp en attente d’import sécurisé. » — et aucune ligne `conversation_message_attachments` tant que le média n'a pas été téléchargé de façon autorisée, contrôlé, hashé et stocké immuablement.
+- Un lot signé texte + média + statut est prévalidé puis persisté atomiquement et se rejoue sans doublon. Les tests prouvent zéro appel `fetch`, zéro pièce jointe fictive et zéro métadonnée média dans les audits ou tables conversationnelles.
+- Cette tranche ne prétend pas avoir importé ou analysé le fichier. Le téléchargement Graph, les contrôles effectifs de taille/type, le stockage Supabase avec ACL/checksum, l'antivirus, la transcription et l'OCR restent à réaliser avant toute activation réelle.
+
 ## Référence prompt maître
 
-Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canonique, signature avant parsing, schémas d'entrée bornés, identité opaque tenant-aware, chiffrement des credentials, action durable, idempotence, audit sans contenu sensible et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 exigent encore la CI complète de la tranche puis le checkpoint fournisseur avant de classer OS-5 terminé.
+Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canonique, signature avant parsing, schémas d'entrée bornés, médias externes non fiables, identité opaque tenant-aware, action durable, idempotence, audit sans contenu sensible et tests provider/sécurité. La Definition of Done de la page 32 et la matrice de la page 69 exigent encore la CI complète de la tranche puis le checkpoint fournisseur avant de classer OS-5 terminé.
 
 ## Prochaine action concrète
 
-1. Réconcilier le head distant exact `4e9f35d`, commiter uniquement les fichiers contrôlés de la tranche webhook Meta mixte et pousser en fast-forward sans `tmp/`.
-2. Attendre la CI PostgreSQL/RLS, la suite complète, le build et Playwright du nouveau head; ne pas déclarer la tranche mixte prouvée CI avant ces résultats.
+1. Réconcilier le head distant exact `0e92f38`, commiter uniquement les fichiers contrôlés de la tranche média entrante Meta et pousser en fast-forward sans `tmp/`.
+2. Attendre la CI PostgreSQL/RLS, la suite complète, le build et Playwright du nouveau head; ne pas déclarer la tranche média prouvée CI avant ces résultats.
 3. Le checkpoint fournisseur reste la saisie du code SMS directement dans Chrome par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 4. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 5. Une requête Graph réelle, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
@@ -86,6 +94,8 @@ Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Tranche entrante locale : 2 fichiers/13 tests ciblés verts; régression Meta 13 fichiers réussis, 3 fichiers PostgreSQL ignorés, 96 tests réussis et 3 ignorés faute de `DATABASE_URL`. ESLint ciblé et complet, TypeScript, build production, continuity-check et `git diff --check` sont verts.
 - La tranche entrante publiée est prouvée par CI `33473526862` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite exhaustive, build production et Playwright verts; continuité `33473526866` verte.
 - Tranche mixte locale : test dédié 5/5 vert; régression ingress/webhook 6 fichiers/41 tests verts; régression Meta/coffre 18 fichiers/120 tests verts et 2 fichiers/2 tests PostgreSQL ignorés faute de `DATABASE_URL`. ESLint complet, TypeScript, build production, continuity-check et `git diff --check` sont verts.
+- La tranche mixte publiée est prouvée par la CI `33523760105` : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/670 tests, build production et 20 Playwright verts; continuité `33523760887` verte.
+- Tranche média locale : les nouveaux tests des cinq types, du média invalide, du non-téléchargement, de l'absence de pièce jointe et du lot texte+média+statut passent. La régression élargie compte 122 tests réussis et 2 PostgreSQL ignorés; deux timeouts dus aux sauts d'horloge locaux ont été relancés isolément et passent. ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` sont verts.
 - `pnpm test` exhaustif local est resté silencieux plus de trois minutes et a été interrompu sans assertion en échec; il n'est pas présenté comme vert. La CI du futur head doit apporter la preuve exhaustive, PostgreSQL/RLS et Playwright.
 - `git diff --check` est vert.
 
@@ -96,7 +106,8 @@ Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Livré et prouvé CI : notifications de statut Meta signées, idempotentes, monotones et sans PII.
 - Livré et prouvé CI : traitement borné et atomique des lots `statuses` Meta.
 - Livré et prouvé CI : traitement borné, prévalidé, atomique et multi-tenant des lots de messages entrants Meta.
-- Livré localement, preuve CI en attente : dispatch mixte messages/statuts après un seul HMAC, borne globale, prévalidation commune et transaction unique.
+- Livré et prouvé CI : dispatch mixte messages/statuts après un seul HMAC, borne globale, prévalidation commune et transaction unique.
+- Livré localement, preuve CI en attente : notices françaises pour cinq types média signés, sans téléchargement Graph, pièce jointe fictive ni métadonnée média persistée.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -108,7 +119,7 @@ Les pages 10-22, 26-33, 35-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head publié 4e9f35d est vert (CI 33473526862, continuité 33473526866). La tranche locale d'enveloppe mixte Meta doit être publiée en fast-forward sans tmp/, puis être prouvée en CI PostgreSQL/RLS, suite complète, build et Playwright.
+3. Le head publié 0e92f38 est vert (CI 33523760105, continuité 33523760887). La tranche locale média Meta doit être publiée en fast-forward sans tmp/, puis être prouvée en CI PostgreSQL/RLS, suite complète, build et Playwright.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.

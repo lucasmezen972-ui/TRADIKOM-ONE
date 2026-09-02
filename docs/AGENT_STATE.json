@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-01T06:02:00.000Z",
+  "updatedAt": "2026-09-02T02:20:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6",
-  "publishedHeadObserved": "4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6",
-  "status": "os5_meta_mixed_webhook_dispatch_local_proven_ci_pending_human_otp_pending",
+  "lastCommit": "0e92f38cad78b14ec80bafa9444658b49e8169a2",
+  "publishedHeadObserved": "0e92f38cad78b14ec80bafa9444658b49e8169a2",
+  "status": "os5_meta_inbound_media_placeholder_local_proven_ci_pending_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le head local et distant 4e9f35d est entièrement vert en CI 33473526862 et continuité 33473526866 : les lots entrants Meta sont prouvés. La tranche suivante est prouvée localement : une enveloppe Meta signée contenant à la fois des changements messages et statuses est vérifiée une seule fois, strictement dispatchée, globalement bornée, entièrement prévalidée puis persistée dans une transaction unique. Rejeu, signature invalide, livraison inconnue et audit sans PII sont couverts; la CI complète du futur head reste requise.",
+  "currentObjective": "Le head local et distant 0e92f38 est entièrement vert en CI 33523760105 et continuité 33523760887 : l'enveloppe Meta mixte messages/statuts est prouvée. La tranche suivante est prouvée localement : les messages média Meta signés image, audio, document, vidéo et sticker produisent une notice française honnête et conservent la caption utile, sans téléchargement Graph, stockage fictif, ligne de pièce jointe ni persistance de métadonnées média. Provenance, idempotence, isolation tenant, prévalidation et atomicité du lot texte+média+statut restent intactes; la CI complète du futur head est requise.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "8-13 Identité omnicanale, adaptateurs, Connector Fabric, policy et missions durables",
-        "17 PostgreSQL, RLS et chiffrement des credentials",
+        "17-19 PostgreSQL, RLS, multimodal et expérience conversationnelle",
         "21-25 Environnements, gouvernance, observabilité et comptes fournisseurs",
         "26-28 Roadmap, Definition of Done et reprise",
         "30-33 Shadow mode, irréversibilité, données sensibles et entrées non fiables",
@@ -28,11 +28,11 @@
         "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive le service d'ingestion du Conversation Hub : pour une enveloppe Meta pouvant contenir des changements de messages entrants et de statuts sortants, vérifier HMAC avant tout parsing et une seule fois, appliquer des schémas stricts et des bornes par niveau et globales, prévalider tous les endpoints et toutes les livraisons avant la première mutation, puis ingérer messages et statuts atomiquement avec isolation tenant/provider, identité opaque, provenance et idempotence. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22, 26-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Preuve attendue : une enveloppe signée mixte traite messages et statuts dans une seule transaction; le rejeu complet reste idempotent; une signature invalide n'accède pas à la base; un endpoint ou une livraison inconnus dans n'importe quelle position annulent l'ensemble; bornes mixtes et réponses/audits sans PII sont testés. Régression Meta, ESLint, TypeScript, build, continuity-check, diff check, puis CI PostgreSQL/RLS/suite complète/Playwright du futur head. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive le service d'ingestion du Conversation Hub. Les pages 11, 14 et 23 imposent de gérer les fichiers et audios, vérifier la signature avant parsing, borner l'entrée et traiter tout média externe comme non fiable. La tranche doit accepter les types Meta image, audio, document, vidéo et sticker avec schémas stricts, transformer caption et type en notice française honnête, conserver provenance/idempotence/isolation tenant et ne jamais télécharger Graph ni créer de pièce jointe canonique avant stockage immuable, contrôle de type/taille, ACL et checksum. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-14, 22-24, 26-29, 34-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Preuve attendue : les cinq types média officiels sont acceptés seulement après HMAC, bornés et normalisés sans URL, media ID, checksum, nom de fichier ni contenu binaire persistés; caption et notice française sont conservées; aucun fetch ni ligne conversation_message_attachments; lot mixte texte+média+statut atomique et rejouable; média invalide et endpoint inconnu refusés avant mutation. Régression Meta, ESLint, TypeScript, build, continuity-check, diff check, puis CI PostgreSQL/RLS/suite complète/Playwright du futur head. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Réconcilier le head distant exact 4e9f35d, commiter uniquement la tranche webhook Meta mixte et les quatre handoffs, pousser en fast-forward sans tmp/, puis attendre CI PostgreSQL/RLS, suite complète, build et Playwright.",
+  "nextAction": "Réconcilier le head distant exact 0e92f38, commiter uniquement la tranche média entrante Meta et les quatre handoffs, pousser en fast-forward sans tmp/, puis attendre CI PostgreSQL/RLS, suite complète, build et Playwright.",
   "nextFile": "docs/OS5_META_CLOUD_API_ACTIVATION_RUNBOOK.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1411,6 +1411,18 @@
     },
     {
       "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après enveloppe mixte",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
+    },
+    {
+      "command": "publication de l'enveloppe mixte Meta au head 0e92f38 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33523760105_green_migrations_backup_restore_rls_lint_typecheck_144_files_670_tests_build_20_playwright_continuity_33523760887_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "médias entrants Meta ciblés et régression provider",
+      "status": "passed_new_media_tests_individually_5_official_types_no_fetch_no_attachment_metadata_not_persisted_mixed_text_media_status_atomic_replay_20_files_122_tests_passed_2_postgres_tests_skipped_2_local_clock_timeouts_rerun_individually_green"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après médias entrants Meta",
       "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
     }
   ],

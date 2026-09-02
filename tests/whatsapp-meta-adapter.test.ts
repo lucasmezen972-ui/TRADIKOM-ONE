@@ -69,7 +69,7 @@ function officialEnvelopePayload() {
     ],
   };
 }
-function prepare(value = payload()) {
+function prepare(value: unknown = payload()) {
   const rawBody = JSON.stringify(value);
   return prepareVerifiedMetaWhatsAppInboundMessages({ rawBody, signature: `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}` }, secret, receivedAt);
 }
@@ -103,6 +103,109 @@ describe("préparation entrante WhatsApp Cloud Meta", () => {
     expect(serialized).not.toContain("Contact Exemple");
     expect(serialized).not.toContain("15550001111");
     expect(serialized).not.toContain("1760000000");
+  });
+
+  it("normalise les cinq médias officiels sans propager leurs métadonnées", () => {
+    const checksum = "a".repeat(64);
+    const cases = [
+      {
+        type: "image",
+        media: {
+          id: "2754859441498128",
+          mime_type: "image/jpeg",
+          sha256: checksum,
+          caption: "Photo du chantier",
+        },
+        text: "Photo du chantier",
+      },
+      {
+        type: "audio",
+        media: {
+          id: "2754859441498129",
+          mime_type: "audio/ogg",
+          sha256: checksum,
+          voice: true,
+        },
+        text: null,
+      },
+      {
+        type: "document",
+        media: {
+          id: "2754859441498130",
+          mime_type: "application/pdf",
+          sha256: checksum,
+          filename: "devis-confidentiel.pdf",
+          caption: "Voici le devis",
+        },
+        text: "Voici le devis",
+      },
+      {
+        type: "video",
+        media: {
+          id: "2754859441498131",
+          mime_type: "video/mp4",
+          sha256: checksum,
+          caption: "Démonstration",
+        },
+        text: "Démonstration",
+      },
+      {
+        type: "sticker",
+        media: {
+          id: "2754859441498132",
+          mime_type: "image/webp",
+          sha256: checksum,
+          animated: false,
+        },
+        text: null,
+      },
+    ] as const;
+
+    for (const [index, mediaCase] of cases.entries()) {
+      const result = prepare(
+        mediaPayload({
+          id: `wamid.media_${mediaCase.type}_${index}`,
+          from: "15550002222",
+          timestamp: "1760000000",
+          type: mediaCase.type,
+          [mediaCase.type]: mediaCase.media,
+        }),
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        messages: [{ mediaKind: mediaCase.type, text: mediaCase.text }],
+      });
+      if (!result.ok) throw new Error("Le média Meta doit être accepté.");
+      const normalized = JSON.stringify(result.messages);
+      expect(normalized).not.toContain(mediaCase.media.id);
+      expect(normalized).not.toContain(checksum);
+      expect(normalized).not.toContain(mediaCase.media.mime_type);
+      expect(normalized).not.toContain("devis-confidentiel.pdf");
+    }
+  });
+
+  it("refuse un média non borné ou enrichi d'une URL fournisseur", () => {
+    const baseImage = {
+      id: "2754859441498128",
+      mime_type: "image/jpeg",
+      sha256: "a".repeat(64),
+    };
+    for (const image of [
+      { ...baseImage, sha256: "invalide" },
+      { ...baseImage, mime_type: "image/svg+xml" },
+      { ...baseImage, url: "https://graph.facebook.com/media" },
+    ]) {
+      expect(
+        prepare(
+          mediaPayload({
+            id: "wamid.media_invalid",
+            from: "15550002222",
+            type: "image",
+            image,
+          }),
+        ),
+      ).toEqual({ ok: false, code: "whatsapp_payload_invalid" });
+    }
   });
 
   it("normalise tous les messages des tableaux entry et changes dans leur ordre", () => {
@@ -188,3 +291,27 @@ describe("préparation entrante WhatsApp Cloud Meta", () => {
     }
   });
 });
+
+function mediaPayload(message: Record<string, unknown>) {
+  return {
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "200000000000000001",
+        changes: [
+          {
+            value: {
+              messaging_product: "whatsapp",
+              metadata: {
+                display_phone_number: "15550001111",
+                phone_number_id: "7000000000000001",
+              },
+              messages: [message],
+            },
+            field: "messages",
+          },
+        ],
+      },
+    ],
+  };
+}

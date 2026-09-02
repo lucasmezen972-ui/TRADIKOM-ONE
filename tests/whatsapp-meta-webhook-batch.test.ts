@@ -136,6 +136,59 @@ describe("enveloppe webhook WhatsApp Cloud Meta unifiée", () => {
     }
   }, 20_000);
 
+  it("traite texte, média et statut atomiquement sans réseau ni stockage fictif", async () => {
+    const setup = await createSetup();
+    const networkCall = vi.fn();
+    vi.stubGlobal("fetch", networkCall);
+    const mediaId = "2754859441498128";
+    const checksum = "c".repeat(64);
+    const fileName = "piece-confidentielle.pdf";
+    const input = signedPayload(mixedMediaPayload({ mediaId, checksum, fileName }));
+
+    await expect(receive(setup.db, input)).resolves.toMatchObject({
+      accepted: true,
+      processed: 3,
+      processedMessages: 2,
+      processedStatuses: 1,
+      replayed: false,
+      replayedCount: 0,
+    });
+    await expect(receive(setup.db, input)).resolves.toMatchObject({
+      accepted: true,
+      processed: 3,
+      processedMessages: 2,
+      processedStatuses: 1,
+      replayed: true,
+      replayedCount: 3,
+    });
+
+    expect(networkCall).not.toHaveBeenCalled();
+    expect(await count(setup.db, "conversation_messages", "direction = 'inbound'"))
+      .toBe(2);
+    expect(await count(setup.db, "conversation_message_attachments")).toBe(0);
+    const storedTexts = (
+      await setup.db.query<{ text_content: string }>(
+        "select text_content from conversation_messages where direction = 'inbound'",
+      )
+    ).rows.map((row) => row.text_content);
+    expect(storedTexts).toEqual(
+      expect.arrayContaining([
+        "Contenu conversationnel privé",
+        "Pièce demandée\n\nDocument WhatsApp en attente d’import sécurisé.",
+      ]),
+    );
+    const persisted = JSON.stringify(
+      await Promise.all([
+        setup.db.query("select * from conversation_messages"),
+        setup.db.query("select * from conversation_message_attachments"),
+        setup.db.query("select * from audit_logs"),
+      ]),
+    );
+    for (const ephemeral of [mediaId, checksum, fileName, "application/pdf"]) {
+      expect(persisted).not.toContain(ephemeral);
+    }
+  }, 20_000);
+
   it("n'écrit aucun message si une livraison du même lot est inconnue", async () => {
     const setup = await createSetup();
     const payload = mixedPayload();
@@ -304,7 +357,32 @@ function mixedPayload() {
   };
 }
 
-function signedPayload(payload: ReturnType<typeof mixedPayload>) {
+function mixedMediaPayload(input: {
+  mediaId: string;
+  checksum: string;
+  fileName: string;
+}) {
+  const payload = mixedPayload();
+  const messages = payload.entry[0].changes[0].value.messages as unknown as Array<
+    Record<string, unknown>
+  >;
+  messages.push({
+    id: "wamid.meta_mixed_document_inbound",
+    from: sender,
+    timestamp: "1760000000",
+    type: "document",
+    document: {
+      id: input.mediaId,
+      mime_type: "application/pdf",
+      sha256: input.checksum,
+      filename: input.fileName,
+      caption: "Pièce demandée",
+    },
+  });
+  return payload;
+}
+
+function signedPayload(payload: unknown) {
   const rawBody = JSON.stringify(payload);
   return {
     rawBody,

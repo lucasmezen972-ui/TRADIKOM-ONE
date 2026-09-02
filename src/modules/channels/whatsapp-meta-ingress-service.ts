@@ -130,7 +130,7 @@ export async function persistPreparedMetaWhatsAppMessage(
       channelIdentityId: identityId,
       externalMessageId: message.externalMessageId,
     }],
-    text: message.text,
+    text: canonicalMetaWhatsAppText(message),
     attachments: [],
     occurredAt: message.receivedAt,
   });
@@ -161,6 +161,26 @@ export async function persistPreparedMetaWhatsAppMessage(
     threadId: result.threadId,
     tenantId: endpoint.tenantId,
   };
+}
+
+function canonicalMetaWhatsAppText(
+  message: PreparedMetaWhatsAppInboundMessage,
+) {
+  if (!message.mediaKind) {
+    if (!message.text) {
+      throw new Error("Le message texte WhatsApp Meta est vide.");
+    }
+    return message.text;
+  }
+  const notices = {
+    image: "Image WhatsApp en attente d’import sécurisé.",
+    audio: "Audio WhatsApp en attente d’import sécurisé.",
+    document: "Document WhatsApp en attente d’import sécurisé.",
+    video: "Vidéo WhatsApp en attente d’import sécurisé.",
+    sticker: "Sticker WhatsApp en attente d’import sécurisé.",
+  } satisfies Record<NonNullable<PreparedMetaWhatsAppInboundMessage["mediaKind"]>, string>;
+  const notice = notices[message.mediaKind];
+  return message.text ? `${message.text}\n\n${notice}` : notice;
 }
 
 class MetaInboundMessageBatchRejection extends Error {

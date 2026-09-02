@@ -199,6 +199,69 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     ).toHaveLength(1);
   }, 20_000);
 
+  it("représente un média signé sans téléchargement ni fausse pièce jointe", async () => {
+    const setup = await createSetup();
+    const networkCall = vi.fn();
+    vi.stubGlobal("fetch", networkCall);
+    const mediaId = "2754859441498128";
+    const checksum = "b".repeat(64);
+    const fileName = "preuve-confidentielle.pdf";
+    const mediaMessageId = "wamid.meta_document_inbound";
+    const value = payload();
+    const messages = value.entry[0].changes[0].value.messages as unknown as Array<
+      Record<string, unknown>
+    >;
+    messages[0] = {
+      id: mediaMessageId,
+      from: sender,
+      timestamp: "1760000000",
+      type: "document",
+      document: {
+        id: mediaId,
+        mime_type: "application/pdf",
+        sha256: checksum,
+        filename: fileName,
+        caption: "Document demandé",
+      },
+    };
+
+    const first = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(value),
+      { appSecret, fingerprintSecret, receivedAt },
+    );
+    const replay = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(value),
+      { appSecret, fingerprintSecret, receivedAt },
+    );
+
+    expect(first).toMatchObject({ accepted: true, replayed: false });
+    expect(replay).toMatchObject({ accepted: true, replayed: true });
+    expect(networkCall).not.toHaveBeenCalled();
+    expect(
+      (await setup.db.query("select text_content from conversation_messages")).rows,
+    ).toEqual([
+      {
+        text_content:
+          "Document demandé\n\nDocument WhatsApp en attente d’import sécurisé.",
+      },
+    ]);
+    expect(
+      (await setup.db.query("select id from conversation_message_attachments")).rows,
+    ).toEqual([]);
+    const persisted = JSON.stringify(
+      await Promise.all([
+        setup.db.query("select * from conversation_messages"),
+        setup.db.query("select * from conversation_message_attachments"),
+        setup.db.query("select * from audit_logs"),
+      ]),
+    );
+    for (const ephemeral of [mediaId, checksum, fileName, "application/pdf"]) {
+      expect(persisted).not.toContain(ephemeral);
+    }
+  }, 20_000);
+
   it("prévalide tout le lot et n'écrit rien si un endpoint ultérieur est inconnu", async () => {
     const setup = await createSetup();
     const batch = payload();
@@ -614,7 +677,7 @@ function webhook(overrides: PayloadOverrides = {}) {
   return signedPayload(payload(overrides));
 }
 
-function signedPayload(value: ReturnType<typeof payload>) {
+function signedPayload(value: unknown) {
   const rawBody = JSON.stringify(value);
   return {
     rawBody,

@@ -1,36 +1,41 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint — 1er septembre 2026, 06:02 UTC
+## Checkpoint — 2 septembre 2026, 02:20 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- Head local et distant publié : `4e9f35dcd7ec7a938f1674293e615c79d5e1d8f6`.
+- Head local et distant publié : `0e92f38cad78b14ec80bafa9444658b49e8169a2`.
 - PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` sur ce head.
-- CI `33473526862` et continuité `33473526866` entièrement vertes : les lots de messages entrants Meta sont prouvés PostgreSQL/RLS, suite complète, build et Playwright.
+- CI `33523760105` et continuité `33523760887` entièrement vertes : l'enveloppe Meta mixte messages/statuts est prouvée PostgreSQL/RLS, suite complète, build et Playwright.
 - Provider examiné : WhatsApp Cloud API directe de Meta, non activé.
 - Worktree préservé : `tmp/` reste non suivi et hors index.
 
 ## Impact north star
 
-La tranche en cours supprime le dernier choix exclusif de la route Meta : une enveloppe signée peut désormais transporter des changements de messages entrants et de statuts sortants sans perdre une famille. HMAC, bornes, prévalidation, transaction et rejeu couvrent les deux ensemble. Cela renforce directement le canal conversationnel WhatsApp sans ajouter d'interface métier. Aucun CRM, Kanban, dashboard secondaire ou travail OS-6 n'a remplacé cette priorité OS-5.
+La tranche en cours empêche qu'une image, un vocal ou un document WhatsApp valide fasse perdre toute la conversation. Le message signé est représenté immédiatement par une notice française honnête, tout en différant l'import du binaire jusqu'à la présence d'un stockage et de contrôles sûrs. Cela renforce directement le canal conversationnel sans ajouter d'interface métier. Aucun CRM, Kanban, dashboard secondaire ou travail OS-6 n'a remplacé cette priorité OS-5.
 
 ## Alignement prompt maître
 
-Les pages 3-7, 10-18, 22, 26-38, 46, 48 et 64-71 du prompt maître ont été relues pour ce checkpoint; les pages 48 et 69 ont aussi été inspectées visuellement pendant ce heartbeat.
+Les pages 3-7, 10-14, 22-24, 26-29, 31-38, 46, 48 et 64-71 du prompt maître ont été relues pour ce checkpoint; les pages 48 et 69 ont aussi été inspectées visuellement pendant ce heartbeat.
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Head `4e9f35d` et reprise revérifiés; aucun CRM/Kanban/dashboard/OS-6 sélectionné | CI de la tranche mixte, puis checkpoint humain Meta |
-| 10-14 | Conversation Hub canonique, statuts, déduplication et adaptateur sans logique métier | Chaque `change` signé est dispatché vers le normaliseur messages ou statuts; les lots mono-famille restent compatibles | Preuve fournisseur externe réelle |
-| 14, 30-33, 35-38 | Signature avant parsing, entrée non fiable bornée, action atomique et audit sans contenu sensible | Un seul HMAC avant JSON; dix éléments par niveau, cent événements combinés; ambiguïtés refusées; prévalidation commune avant mutation | CI complète du futur head |
-| 17-22, 26-30 | PostgreSQL, RLS, runtime fournisseur et isolation tenant | Messages, bindings, statuts et projections passent par les services tenant/provider-scoped existants dans une transaction unique; aucun changement de schéma/RLS | PostgreSQL/RLS CI du futur head |
-| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | Test dédié 5/5, régression ingress/webhook 41 tests et Meta/coffre 120 tests verts; lint, typecheck, build et continuity-check verts | Suite exhaustive/PostgreSQL/RLS/Playwright CI requis; fournisseur actif bloqué par SMS |
-| 64-68 | Runtime provider uniforme, webhook Meta et fournisseur fail-closed | Ingestion durable sans client Graph réel; provider toujours non activé | Meta for Developers attend le code SMS |
-| 69 | Matrice provider, intégration, sécurité et isolation | Matrice relue en rendu; mixte, mono-famille, rejeu, borne globale, signature avant base, annulation commune et absence de PII testés | CI complète du futur head |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Head `0e92f38` et reprise revérifiés; aucun CRM/Kanban/dashboard/OS-6 sélectionné | CI de la tranche média, puis checkpoint humain Meta |
+| 10-14 | Conversation Hub canonique, fichiers, audios, déduplication et adaptateur sans logique métier | Cinq types média Meta signés sont normalisés vers une légende et un type générique; provenance et idempotence restent celles du message | Téléchargement autorisé et stockage immuable |
+| 22-24, 34-38 | Média externe non fiable, stockage avec ACL/checksum, minimisation et injection | Aucun binaire, URL, Media ID, checksum, nom ou MIME n'est persisté; aucune pièce jointe canonique fictive n'est créée | Contrôles réels taille/type, Supabase Storage, antivirus, transcription/OCR et protections d'extraction |
+| 14, 26-29, 31-33 | Signature avant parsing, entrée bornée, action atomique et audit sans contenu sensible | HMAC préalable; schémas stricts; lot texte+média+statut prévalidé, transactionnel et rejouable; zéro `fetch` testé | CI complète du futur head |
+| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | Nouveaux scénarios média verts; régression élargie 122 tests réussis, 2 PostgreSQL ignorés; lint, typecheck, build et continuity-check verts | PostgreSQL/RLS/suite exhaustive/Playwright CI requis; fournisseur actif bloqué par SMS |
+| 64-68 | Runtime provider uniforme, webhook Meta et fournisseur fail-closed | Notice conversationnelle durable sans client Graph réel; provider toujours non activé | Meta for Developers attend le code SMS |
+| 69 | Matrice provider, intégration, sécurité et isolation | Matrice relue en rendu; cinq types, entrée invalide, non-téléchargement, zéro pièce jointe, non-fuite, atomicité et rejeu testés | CI complète du futur head |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
 ## Travail livré localement
 
+- Normalisation stricte des messages Meta `image`, `audio`, `document`, `video` et `sticker`, avec MIME autorisés par type et champs média bornés.
+- Conservation de la légende utile et ajout d'une notice française explicite indiquant que l'import sécurisé reste en attente.
+- Suppression des métadonnées média à la frontière de normalisation : Media ID, checksum, nom de fichier et MIME ne sont pas propagés vers le Conversation Hub.
+- Zéro appel réseau et zéro ligne `conversation_message_attachments`; la tranche ne simule ni téléchargement, ni stockage, ni analyse du média.
+- Lot texte+média+statut atomique et idempotent, avec prévalidation commune, audit sans PII et replay complet sans doublon.
 - Dispatch unifié de chaque changement Meta signé vers messages entrants ou statuts de livraison après une seule vérification HMAC du corps brut.
 - Borne combinée de cent événements et refus strict d'un changement ambigu contenant `messages` et `statuses`, ou aucune famille reconnue.
 - Prévalidation de tous les endpoints et livraisons des deux familles avant toute mutation, puis transaction unique pour messages, bindings, événements et projections.
@@ -66,7 +71,8 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Validation honnête
 
-- Head `4e9f35d` : CI `33473526862` et continuité `33473526866` vertes, incluant migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, suite exhaustive, build production et Playwright pour les lots entrants.
+- Head `0e92f38` : CI `33523760105` et continuité `33523760887` vertes, incluant migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/670 tests, build production et 20 Playwright pour l'enveloppe mixte.
+- Tranche média locale : nouveaux scénarios des cinq types, rejet d'entrée invalide, zéro réseau, zéro pièce jointe et lot mixte passent. La régression élargie compte 122 tests réussis et 2 PostgreSQL ignorés; deux timeouts liés aux sauts d'horloge locaux ont été relancés isolément et passent. ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` sont verts.
 - Tranche mixte locale : test dédié 5/5 vert; régression ingress/webhook 6 fichiers/41 tests; régression Meta/coffre 18 fichiers/120 tests verts et 2 fichiers/2 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint complet, TypeScript, build production, continuity-check et `git diff --check` verts. La CI exhaustive du futur head n'est pas encore revendiquée.
 - Tranche entrante locale : 2 fichiers/13 tests ciblés verts; régression Meta 13 fichiers réussis, 3 fichiers PostgreSQL ignorés, 96 tests réussis et 3 ignorés sans `DATABASE_URL`; ESLint ciblé et complet, TypeScript, build production, continuity-check et `git diff --check` verts.
 - La suite exhaustive locale est restée silencieuse plus de trois minutes et a été interrompue sans assertion en échec; elle n'est pas présentée comme verte. La CI PostgreSQL/RLS, suite exhaustive et Playwright du futur head ne sont pas encore revendiqués.
@@ -91,7 +97,8 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Livré et prouvé CI : notifications de statut Meta signées, immuables, idempotentes et monotones.
 - Livré et prouvé CI : lots de statuts Meta bornés, prévalidés et atomiques.
 - Livré et prouvé CI : lots de messages entrants Meta bornés, prévalidés, atomiques, idempotents et multi-tenant.
-- Livré localement, CI en attente : enveloppe mixte messages/statuts authentifiée une fois, bornée, prévalidée et atomique.
+- Livré et prouvé CI : enveloppe mixte messages/statuts authentifiée une fois, bornée, prévalidée et atomique.
+- Livré localement, CI en attente : représentation conversationnelle française de cinq types média signés, sans téléchargement Graph ni stockage fictif.
 - Réel : aucun compte développeur finalisé, app, WABA, numéro, token, endpoint public, requête Graph ou message.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport injecté uniquement en test, sans réseau fournisseur.
@@ -100,4 +107,4 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Écarts restants et reprise
 
-Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots et les lots entrants sont publiés et prouvés avec PostgreSQL/RLS. La tranche mixte doit maintenant être publiée en fast-forward puis validée par CI complète. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement dans Chrome sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
+Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les lots entrants et l'enveloppe mixte sont publiés et prouvés avec PostgreSQL/RLS. La tranche média doit maintenant être publiée en fast-forward puis validée par CI complète. L'écart technique suivant est l'import autorisé vers un stockage immuable avec contrôle type/taille, ACL, checksum, analyse de sécurité et traitements séparés; il ne doit pas être présenté comme livré. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement dans Chrome sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
