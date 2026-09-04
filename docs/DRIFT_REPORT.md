@@ -1,30 +1,30 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint applicatif — 4 septembre 2026, 14:46 UTC
+## Checkpoint applicatif — 4 septembre 2026, 15:50 UTC
 
-- Branche : `codex/tradikom-one-os`; head distant publié `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; nouvelle tranche applicative conservée localement dans `ca08001929a438f94cf13c889a9f99a0425b67b8`. Après le handoff documentaire, la branche sera en avance de sept commits, sans push.
-- Travail effectué : analyse de sécurité média obligatoire et injectée après validation binaire/hachage et avant stockage, avec mode durable, migration additive, verdict dangereux fail-closed et retry temporaire idempotent.
-- Impact north star : un fichier reçu dans la conversation ne peut plus devenir une pièce jointe stockée sans passer par une barrière de sécurité explicite; le parcours reste automatique, durable et sans nouveau module CRM, Kanban ou dashboard.
-- Risques contenus : seules les trois frontières provider/scanner/storage en `mock` peuvent effectuer des IO; `disabled`/`not_configured` ferme la sélection, un verdict dangereux bloque stockage et pièce jointe, et l'audit exclut contenu, checksum, référence et détail antivirus. Aucun antivirus réel, Graph, stockage Supabase, OCR/transcription, secret, endpoint public, message, activation, fusion, déploiement ou dépense. `tmp/` reste non suivi et hors index.
+- Branche : `codex/tradikom-one-os`; head distant publié `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; nouvelle tranche applicative conservée localement dans `4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed`. Après le handoff documentaire, la branche sera en avance de neuf commits, sans push.
+- Travail effectué : extraction média obligatoire et injectée après validation binaire/hachage et scan propre, avant stockage, avec mode durable, enveloppe `external_untrusted_data`, migration additive, immutabilité et retry temporaire idempotent.
+- Impact north star : un fichier reçu dans la conversation peut maintenant fournir un texte exploitable et visible tout en restant explicitement une donnée externe non fiable, séparée des règles et actions; le parcours reste automatique, durable et sans nouveau module CRM, Kanban ou dashboard.
+- Risques contenus : seules les quatre frontières provider/scanner/extracteur/stockage en `mock` peuvent effectuer des IO; `disabled`/`not_configured` ferme la sélection. L'extracteur ne reçoit ni LLM, outil, policy ni instruction système; l'audit exclut texte, checksum et référence. Aucun extracteur/OCR/transcription réel, Graph, stockage Supabase, secret, endpoint public, message, activation, fusion, déploiement ou dépense. `tmp/` reste non suivi et hors index.
 - GitHub inchangé : PR #11 ouverte, brouillon et `MERGEABLE/UNSTABLE`; continuité `33826756891` verte, CI `33826756939` rouge avant tests uniquement sur timeout npm audit. Aucun rerun, push ou déclenchement indirect sans l'ordre explicite de publication.
 
 ## Alignement prompt maître
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre strict et reprise exacte | Webhook signé → worker durable → validation → scan mock → stockage/pièce jointe seulement si propre; quatre documents de reprise actualisés; aucun CRM/Kanban/dashboard/OS-6 | Publication et CI complète soumises à l'ordre explicite « publie et lance la CI » |
-| 11, 14, 16-18, 64-65 | Hub canonique, frontière provider, policy, idempotence, activité durable et états honnêtes | Contrat scanner injecté sans fournisseur réel; mode persisté avec l'exécution; même clé d'idempotence; panne temporaire replanifiée; défaut `not_configured` sans sélection/IO | Provider Graph, bootstrap et scanner réels non autorisés |
-| 22-23, 35-38 | Tenant/RLS, fichier externe non fiable, analyse, stockage immuable et audit sans donnée sensible | Validation taille/type/signature/checksum avant scan; verdict dangereux avant stockage; migration additive 109/0103, mode immuable et réussite interdite sans `mock`; audit sans contenu ni détail antivirus | PostgreSQL/RLS à exécuter en CI; stockage Supabase/ACL, antivirus réel et extraction isolée/OCR/transcription non livrés |
-| 32, 69 | DoD et matrice unit/intégration/RLS/provider/workflow/Playwright/sécurité | 30 tests ciblés verts; régression exhaustive 139 fichiers/678 tests verts; ESLint, TypeScript, build, continuity-check direct et diff check verts; scénario Playwright adapté | 8 fichiers/20 tests PostgreSQL ignorés sans `DATABASE_URL`; Playwright non exécuté localement; CI requise |
+| 3-7, 31-33, 46-48, 70-71 | Conversation-first, tranche verticale utile, ordre strict et reprise exacte | Webhook signé → worker durable → validation → scan propre → extraction non fiable → stockage/pièce jointe; quatre documents de reprise actualisés; aucun CRM/Kanban/dashboard/OS-6 | Publication et CI complète soumises à l'ordre explicite « publie et lance la CI » |
+| 10-18, 64-65 | Hub canonique, frontière provider, policy, idempotence, activité durable et états honnêtes | Contrat extracteur injecté sans fournisseur réel, LLM ni outil; mode persisté avec l'exécution; même clé d'idempotence; panne temporaire replanifiée; défaut `not_configured` sans sélection/IO | Provider Graph, bootstrap, stockage, scanner et extracteur réels non autorisés ou non configurés |
+| 22-24, 35-38 | Tenant/RLS, fichier externe non fiable, analyse séparée, stockage immuable et défense contre l'injection | Migration additive 110/0104; enveloppe fixe, texte borné/hashé et champs immuables; base refusant la réussite sans extraction mock; ingress incapable d'usurper l'enveloppe; audit sans texte; avertissement français visible | PostgreSQL/RLS à exécuter en CI; stockage Supabase/ACL, antivirus et OCR/transcription réels non livrés; vue filtrée `data-only` future |
+| 32, 69 | DoD et matrice unit/intégration/RLS/provider/workflow/Playwright/sécurité | 38 tests ciblés verts; régression exhaustive 139 fichiers/681 tests verts; ESLint, TypeScript, build, continuity-check direct et diff check verts; scénario Playwright adapté | 8 fichiers/21 tests PostgreSQL ignorés sans `DATABASE_URL`; Playwright non exécuté localement; CI requise |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
 ## Classification actuelle
 
-- Livré localement : worker média, migrations, rendu Conversation, composition générique et scan de sécurité obligatoire avant stockage, uniquement avec doubles mock.
+- Livré localement : worker média, migrations, rendu Conversation, composition générique, scan de sécurité et extraction `external_untrusted_data` obligatoires avant stockage, uniquement avec doubles mock.
 - Réel connecté : aucun nouveau fournisseur; Graph et stockage réel non composés.
 - Sandbox : aucune appelée.
-- Mock : fetch, scanner propre/dangereux/temporaire et stockage média uniquement via doubles injectés; affichage explicite « Stockage mock ».
+- Mock : fetch, scanner propre/dangereux/temporaire, extracteur et stockage média uniquement via doubles injectés; affichages explicites « Stockage mock » et « Contenu externe non fiable · extraction mock ».
 - Bloqué humain : ordre explicite avant publication/CI; code SMS Meta; confirmation distincte avant token persistant.
 - Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
 
@@ -107,6 +107,7 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Validation honnête
 
+- Commit local `4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed` : extraction obligatoire sous enveloppe `external_untrusted_data`, migration additive 110/0104, mode et contenu immuables, texte borné/hashé, contrat d'entrée non usurpable, audit sûr et rendu français. Tests ciblés : 3 fichiers/38 tests verts; 1 fichier/3 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`. Régression exhaustive : 139 fichiers/681 tests verts; 8 fichiers/21 tests PostgreSQL ignorés. ESLint, TypeScript, build production, continuity-check direct et diff check sont verts. Le scénario Playwright est adapté mais non exécuté localement faute de PostgreSQL partagé.
 - Commit local `ca08001929a438f94cf13c889a9f99a0425b67b8` : scan de sécurité obligatoire avant stockage, migration additive 109/0103, modes durables et audit sûr. Tests finaux ciblés : 2 fichiers/30 tests verts; 1 fichier/2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`. Régression exhaustive : 139 fichiers/678 tests verts; 8 fichiers/20 tests PostgreSQL ignorés. ESLint, TypeScript, build production, continuity-check direct et diff check sont verts. Le scénario Playwright est adapté mais non exécuté localement faute de PostgreSQL partagé.
 - Head `28efa75` : publication confirmée par fetch exact; continuité `33826756891` verte.
 - CI `33826756939` tentatives 1 et 2 : rouges uniquement parce que `pnpm audit` n'a pas reçu de réponse de `registry.npmjs.org/-/npm/v1/security/advisories/bulk` après retries. L'arrêt précède migrations, RLS, tests, build et Playwright; aucune de ces preuves n'est revendiquée sur ce head.
@@ -147,13 +148,13 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Livré et prouvé CI : enveloppe mixte messages/statuts authentifiée une fois, bornée, prévalidée et atomique.
 - Livré et prouvé CI : représentation conversationnelle française de cinq types média signés, sans téléchargement Graph ni stockage fictif.
 - Livré et publié, CI externe bloquée : réservation d'import média tenant/RLS, référence fournisseur chiffrée, états explicites, idempotence/collision et audit sans contenu.
-- Livré localement, CI non déclenchée : worker média durable et composition générique, validation binaire/hachage, scanner obligatoire fail-closed, stockage/pièce jointe mock idempotents et rendu conversationnel français.
+- Livré localement, CI non déclenchée : worker média durable et composition générique, validation binaire/hachage, scanner puis extraction `external_untrusted_data` obligatoires et fail-closed, stockage/pièce jointe mock idempotents et rendu conversationnel français.
 - Réel : aucun compte développeur finalisé, app, WABA, numéro, token, endpoint public, requête Graph ou message.
 - Sandbox : aucune configurée ou appelée.
-- Mock : fetch, scanner et stockage injectés uniquement en test, sans réseau fournisseur ni antivirus réel.
+- Mock : fetch, scanner, extracteur et stockage injectés uniquement en test, sans réseau fournisseur, antivirus, OCR, LLM ni outil réel.
 - Bloqué humain : ordre explicite « publie et lance la CI »; code SMS Meta saisi directement dans Chrome; confirmation au moment exact avant création d'un token persistant et injection via gestionnaire de secrets.
 - Hors périmètre : fusion, production, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
 ## Écarts restants et reprise
 
-Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les lots entrants, l'enveloppe mixte et la représentation média sont publiés et prouvés avec PostgreSQL/RLS. La réservation durable est publiée mais sa CI reste bloquée avant tests par l'API d'audit npm. Le worker durable, sa composition générique, le stockage mock et le scanner obligatoire sont livrés localement seulement : ils ne deviennent prouvés PostgreSQL/RLS et Playwright qu'après l'ordre explicite « publie et lance la CI » et une CI complète, sans contourner l'audit. L'écart technique local suivant est l'extraction isolée des données externes non fiables derrière une enveloppe `external_untrusted_data`, sans LLM ni outil; les écarts réels restent stockage Supabase/ACL, antivirus, OCR/transcription et Graph. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, stockage réel, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
+Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les lots entrants, l'enveloppe mixte et la représentation média sont publiés et prouvés avec PostgreSQL/RLS. La réservation durable est publiée mais sa CI reste bloquée avant tests par l'API d'audit npm. Le worker durable, sa composition générique, le stockage mock, le scanner obligatoire et l'extraction `external_untrusted_data` sont livrés localement seulement : ils ne deviennent prouvés PostgreSQL/RLS et Playwright qu'après l'ordre explicite « publie et lance la CI » et une CI complète, sans contourner l'audit. L'écart technique local suivant est la vérification d'intégrité du texte extrait lors de la lecture et une vue filtrée `data-only` pour tout futur consommateur; les écarts réels restent stockage Supabase/ACL, antivirus, OCR/transcription et Graph. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, stockage réel, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.

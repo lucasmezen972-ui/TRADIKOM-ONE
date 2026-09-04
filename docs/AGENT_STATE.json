@@ -1,21 +1,21 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T14:46:00.000Z",
+  "updatedAt": "2026-09-04T15:50:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "ca08001929a438f94cf13c889a9f99a0425b67b8",
+  "lastCommit": "4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_meta_media_security_scanner_complete_local_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_media_untrusted_extraction_complete_local_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "L'import média durable impose maintenant une analyse de sécurité injectée entre validation binaire et stockage immuable. Seul un scanner explicitement mock peut autoriser le stockage; disabled/not_configured ferme le worker avant sélection, un verdict dangereux bloque stockage et pièce jointe, et une panne temporaire reprend durablement avec la même idempotence. Le mode scanner est ajouté par migration additive, immuable et contrôlé avant succès; l'audit ne contient ni contenu, checksum ni détail antivirus. Aucun scanner, Graph, stockage ou fournisseur réel n'est composé.",
+  "currentObjective": "Après validation binaire et analyse de sécurité réussie, l'extraction du média est maintenant isolée dans une enveloppe durable external_untrusted_data : adaptateur injecté explicitement mock/disabled/not_configured, aucun accès LLM ou outil, contenu incapable de modifier règles et politiques, isolation tenant/RLS héritée de la pièce jointe, idempotence, audit sans texte extrait, et avertissement français visible dans Conversation. Aucun extracteur, OCR, fournisseur, Graph ou stockage réel n'est composé.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 11, 14, 16, 17, 18, 22, 23, 31, 32, 33, 35, 36, 37, 38, 46, 48, 64, 65, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 23, 24, 31, 32, 33, 35, 36, 37, 38, 46, 47, 48, 64, 65, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "7 et 9 Conversation Hub canonique et adaptateurs de canaux",
@@ -28,11 +28,11 @@
         "58-59 Runtime provider et webhook signé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Après l'activité durable d'import média déjà composée, traiter tout fichier externe comme non fiable : analyse de sécurité obligatoire après validation de taille/type/hachage et avant stockage immuable, adaptateur injecté, états mock/disabled/not_configured explicites, échec fermé, retry durable des erreurs temporaires, idempotence, isolation tenant et audit sans contenu ni détail de scan. Seul l'ensemble provider/storage/scanner explicitement mock peut effectuer des IO; le runtime par défaut doit rester not_configured. Aucun OS-6, CRM, Kanban, dashboard, fournisseur réel ou activation externe.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 16-18, 22-23, 31-33, 35-38, 46, 48, 64-65 et 69-71 relues directement, pages 23 et 69 inspectées en rendu. Preuve obtenue : contrat de scanner sans fournisseur réel; mode persisté par migration additive 109/miroir 0103, immuable et exigé par la base avant toute nouvelle réussite; scan clean exactement après validation et avant stockage; verdict dangereux sans stockage ni pièce jointe; erreur temporaire replanifiée puis reprise avec la même idempotence; scanner disabled/not_configured et composition générique par défaut sans sélection ni IO; audit sans contenu, checksum, référence ni détail antivirus. Tests finaux ciblés 30 verts et 2 PostgreSQL/RLS ignorés; régression exhaustive 139 fichiers/678 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript, build, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer par CI seulement après publication explicitement autorisée. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Après validation binaire, hachage et verdict de sécurité propre, traiter toute extraction comme external_untrusted_data séparée des règles système : adaptateur injecté, états mock/disabled/not_configured explicites, échec fermé, persistance tenant-scoped sous RLS, enveloppe et contenu immuables, idempotence, bornes de taille, audit sans contenu, et restitution française signalant clairement la donnée non fiable. L'extraction ne doit disposer d'aucun outil, LLM, OCR réel ou capacité de modifier plan, politique ou instruction. Aucun OS-6, CRM, Kanban, dashboard, fournisseur réel ou activation externe.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 10-18, 22-24, 31-33, 35-38, 46-48, 64-65 et 69-71 relues directement, pages 23, 38 et 69 inspectées en rendu. Preuve obtenue : contrat d'extraction sans fournisseur réel et sans accès outil/modèle; exécution exactement après scan propre et avant stockage; runtime par défaut fermé; mode et enveloppe external_untrusted_data persistés et immuables par migration additive 110/miroir 0104; texte borné, hashé et tenant-scoped sous la RLS existante des pièces jointes; base refusant toute nouvelle réussite sans extraction mock; replay sans duplication; disabled/not_configured et erreur temporaire sans stockage prématuré; audit sans texte extrait, checksum ou référence sensible; Conversation affiche en français l'avertissement et le mode mock. Tests ciblés 38 verts et 3 PostgreSQL/RLS ignorés; régression exhaustive 139 fichiers/681 tests verts et 8 fichiers/21 tests PostgreSQL ignorés; ESLint complet, TypeScript, build, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer par CI seulement après publication explicitement autorisée. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Après l'ordre explicite publie et lance la CI, vérifier que le distant reste 28efa75, publier en fast-forward les sept commits locaux puis exiger PostgreSQL/RLS et Playwright verts. Sans publication, prochaine tranche locale : isoler l'extraction du média derrière une enveloppe external_untrusted_data et un adaptateur mock fail-closed, sans LLM, outil, OCR ou fournisseur réel.",
+  "nextAction": "Après l'ordre explicite publie et lance la CI, vérifier que le distant reste 28efa75, publier en fast-forward les neuf commits locaux puis exiger migrations PostgreSQL, RLS, suite exhaustive et Playwright verts. Sans publication, prochaine tranche locale : vérifier l'intégrité du texte extrait à la lecture et préparer une vue filtrée data-only pour un futur consommateur, toujours sans LLM, outil, OCR ou fournisseur réel.",
   "nextFile": "src/modules/channels/channel-provider-media-import-worker.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1544,6 +1544,18 @@
     {
       "command": "continuity-check direct et JSON après mise à jour des quatre documents le 2026-09-04T14:47Z",
       "status": "passed_ready_zero_errors_zero_warnings_json_valid_tmp_preserved"
+    },
+    {
+      "command": "extraction média external_untrusted_data au commit local 4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed",
+      "status": "passed_additive_migration_110_sql_0104_extractor_mode_immutable_envelope_bounded_hashed_tenant_rls_mock_only_after_clean_scan_before_storage_safe_audit_french_ui_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests ciblés extraction, migrations et RLS puis régression exhaustive, ESLint, TypeScript, build et diff check",
+      "status": "passed_targeted_3_files_38_tests_1_postgres_file_3_tests_skipped_full_139_files_681_tests_8_files_21_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_ci_pending"
+    },
+    {
+      "command": "prompt maître pages cœur et média, continuity-check direct et GitHub le 2026-09-04T15:50Z",
+      "status": "passed_sha256_exact_71_pages_pages_23_38_69_rendered_direct_script_ready_remote_pr_and_runs_unchanged_no_rerun_push_or_external_io"
     }
   ],
   "humanBlockers": [
