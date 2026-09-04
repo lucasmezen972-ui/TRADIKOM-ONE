@@ -1,6 +1,9 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { prepareVerifiedMetaWhatsAppInboundMessages } from "../src/modules/channels";
+import {
+  getPreparedMetaWhatsAppProviderMediaReference,
+  prepareVerifiedMetaWhatsAppInboundMessages,
+} from "../src/modules/channels";
 
 const secret = "meta_app_secret_for_adapter_tests_123456";
 const receivedAt = "2026-08-19T15:40:00.000Z";
@@ -176,6 +179,15 @@ describe("préparation entrante WhatsApp Cloud Meta", () => {
         messages: [{ mediaKind: mediaCase.type, text: mediaCase.text }],
       });
       if (!result.ok) throw new Error("Le média Meta doit être accepté.");
+      expect(
+        getPreparedMetaWhatsAppProviderMediaReference(result.messages[0]),
+      ).toMatchObject({
+        provider: "whatsapp_meta",
+        mediaId: mediaCase.media.id,
+        mediaKind: mediaCase.type,
+        declaredMediaType: mediaCase.media.mime_type,
+        declaredChecksumSha256: checksum,
+      });
       const normalized = JSON.stringify(result.messages);
       expect(normalized).not.toContain(mediaCase.media.id);
       expect(normalized).not.toContain(checksum);

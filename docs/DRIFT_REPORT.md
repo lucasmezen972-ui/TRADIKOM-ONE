@@ -1,33 +1,40 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint — 2 septembre 2026, 17:50 UTC
+## Checkpoint — 3 septembre 2026, 20:40 UTC
 
 - Branche : `codex/tradikom-one-os`.
-- Head local et distant publié : `44350ec2a97c1cf664fcf5132d6a3523fdc8f634`.
-- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` sur ce head.
-- CI `33661150567` et continuité `33661150706` entièrement vertes : audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/674 tests, build et 20 Playwright.
+- Parent local et distant publié : `232f60a4530b2a54dd1aee3ce7be75ecc7d6f45a`.
+- PR #11 : ouverte, brouillon et `MERGEABLE/CLEAN` sur ce parent; la tranche de réservation média est locale et sa CI n'est pas encore revendiquée.
+- CI `33674098147` et continuité `33674098123` entièrement vertes sur le parent.
 - Provider examiné : WhatsApp Cloud API directe de Meta, non activé.
 - Worktree préservé : `tmp/` reste non suivi et hors index.
 
 ## Impact north star
 
-La tranche en cours empêche qu'une image, un vocal ou un document WhatsApp valide fasse perdre toute la conversation. Le message signé est représenté immédiatement par une notice française honnête, tout en différant l'import du binaire jusqu'à la présence d'un stockage et de contrôles sûrs. Cela renforce directement le canal conversationnel sans ajouter d'interface métier. Aucun CRM, Kanban, dashboard secondaire ou travail OS-6 n'a remplacé cette priorité OS-5.
+La tranche locale rend l'attente d'un média actionnable et durable sans prétendre que son binaire a été importé : le message signé reste visible dans la conversation et une réservation protégée peut être traitée ultérieurement. Cela renforce directement le canal conversationnel sans ajouter d'interface métier. Aucun CRM, Kanban, dashboard secondaire ou travail OS-6 n'a remplacé cette priorité OS-5.
 
 ## Alignement prompt maître
 
-Les pages 3-7, 10-14, 22-24, 26-29, 31-38, 46, 48 et 64-71 du prompt maître ont été relues pour ce checkpoint; les pages 48 et 69 ont aussi été inspectées visuellement pendant ce heartbeat.
+Les pages 3-7, 11, 14, 22-23, 31-33, 46, 48, 64-65 et 69-71 du prompt maître ont été relues directement pour ce checkpoint; les pages 48 et 69 ont aussi été inspectées visuellement pendant ce heartbeat.
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Head `44350ec` et reprise revérifiés; aucun CRM/Kanban/dashboard/OS-6 sélectionné | Continuer l'import média durable, puis checkpoint humain Meta |
-| 10-14 | Conversation Hub canonique, fichiers, audios, déduplication et adaptateur sans logique métier | Cinq types média Meta signés sont normalisés vers une légende et un type générique; provenance et idempotence restent celles du message | Téléchargement autorisé et stockage immuable |
-| 22-24, 34-38 | Média externe non fiable, stockage avec ACL/checksum, minimisation et injection | Aucun binaire, URL, Media ID, checksum, nom ou MIME n'est persisté; aucune pièce jointe canonique fictive n'est créée | Contrôles réels taille/type, Supabase Storage, antivirus, transcription/OCR et protections d'extraction |
-| 14, 26-29, 31-33 | Signature avant parsing, entrée bornée, action atomique et audit sans contenu sensible | HMAC préalable; schémas stricts; lot texte+média+statut prévalidé, transactionnel et rejouable; zéro `fetch` testé | Réservation durable de l'import binaire |
-| 31-33 | Definition of Done : tests sans clé, états honnêtes, preuve utilisable | CI `33661150567` verte : PostgreSQL/RLS, 674 tests, build et 20 Playwright; continuité verte | Fournisseur actif bloqué par SMS |
-| 64-68 | Runtime provider uniforme, webhook Meta et fournisseur fail-closed | Notice conversationnelle durable sans client Graph réel; provider toujours non activé | Meta for Developers attend le code SMS |
-| 69 | Matrice provider, intégration, sécurité et isolation | Matrice relue en rendu; cinq types, entrée invalide, non-téléchargement, zéro pièce jointe, non-fuite, atomicité et rejeu prouvés par CI | Tests de la future réservation d'import |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Parent `232f60a` réconcilié; réservation média terminée localement; aucun CRM/Kanban/dashboard/OS-6 sélectionné | Publication puis CI complète de la tranche |
+| 11, 14 | Conversation Hub canonique, adaptateur sans logique métier et déduplication | Notice française conservée; référence fournisseur éphémère hors objet sérialisable; rejeu exact et collision testés | Import binaire différé |
+| 22-23 | Média externe non fiable, stockage avec ACL/checksum, minimisation et injection | Référence AES-256-GCM avec contexte tenant/provider/endpoint/message; aucune valeur média en clair, aucun binaire ou fausse pièce jointe | Contrôles réels taille/type, stockage immuable, antivirus, transcription/OCR |
+| 31-33 | Definition of Done : action durable, états honnêtes et preuve utilisable | Réservation tenant/RLS, relations composées, `pending`/`not_configured`/`failed`, audit sans contenu; tests locaux, lint, typecheck et build verts | PostgreSQL/RLS, suite exhaustive et Playwright à prouver par CI; fournisseur actif bloqué par SMS |
+| 64-65 | Runtime provider uniforme, webhook signé et fournisseur fail-closed | Ingestion et réservation atomiques; zéro Graph; provider réel toujours non activé | Meta for Developers attend le code SMS |
+| 69 | Matrice provider, intégration, sécurité et isolation | Matrice relue en rendu; chiffrement/AAD, migrations miroir, non-fuite, atomicité, RLS et collision couverts | Test RLS local ignoré sans `DATABASE_URL`; CI requise |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Travail livré localement, CI en attente
+
+- Migrations runtime 105/106 et miroirs SQL 0099/0100 pour `channel_provider_media_imports`, avec relations composées tenant/endpoint/provider et tenant/message, index tenant-leading, contraintes d'état et politique RLS.
+- Référence fournisseur conservée de manière éphémère jusqu'au service d'ingestion, puis chiffrée en AES-256-GCM avec AAD tenant/provider/endpoint/message et version de clé.
+- Aucun Media ID, MIME, checksum, nom de fichier, URL, contenu ou payload en clair dans la réservation ou l'audit.
+- États durables `pending`, `not_configured` et `failed`; rejeu identique sans doublon et collision de référence refusée.
+- Réservation et audit dans la même transaction que le message canonique; aucun `fetch`, Graph, stockage, binaire ou pièce jointe canonique.
 
 ## Travail livré, publié et prouvé CI
 
@@ -71,6 +78,10 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Validation honnête
 
+- Parent `232f60a` : CI `33674098147` et continuité `33674098123` vertes; PR #11 ouverte, brouillon et `MERGEABLE/CLEAN` avant publication locale.
+- Réservation média locale : 4 fichiers ciblés réussis, 1 fichier PostgreSQL/RLS ignoré, 17 tests réussis et 1 ignoré; ingestion complète 13/13 verte. La régression Meta élargie a 19 fichiers et 135 tests réussis; deux scénarios ont uniquement dépassé le délai lors de sauts d'horloge locale puis ont repassé isolément en quelques secondes.
+- ESLint complet, TypeScript, build Next.js production et `git diff --check` sont verts. Le build a utilisé le réseau uniquement pour les polices Google déjà déclarées.
+- `pnpm agent:continuity-check` a été tenté mais son lanceur local a voulu réinstaller sans réseau ni TTY; le script versionné direct retourne `ready`, zéro erreur et zéro avertissement. La CI du futur head doit encore prouver migrations PostgreSQL, RLS, suite exhaustive et Playwright.
 - Head `0e92f38` : CI `33523760105` et continuité `33523760887` vertes, incluant migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/670 tests, build production et 20 Playwright pour l'enveloppe mixte.
 - Tranche média locale : nouveaux scénarios des cinq types, rejet d'entrée invalide, zéro réseau, zéro pièce jointe et lot mixte passent. La régression élargie compte 122 tests réussis et 2 PostgreSQL ignorés; deux timeouts liés aux sauts d'horloge locaux ont été relancés isolément et passent. ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` sont verts.
 - Head média `41c2fc8` : continuité `33628923623` verte; CI `33628923602` rouge uniquement sur l'audit préalable `browserslist 4.28.5`, avant migrations ou tests. La surcharge `4.28.7` met à jour le lockfile et `pnpm audit --prod --audit-level high` ne trouve plus de vulnérabilité connue; la nouvelle CI reste requise.
@@ -101,6 +112,7 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Livré et prouvé CI : lots de messages entrants Meta bornés, prévalidés, atomiques, idempotents et multi-tenant.
 - Livré et prouvé CI : enveloppe mixte messages/statuts authentifiée une fois, bornée, prévalidée et atomique.
 - Livré et prouvé CI : représentation conversationnelle française de cinq types média signés, sans téléchargement Graph ni stockage fictif.
+- Livré localement, CI en attente : réservation d'import média tenant/RLS, référence fournisseur chiffrée, états explicites, idempotence/collision et audit sans contenu.
 - Réel : aucun compte développeur finalisé, app, WABA, numéro, token, endpoint public, requête Graph ou message.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport injecté uniquement en test, sans réseau fournisseur.
@@ -109,4 +121,4 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 
 ## Écarts restants et reprise
 
-Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les lots entrants, l'enveloppe mixte et la représentation média sont publiés et prouvés avec PostgreSQL/RLS. L'écart technique suivant est la réservation durable de l'import puis le stockage immuable avec contrôle type/taille, ACL, checksum, analyse de sécurité et traitements séparés; aucun de ces éléments ne doit être présenté comme déjà livré. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement dans Chrome sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
+Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les lots entrants, l'enveloppe mixte et la représentation média sont publiés et prouvés avec PostgreSQL/RLS. La réservation durable est livrée localement mais attend encore sa publication et sa CI PostgreSQL/RLS. Après cette preuve, l'écart technique suivant est le journal durable d'exécution et le contrat provider/storage avec doubles mock, puis seulement le stockage immuable avec contrôle type/taille, ACL, checksum et analyse de sécurité; aucun téléchargement ou stockage ne doit être présenté comme déjà livré. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, stockage réel, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.

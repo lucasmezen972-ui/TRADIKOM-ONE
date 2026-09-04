@@ -3,6 +3,8 @@ import { withSystemDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { nowIso } from "@/lib/security";
 import { resolveActiveMetaWhatsAppEndpoint } from "@/modules/channels/provider-endpoints-service";
+import type { ChannelProviderMediaReferenceCipher } from "@/modules/channels/channel-provider-media-reference-crypto";
+import { ChannelProviderMediaImportError } from "@/modules/channels/channel-provider-media-imports-service";
 import { persistPreparedMetaWhatsAppMessage } from "@/modules/channels/whatsapp-meta-ingress-service";
 import { prepareVerifiedMetaWhatsAppWebhookBatch } from "@/modules/channels/whatsapp-meta-webhook-batch";
 import { persistVerifiedWhatsAppDeliveryStatus } from "@/modules/channels/whatsapp-twilio-delivery-status-service";
@@ -19,6 +21,7 @@ export async function receivePreparedMetaWhatsAppWebhookBatch(
   configuration: {
     appSecret: string | undefined;
     fingerprintSecret: string | undefined;
+    mediaReferenceCipher?: ChannelProviderMediaReferenceCipher;
     receivedAt?: string;
   },
 ) {
@@ -55,6 +58,8 @@ export async function receivePreparedMetaWhatsAppWebhookBatch(
         resolvedMessages.push({
           endpoint,
           identityId: `meta_identity_${subject.slice(0, 32)}`,
+          fingerprintSecret: configuration.fingerprintSecret,
+          mediaReferenceCipher: configuration.mediaReferenceCipher,
           message,
           subject,
         });
@@ -127,7 +132,10 @@ export async function receivePreparedMetaWhatsAppWebhookBatch(
       };
     });
   } catch (error) {
-    if (error instanceof MetaWebhookBatchRejection) {
+    if (
+      error instanceof MetaWebhookBatchRejection ||
+      error instanceof ChannelProviderMediaImportError
+    ) {
       return { accepted: false as const, code: error.code };
     }
     throw error;

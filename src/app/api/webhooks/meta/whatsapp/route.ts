@@ -1,4 +1,5 @@
 import {
+  createChannelProviderMediaReferenceCipher,
   getPreparedChannelProvider,
   handlePreparedMetaWhatsAppWebhookRequest,
   receivePreparedMetaWhatsAppWebhookBatch,
@@ -35,6 +36,14 @@ async function handleMetaWhatsAppWebhookRequest(request: Request) {
         const configuration = {
           appSecret: process.env.META_WHATSAPP_APP_SECRET,
           fingerprintSecret: process.env.CONNECTOR_ENCRYPTION_KEY,
+          mediaReferenceCipher: process.env.CONNECTOR_ENCRYPTION_KEY
+            ? createChannelProviderMediaReferenceCipher({
+                keyMaterial: process.env.CONNECTOR_ENCRYPTION_KEY,
+                keyVersion:
+                  process.env.CONNECTOR_ENCRYPTION_KEY_VERSION?.trim() ||
+                  "configured-v1",
+              })
+            : undefined,
         };
         return receivePreparedMetaWhatsAppWebhookBatch(
           db,

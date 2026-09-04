@@ -1,39 +1,37 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-02T17:50:00.000Z",
+  "updatedAt": "2026-09-03T20:40:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "44350ec2a97c1cf664fcf5132d6a3523fdc8f634",
-  "publishedHeadObserved": "44350ec2a97c1cf664fcf5132d6a3523fdc8f634",
-  "status": "os5_meta_inbound_media_ci_proven_human_otp_pending",
+  "lastCommit": "232f60a4530b2a54dd1aee3ce7be75ecc7d6f45a",
+  "publishedHeadObserved": "232f60a4530b2a54dd1aee3ce7be75ecc7d6f45a",
+  "status": "os5_meta_media_import_reservation_ready_local_ci_pending_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le head local et distant 44350ec est entièrement vert en CI 33661150567 et continuité 33661150706 : les cinq types média Meta sont représentés dans la conversation sans téléchargement ni stockage fictif, et le correctif browserslist 4.28.7 est validé. Tant que l'activation Meta reste bloquée par le code SMS humain, la prochaine tranche non bloquée du service d'ingestion est de préparer une réservation durable tenant/RLS pour l'import média, avec référence fournisseur chiffrée, états explicites et aucun appel Graph sans autorisation.",
+  "currentObjective": "La réservation durable tenant/RLS de l'import média entrant est prête localement sur le parent publié 232f60a, lui-même vert en CI 33674098147 et continuité 33674098123. La référence fournisseur reste éphémère jusqu'à son chiffrement lié au tenant, endpoint et message; la réservation distingue pending, not_configured et failed, refuse les collisions de rejeu et audite sans contenu. La CI du futur head doit encore prouver PostgreSQL/RLS et la suite exhaustive. Aucun téléchargement Graph, stockage binaire ou pièce jointe canonique n'est revendiqué; l'activation Meta reste bloquée par le code SMS humain.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 11, 14, 22, 23, 31, 32, 33, 46, 48, 64, 65, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
-        "8-13 Identité omnicanale, adaptateurs, Connector Fabric, policy et missions durables",
-        "17-19 PostgreSQL, RLS, multimodal et expérience conversationnelle",
-        "21-25 Environnements, gouvernance, observabilité et comptes fournisseurs",
+        "7 et 9 Conversation Hub canonique et adaptateurs de canaux",
+        "17-18 PostgreSQL, RLS, multimodal et pièces jointes non fiables",
         "26-28 Roadmap, Definition of Done et reprise",
-        "30-33 Shadow mode, irréversibilité, données sensibles et entrées non fiables",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
-        "64-68 Runtime provider, webhooks, Twilio, Resend et WebChat",
+        "58-59 Runtime provider et webhook signé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Tant que l'activation réelle OS-5 reste bloquée par le code SMS prévu pages 6, 29 et 31, poursuivre sans dérive le service d'ingestion du Conversation Hub. Les pages 11, 14 et 23 imposent de gérer les fichiers et audios, vérifier la signature avant parsing, borner l'entrée et traiter tout média externe comme non fiable. La tranche doit accepter les types Meta image, audio, document, vidéo et sticker avec schémas stricts, transformer caption et type en notice française honnête, conserver provenance/idempotence/isolation tenant et ne jamais télécharger Graph ni créer de pièce jointe canonique avant stockage immuable, contrôle de type/taille, ACL et checksum. Ne sélectionner aucun OS-6, CRM, Kanban ou dashboard. Toute création de token persistant, requête Graph, activation ou message externe exige une confirmation distincte au moment exact.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-14, 22-24, 26-29, 34-38 et 64-68 relues directement, pages 48 et 69 inspectées visuellement. Preuve attendue : les cinq types média officiels sont acceptés seulement après HMAC, bornés et normalisés sans URL, media ID, checksum, nom de fichier ni contenu binaire persistés; caption et notice française sont conservées; aucun fetch ni ligne conversation_message_attachments; lot mixte texte+média+statut atomique et rejouable; média invalide et endpoint inconnu refusés avant mutation. Régression Meta, ESLint, TypeScript, build, continuity-check, diff check, puis CI PostgreSQL/RLS/suite complète/Playwright du futur head. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Poursuivre le service d'ingestion conversation-first tant que l'activation réelle OS-5 attend le code SMS humain. Les pages 11, 14, 22-23 et 64-65 imposent une action durable tenant-aware, la signature avant parsing, une référence de média non fiable protégée, des relations composites, RLS, idempotence et audit sans contenu. La tranche réserve l'import des médias Meta après ingestion canonique, chiffre la référence fournisseur avec authentification du contexte tenant/endpoint/message, distingue not_configured, pending et failed, et ne déclenche ni Graph, ni stockage, ni pièce jointe canonique. Aucun OS-6, CRM, Kanban ou dashboard; toute activation, création de token persistant ou action fournisseur exige une autorisation distincte.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 22-23, 31-33, 46, 48, 64-65 et 69-71 relues directement; pages 48 et 69 inspectées visuellement. Preuve attendue : migrations runtime et SQL miroir pour une réservation tenant-scoped avec RLS, index tenant-leading et relations composées; référence Meta chiffrée en AES-256-GCM avec AAD tenant/endpoint/message/provider et version de clé, jamais écrite en clair; idempotence avec collision refusée; états not_configured/pending/failed cohérents; audit sans media ID, checksum, MIME, nom ou contenu; transaction atomique avec le message entrant; zéro fetch, zéro pièce jointe canonique et aucun comportement réel simulé. Tests unitaires, intégration, migrations, PostgreSQL/RLS en CI, régression Meta, ESLint, TypeScript, build, continuity-check et diff check. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Avant de coder, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69, puis concevoir la réservation durable d'import média Meta : tenant/RLS, référence fournisseur chiffrée, idempotence, audit sans contenu et états not_configured/pending/failed, sans téléchargement Graph.",
-  "nextFile": "src/modules/channels/channel-provider-media-imports-service.ts",
+  "nextAction": "Après publication et CI verte de la réservation, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69 puis préparer, sans réseau réel, le contrat provider/storage et le journal durable des tentatives d'import : déchiffrement tenant-scoped, limites taille/type, checksum, états explicites et doubles mock, sans Graph, Supabase réel ni pièce jointe canonique avant preuve.",
+  "nextFile": "src/modules/channels/channel-provider-media-import-worker.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -462,7 +460,15 @@
     "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 4e9f35d; CI 33473526862 et continuité 33473526866 entièrement vertes",
     "dispatch local d'une enveloppe Meta mixte : HMAC unique, schémas stricts, borne globale 100, prévalidation complète et transaction unique",
     "Vitest ciblé 6 fichiers/41 tests puis régression Meta/coffre 18 fichiers/120 tests verts; 2 fichiers/2 tests PostgreSQL ignorés sans DATABASE_URL",
-    "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check verts; build hors sandbox uniquement pour les polices Google"
+    "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check verts; build hors sandbox uniquement pour les polices Google",
+    "heartbeat 2026-09-02T20:24Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages candidates 11, 14, 22-23 et 64-65 relues directement; pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check tenté puis script versionné direct ready, zéro erreur et zéro avertissement; le lanceur pnpm local voulait réinstaller sans réseau ni TTY",
+    "réservation média Meta locale : migrations runtime 105/106 et miroirs 0099/0100, AES-256-GCM avec AAD tenant/provider/endpoint/message, RLS, idempotence, audit sûr et états pending/not_configured/failed",
+    "tests ciblés média : 4 fichiers réussis, 1 fichier PostgreSQL ignoré, 17 tests réussis et 1 ignoré; ingress complet 13/13 vert",
+    "régression Meta élargie : 19 fichiers réussis, 2 fichiers en timeout d'horloge locale et 135 tests réussis; les 2 scénarios expirés repassent isolément en 1/1 chacun",
+    "ESLint complet, TypeScript, build Next.js production hors sandbox pour les polices Google et git diff --check verts; CI du futur head requise pour PostgreSQL/RLS, suite exhaustive et Playwright",
+    "fetch final avant publication : HEAD et origin/codex/tradikom-one-os identiques sur 232f60a; PR #11 OPEN DRAFT MERGEABLE/CLEAN, CI 33674098147 et continuité 33674098123 vertes"
   ],
   "lastValidation": [
     {
@@ -1436,6 +1442,14 @@
     {
       "command": "publication du correctif 44350ec, CI 33661150567 et continuité 33661150706",
       "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_144_files_674_tests_build_20_playwright_continuity_ready_pr_11_open_draft_mergeable_clean_tmp_preserved"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant réservation d'import média Meta le 2026-09-02",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_48_69_rendered_direct_script_ready_parent_232f60a_ci_33674098147_continuity_33674098123_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "réservation d'import média Meta, migrations, chiffrement, ingress et régression provider",
+      "status": "passed_targeted_4_files_17_tests_1_postgres_rls_test_skipped_ingress_13_tests_meta_regression_135_tests_2_clock_timeouts_rerun_individually_green_eslint_typecheck_build_diff_ci_pending"
     }
   ],
   "humanBlockers": [

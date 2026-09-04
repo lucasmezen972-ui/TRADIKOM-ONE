@@ -4,6 +4,7 @@ import {
   verifyMetaWhatsAppWebhook,
   type MetaWebhookVerificationResult,
 } from "@/modules/channels/whatsapp-meta-webhook";
+import type { ChannelProviderMediaReference } from "@/modules/channels/channel-provider-media-reference-crypto";
 
 const receivedAtSchema = z.string().datetime({ offset: true });
 const numericReferenceSchema = z.string().regex(/^\d{1,64}$/);
@@ -149,6 +150,21 @@ export type PreparedMetaWhatsAppInboundMessage = {
   receivedAt: string;
 };
 
+const providerMediaReferences = new WeakMap<
+  PreparedMetaWhatsAppInboundMessage,
+  ChannelProviderMediaReference
+>();
+
+/**
+ * La référence fournisseur reste éphémère et non énumérable : elle ne peut pas
+ * fuiter via JSON, logs structurés ou propagation vers le Conversation Hub.
+ */
+export function getPreparedMetaWhatsAppProviderMediaReference(
+  message: PreparedMetaWhatsAppInboundMessage,
+) {
+  return providerMediaReferences.get(message) ?? null;
+}
+
 export type MetaWhatsAppInboundPreparationResult =
   | { ok: true; messages: PreparedMetaWhatsAppInboundMessage[] }
   | Extract<MetaWebhookVerificationResult, { ok: false }>
@@ -251,7 +267,7 @@ export function normalizeVerifiedMetaWhatsAppInboundPayload(
           .update(message.id, "utf8")
           .digest("hex");
         const content = normalizeInboundContent(message);
-        return {
+        const preparedMessage: PreparedMetaWhatsAppInboundMessage = {
           provider: "whatsapp_meta" as const,
           adapterKey: "whatsapp-meta" as const,
           externalMessageId: message.id,
@@ -264,6 +280,13 @@ export function normalizeVerifiedMetaWhatsAppInboundPayload(
           correlationId: `meta_${messageFingerprint}`,
           receivedAt,
         };
+        if (content.providerReference) {
+          providerMediaReferences.set(
+            preparedMessage,
+            content.providerReference,
+          );
+        }
+        return preparedMessage;
       }),
     ),
   );
@@ -281,22 +304,59 @@ function normalizeInboundContent(
 ): {
   text: string | null;
   mediaKind: MetaWhatsAppInboundMediaKind | null;
+  providerReference: ChannelProviderMediaReference | null;
 } {
   switch (message.type) {
     case "text":
-      return { text: message.text.body, mediaKind: null };
+      return { text: message.text.body, mediaKind: null, providerReference: null };
     case "image":
-      return { text: message.image.caption ?? null, mediaKind: "image" };
+      return {
+        text: message.image.caption ?? null,
+        mediaKind: "image",
+        providerReference: mediaReference("image", message.image),
+      };
     case "audio":
-      return { text: null, mediaKind: "audio" };
+      return {
+        text: null,
+        mediaKind: "audio",
+        providerReference: mediaReference("audio", message.audio),
+      };
     case "document":
       return {
         text: message.document.caption ?? null,
         mediaKind: "document",
+        providerReference: mediaReference("document", message.document),
       };
     case "video":
-      return { text: message.video.caption ?? null, mediaKind: "video" };
+      return {
+        text: message.video.caption ?? null,
+        mediaKind: "video",
+        providerReference: mediaReference("video", message.video),
+      };
     case "sticker":
-      return { text: null, mediaKind: "sticker" };
+      return {
+        text: null,
+        mediaKind: "sticker",
+        providerReference: mediaReference("sticker", message.sticker),
+      };
   }
+}
+
+function mediaReference(
+  mediaKind: MetaWhatsAppInboundMediaKind,
+  media: {
+    id: string;
+    mime_type: string;
+    sha256: string;
+    filename?: string;
+  },
+): ChannelProviderMediaReference {
+  return {
+    provider: "whatsapp_meta",
+    mediaId: media.id,
+    mediaKind,
+    declaredMediaType: media.mime_type,
+    declaredChecksumSha256: media.sha256,
+    originalFileName: media.filename ?? null,
+  };
 }

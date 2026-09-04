@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import {
+  createChannelProviderMediaReferenceCipher,
   receivePreparedMetaWhatsAppWebhook,
   registerAuthorizedMetaWhatsAppEndpoint,
   setAuthorizedMetaWhatsAppEndpointStatus,
+  type ChannelProviderMediaReferenceCipher,
 } from "../src/modules/channels";
 import { getConversationThread } from "../src/modules/conversation-hub";
 
@@ -21,6 +23,10 @@ const messageId = "wamid.HBgMNTk2Njk2MDAwMDA";
 const secondMessageId = "wamid.HBgMNTk2Njk2MDAwMDBfMg";
 const thirdMessageId = "wamid.HBgMNTk2Njk2MDAwMDBfMw";
 const receivedAt = "2026-07-30T16:20:00.000Z";
+const mediaReferenceCipher = createChannelProviderMediaReferenceCipher({
+  keyMaterial: "meta-media-ingress-test-key-material-32-bytes-minimum",
+  keyVersion: "media-test-v1",
+});
 
 afterEach(async () => {
   vi.unstubAllGlobals();
@@ -228,12 +234,22 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     const first = await receivePreparedMetaWhatsAppWebhook(
       setup.db,
       signedPayload(value),
-      { appSecret, fingerprintSecret, receivedAt },
+      {
+        appSecret,
+        fingerprintSecret,
+        mediaReferenceCipher,
+        receivedAt,
+      },
     );
     const replay = await receivePreparedMetaWhatsAppWebhook(
       setup.db,
       signedPayload(value),
-      { appSecret, fingerprintSecret, receivedAt },
+      {
+        appSecret,
+        fingerprintSecret,
+        mediaReferenceCipher,
+        receivedAt,
+      },
     );
 
     expect(first).toMatchObject({ accepted: true, replayed: false });
@@ -250,16 +266,187 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     expect(
       (await setup.db.query("select id from conversation_message_attachments")).rows,
     ).toEqual([]);
+    const imports = await setup.db.query<{
+      endpoint_id: string;
+      encrypted_provider_reference: string;
+      key_version: string;
+      message_id: string;
+      reservation_status: string;
+      safe_error_code: string | null;
+    }>("select * from channel_provider_media_imports");
+    expect(imports.rows).toEqual([
+      expect.objectContaining({
+        endpoint_id: setup.endpointId,
+        key_version: "media-test-v1",
+        reservation_status: "pending",
+        safe_error_code: null,
+      }),
+    ]);
+    const storedImport = imports.rows[0];
+    if (!storedImport || !first.accepted) {
+      throw new Error("La réservation média doit être persistée.");
+    }
+    expect(
+      mediaReferenceCipher.decrypt(storedImport.encrypted_provider_reference, {
+        tenantId: setup.tenant.id,
+        endpointId: setup.endpointId,
+        messageId: first.messageId,
+        provider: "whatsapp_meta",
+      }),
+    ).toEqual({
+      provider: "whatsapp_meta",
+      mediaId,
+      mediaKind: "document",
+      declaredMediaType: "application/pdf",
+      declaredChecksumSha256: checksum,
+      originalFileName: fileName,
+    });
     const persisted = JSON.stringify(
       await Promise.all([
         setup.db.query("select * from conversation_messages"),
         setup.db.query("select * from conversation_message_attachments"),
+        setup.db.query("select * from channel_provider_media_imports"),
         setup.db.query("select * from audit_logs"),
       ]),
     );
     for (const ephemeral of [mediaId, checksum, fileName, "application/pdf"]) {
       expect(persisted).not.toContain(ephemeral);
     }
+  }, 20_000);
+
+  it("réserve honnêtement not_configured sans clé", async () => {
+    const notConfigured = await createSetup();
+    const notConfiguredResult = await receivePreparedMetaWhatsAppWebhook(
+      notConfigured.db,
+      signedPayload(documentPayload({ mediaId: "2754859441498200" })),
+      { appSecret, fingerprintSecret, receivedAt },
+    );
+    expect(notConfiguredResult).toMatchObject({
+      accepted: true,
+      messages: [
+        expect.objectContaining({
+          mediaImport: expect.objectContaining({
+            status: "not_configured",
+            safeErrorCode: "media_reference_vault_not_configured",
+            replayed: false,
+          }),
+        }),
+      ],
+    });
+    expect(
+      (
+        await notConfigured.db.query(
+          `select reservation_status, encrypted_provider_reference,
+             key_version, safe_error_code
+           from channel_provider_media_imports`,
+        )
+      ).rows,
+    ).toEqual([
+      {
+        reservation_status: "not_configured",
+        encrypted_provider_reference: null,
+        key_version: null,
+        safe_error_code: "media_reference_vault_not_configured",
+      },
+    ]);
+  }, 20_000);
+
+  it("réserve failed sans donnée sensible si le coffre échoue", async () => {
+    const failed = await createSetup();
+    const failingCipher: ChannelProviderMediaReferenceCipher = {
+      keyVersion: "media-test-v1",
+      encrypt() {
+        throw new Error("échec simulé sans secret");
+      },
+      decrypt() {
+        throw new Error("échec simulé sans secret");
+      },
+    };
+    const failedResult = await receivePreparedMetaWhatsAppWebhook(
+      failed.db,
+      signedPayload(documentPayload({ mediaId: "2754859441498201" })),
+      {
+        appSecret,
+        fingerprintSecret,
+        mediaReferenceCipher: failingCipher,
+        receivedAt,
+      },
+    );
+    expect(failedResult).toMatchObject({
+      accepted: true,
+      messages: [
+        expect.objectContaining({
+          mediaImport: expect.objectContaining({
+            status: "failed",
+            safeErrorCode: "media_reference_encryption_failed",
+            replayed: false,
+          }),
+        }),
+      ],
+    });
+    expect(
+      (
+        await failed.db.query(
+          `select reservation_status, encrypted_provider_reference,
+             key_version, safe_error_code
+           from channel_provider_media_imports`,
+        )
+      ).rows,
+    ).toEqual([
+      {
+        reservation_status: "failed",
+        encrypted_provider_reference: null,
+        key_version: null,
+        safe_error_code: "media_reference_encryption_failed",
+      },
+    ]);
+  }, 20_000);
+
+  it("refuse la collision d'une référence média rejouée sans mutation partielle", async () => {
+    const setup = await createSetup();
+    const firstPayload = documentPayload({ mediaId: "2754859441498300" });
+    const collisionPayload = documentPayload({ mediaId: "2754859441498301" });
+    await expect(
+      receivePreparedMetaWhatsAppWebhook(
+        setup.db,
+        signedPayload(firstPayload),
+        {
+          appSecret,
+          fingerprintSecret,
+          mediaReferenceCipher,
+          receivedAt,
+        },
+      ),
+    ).resolves.toMatchObject({ accepted: true, replayed: false });
+    await expect(
+      receivePreparedMetaWhatsAppWebhook(
+        setup.db,
+        signedPayload(collisionPayload),
+        {
+          appSecret,
+          fingerprintSecret,
+          mediaReferenceCipher,
+          receivedAt,
+        },
+      ),
+    ).resolves.toEqual({
+      accepted: false,
+      code: "channel_provider_media_import_idempotency_conflict",
+    });
+    expect(
+      (await setup.db.query("select id from conversation_messages")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await setup.db.query("select id from channel_provider_media_imports")).rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await setup.db.query(
+          `select id from audit_logs
+           where action = 'channel.provider_media_import_reserved'`,
+        )
+      ).rows,
+    ).toHaveLength(1);
   }, 20_000);
 
   it("prévalide tout le lot et n'écrit rien si un endpoint ultérieur est inconnu", async () => {
@@ -675,6 +862,27 @@ function payload(overrides: PayloadOverrides = {}) {
 
 function webhook(overrides: PayloadOverrides = {}) {
   return signedPayload(payload(overrides));
+}
+
+function documentPayload(input: { mediaId: string }) {
+  const value = payload({ messageId: "wamid.meta_document_reservation" });
+  const messages = value.entry[0].changes[0].value.messages as unknown as Array<
+    Record<string, unknown>
+  >;
+  messages[0] = {
+    id: "wamid.meta_document_reservation",
+    from: sender,
+    timestamp: "1760000000",
+    type: "document",
+    document: {
+      id: input.mediaId,
+      mime_type: "application/pdf",
+      sha256: "c".repeat(64),
+      filename: "preuve-confidentielle.pdf",
+      caption: "Document demandé",
+    },
+  };
+  return value;
 }
 
 function signedPayload(value: unknown) {

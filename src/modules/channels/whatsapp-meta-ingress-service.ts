@@ -4,9 +4,15 @@ import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import {
+  getPreparedMetaWhatsAppProviderMediaReference,
   prepareVerifiedMetaWhatsAppInboundMessages,
   type PreparedMetaWhatsAppInboundMessage,
 } from "@/modules/channels/whatsapp-meta-adapter";
+import type { ChannelProviderMediaReferenceCipher } from "@/modules/channels/channel-provider-media-reference-crypto";
+import {
+  ChannelProviderMediaImportError,
+  reserveMetaWhatsAppMediaImport,
+} from "@/modules/channels/channel-provider-media-imports-service";
 import { reserveMetaWhatsAppIdentityBinding } from "@/modules/channels/channel-provider-identity-bindings-repository";
 import { resolveActiveMetaWhatsAppEndpoint } from "@/modules/channels/provider-endpoints-service";
 import { ingestSystemConversationMessage } from "@/modules/conversation-hub";
@@ -19,6 +25,7 @@ export async function receivePreparedMetaWhatsAppWebhook(
   configuration: {
     appSecret: string | undefined;
     fingerprintSecret: string | undefined;
+    mediaReferenceCipher?: ChannelProviderMediaReferenceCipher;
     receivedAt?: string;
   },
 ) {
@@ -56,20 +63,17 @@ export async function receivePreparedMetaWhatsAppWebhook(
         resolved.push({
           endpoint,
           identityId: `meta_identity_${subject.slice(0, 32)}`,
+          fingerprintSecret: configuration.fingerprintSecret,
+          mediaReferenceCipher: configuration.mediaReferenceCipher,
           message,
           subject,
         });
       }
 
       const outcomes = [];
-      for (const { endpoint, identityId, message, subject } of resolved) {
+      for (const messageInput of resolved) {
         outcomes.push(
-          await persistPreparedMetaWhatsAppMessage(transaction, {
-            endpoint,
-            identityId,
-            message,
-            subject,
-          }),
+          await persistPreparedMetaWhatsAppMessage(transaction, messageInput),
         );
       }
 
@@ -89,7 +93,10 @@ export async function receivePreparedMetaWhatsAppWebhook(
       };
     });
   } catch (error) {
-    if (error instanceof MetaInboundMessageBatchRejection) {
+    if (
+      error instanceof MetaInboundMessageBatchRejection ||
+      error instanceof ChannelProviderMediaImportError
+    ) {
       return { accepted: false as const, code: error.code };
     }
     throw error;
@@ -100,12 +107,21 @@ export async function persistPreparedMetaWhatsAppMessage(
   transaction: DbClient,
   input: {
     endpoint: { endpointId: string; tenantId: string };
+    fingerprintSecret: string | undefined;
     identityId: string;
+    mediaReferenceCipher?: ChannelProviderMediaReferenceCipher;
     message: PreparedMetaWhatsAppInboundMessage;
     subject: string;
   },
 ) {
-  const { endpoint, identityId, message, subject } = input;
+  const {
+    endpoint,
+    fingerprintSecret,
+    identityId,
+    mediaReferenceCipher,
+    message,
+    subject,
+  } = input;
   const result = await ingestSystemConversationMessage(transaction, systemActorId, {
     tenantId: endpoint.tenantId,
     threadId: `conversation_thread_meta_${subject.slice(0, 32)}`,
@@ -155,11 +171,25 @@ export async function persistPreparedMetaWhatsAppMessage(
       },
     });
   }
+  const providerMediaReference =
+    getPreparedMetaWhatsAppProviderMediaReference(message);
+  const mediaImport = providerMediaReference
+    ? await reserveMetaWhatsAppMediaImport(transaction, {
+        tenantId: endpoint.tenantId,
+        endpointId: endpoint.endpointId,
+        messageId: result.messageId,
+        reference: providerMediaReference,
+        fingerprintSecret,
+        cipher: mediaReferenceCipher,
+        occurredAt: message.receivedAt,
+      })
+    : null;
   return {
     replayed: result.idempotentReplay,
     messageId: result.messageId,
     threadId: result.threadId,
     tenantId: endpoint.tenantId,
+    mediaImport,
   };
 }
 

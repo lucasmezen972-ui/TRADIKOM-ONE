@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import {
+  createChannelProviderMediaReferenceCipher,
   prepareVerifiedMetaWhatsAppWebhookBatch,
   receivePreparedMetaWhatsAppWebhookBatch,
 } from "../src/modules/channels";
@@ -17,6 +18,10 @@ const inboundMessageId =
   "wamid.HBgLMTU1NTAwMDMzMzMVAGHAYWZha2VfbWl4ZWRfaW5ib3VuZAA=";
 const receivedAt = "2026-09-01T05:45:00.000Z";
 const opened: Array<{ close: () => Promise<void> }> = [];
+const mediaReferenceCipher = createChannelProviderMediaReferenceCipher({
+  keyMaterial: "meta-mixed-media-test-key-material-32-bytes-minimum",
+  keyVersion: "media-test-v1",
+});
 
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -166,6 +171,21 @@ describe("enveloppe webhook WhatsApp Cloud Meta unifiée", () => {
     expect(await count(setup.db, "conversation_messages", "direction = 'inbound'"))
       .toBe(2);
     expect(await count(setup.db, "conversation_message_attachments")).toBe(0);
+    expect(await count(setup.db, "channel_provider_media_imports")).toBe(1);
+    expect(
+      (
+        await setup.db.query(
+          `select reservation_status, key_version, safe_error_code
+           from channel_provider_media_imports`,
+        )
+      ).rows,
+    ).toEqual([
+      {
+        reservation_status: "pending",
+        key_version: "media-test-v1",
+        safe_error_code: null,
+      },
+    ]);
     const storedTexts = (
       await setup.db.query<{ text_content: string }>(
         "select text_content from conversation_messages where direction = 'inbound'",
@@ -181,6 +201,7 @@ describe("enveloppe webhook WhatsApp Cloud Meta unifiée", () => {
       await Promise.all([
         setup.db.query("select * from conversation_messages"),
         setup.db.query("select * from conversation_message_attachments"),
+        setup.db.query("select * from channel_provider_media_imports"),
         setup.db.query("select * from audit_logs"),
       ]),
     );
@@ -191,7 +212,11 @@ describe("enveloppe webhook WhatsApp Cloud Meta unifiée", () => {
 
   it("n'écrit aucun message si une livraison du même lot est inconnue", async () => {
     const setup = await createSetup();
-    const payload = mixedPayload();
+    const payload = mixedMediaPayload({
+      mediaId: "2754859441498999",
+      checksum: "d".repeat(64),
+      fileName: "preuve-atomique.pdf",
+    });
     payload.entry[0].changes[1].value.statuses![0]!.id =
       "wamid.HBgLMTU1NTAwMDIyMjIVAGHAYWZha2VfbWlzc2luZw==";
 
@@ -202,6 +227,7 @@ describe("enveloppe webhook WhatsApp Cloud Meta unifiée", () => {
     expect(await count(setup.db, "conversation_messages", "direction = 'inbound'"))
       .toBe(0);
     expect(await count(setup.db, "channel_provider_delivery_events")).toBe(0);
+    expect(await count(setup.db, "channel_provider_media_imports")).toBe(0);
     expect(
       await count(
         setup.db,
@@ -402,6 +428,7 @@ function receive(db: TestDb, input: ReturnType<typeof signedPayload>) {
   return receivePreparedMetaWhatsAppWebhookBatch(db, input, {
     appSecret,
     fingerprintSecret,
+    mediaReferenceCipher,
     receivedAt,
   });
 }
