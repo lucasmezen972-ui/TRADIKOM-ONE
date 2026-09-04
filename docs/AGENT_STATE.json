@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-03T20:40:00.000Z",
+  "updatedAt": "2026-09-04T11:35:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "232f60a4530b2a54dd1aee3ce7be75ecc7d6f45a",
-  "publishedHeadObserved": "232f60a4530b2a54dd1aee3ce7be75ecc7d6f45a",
-  "status": "os5_meta_media_import_reservation_ready_local_ci_pending_human_otp_pending",
+  "lastCommit": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
+  "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
+  "status": "os5_meta_media_import_reservation_published_ci_rerun_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La réservation durable tenant/RLS de l'import média entrant est prête localement sur le parent publié 232f60a, lui-même vert en CI 33674098147 et continuité 33674098123. La référence fournisseur reste éphémère jusqu'à son chiffrement lié au tenant, endpoint et message; la réservation distingue pending, not_configured et failed, refuse les collisions de rejeu et audite sans contenu. La CI du futur head doit encore prouver PostgreSQL/RLS et la suite exhaustive. Aucun téléchargement Graph, stockage binaire ou pièce jointe canonique n'est revendiqué; l'activation Meta reste bloquée par le code SMS humain.",
+  "currentObjective": "La réservation durable tenant/RLS de l'import média entrant est publiée au head exact 28efa75 et sa continuité est verte. Les deux tentatives de CI 33826756939 se sont arrêtées avant migrations et tests uniquement parce que l'API d'audit du registre npm a expiré; aucun échec applicatif ni avis de vulnérabilité n'a été produit. La troisième relance n'a pas été lancée : le contrôleur d'autorisation a échoué sur une erreur réseau et exige désormais une approbation utilisateur explicite, sans contournement. Conserver le contrôle fail-closed et obtenir une CI complète avant le worker d'import mock. Aucun téléchargement Graph, stockage binaire ou pièce jointe canonique n'est revendiqué; l'activation Meta reste bloquée par le code SMS humain.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,7 +30,7 @@
       "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 22-23, 31-33, 46, 48, 64-65 et 69-71 relues directement; pages 48 et 69 inspectées visuellement. Preuve attendue : migrations runtime et SQL miroir pour une réservation tenant-scoped avec RLS, index tenant-leading et relations composées; référence Meta chiffrée en AES-256-GCM avec AAD tenant/endpoint/message/provider et version de clé, jamais écrite en clair; idempotence avec collision refusée; états not_configured/pending/failed cohérents; audit sans media ID, checksum, MIME, nom ou contenu; transaction atomique avec le message entrant; zéro fetch, zéro pièce jointe canonique et aucun comportement réel simulé. Tests unitaires, intégration, migrations, PostgreSQL/RLS en CI, régression Meta, ESLint, TypeScript, build, continuity-check et diff check. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Après publication et CI verte de la réservation, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69 puis préparer, sans réseau réel, le contrat provider/storage et le journal durable des tentatives d'import : déchiffrement tenant-scoped, limites taille/type, checksum, états explicites et doubles mock, sans Graph, Supabase réel ni pièce jointe canonique avant preuve.",
+  "nextAction": "Après approbation explicite de l'utilisateur, relancer la CI 33826756939 sans contourner ni affaiblir l'audit npm. Après CI verte seulement, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69 puis préparer, sans réseau réel, le contrat provider/storage et le journal durable des tentatives d'import avec doubles mock.",
   "nextFile": "src/modules/channels/channel-provider-media-import-worker.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -468,7 +468,16 @@
     "tests ciblés média : 4 fichiers réussis, 1 fichier PostgreSQL ignoré, 17 tests réussis et 1 ignoré; ingress complet 13/13 vert",
     "régression Meta élargie : 19 fichiers réussis, 2 fichiers en timeout d'horloge locale et 135 tests réussis; les 2 scénarios expirés repassent isolément en 1/1 chacun",
     "ESLint complet, TypeScript, build Next.js production hors sandbox pour les polices Google et git diff --check verts; CI du futur head requise pour PostgreSQL/RLS, suite exhaustive et Playwright",
-    "fetch final avant publication : HEAD et origin/codex/tradikom-one-os identiques sur 232f60a; PR #11 OPEN DRAFT MERGEABLE/CLEAN, CI 33674098147 et continuité 33674098123 vertes"
+    "fetch final avant publication : HEAD et origin/codex/tradikom-one-os identiques sur 232f60a; PR #11 OPEN DRAFT MERGEABLE/CLEAN, CI 33674098147 et continuité 33674098123 vertes",
+    "commit fonctionnel et documentaire 28efa75; 22 fichiers contrôlés, tmp exclu",
+    "push concurrent résolu sans force : le ref distant contenait déjà exactement 28efa75; fetch final confirme HEAD égal origin",
+    "continuité 33826756891 verte sur 28efa75",
+    "CI 33826756939 tentatives 1 et 2 rouges avant migrations/tests : timeout réseau identique de l'API npm advisories pendant pnpm audit, aucun avis ni échec applicatif",
+    "reproduction locale de pnpm audit hors sandbox : même timeout de registry.npmjs.org, aucune modification de dépendance ou de workflow",
+    "heartbeat 2026-09-04T09:45Z : PDF SHA-256 exact, 71 pages, pages cœur et candidates relues directement, pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check retenté : wrapper bloqué sur réinstallation sans réseau/TTY; script versionné direct à relancer après docs",
+    "troisième relance CI non exécutée : contrôleur d'autorisation en erreur réseau, approbation utilisateur explicite désormais requise; aucun contournement",
+    "continuity-check direct final 2026-09-04T11:34Z : ready, zéro erreur et zéro avertissement; JSON et git diff --check verts"
   ],
   "lastValidation": [
     {
@@ -1450,9 +1459,26 @@
     {
       "command": "réservation d'import média Meta, migrations, chiffrement, ingress et régression provider",
       "status": "passed_targeted_4_files_17_tests_1_postgres_rls_test_skipped_ingress_13_tests_meta_regression_135_tests_2_clock_timeouts_rerun_individually_green_eslint_typecheck_build_diff_ci_pending"
+    },
+    {
+      "command": "publication de la réservation média au head 28efa75 et continuité 33826756891",
+      "status": "passed_fast_forward_exact_remote_head_tmp_excluded_continuity_ready"
+    },
+    {
+      "command": "CI 33826756939 tentatives 1 et 2",
+      "status": "blocked_before_migrations_and_tests_by_identical_registry_npm_audit_api_timeout_no_advisory_or_application_failure_local_reproduction_same"
+    },
+    {
+      "command": "troisième relance de CI 33826756939 au heartbeat 2026-09-04T09:45Z",
+      "status": "not_executed_approval_reviewer_network_error_requires_explicit_user_approval_no_workaround"
+    },
+    {
+      "command": "continuity-check direct, JSON et git diff --check finaux après handoff CI",
+      "status": "passed_ready_zero_errors_zero_warnings_json_valid_diff_clean"
     }
   ],
   "humanBlockers": [
+    "Approbation explicite de l'utilisateur pour relancer la CI 33826756939 après l'échec réseau du contrôleur d'autorisation; ne pas contourner par une autre commande",
     "Saisie par l'utilisateur du code SMS à six chiffres directement dans l'onglet Meta for Developers ouvert; le code ne doit pas être transmis dans le chat",
     "Confirmation au moment exact avant toute création d'un token Meta persistant, puis stockage uniquement via références de gestionnaire de secrets sans exposition au modèle",
     "Mise à disposition d'une application, d'un WABA, d'un Phone Number ID et d'un endpoint HTTPS contrôlé dans la console officielle",
