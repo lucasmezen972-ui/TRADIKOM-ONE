@@ -2,7 +2,7 @@
 
 ## Checkpoint applicatif — 4 septembre 2026, 12:11 UTC
 
-- Branche : `codex/tradikom-one-os`; head distant publié `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; handoff local antérieur `cb99df84cd5740bfe1fff88159e9ab8f1683cc12` et tranche applicative courante non publiée.
+- Branche : `codex/tradikom-one-os`; head distant publié `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; tranche applicative conservée localement dans `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052`. La branche est en avance de deux commits, sans push.
 - Travail effectué : exécution durable des réservations média Meta avec doubles provider/storage mock, contrôles taille/type binaire/checksum, policy, retry, stockage idempotent, création atomique d'une pièce jointe canonique et rendu français dans Conversation.
 - Impact north star : un média reçu par WhatsApp devient une preuve visible dans la conversation sans nouveau module CRM, Kanban ou dashboard et sans confondre mock et fournisseur réel.
 - Risques contenus : aucun Graph, stockage Supabase, antivirus, OCR/transcription, secret, endpoint public, message, activation, fusion, déploiement ou dépense. `tmp/` reste non suivi et hors index.

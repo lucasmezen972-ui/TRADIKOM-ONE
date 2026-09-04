@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 11, 14, 16-18, 22-23, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; le dépôt local contient le handoff documentaire `cb99df8` et la nouvelle tranche applicative non publiée. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; le commit applicatif local `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052` est conservé sans push et la branche est en avance de deux commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta

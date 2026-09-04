@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T12:11:47.000Z",
+  "updatedAt": "2026-09-04T12:15:47.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
+  "lastCommit": "279b061ec9609dbbf3e5d9aaf21ccd30c9c68052",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
   "status": "os5_meta_media_import_mock_worker_complete_local_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
@@ -485,7 +485,8 @@
     "régression exhaustive locale : 139 fichiers réussis, 8 ignorés, 672 tests réussis et 20 ignorés; ESLint complet, TypeScript et build production verts",
     "Playwright média ajouté pour provenance WhatsApp, nom de fichier et badge Stockage mock; exécution locale non revendiquée faute de PostgreSQL partagé",
     "GitHub relu sans mutation : PR #11 ouverte, brouillon, MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte et CI 33826756939 inchangée rouge avant tests sur timeout npm audit",
-    "pnpm agent:continuity-check tenté : wrapper local bloqué par réinstallation pnpm sans réseau/TTY; script versionné direct à exécuter après documentation"
+    "pnpm agent:continuity-check tenté : wrapper local bloqué par réinstallation pnpm sans réseau/TTY; script versionné direct à exécuter après documentation",
+    "commit local contrôlé 279b061ec9609dbbf3e5d9aaf21ccd30c9c68052; 15 fichiers applicatifs/tests/docs, tmp exclu, aucun push ni CI déclenchée"
   ],
   "lastValidation": [
     {
@@ -1503,6 +1504,10 @@
     {
       "command": "PR #11 et workflows relus le 2026-09-04T12:11Z",
       "status": "unchanged_open_draft_mergeable_unstable_head_28efa75_continuity_green_ci_failed_before_tests_on_npm_audit_timeout_no_rerun_or_push"
+    },
+    {
+      "command": "commit local 279b061ec9609dbbf3e5d9aaf21ccd30c9c68052",
+      "status": "passed_15_controlled_files_tmp_excluded_no_push_no_ci_trigger"
     }
   ],
   "humanBlockers": [
