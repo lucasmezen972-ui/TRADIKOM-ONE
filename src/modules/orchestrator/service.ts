@@ -7,6 +7,7 @@ import { hashToken, id, nowIso, safeJson, toJson } from "@/lib/security";
 import type { Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import {
+  findAccessibleConversationThreadRow,
   findConversationIdentityByExternalSubject,
   findConversationMessageRow,
   insertConversationIdentityIfAbsent,
@@ -61,6 +62,7 @@ import {
   listWorkflowRunStepRows,
   requestManualWorkflowRetry,
   workflowDefinitionSchema,
+  WorkflowError,
 } from "@/modules/workflows";
 
 const mockScopes = ["crm.contacts.read", "project.tasks.write"];
@@ -89,6 +91,13 @@ export async function createConversationActionPlan(
         userId,
         parsed.tenantId,
         creationRoles,
+      );
+      await assertConversationPlanThreadAccess(
+        transaction,
+        userId,
+        parsed.tenantId,
+        parsed.threadId,
+        "source",
       );
       const message = await findConversationMessageRow(
         transaction,
@@ -135,6 +144,13 @@ export async function createConversationActionPlan(
         userId,
         parsed.tenantId,
         creationRoles,
+      );
+      await assertConversationPlanThreadAccess(
+        transaction,
+        userId,
+        parsed.tenantId,
+        parsed.threadId,
+        "source",
       );
       const currentSource = await findConversationMessageRow(
         transaction,
@@ -309,6 +325,13 @@ export async function getConversationActionPlan(
         "Le plan est introuvable.",
       );
     }
+    await assertConversationPlanThreadAccess(
+      transaction,
+      userId,
+      tenantId,
+      plan.thread_id,
+      "plan",
+    );
     return mapPlanResult(transaction, plan, false);
   });
 }
@@ -322,6 +345,13 @@ export async function listConversationActionPlans(
   const parsed = actionPlanListSchema.parse({ threadId });
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId);
+    await assertConversationPlanThreadAccess(
+      transaction,
+      userId,
+      tenantId,
+      parsed.threadId,
+      "plan",
+    );
     const plans = await listActionPlanRowsByThread(
       transaction,
       tenantId,
@@ -355,6 +385,13 @@ export async function decideConversationActionPlan(
         "Le plan est introuvable.",
       );
     }
+    await assertConversationPlanThreadAccess(
+      transaction,
+      userId,
+      tenantId,
+      existing.thread_id,
+      "plan",
+    );
     if (existing.approval_status !== "awaiting_approval") {
       if (existing.approval_status === parsed.decision) {
         const replay = await mapPlanResult(transaction, existing, true);
@@ -464,6 +501,13 @@ export async function executeConversationActionPlan(
           "Le plan est introuvable.",
         );
       }
+      await assertConversationPlanThreadAccess(
+        transaction,
+        userId,
+        tenantId,
+        plan.thread_id,
+        "plan",
+      );
       const workflowKey = conversationPlanWorkflowKey(plan.id);
       const existingRun = await findWorkflowRunByKey(
         transaction,
@@ -616,6 +660,13 @@ export async function requestConversationActionPlanRetry(
           "Le plan est introuvable.",
         );
       }
+      await assertConversationPlanThreadAccess(
+        transaction,
+        userId,
+        tenantId,
+        plan.thread_id,
+        "plan",
+      );
       const run = await findWorkflowRunByKey(
         transaction,
         tenantId,
@@ -631,7 +682,46 @@ export async function requestConversationActionPlanRetry(
     },
   );
 
-  return requestManualWorkflowRetry(db, userId, tenantId, { runId });
+  try {
+    return await requestManualWorkflowRetry(db, userId, tenantId, { runId });
+  } catch (error) {
+    if (
+      error instanceof WorkflowError &&
+      error.code === "workflow_run_not_found"
+    ) {
+      throw new OrchestratorError(
+        "orchestrator_plan_not_found",
+        "Le plan est introuvable ou inaccessible.",
+      );
+    }
+    throw error;
+  }
+}
+
+async function assertConversationPlanThreadAccess(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  threadId: string,
+  target: "source" | "plan",
+) {
+  const thread = await findAccessibleConversationThreadRow(
+    db,
+    tenantId,
+    userId,
+    threadId,
+  );
+  if (thread) return thread;
+  if (target === "source") {
+    throw new OrchestratorError(
+      "orchestrator_source_message_not_found",
+      "Le message source du plan est introuvable ou inaccessible.",
+    );
+  }
+  throw new OrchestratorError(
+    "orchestrator_plan_not_found",
+    "Le plan est introuvable ou inaccessible.",
+  );
 }
 
 async function finalizeConversationActionPlanInTransaction(

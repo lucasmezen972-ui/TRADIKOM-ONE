@@ -11,6 +11,8 @@ import type {
   WorkflowRun,
 } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
+import { findAccessibleConversationThreadRow } from "@/modules/conversation-hub/repository";
+import { findActionPlanRow } from "@/modules/orchestrator/repository";
 import { assertTenantAccess } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows/errors";
 import {
@@ -34,6 +36,7 @@ import {
   requeueFailedDomainEvent,
   updateApprovalStatus,
   updateWorkflowRunStatus,
+  type WorkflowRunRow,
 } from "@/modules/workflows/repository";
 import {
   workflowDeadLetterRetrySchema,
@@ -51,25 +54,36 @@ export async function getWorkflowRuns(
   userId: string,
   tenantId: string,
 ) {
-  await assertTenantAccess(db, userId, tenantId);
-  const runs = await listWorkflowRunRows(db, tenantId, 20);
-  const steps = await listWorkflowRunStepRows(
-    db,
-    tenantId,
-    runs.map((run) => run.id),
-  );
-  const stepsByRun = new Map<string, ReturnType<typeof mapWorkflowRunStep>[]>();
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId);
+    const tenantRuns = await listWorkflowRunRows(transaction, tenantId, 20);
+    const runs: WorkflowRunRow[] = [];
+    for (const run of tenantRuns) {
+      if (await canAccessWorkflowRun(transaction, userId, tenantId, run)) {
+        runs.push(run);
+      }
+    }
+    const steps = await listWorkflowRunStepRows(
+      transaction,
+      tenantId,
+      runs.map((run) => run.id),
+    );
+    const stepsByRun = new Map<
+      string,
+      ReturnType<typeof mapWorkflowRunStep>[]
+    >();
 
-  for (const step of steps) {
-    const timeline = stepsByRun.get(step.workflow_run_id) ?? [];
-    timeline.push(mapWorkflowRunStep(step));
-    stepsByRun.set(step.workflow_run_id, timeline);
-  }
+    for (const step of steps) {
+      const timeline = stepsByRun.get(step.workflow_run_id) ?? [];
+      timeline.push(mapWorkflowRunStep(step));
+      stepsByRun.set(step.workflow_run_id, timeline);
+    }
 
-  return runs.map((run) => ({
-    ...mapWorkflowRun(run),
-    steps: stepsByRun.get(run.id) ?? [],
-  })) satisfies WorkflowRun[];
+    return runs.map((run) => ({
+      ...mapWorkflowRun(run),
+      steps: stepsByRun.get(run.id) ?? [],
+    })) satisfies WorkflowRun[];
+  });
 }
 
 export async function getWorkflowDeadLetters(
@@ -109,6 +123,7 @@ export async function cancelWorkflowRun(
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
+    await assertWorkflowRunAccess(transaction, userId, tenantId, run);
 
     if (isTerminalStatus(run.status)) {
       throw new WorkflowError(
@@ -151,6 +166,7 @@ export async function approveWorkflowRun(
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
+    await assertWorkflowRunAccess(transaction, userId, tenantId, run);
 
     if (run.status !== "approval_required") {
       throw new WorkflowError(
@@ -201,6 +217,7 @@ export async function rejectWorkflowRun(
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
+    await assertWorkflowRunAccess(transaction, userId, tenantId, run);
 
     if (run.status !== "approval_required") {
       throw new WorkflowError(
@@ -245,6 +262,7 @@ export async function requestManualWorkflowRetry(
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
+    await assertWorkflowRunAccess(transaction, userId, tenantId, run);
 
     if (
       run.status === "waiting" &&
@@ -304,6 +322,39 @@ export async function requestManualWorkflowRetry(
     );
     return { idempotentReplay: false as const };
   });
+}
+
+async function canAccessWorkflowRun(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  run: WorkflowRunRow,
+) {
+  if (!run.workflow_key.startsWith("conversation_plan:")) return true;
+  const planId = run.workflow_key.slice("conversation_plan:".length);
+  const plan = await findActionPlanRow(db, tenantId, planId);
+  if (!plan) return true;
+  return Boolean(
+    await findAccessibleConversationThreadRow(
+      db,
+      tenantId,
+      userId,
+      plan.thread_id,
+    ),
+  );
+}
+
+async function assertWorkflowRunAccess(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  run: WorkflowRunRow,
+) {
+  if (await canAccessWorkflowRun(db, userId, tenantId, run)) return;
+  throw new WorkflowError(
+    "workflow_run_not_found",
+    "Cette mission est introuvable ou inaccessible.",
+  );
 }
 
 export async function retryWorkflowDeadLetter(

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
-import { ingestConversationMessage } from "../src/modules/conversation-hub";
+import {
+  configureConversationThreadAccess,
+  ingestConversationMessage,
+} from "../src/modules/conversation-hub";
 import {
   createConversationActionPlan,
   decideConversationActionPlan,
@@ -10,6 +13,10 @@ import {
   listConversationActionPlans,
   requestConversationActionPlanRetry,
 } from "../src/modules/orchestrator";
+import {
+  getWorkflowRuns,
+  requestManualWorkflowRetry,
+} from "../src/modules/workflows";
 import { processPendingDomainEvents } from "../src/modules/workflows/worker";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
@@ -601,6 +608,295 @@ describe("service des plans Conversation", () => {
       "Relancer le contact de la conversation",
     );
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("ferme les plans quand le droit du fil manque ou est révoqué", async () => {
+    const owner = await createTenantContext("thread-plan-owner@example.com");
+    const manager = await createSecondUserAndTenant(
+      owner.db,
+      "thread-plan-manager@example.com",
+    );
+    await owner.db.query(
+      `insert into memberships (tenant_id, user_id, role, created_at)
+       values ($1, $2, 'manager', $3)`,
+      [owner.tenantId, manager.userId, occurredAt],
+    );
+    const source = await ingestConversationMessage(
+      owner.db,
+      owner.userId,
+      ingressFixture(owner.tenantId),
+    );
+    await configureConversationThreadAccess(owner.db, owner.userId, {
+      tenantId: owner.tenantId,
+      threadId: source.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [owner.userId],
+      idempotencyKey: `thread-plan-access:${source.threadId}:owner`,
+    });
+
+    const generator = {
+      generate: vi.fn(async () => {
+        throw new Error("Le générateur ne doit pas voir un fil inaccessible.");
+      }),
+    };
+    await expect(
+      createConversationActionPlan(
+        owner.db,
+        manager.userId,
+        {
+          tenantId: owner.tenantId,
+          threadId: source.threadId,
+          sourceMessageId: source.messageId,
+        },
+        { generator },
+      ),
+    ).rejects.toMatchObject({
+      code: "orchestrator_source_message_not_found",
+    });
+    expect(generator.generate).not.toHaveBeenCalled();
+
+    await configureConversationThreadAccess(owner.db, owner.userId, {
+      tenantId: owner.tenantId,
+      threadId: source.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [owner.userId, manager.userId],
+      idempotencyKey: `thread-plan-access:${source.threadId}:manager`,
+    });
+    const plan = await createConversationActionPlan(
+      owner.db,
+      manager.userId,
+      {
+        tenantId: owner.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    await expect(
+      getConversationActionPlan(
+        owner.db,
+        manager.userId,
+        owner.tenantId,
+        plan.id,
+      ),
+    ).resolves.toMatchObject({ id: plan.id });
+    await expect(
+      listConversationActionPlans(
+        owner.db,
+        manager.userId,
+        owner.tenantId,
+        source.threadId,
+      ),
+    ).resolves.toHaveLength(1);
+
+    await configureConversationThreadAccess(owner.db, owner.userId, {
+      tenantId: owner.tenantId,
+      threadId: source.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [owner.userId],
+      idempotencyKey: `thread-plan-access:${source.threadId}:revoked`,
+    });
+    await expect(
+      getConversationActionPlan(
+        owner.db,
+        manager.userId,
+        owner.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+    await expect(
+      listConversationActionPlans(
+        owner.db,
+        manager.userId,
+        owner.tenantId,
+        source.threadId,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+    await expect(
+      decideConversationActionPlan(
+        owner.db,
+        manager.userId,
+        owner.tenantId,
+        {
+          planId: plan.id,
+          decision: "approved",
+          reason: "Cette décision ne doit pas être enregistrée.",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+    await expect(
+      executeConversationActionPlan(
+        owner.db,
+        manager.userId,
+        owner.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+
+    const state = await owner.db.query<{
+      approvalStatus: string;
+      approval: string;
+      runs: number;
+      decisionAudits: number;
+    }>(
+      `select
+         (select approval_status from conversation_action_plans
+          where tenant_id = $1 and id = $2) as "approvalStatus",
+         (select status from approvals
+          where tenant_id = $1 and target_type = 'conversation_action_plan'
+            and target_id = $2) as approval,
+         (select count(*)::int from workflow_runs
+          where tenant_id = $1 and workflow_key = $3) as runs,
+         (select count(*)::int from audit_logs
+          where tenant_id = $1 and target_id = $2
+            and action in ('conversation.plan_approved',
+                           'conversation.plan_rejected')) as "decisionAudits"`,
+      [owner.tenantId, plan.id, `conversation_plan:${plan.id}`],
+    );
+    expect(state.rows[0]).toEqual({
+      approvalStatus: "awaiting_approval",
+      approval: "pending",
+      runs: 0,
+      decisionAudits: 0,
+    });
+    const auditText = await owner.db.query<{ safe_metadata: string }>(
+      `select safe_metadata from audit_logs where tenant_id = $1`,
+      [owner.tenantId],
+    );
+    expect(auditText.rows.map((row) => row.safe_metadata).join(" ")).not.toContain(
+      manager.userId,
+    );
+  });
+
+  it("revalide le droit dans la transaction qui relance la mission", async () => {
+    const context = await createTenantContext("retry-access-owner@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const plan = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    await decideConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      {
+        planId: plan.id,
+        decision: "approved",
+        reason: "Créer une mission interrompue pour tester sa reprise.",
+      },
+    );
+
+    let interruptionInjected = false;
+    const interruptedDb: DbClient = {
+      query: async <T>(sql: string, params?: unknown[]) => {
+        if (
+          !interruptionInjected &&
+          sql.includes("insert into workflow_run_steps") &&
+          params?.[4] === "succeeded" &&
+          String(params?.[5]).includes('"actionIndex":1')
+        ) {
+          interruptionInjected = true;
+          throw new Error("Interruption simulée avant la seconde preuve.");
+        }
+        return context.db.query<T>(sql, params);
+      },
+    };
+    await expect(
+      executeConversationActionPlan(
+        interruptedDb,
+        context.userId,
+        context.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_execution_failed" });
+    await configureConversationThreadAccess(context.db, context.userId, {
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [context.userId],
+      idempotencyKey: `retry-access:${source.threadId}:granted`,
+    });
+    const beforeRetry = await context.db.query<{
+      id: string;
+      retryCount: number;
+    }>(
+      `select id, retry_count::int as "retryCount"
+       from workflow_runs where tenant_id = $1 and workflow_key = $2`,
+      [context.tenantId, `conversation_plan:${plan.id}`],
+    );
+
+    let revocationApplied = false;
+    const revokingDb: DbClient = {
+      query: async <T>(sql: string, params?: unknown[]) => {
+        const result = await context.db.query<T>(sql, params);
+        if (!revocationApplied && sql.trim().toLowerCase() === "commit") {
+          revocationApplied = true;
+          await context.db.query(
+            `delete from conversation_thread_access_grants
+             where tenant_id = $1 and thread_id = $2 and user_id = $3`,
+            [context.tenantId, source.threadId, context.userId],
+          );
+        }
+        return result;
+      },
+    };
+    await expect(
+      requestConversationActionPlanRetry(
+        revokingDb,
+        context.userId,
+        context.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+    expect(revocationApplied).toBe(true);
+    await expect(
+      requestManualWorkflowRetry(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { runId: beforeRetry.rows[0]!.id },
+      ),
+    ).rejects.toMatchObject({ code: "workflow_run_not_found" });
+    const visibleRuns = await getWorkflowRuns(
+      context.db,
+      context.userId,
+      context.tenantId,
+    );
+    expect(visibleRuns.map((run) => run.id)).not.toContain(
+      beforeRetry.rows[0]!.id,
+    );
+
+    const retryState = await context.db.query<{
+      status: string;
+      retryCount: number;
+      retryEvents: number;
+      retryAudits: number;
+    }>(
+      `select
+         (select status from workflow_runs where tenant_id = $1
+            and workflow_key = $2) as status,
+         (select retry_count::int from workflow_runs where tenant_id = $1
+            and workflow_key = $2) as "retryCount",
+         (select count(*)::int from domain_events where tenant_id = $1
+            and event_type = 'workflow.resume') as "retryEvents",
+         (select count(*)::int from audit_logs where tenant_id = $1
+            and action = 'workflow.manual_retry_requested') as "retryAudits"`,
+      [context.tenantId, `conversation_plan:${plan.id}`],
+    );
+    expect(retryState.rows[0]).toEqual({
+      status: "failed",
+      retryCount: beforeRetry.rows[0]?.retryCount,
+      retryEvents: 0,
+      retryAudits: 0,
+    });
   });
 
   it("isole les tenants et réserve la décision aux rôles autorisés", async () => {
