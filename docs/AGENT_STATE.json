@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T13:42:48.000Z",
+  "updatedAt": "2026-09-04T14:46:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "9af546df640a555c76da755bd3139ce541a1196f",
+  "lastCommit": "ca08001929a438f94cf13c889a9f99a0425b67b8",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_meta_media_import_generic_worker_composed_local_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_meta_media_security_scanner_complete_local_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La file d'import média Meta est maintenant composée dans le worker générique : le batch et ses logs exposent un résumé mock/disabled/not_configured, le défaut reste fail-closed sans sélection ni IO, et le mode mock découvre les réservations sous contexte système puis traite chaque tenant avec l'identité interne system_whatsapp_meta. Un webhook signé aboutit automatiquement à une pièce jointe canonique mock et le batch suivant ne duplique rien. Aucun Graph, stockage réel ou fournisseur actif n'est composé.",
+  "currentObjective": "L'import média durable impose maintenant une analyse de sécurité injectée entre validation binaire et stockage immuable. Seul un scanner explicitement mock peut autoriser le stockage; disabled/not_configured ferme le worker avant sélection, un verdict dangereux bloque stockage et pièce jointe, et une panne temporaire reprend durablement avec la même idempotence. Le mode scanner est ajouté par migration additive, immuable et contrôlé avant succès; l'audit ne contient ni contenu, checksum ni détail antivirus. Aucun scanner, Graph, stockage ou fournisseur réel n'est composé.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,11 +28,11 @@
         "58-59 Runtime provider et webhook signé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Après l'activité durable d'import média déjà livrée localement, brancher sa file dans le worker générique sans dérive d'interface : découverte globale uniquement sous contexte système, traitement tenant-scoped, identité interne explicite, policy avant IO, idempotence et états honnêtes. Le runtime par défaut doit rester not_configured et ne déclencher aucun fetch, stockage, Graph ou fournisseur; seuls des doubles provider/storage tous deux mock peuvent agir. Aucun OS-6, CRM, Kanban, dashboard, fournisseur réel ou activation externe.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 16-18, 22-23, 31-33, 35-38, 46, 48, 64-65 et 69-71 relues directement, pages 48 et 69 inspectées en rendu. Preuve obtenue : résumé média dans le batch et les logs du worker générique; défaut not_configured et mode disabled avec zéro sélection, exécution ou IO; sélection globale bornée autorisée uniquement sous contexte système PostgreSQL, puis traitement par tenant avec actor system_whatsapp_meta et créateur d'endpoint conservé comme responsable durable; webhook signé vers import automatique mock et pièce jointe unique; batch suivant sans double fetch, stockage ni pièce jointe; policy et modes non mock fermés avant IO. Tests ciblés 43 verts et 2 PostgreSQL/RLS ignorés; régression 139 fichiers/675 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint, TypeScript, build, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright restent à prouver par CI après publication autorisée. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Après l'activité durable d'import média déjà composée, traiter tout fichier externe comme non fiable : analyse de sécurité obligatoire après validation de taille/type/hachage et avant stockage immuable, adaptateur injecté, états mock/disabled/not_configured explicites, échec fermé, retry durable des erreurs temporaires, idempotence, isolation tenant et audit sans contenu ni détail de scan. Seul l'ensemble provider/storage/scanner explicitement mock peut effectuer des IO; le runtime par défaut doit rester not_configured. Aucun OS-6, CRM, Kanban, dashboard, fournisseur réel ou activation externe.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 16-18, 22-23, 31-33, 35-38, 46, 48, 64-65 et 69-71 relues directement, pages 23 et 69 inspectées en rendu. Preuve obtenue : contrat de scanner sans fournisseur réel; mode persisté par migration additive 109/miroir 0103, immuable et exigé par la base avant toute nouvelle réussite; scan clean exactement après validation et avant stockage; verdict dangereux sans stockage ni pièce jointe; erreur temporaire replanifiée puis reprise avec la même idempotence; scanner disabled/not_configured et composition générique par défaut sans sélection ni IO; audit sans contenu, checksum, référence ni détail antivirus. Tests finaux ciblés 30 verts et 2 PostgreSQL/RLS ignorés; régression exhaustive 139 fichiers/678 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript, build, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer par CI seulement après publication explicitement autorisée. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Après approbation explicite, vérifier que le distant reste 28efa75, publier en fast-forward les cinq commits locaux et laisser la CI prouver PostgreSQL/RLS et Playwright. Sans publication, la prochaine tranche locale non bloquée est une étape d'analyse de sécurité média injectable et fail-closed avant stockage, uniquement avec doubles mock.",
+  "nextAction": "Après l'ordre explicite publie et lance la CI, vérifier que le distant reste 28efa75, publier en fast-forward les sept commits locaux puis exiger PostgreSQL/RLS et Playwright verts. Sans publication, prochaine tranche locale : isoler l'extraction du média derrière une enveloppe external_untrusted_data et un adaptateur mock fail-closed, sans LLM, outil, OCR ou fournisseur réel.",
   "nextFile": "src/modules/channels/channel-provider-media-import-worker.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1528,6 +1528,22 @@
     {
       "command": "PR #11 et workflows relus le 2026-09-04T13:42Z",
       "status": "unchanged_open_draft_mergeable_unstable_remote_head_28efa75_continuity_33826756891_green_ci_33826756939_failed_before_tests_on_npm_audit_timeout_no_rerun_or_push"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub le 2026-09-04T14:20Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_23_69_rendered_direct_script_ready_pr_open_draft_mergeable_unstable_remote_head_28efa75_continuity_green_ci_failed_before_tests_no_rerun_or_push"
+    },
+    {
+      "command": "scanner de sécurité média obligatoire au commit local ca08001929a438f94cf13c889a9f99a0425b67b8",
+      "status": "passed_additive_migration_109_sql_0103_persisted_immutable_mode_mock_only_clean_before_storage_unsafe_blocked_temporary_retry_safe_audit_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests finaux scanner, migrations et RLS puis régression exhaustive, ESLint, TypeScript, build et diff check",
+      "status": "passed_targeted_2_files_30_tests_1_postgres_file_2_tests_skipped_full_139_files_678_tests_8_files_20_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_ci_pending"
+    },
+    {
+      "command": "continuity-check direct et JSON après mise à jour des quatre documents le 2026-09-04T14:47Z",
+      "status": "passed_ready_zero_errors_zero_warnings_json_valid_tmp_preserved"
     }
   ],
   "humanBlockers": [

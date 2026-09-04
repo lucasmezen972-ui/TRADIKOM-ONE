@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 11, 14, 16-18, 22-23, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; les commits applicatifs locaux `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052` et `9af546df640a555c76da755bd3139ce541a1196f` sont conservés sans push. Après le présent handoff, la branche est en avance de cinq commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; les commits applicatifs locaux `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052`, `9af546df640a555c76da755bd3139ce541a1196f` et `ca08001929a438f94cf13c889a9f99a0425b67b8` sont conservés sans push. Après le présent handoff, la branche sera en avance de sept commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -95,6 +95,15 @@
 - Preuves locales : 43 tests ciblés verts et 2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; suite exhaustive 139 fichiers/675 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint, TypeScript, build production, continuity-check direct et `git diff --check` verts.
 - État honnête : livré localement au commit `9af546df640a555c76da755bd3139ce541a1196f`, mock uniquement. Aucun bootstrap de coffre depuis l'environnement, client Graph, stockage Supabase, antivirus, OCR/transcription, secret ou effet externe.
 
+## Tranche applicative locale terminée : scan de sécurité obligatoire avant stockage
+
+- Le worker impose désormais la séquence provider mock → validation taille/type/signature/SHA-256 → scanner mock → stockage mock. Le scanner reçoit la même clé d'idempotence que l'activité durable et s'exécute exactement avant le stockage.
+- La migration additive runtime `109_os5_channel_provider_media_security_scan` et son miroir `0103_os5_channel_provider_media_security_scan.sql` ajoutent `scanner_mode` sans réécrire la migration d'exécution. Les lignes historiques sont marquées `not_configured`; le mode devient obligatoire et immuable, et la base interdit une nouvelle transition vers `succeeded` sans scanner `mock`.
+- `disabled` ou `not_configured` ferme le worker générique avant sélection et avant tout IO. Un verdict `unsafe` produit un échec de validation non rejouable sans stockage ni pièce jointe. Une panne temporaire du scanner est classée, replanifiée puis reprise avec la même idempotence; le stockage ne s'exécute qu'une fois après verdict propre.
+- L'audit ne conserve que les modes et la classification sûre. Il ne contient ni octets, Media ID, checksum, nom, référence de stockage, signature de malware ou détail antivirus.
+- Preuves locales finales : 30 tests ciblés verts et 2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/678 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` verts. Le scénario Playwright a été adapté mais son exécution attend la CI PostgreSQL partagée.
+- État honnête : livré localement au commit `ca08001929a438f94cf13c889a9f99a0425b67b8`, scanner uniquement mock. Aucun antivirus réel, Graph, stockage Supabase, OCR/transcription, secret ou effet externe n'est composé.
+
 ## Correctif de sécurité CI publié et prouvé
 
 - La CI `33628923602` du head média s'est arrêtée au contrôle des dépendances, avant migrations, tests ou build, sur deux avis élevés affectant `browserslist <= 4.28.6`.
@@ -107,16 +116,17 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'approbation explicite de l'utilisateur pour publier les cinq commits locaux et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les sept commits locaux et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
 2. Vérifier que le head distant est encore exactement `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
 3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
-4. Sans publication, prochaine tranche locale non bloquée : ajouter avant stockage une analyse de sécurité média injectable, durable et fail-closed, uniquement avec doubles `mock` et sans Graph ni stockage réel.
+4. Sans publication, prochaine tranche locale non bloquée : isoler toute extraction du média dans une enveloppe `external_untrusted_data` derrière un adaptateur mock fail-closed, sans accès LLM/outils, OCR, transcription, Graph ni stockage réel.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
 
 ## Validation disponible
 
+- Scanner média local : 2 fichiers/30 tests ciblés verts, 1 fichier/2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/678 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright attendent la publication explicitement ordonnée puis la CI.
 - Régression coffre/Meta : 14 fichiers réussis, 2 fichiers PostgreSQL ignorés, 91 tests réussis et 2 ignorés faute de `DATABASE_URL`.
 - Migrations PGlite : base neuve et mise à niveau depuis runtime 101 validées; mauvais couple endpoint/provider refusé.
 - ESLint complet, TypeScript et build Next.js production verts. Le build a été relancé hors sandbox uniquement pour charger les polices Google requises.
