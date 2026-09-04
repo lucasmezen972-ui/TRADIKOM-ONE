@@ -36,6 +36,10 @@ describe("migrations des réservations d'import média fournisseur", () => {
         "os5ChannelProviderMediaSecurityScanMigrationSql",
         "../src/db/migrations/0103_os5_channel_provider_media_security_scan.sql",
       ],
+      [
+        "os5MediaUntrustedExtractionMigrationSql",
+        "../src/db/migrations/0104_os5_media_untrusted_extraction.sql",
+      ],
     ] as const;
     for (const [constant, mirrorPath] of definitions) {
       const mirror = readFileSync(new URL(mirrorPath, import.meta.url), "utf8");
@@ -55,6 +59,9 @@ describe("migrations des réservations d'import média fournisseur", () => {
     );
     expect(getMigrationIds()).toContain(
       "109_os5_channel_provider_media_security_scan",
+    );
+    expect(getMigrationIds()).toContain(
+      "110_os5_media_untrusted_extraction",
     );
   });
 
@@ -142,39 +149,71 @@ describe("migrations des réservations d'import média fournisseur", () => {
     await db.query(
       `insert into conversation_message_attachments (
          id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
-         storage_reference, checksum_sha256, created_at
+         storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+         extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+         created_at
        ) values (
          'attachment_a', 'tenant_a', 'message_a', 'document', 'preuve.pdf',
-         'application/pdf', 32, 'mock:media/attachment_a', $1, $2
+         'application/pdf', 32, 'mock:media/attachment_a', $1,
+         'external_untrusted_data', 'mock', 'mock_external_text_v1',
+         'Donnée externe', $3, $2, $2
        )`,
-      ["a".repeat(64), timestamp],
+      ["a".repeat(64), timestamp, "b".repeat(64)],
+    );
+    await db.query(
+      `insert into conversation_message_attachments (
+         id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+         storage_reference, checksum_sha256, created_at
+       ) values (
+         'attachment_without_extraction', 'tenant_a', 'message_a', 'document',
+         'sans-extraction.pdf', 'application/pdf', 32,
+         'mock:media/attachment_without_extraction', $1, $2
+       )`,
+      ["c".repeat(64), timestamp],
     );
     await expect(
       db.query(
         `insert into channel_provider_media_import_executions (
            id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
-           storage_mode, status, failure_classification, safe_error_code,
+           extractor_mode, storage_mode, status, failure_classification, safe_error_code,
            retryable, attempts, max_attempts, next_attempt_at, last_attempted_at,
            lease_id, lease_expires_at, attachment_id, created_by, created_at,
            updated_at
          ) values (
            'execution_without_scan', 'tenant_a', 'reservation_a',
-           'whatsapp_meta', 'mock', 'not_configured', 'mock', 'succeeded', null,
+           'whatsapp_meta', 'mock', 'not_configured', 'mock', 'mock', 'succeeded', null,
            null, false, 1, 3, $1, $1, null, null, 'attachment_a', 'user_a', $1, $1
          )`,
         [timestamp],
       ),
     ).rejects.toThrow(/scan_required/i);
+    await expect(
+      db.query(
+        `insert into channel_provider_media_import_executions (
+           id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
+           extractor_mode, storage_mode, status, failure_classification,
+           safe_error_code, retryable, attempts, max_attempts, next_attempt_at,
+           last_attempted_at, lease_id, lease_expires_at, attachment_id,
+           created_by, created_at, updated_at
+         ) values (
+           'execution_without_extraction', 'tenant_a', 'reservation_a',
+           'whatsapp_meta', 'mock', 'mock', 'mock', 'mock', 'succeeded', null,
+           null, false, 1, 3, $1, $1, null, null,
+           'attachment_without_extraction', 'user_a', $1, $1
+         )`,
+        [timestamp],
+      ),
+    ).rejects.toThrow(/external_extraction_required/i);
     await db.query(
       `insert into channel_provider_media_import_executions (
          id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
-         storage_mode,
+         extractor_mode, storage_mode,
          status, failure_classification, safe_error_code, retryable, attempts,
          max_attempts, next_attempt_at, last_attempted_at, lease_id,
          lease_expires_at, attachment_id, created_by, created_at, updated_at
        ) values (
          'execution_a', 'tenant_a', 'reservation_a', 'whatsapp_meta',
-         'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
+         'mock', 'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
          null, null, null, null, 'user_a', $1, $1
        )`,
       [timestamp],
@@ -194,6 +233,13 @@ describe("migrations des réservations d'import média fournisseur", () => {
     expect(forbidden.rows).toEqual([]);
     await expect(
       db.query(
+        `update conversation_message_attachments
+         set extracted_text = 'Instruction modifiée'
+         where tenant_id = 'tenant_a' and id = 'attachment_a'`,
+      ),
+    ).rejects.toThrow(/external_extraction_immutable/i);
+    await expect(
+      db.query(
         `update channel_provider_media_import_executions
          set scanner_mode = 'disabled'
          where tenant_id = 'tenant_a' and id = 'execution_a'`,
@@ -203,13 +249,13 @@ describe("migrations des réservations d'import média fournisseur", () => {
       db.query(
         `insert into channel_provider_media_import_executions (
            id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
-           storage_mode,
+           extractor_mode, storage_mode,
            status, failure_classification, safe_error_code, retryable, attempts,
            max_attempts, next_attempt_at, last_attempted_at, lease_id,
            lease_expires_at, attachment_id, created_by, created_at, updated_at
          ) values (
            'execution_cross', 'tenant_b', 'reservation_a', 'whatsapp_meta',
-           'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
+           'mock', 'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
            null, null, null, null, 'user_b', $1, $1
          )`,
         [timestamp],

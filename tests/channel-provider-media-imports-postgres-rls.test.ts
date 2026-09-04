@@ -156,19 +156,59 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
         client.query(
           `insert into channel_provider_media_import_executions (
              id, tenant_id, media_import_id, provider, provider_mode,
-             scanner_mode, storage_mode, status, failure_classification, safe_error_code,
+             scanner_mode, extractor_mode, storage_mode, status,
+             failure_classification, safe_error_code,
              retryable, attempts, max_attempts, next_attempt_at,
              last_attempted_at, lease_id, lease_expires_at, attachment_id,
              created_by, created_at, updated_at
            ) values (
              'execution_media_rls_cross', $1, $2, 'whatsapp_meta', 'mock',
-             'mock', 'mock', 'reserved', null, null, null, 0, 3, $3, null, null,
+             'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $3, null, null,
              null, null, $4, $3, $3
            )`,
           [fixtureB.tenantId, fixtureB.reservationId, timestamp, fixtureB.userId],
         ),
       ),
     ).rejects.toThrow(/row-level security|violates/i);
+  });
+
+  it("isole aussi le texte extrait marqué comme donnée externe non fiable", async () => {
+    if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const fixtureA = await seedReservation(ownerDb, "a");
+    const fixtureB = await seedReservation(ownerDb, "b");
+    await seedExternalExtraction(ownerDb, fixtureA, "a");
+    await seedExternalExtraction(ownerDb, fixtureB, "b");
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    const ownRows = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) =>
+        client.query<{ extracted_text: string }>(
+          `select extracted_text
+           from conversation_message_attachments
+           order by id`,
+        ),
+    );
+    expect(ownRows.rows).toEqual([{ extracted_text: "Donnée externe tenant a" }]);
+    const crossRows = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) =>
+        client.query<{ id: string }>(
+          `select id from conversation_message_attachments
+           where tenant_id = $1`,
+          [fixtureB.tenantId],
+        ),
+    );
+    expect(crossRows.rows).toEqual([]);
   });
 });
 
@@ -280,12 +320,12 @@ async function seedExecution(
   await db.query(
     `insert into channel_provider_media_import_executions (
        id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
-       storage_mode,
+       extractor_mode, storage_mode,
        status, failure_classification, safe_error_code, retryable, attempts,
        max_attempts, next_attempt_at, last_attempted_at, lease_id,
        lease_expires_at, attachment_id, created_by, created_at, updated_at
      ) values (
-       $1, $2, $3, 'whatsapp_meta', 'mock', 'mock', 'mock', 'reserved', null, null,
+       $1, $2, $3, 'whatsapp_meta', 'mock', 'mock', 'mock', 'mock', 'reserved', null, null,
        null, 0, 3, $4, null, null, null, null, $5, $4, $4
      )`,
     [
@@ -294,6 +334,36 @@ async function seedExecution(
       fixture.reservationId,
       timestamp,
       fixture.userId,
+    ],
+  );
+}
+
+async function seedExternalExtraction(
+  db: OwnerDb,
+  fixture: Awaited<ReturnType<typeof seedReservation>>,
+  suffix: "a" | "b",
+) {
+  await db.query(
+    `insert into conversation_message_attachments (
+       id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+       storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+       extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+       created_at
+     ) values (
+       $1, $2, $3, 'document', $4, 'application/pdf', 32, $5, $6,
+       'external_untrusted_data', 'mock', 'mock_external_text_v1', $7, $8,
+       $9, $9
+     )`,
+    [
+      `attachment_media_rls_${suffix}_${fixture.unique}`,
+      fixture.tenantId,
+      fixture.messageId,
+      `preuve-${suffix}.pdf`,
+      `mock:media/${fixture.unique}`,
+      "a".repeat(64),
+      `Donnée externe tenant ${suffix}`,
+      "b".repeat(64),
+      timestamp,
     ],
   );
 }

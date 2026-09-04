@@ -68,6 +68,12 @@ export type ConversationAttachmentRow = {
   size_bytes: number;
   storage_reference: string;
   checksum_sha256: string;
+  trust_boundary: "external_untrusted_data" | null;
+  extractor_mode: "mock" | null;
+  extractor_key: string | null;
+  extracted_text: string | null;
+  extracted_text_sha256: string | null;
+  extracted_at: string | null;
   created_at: string;
 };
 
@@ -351,14 +357,26 @@ export async function insertConversationAttachment(
     sizeBytes: number;
     storageReference: string;
     checksumSha256: string;
+    extraction?: {
+      trustBoundary: "external_untrusted_data";
+      extractorMode: "mock";
+      extractorKey: string;
+      text: string;
+      textSha256: string;
+      extractedAt: string;
+    };
     createdAt: string;
   },
 ) {
   await db.query(
     `insert into conversation_message_attachments (
        id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
-       storage_reference, checksum_sha256, created_at
-     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+       extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+       created_at
+     ) values (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+     )`,
     [
       input.id,
       input.tenantId,
@@ -369,6 +387,12 @@ export async function insertConversationAttachment(
       input.sizeBytes,
       input.storageReference,
       input.checksumSha256,
+      input.extraction?.trustBoundary ?? null,
+      input.extraction?.extractorMode ?? null,
+      input.extraction?.extractorKey ?? null,
+      input.extraction?.text ?? null,
+      input.extraction?.textSha256 ?? null,
+      input.extraction?.extractedAt ?? null,
       input.createdAt,
     ],
   );

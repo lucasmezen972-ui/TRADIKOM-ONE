@@ -1225,6 +1225,16 @@ async function runConversationJourney(
             return { status: "clean" };
           },
         },
+        extractor: {
+          state: "mock",
+          extractorKey: "mock_external_text_v1",
+          async extract() {
+            return {
+              status: "extracted",
+              text: "Contenu de preuve extrait sans modèle ni outil.",
+            };
+          },
+        },
         storage: {
           state: "mock",
           async store() {
@@ -1243,6 +1253,16 @@ async function runConversationJourney(
     await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("Stockage mock", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Contenu externe non fiable · extraction mock", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Contenu de preuve extrait sans modèle ni outil.", {
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(page.getByText(mediaChecksum, { exact: false })).toHaveCount(0);
 
     const evidence = await db.query<{

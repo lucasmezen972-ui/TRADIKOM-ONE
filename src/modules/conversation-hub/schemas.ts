@@ -123,6 +123,23 @@ export const messageAttachmentSchema = z
   })
   .strict();
 
+export const externalUntrustedDataExtractionSchema = z
+  .object({
+    trustBoundary: z.literal("external_untrusted_data"),
+    mode: z.literal("mock"),
+    extractorKey: boundedIdentifierSchema,
+    text: z.string().min(1).max(16_000),
+    textSha256: z.string().regex(/^[A-Fa-f0-9]{64}$/),
+    extractedAt: timestampSchema,
+  })
+  .strict();
+
+export const canonicalMessageAttachmentSchema = messageAttachmentSchema
+  .extend({
+    extraction: externalUntrustedDataExtractionSchema.optional(),
+  })
+  .strict();
+
 export const messageRouteHopSchema = z
   .object({
     adapterKey: boundedIdentifierSchema,
@@ -166,6 +183,11 @@ const messageContentShape = {
   attachments: z.array(messageAttachmentSchema).max(10),
 };
 
+const canonicalMessageContentShape = {
+  text: messageContentShape.text,
+  attachments: z.array(canonicalMessageAttachmentSchema).max(10),
+};
+
 export const canonicalMessageSchema = z
   .object({
     id: boundedIdentifierSchema,
@@ -174,7 +196,7 @@ export const canonicalMessageSchema = z
     direction: z.enum(["inbound", "outbound", "internal"]),
     kind: z.enum(["text", "system", "plan", "approval", "result"]),
     status: z.enum(["received", "pending", "sent", "delivered", "failed"]),
-    ...messageContentShape,
+    ...canonicalMessageContentShape,
     provenance: messageProvenanceSchema,
     occurredAt: timestampSchema,
     createdAt: timestampSchema,
@@ -245,6 +267,9 @@ export type ChannelKind = z.infer<typeof channelKindSchema>;
 export type ChannelIdentity = z.infer<typeof channelIdentitySchema>;
 export type CanonicalThread = z.infer<typeof canonicalThreadSchema>;
 export type MessageAttachment = z.infer<typeof messageAttachmentSchema>;
+export type CanonicalMessageAttachment = z.infer<
+  typeof canonicalMessageAttachmentSchema
+>;
 export type MessageProvenance = z.infer<typeof messageProvenanceSchema>;
 export type CanonicalMessage = z.infer<typeof canonicalMessageSchema>;
 export type MessageIngress = z.infer<typeof messageIngressSchema>;

@@ -299,6 +299,22 @@ async function readConversationThread(
           sizeBytes: attachment.size_bytes,
           storageReference: attachment.storage_reference,
           checksumSha256: attachment.checksum_sha256,
+          extraction:
+            attachment.trust_boundary &&
+            attachment.extractor_mode &&
+            attachment.extractor_key &&
+            attachment.extracted_text &&
+            attachment.extracted_text_sha256 &&
+            attachment.extracted_at
+              ? {
+                  trustBoundary: attachment.trust_boundary,
+                  mode: attachment.extractor_mode,
+                  extractorKey: attachment.extractor_key,
+                  text: attachment.extracted_text,
+                  textSha256: attachment.extracted_text_sha256,
+                  extractedAt: attachment.extracted_at,
+                }
+              : undefined,
         }),
       ),
       provenance: {

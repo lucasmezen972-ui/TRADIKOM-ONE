@@ -59,6 +59,7 @@ const storageReferenceSchema = z
   .min(1)
   .max(512)
   .regex(/^mock:[A-Za-z0-9][A-Za-z0-9/_.:-]*$/);
+const extractedTextSchema = z.string().min(1).max(16_000);
 const processInputSchema = z
   .object({
     tenantId: boundedIdentifierSchema,
@@ -118,6 +119,22 @@ export type MediaSecurityScanAdapter = {
   >;
 };
 
+export type MediaContentExtractionAdapter = {
+  readonly state: MediaImportRuntimeMode;
+  readonly extractorKey: string;
+  extract(input: {
+    tenantId: string;
+    mediaImportId: string;
+    idempotencyKey: string;
+    bytes: Uint8Array;
+    mediaType: string;
+    checksumSha256: string;
+  }): Promise<
+    | { status: "extracted"; text: string }
+    | MediaImportFailureResult
+  >;
+};
+
 export type MediaImportPolicyEvaluator = (input: {
   tenantId: string;
   actorId: string;
@@ -133,6 +150,7 @@ export type ChannelProviderMediaImportDependencies = {
   cipher?: ChannelProviderMediaReferenceCipher;
   provider: MetaWhatsAppMediaFetchAdapter;
   scanner: MediaSecurityScanAdapter;
+  extractor: MediaContentExtractionAdapter;
   storage: ImmutableMediaStorageAdapter;
   evaluatePolicy: MediaImportPolicyEvaluator;
 };
@@ -174,8 +192,9 @@ export class ChannelProviderMediaImportWorkerError extends Error {
 }
 
 /**
- * Activité bornée : seuls des doubles explicitement `mock` peuvent lire et
- * stocker des octets. Les modes réels ou ambigus restent fermés par défaut.
+ * Activité bornée : seuls des doubles explicitement `mock` peuvent lire,
+ * analyser, extraire et stocker des octets. Les modes réels ou ambigus restent
+ * fermés par défaut; l'extraction n'obtient ni outil, ni modèle, ni politique.
  */
 export async function processMetaWhatsAppMediaImport(
   db: DbClient,
@@ -229,6 +248,7 @@ async function processMetaWhatsAppMediaImportAs(
           mediaImportId: parsed.mediaImportId,
           providerMode: dependencies.provider.state,
           scannerMode: dependencies.scanner.state,
+          extractorMode: dependencies.extractor.state,
           storageMode: dependencies.storage.state,
           maxAttempts,
           actorId:
@@ -242,6 +262,7 @@ async function processMetaWhatsAppMediaImportAs(
       if (
         reservation.row.provider_mode !== dependencies.provider.state ||
         reservation.row.scanner_mode !== dependencies.scanner.state ||
+        reservation.row.extractor_mode !== dependencies.extractor.state ||
         reservation.row.storage_mode !== dependencies.storage.state
       ) {
         throw workerError("channel_provider_media_import_runtime_mismatch");
@@ -340,6 +361,7 @@ async function attemptMetaWhatsAppMediaImportAs(
       if (
         claimed.provider_mode !== dependencies.provider.state ||
         claimed.scanner_mode !== dependencies.scanner.state ||
+        claimed.extractor_mode !== dependencies.extractor.state ||
         claimed.storage_mode !== dependencies.storage.state
       ) {
         return finalizeWithoutIo(
@@ -355,11 +377,13 @@ async function attemptMetaWhatsAppMediaImportAs(
       if (
         claimed.provider_mode !== "mock" ||
         claimed.scanner_mode !== "mock" ||
+        claimed.extractor_mode !== "mock" ||
         claimed.storage_mode !== "mock"
       ) {
         const code =
           claimed.provider_mode === "disabled" ||
           claimed.scanner_mode === "disabled" ||
+          claimed.extractor_mode === "disabled" ||
           claimed.storage_mode === "disabled"
             ? "media_import_disabled"
             : "media_import_not_configured";
@@ -475,7 +499,7 @@ async function attemptMetaWhatsAppMediaImportAs(
         } else if (scanned.status === "unsafe") {
           outcome = failedOutcome("validation", scanned.safeErrorCode, false);
         } else {
-          const stored = await storeSafely(dependencies.storage, {
+          const extracted = await extractSafely(dependencies.extractor, {
             tenantId: parsed.tenantId,
             mediaImportId: parsed.mediaImportId,
             idempotencyKey,
@@ -483,20 +507,42 @@ async function attemptMetaWhatsAppMediaImportAs(
             mediaType: validated.mediaType,
             checksumSha256: validated.checksumSha256,
           });
-          if (stored.status === "failed") {
-            outcome = failureOutcome(stored);
+          if (extracted.status === "failed") {
+            outcome = failureOutcome(extracted);
           } else {
-            outcome = succeededOutcome();
-            attachment = {
-              id: deterministicAttachmentId(prepared.row.id),
-              messageId: prepared.request.messageId,
-              kind: attachmentKind(prepared.request.reference.mediaKind),
-              fileName: safeFileName(prepared.request.reference),
+            const stored = await storeSafely(dependencies.storage, {
+              tenantId: parsed.tenantId,
+              mediaImportId: parsed.mediaImportId,
+              idempotencyKey,
+              bytes: fetched.bytes,
               mediaType: validated.mediaType,
-              sizeBytes: fetched.bytes.byteLength,
-              storageReference: stored.storageReference,
               checksumSha256: validated.checksumSha256,
-            };
+            });
+            if (stored.status === "failed") {
+              outcome = failureOutcome(stored);
+            } else {
+              outcome = succeededOutcome();
+              attachment = {
+                id: deterministicAttachmentId(prepared.row.id),
+                messageId: prepared.request.messageId,
+                kind: attachmentKind(prepared.request.reference.mediaKind),
+                fileName: safeFileName(prepared.request.reference),
+                mediaType: validated.mediaType,
+                sizeBytes: fetched.bytes.byteLength,
+                storageReference: stored.storageReference,
+                checksumSha256: validated.checksumSha256,
+                extraction: {
+                  trustBoundary: "external_untrusted_data",
+                  extractorMode: "mock",
+                  extractorKey: extracted.extractorKey,
+                  text: extracted.text,
+                  textSha256: createHash("sha256")
+                    .update(extracted.text, "utf8")
+                    .digest("hex"),
+                  extractedAt: attemptedAtIso,
+                },
+              };
+            }
           }
         }
       }
@@ -604,6 +650,14 @@ type PreparedAttachment = {
   sizeBytes: number;
   storageReference: string;
   checksumSha256: string;
+  extraction: {
+    trustBoundary: "external_untrusted_data";
+    extractorMode: "mock";
+    extractorKey: string;
+    text: string;
+    textSha256: string;
+    extractedAt: string;
+  };
 };
 
 type FinalOutcome = {
@@ -723,6 +777,7 @@ async function auditExecution(
       provider: execution.provider,
       providerMode: execution.provider_mode,
       scannerMode: execution.scanner_mode,
+      extractorMode: execution.extractor_mode,
       storageMode: execution.storage_mode,
       status: execution.status,
       classification: execution.failure_classification,
@@ -730,6 +785,7 @@ async function auditExecution(
       attempt: execution.attempts,
       maxAttempts: execution.max_attempts,
       contentStoredInAudit: false,
+      extractedTextStoredInAudit: false,
       providerReferenceStoredInAudit: false,
       storageReferenceStoredInAudit: false,
     },
@@ -747,6 +803,7 @@ function mediaImportRuntimeState(
   if (
     dependencies.provider.state === "disabled" ||
     dependencies.scanner.state === "disabled" ||
+    dependencies.extractor.state === "disabled" ||
     dependencies.storage.state === "disabled"
   ) {
     return "disabled";
@@ -754,6 +811,7 @@ function mediaImportRuntimeState(
   if (
     dependencies.provider.state === "mock" &&
     dependencies.scanner.state === "mock" &&
+    dependencies.extractor.state === "mock" &&
     dependencies.storage.state === "mock" &&
     dependencies.cipher
   ) {
@@ -861,6 +919,36 @@ async function scanSafely(
     return parseFailure(result);
   } catch {
     return temporaryFailure("media_security_scanner_unavailable");
+  }
+}
+
+async function extractSafely(
+  adapter: MediaContentExtractionAdapter,
+  input: Parameters<MediaContentExtractionAdapter["extract"]>[0],
+) {
+  if (adapter.state !== "mock") return providerUnavailable(adapter.state);
+  try {
+    const result = await adapter.extract(input);
+    if (result.status === "extracted") {
+      const text = extractedTextSchema.safeParse(result.text);
+      const extractorKey = boundedIdentifierSchema.safeParse(adapter.extractorKey);
+      if (!text.success || !extractorKey.success) {
+        return {
+          status: "failed" as const,
+          classification: "permanent" as const,
+          safeErrorCode: "media_extraction_invalid",
+          retryable: false,
+        };
+      }
+      return {
+        status: "extracted" as const,
+        text: text.data,
+        extractorKey: extractorKey.data,
+      };
+    }
+    return parseFailure(result);
+  } catch {
+    return temporaryFailure("media_extractor_unavailable");
   }
 }
 
@@ -1054,6 +1142,7 @@ function mapExecution(row: ChannelProviderMediaImportExecutionRow, replayed: boo
     attachmentId: row.attachment_id,
     providerMode: row.provider_mode,
     scannerMode: row.scanner_mode,
+    extractorMode: row.extractor_mode,
     storageMode: row.storage_mode,
     idempotentReplay: replayed,
   };
