@@ -74,6 +74,7 @@ export type FailedDomainEventRow = {
   id: string;
   tenant_id: string;
   event_type: string;
+  payload: string;
   attempts: number;
   correlation_id: string;
   last_error: string | null;
@@ -96,6 +97,7 @@ export type DomainEventQueueRow = {
   id: string;
   tenant_id: string;
   event_type: string;
+  payload: string;
   status: string;
   attempts: number;
   next_run_at: string;
@@ -477,12 +479,15 @@ export async function listActiveDomainEventQueueRows(
   db: DbClient,
   tenantId: string,
   limit: number,
+  offset = 0,
 ) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const result = await db.query<DomainEventQueueRow>(
     `select id,
             tenant_id,
             event_type,
+            payload,
             status,
             attempts,
             next_run_at,
@@ -495,7 +500,7 @@ export async function listActiveDomainEventQueueRows(
      from domain_events
      where tenant_id = $1 and status in ($2, $3)
      order by next_run_at asc, updated_at desc
-     limit ${safeLimit}`,
+     limit ${safeLimit} offset ${safeOffset}`,
     [tenantId, "pending", "processing"],
   );
 
@@ -511,6 +516,7 @@ export async function findActiveDomainEventQueueRow(
     `select id,
             tenant_id,
             event_type,
+            payload,
             status,
             attempts,
             next_run_at,
@@ -570,12 +576,15 @@ export async function listFailedDomainEventRows(
   db: DbClient,
   tenantId: string,
   limit: number,
+  offset = 0,
 ) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const result = await db.query<FailedDomainEventRow>(
     `select id,
             tenant_id,
             event_type,
+            payload,
             attempts,
             correlation_id,
             last_error,
@@ -588,7 +597,7 @@ export async function listFailedDomainEventRows(
      from domain_events
      where tenant_id = $1 and status = $2
      order by updated_at desc, created_at desc
-     limit ${safeLimit}`,
+     limit ${safeLimit} offset ${safeOffset}`,
     [tenantId, "failed"],
   );
 
@@ -604,6 +613,7 @@ export async function findFailedDomainEventRow(
     `select id,
             tenant_id,
             event_type,
+            payload,
             attempts,
             correlation_id,
             last_error,

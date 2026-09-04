@@ -1,6 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import { withTenantDbTransaction } from "@/db/tenant-context";
-import { id, nowIso } from "@/lib/security";
+import { id, nowIso, safeJson } from "@/lib/security";
 import type {
   Role,
   WorkflowDeadLetterEvent,
@@ -91,10 +91,19 @@ export async function getWorkflowDeadLetters(
   userId: string,
   tenantId: string,
 ) {
-  await assertTenantAccess(db, userId, tenantId);
-  const events = await listFailedDomainEventRows(db, tenantId, 20);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId);
+    const events = await listAccessibleWorkflowDomainEvents(
+      transaction,
+      userId,
+      tenantId,
+      20,
+      (limit, offset) =>
+        listFailedDomainEventRows(transaction, tenantId, limit, offset),
+    );
 
-  return events.map(mapWorkflowDeadLetter) satisfies WorkflowDeadLetterEvent[];
+    return events.map(mapWorkflowDeadLetter) satisfies WorkflowDeadLetterEvent[];
+  });
 }
 
 export async function getWorkflowQueueOverview(
@@ -102,16 +111,25 @@ export async function getWorkflowQueueOverview(
   userId: string,
   tenantId: string,
 ) {
-  await assertTenantAccess(db, userId, tenantId);
-  const [summaryRows, activeRows] = await Promise.all([
-    listDomainEventQueueSummaryRows(db, tenantId),
-    listActiveDomainEventQueueRows(db, tenantId, 12),
-  ]);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId);
+    const [summaryRows, activeRows] = await Promise.all([
+      listDomainEventQueueSummaryRows(transaction, tenantId),
+      listAccessibleWorkflowDomainEvents(
+        transaction,
+        userId,
+        tenantId,
+        12,
+        (limit, offset) =>
+          listActiveDomainEventQueueRows(transaction, tenantId, limit, offset),
+      ),
+    ]);
 
-  return {
-    summary: normalizeQueueSummary(summaryRows.map(mapWorkflowQueueSummary)),
-    activeEvents: activeRows.map(mapWorkflowQueueEvent),
-  } satisfies WorkflowQueueOverview;
+    return {
+      summary: normalizeQueueSummary(summaryRows.map(mapWorkflowQueueSummary)),
+      activeEvents: activeRows.map(mapWorkflowQueueEvent),
+    } satisfies WorkflowQueueOverview;
+  });
 }
 
 export async function cancelWorkflowRun(
@@ -357,6 +375,109 @@ async function assertWorkflowRunAccess(
   );
 }
 
+type WorkflowDomainEventAccessRow = {
+  event_type: string;
+  payload: string;
+};
+
+async function listAccessibleWorkflowDomainEvents<
+  EventRow extends WorkflowDomainEventAccessRow,
+>(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  limit: number,
+  loadPage: (limit: number, offset: number) => Promise<EventRow[]>,
+) {
+  const pageSize = 50;
+  const visible: EventRow[] = [];
+  let offset = 0;
+
+  while (visible.length < limit) {
+    const page = await loadPage(pageSize, offset);
+    for (const event of page) {
+      if (await canAccessWorkflowDomainEvent(db, userId, tenantId, event)) {
+        visible.push(event);
+        if (visible.length === limit) break;
+      }
+    }
+    if (page.length < pageSize) break;
+    offset += page.length;
+  }
+
+  return visible;
+}
+
+async function canAccessWorkflowDomainEvent(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  event: WorkflowDomainEventAccessRow,
+) {
+  const payload = safeJson<Record<string, unknown>>(event.payload, {});
+  const runId = stringValue(payload.runId);
+  if (runId) {
+    const run = await findWorkflowRunById(db, tenantId, runId);
+    if (!run) {
+      return event.event_type !== "workflow.resume";
+    }
+    if (run.workflow_key.startsWith("conversation_plan:")) {
+      const runPlanId = run.workflow_key.slice("conversation_plan:".length);
+      const runPlan = await findActionPlanRow(db, tenantId, runPlanId);
+      if (!runPlan) return false;
+      return Boolean(
+        await findAccessibleConversationThreadRow(
+          db,
+          tenantId,
+          userId,
+          runPlan.thread_id,
+        ),
+      );
+    }
+  }
+
+  const planId = stringValue(payload.planId);
+  if (!planId) {
+    if (event.event_type === "conversation.plan.execute") {
+      return false;
+    }
+    return true;
+  }
+
+  const plan = await findActionPlanRow(db, tenantId, planId);
+  if (!plan) {
+    return event.event_type !== "conversation.plan.execute";
+  }
+  return Boolean(
+    await findAccessibleConversationThreadRow(
+      db,
+      tenantId,
+      userId,
+      plan.thread_id,
+    ),
+  );
+}
+
+async function assertWorkflowDomainEventAccess(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  event: WorkflowDomainEventAccessRow,
+  target: "dead_letter" | "queue",
+) {
+  if (await canAccessWorkflowDomainEvent(db, userId, tenantId, event)) return;
+  if (target === "dead_letter") {
+    throw new WorkflowError(
+      "workflow_dead_letter_not_found",
+      "Incident workflow introuvable ou deja relance.",
+    );
+  }
+  throw new WorkflowError(
+    "workflow_queue_event_not_found",
+    "Evenement workflow introuvable ou deja termine.",
+  );
+}
+
 export async function retryWorkflowDeadLetter(
   db: DbClient,
   userId: string,
@@ -378,6 +499,13 @@ export async function retryWorkflowDeadLetter(
         "Incident workflow introuvable ou deja relance.",
       );
     }
+    await assertWorkflowDomainEventAccess(
+      transaction,
+      userId,
+      tenantId,
+      failedEvent,
+      "dead_letter",
+    );
 
     const requeued = await requeueFailedDomainEvent(transaction, {
       tenantId,
@@ -430,6 +558,13 @@ export async function cancelWorkflowQueueEvent(
         "Evenement workflow introuvable ou deja termine.",
       );
     }
+    await assertWorkflowDomainEventAccess(
+      transaction,
+      userId,
+      tenantId,
+      activeEvent,
+      "queue",
+    );
 
     const cancelled = await cancelActiveDomainEvent(transaction, {
       tenantId,
@@ -720,6 +855,10 @@ function safeDeadLetterError(value: string | null) {
       "$1=[redacted]",
     )
     .slice(0, 280);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function isTerminalStatus(status: string) {

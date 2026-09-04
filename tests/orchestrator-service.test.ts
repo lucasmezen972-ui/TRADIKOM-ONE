@@ -14,8 +14,12 @@ import {
   requestConversationActionPlanRetry,
 } from "../src/modules/orchestrator";
 import {
+  cancelWorkflowQueueEvent,
+  getWorkflowDeadLetters,
+  getWorkflowQueueOverview,
   getWorkflowRuns,
   requestManualWorkflowRetry,
+  retryWorkflowDeadLetter,
 } from "../src/modules/workflows";
 import { processPendingDomainEvents } from "../src/modules/workflows/worker";
 
@@ -897,6 +901,141 @@ describe("service des plans Conversation", () => {
       retryEvents: 0,
       retryAudits: 0,
     });
+
+    const failedPlanEvent = await context.db.query<{
+      id: string;
+      attempts: number;
+    }>(
+      `select id, attempts from domain_events
+       where tenant_id = $1 and event_type = 'conversation.plan.execute'`,
+      [context.tenantId],
+    );
+    await context.db.query(
+      `insert into domain_events (
+         id, tenant_id, actor_id, event_type, payload, status, attempts,
+         idempotency_key, correlation_id, causation_id, next_run_at,
+         last_error, created_at, updated_at
+       ) values ($1, $2, $3, $4, $5, 'pending', 0, $6, $7, null, $8, null, $8, $8),
+                ($9, $2, $3, $10, $11, 'pending', 0, $12, $13, null, $8, null, $8, $8)`,
+      [
+        "event_restricted_resume",
+        context.tenantId,
+        context.userId,
+        "workflow.resume",
+        JSON.stringify({
+          runId: beforeRetry.rows[0]!.id,
+          sourceEventId: failedPlanEvent.rows[0]!.id,
+          resumeFromActionIndex: 1,
+          reason: "manual_retry",
+        }),
+        "restricted-resume-event",
+        "restricted-resume-correlation",
+        "2026-07-30T10:10:00.000Z",
+        "event_generic_visible",
+        "lead.created",
+        JSON.stringify({ leadId: "lead_visible" }),
+        "generic-visible-event",
+        "generic-visible-correlation",
+      ],
+    );
+    for (let index = 0; index < 12; index += 1) {
+      const eventId = `event_restricted_resume_${index}`;
+      const createdAt = `2026-07-30T10:00:${String(index).padStart(2, "0")}.000Z`;
+      await context.db.query(
+        `insert into domain_events (
+           id, tenant_id, actor_id, event_type, payload, status, attempts,
+           idempotency_key, correlation_id, causation_id, next_run_at,
+           last_error, created_at, updated_at
+         ) values ($1, $2, $3, 'workflow.resume', $4, 'pending', 0, $5, $6,
+                   null, $7, null, $7, $7)`,
+        [
+          eventId,
+          context.tenantId,
+          context.userId,
+          JSON.stringify({
+            runId: beforeRetry.rows[0]!.id,
+            sourceEventId: failedPlanEvent.rows[0]!.id,
+            resumeFromActionIndex: 1,
+            reason: "manual_retry",
+          }),
+          `restricted-resume-event-${index}`,
+          `restricted-resume-correlation-${index}`,
+          createdAt,
+        ],
+      );
+    }
+    const queue = await getWorkflowQueueOverview(
+      context.db,
+      context.userId,
+      context.tenantId,
+    );
+    expect(queue.activeEvents.map((event) => event.id)).toEqual([
+      "event_generic_visible",
+    ]);
+    expect(queue.activeEvents[0]).not.toHaveProperty("payload");
+    expect(
+      queue.summary.find((item) => item.status === "pending")?.count,
+    ).toBe(14);
+    await expect(
+      cancelWorkflowQueueEvent(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { eventId: "event_restricted_resume" },
+      ),
+    ).rejects.toMatchObject({ code: "workflow_queue_event_not_found" });
+    const deadLetters = await getWorkflowDeadLetters(
+      context.db,
+      context.userId,
+      context.tenantId,
+    );
+    expect(deadLetters).toEqual([]);
+    await expect(
+      retryWorkflowDeadLetter(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { eventId: failedPlanEvent.rows[0]!.id },
+      ),
+    ).rejects.toMatchObject({ code: "workflow_dead_letter_not_found" });
+
+    const protectedEvents = await context.db.query<{
+      id: string;
+      status: string;
+      attempts: number;
+    }>(
+      `select id, status, attempts from domain_events
+       where tenant_id = $1 and id in ($2, $3)
+       order by id asc`,
+      [
+        context.tenantId,
+        failedPlanEvent.rows[0]!.id,
+        "event_restricted_resume",
+      ],
+    );
+    expect(protectedEvents.rows).toEqual(
+      expect.arrayContaining([
+        {
+          id: "event_restricted_resume",
+          status: "pending",
+          attempts: 0,
+        },
+        {
+          id: failedPlanEvent.rows[0]!.id,
+          status: "failed",
+          attempts: failedPlanEvent.rows[0]!.attempts,
+        },
+      ]),
+    );
+    const controlAudits = await context.db.query<{ count: number }>(
+      `select count(*)::int as count from audit_logs
+       where tenant_id = $1 and action in (
+         'workflow.queue_event_cancelled',
+         'workflow.dead_letter_retried'
+       )`,
+      [context.tenantId],
+    );
+    expect(controlAudits.rows[0]?.count).toBe(0);
   });
 
   it("isole les tenants et réserve la décision aux rôles autorisés", async () => {
