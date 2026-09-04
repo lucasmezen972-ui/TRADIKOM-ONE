@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T21:47:00.000Z",
+  "updatedAt": "2026-09-04T22:48:15.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "754316a5466ca16b730ef0e521852dcce3459b7e",
+  "lastCommit": "517a8a73acf9f4f07afe254dd84c8489e2f6e37a",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_plan_thread_access_propagation_complete_local_only_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_workflow_event_thread_access_complete_local_only_rls_extension_next_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La propagation des autorisations du fil aux plans Conversation OS-1/OS-4 est livrée localement. Création, lecture, liste, décision, exécution et reprise exigent désormais un accès actif au fil; la création contrôle avant génération puis avant persistance; toute mutation/reprise ferme l'accès après révocation; la liste et les contrôles génériques des missions ne contournent plus le fil. La finalisation système d'une mission déjà autorisée reste durable et bornée. Prochaine tranche non bloquée : appliquer la même non-fuite aux événements actifs et incidents de workflow liés à un plan restreint. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
+  "currentObjective": "La non-fuite des événements durables liés aux plans Conversation OS-1/OS-4 est livrée localement. Les listes actives et dead-letter masquent les événements d'un fil inaccessible; annulation et relance génériques revalident le droit dans leur transaction; le payload n'est jamais rendu; une pagination bornée évite que des événements masqués évincent les événements génériques accessibles; seuls des agrégats de statut sans identifiant restent tenant-wide. Prochaine tranche de sécurité non bloquée : porter cette frontière d'accès dans les politiques RLS PostgreSQL des objets Conversation dérivés. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -32,12 +32,12 @@
         "62 WebChat minimal : fil, plans, décisions et travail en cours",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 exigent que les droits suivent la conversation canonique. Les pages 17-18 imposent qu'un plan soit validé contre les permissions avant exécution et que toute exécution passe par une mission durable/idempotente. Les pages 22, 32, 37 et 69 exigent isolation tenant/RLS, refus de permission, minimisation et tests unitaires, intégration, workflow, sécurité et Playwright. Appliquer le contrôle d'accès du fil à chaque entrée utilisateur des plans : création depuis le message, lecture, liste, décision, exécution et reprise. Revalider avant chaque mutation sensible et lancement/reprise de mission; une révocation doit fermer l'accès sans altérer la preuve durable. Conserver le bypass système uniquement pour la finalisation asynchrone déjà autorisée. Aucun OS-6, CRM, Kanban, dashboard, provider réel, Graph, activation externe, LLM ou outil.",
-      "evidenceExpected": "Preuve obtenue localement : garde fondée sur tenant, fil et utilisateur appliquée avant génération puis avant persistance; get/list sans fuite; décision et exécution refusées après révocation sans modifier approval, plan, mission ou audit; reprise revalidée dans sa transaction de mutation, y compris contre une révocation injectée entre les deux transactions; liste et contrôles génériques des missions conversationnelles filtrés; tenant compatible et finalisation système durable inchangée; audit sans identifiant de bénéficiaire ni contenu. Tests ciblés 3 fichiers/16 tests verts; régression orchestrateur/workflows/Conversation 14 fichiers verts et 1 PostgreSQL ignoré, 53 tests verts et 1 ignoré; suite exhaustive 146 fichiers verts et 10 ignorés, 724 tests verts et 23 ignorés sans DATABASE_URL; ESLint complet, TypeScript, build production, continuity-check et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer en CI. Fournisseurs toujours disabled/not_configured/mock et zéro IO externe."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 exigent que les droits de la conversation suivent chaque preuve et action dérivée. Les pages 17-18 imposent permissions, mission durable et reprise idempotente. Les pages 22, 28, 32, 37 et 69 exigent isolation tenant/RLS, dead-letter inspectable, refus de permission, minimisation et tests workflow/sécurité. Filtrer les événements actifs et incidents/dead letters liés à un plan Conversation inaccessible; refuser leurs commandes génériques d'annulation et de relance après révocation dans la transaction de mutation. Ne jamais exposer le payload; conserver uniquement des agrégats de statut non identifiants. Les événements génériques non liés à Conversation restent compatibles. Aucun OS-6, CRM, Kanban, dashboard secondaire, provider réel, Graph, activation externe, LLM ou outil.",
+      "evidenceExpected": "Preuve obtenue localement : les lignes internes chargent le payload uniquement pour résoudre planId/runId, mais les types publics ne le rendent jamais; listes active et dead-letter masquées après révocation; annulation et relance retournent une absence non énumérable sans modifier statut, tentatives ou audit; pagination par lots de 50 prouvée avec treize reprises restreintes avant un événement générique visible; agrégats de statut non identifiants conservés tenant-wide; événements génériques et fils tenant compatibles. Ciblés 3 fichiers/27 tests verts; régression Conversation/workflows/vues 21 fichiers verts et 2 PostgreSQL ignorés, 96 tests verts et 2 ignorés; suite exhaustive 146 fichiers verts et 10 ignorés, 724 tests verts et 23 ignorés sans DATABASE_URL; ESLint complet, TypeScript, build production et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer en CI. Fournisseurs toujours disabled/not_configured/mock et zéro IO externe."
     }
   },
-  "nextAction": "Filtrer les événements actifs, la vue de file et les incidents/dead letters liés à un conversation_plan inaccessible, puis empêcher leur annulation ou relance générique sans droit actif; conserver les agrégats sûrs et ajouter les tests de non-fuite/révocation. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
-  "nextFile": "src/modules/workflows/service.ts",
+  "nextAction": "Ajouter une migration additive runtime et son miroir SQL pour que les politiques RLS PostgreSQL des fils, messages, pièces jointes, plans, étapes, missions et événements dérivés appliquent app.actor_id et les droits actifs, avec bypass système borné; ajouter les tests restricted-role select/write et relations, sans affaiblir l'isolation tenant ni démarrer OS-6. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
+  "nextFile": "src/lib/db.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -498,7 +498,15 @@
     "contrôles de fil sur create/get/list/decide/execute/retry, revalidation transactionnelle de reprise et filtrage des missions génériques; aucun IO externe",
     "tests ciblés 3 fichiers/16 tests verts; régression élargie 14 fichiers réussis, 1 ignoré, 53 tests réussis et 1 ignoré sans DATABASE_URL",
     "suite exhaustive 146 fichiers réussis, 10 ignorés, 724 tests réussis et 23 ignorés; ESLint complet, TypeScript, build production et git diff --check verts",
-    "commit fonctionnel local 754316a5466ca16b730ef0e521852dcce3459b7e; tmp exclu, aucun push ni CI déclenchée"
+    "commit fonctionnel local 754316a5466ca16b730ef0e521852dcce3459b7e; tmp exclu, aucun push ni CI déclenchée",
+    "heartbeat 2026-09-04T22:19Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages événements/workflows 10-12, 15-18, 22, 24, 28, 35-38, 43-44, 64 et 68 relues directement; pages 17, 32, 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check : ready, zéro erreur et zéro avertissement; changelog Supabase officiel relu, aucune rupture pertinente pour cette tranche de service",
+    "GitHub relu sans mutation : PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte, CI 33826756939 rouge avant tests sur timeout npm audit",
+    "événements actifs et dead letters liés aux plans Conversation filtrés via planId/runId; annulation et relance revalidées transactionnellement; payload jamais exposé; agrégats non identifiants conservés",
+    "tests ciblés 3 fichiers/27 tests verts; régression 21 fichiers/96 tests verts avec 2 fichiers/2 tests PostgreSQL ignorés sans DATABASE_URL",
+    "suite exhaustive 146 fichiers/724 tests verts, 10 fichiers/23 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production et git diff --check verts",
+    "commit fonctionnel local 517a8a73acf9f4f07afe254dd84c8489e2f6e37a; tmp exclu, aucun push ni CI déclenchée"
   ],
   "lastValidation": [
     {
@@ -1672,6 +1680,26 @@
     {
       "command": "audit de la prochaine frontière workflow",
       "status": "gap_identified_active_queue_events_and_dead_letters_may_still_expose_or_control_restricted_conversation_plan_next_slice_no_os6"
+    },
+    {
+      "command": "prompt maître, continuity-check, changelog Supabase et GitHub le 2026-09-04T22:22Z",
+      "status": "passed_sha256_exact_71_pages_core_and_event_workflow_pages_reviewed_pages_17_32_48_69_rendered_pnpm_ready_supabase_no_relevant_breaking_change_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_npm_timeout_no_mutation"
+    },
+    {
+      "command": "droits de fil appliqués aux événements actifs et dead letters au commit local 517a8a73acf9f4f07afe254dd84c8489e2f6e37a",
+      "status": "passed_plan_id_run_id_resolution_internal_payload_not_exposed_active_and_failed_lists_filtered_non_enumerating_cancel_retry_transaction_guards_no_state_attempt_or_audit_mutation_paged_visibility_generic_compatible_safe_status_aggregates_no_external_io"
+    },
+    {
+      "command": "tests ciblés puis régression Conversation workflows et vues consommatrices",
+      "status": "passed_targeted_3_files_27_tests_regression_21_files_96_tests_2_postgres_files_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T22:47Z",
+      "status": "passed_full_146_files_724_tests_10_files_23_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_playwright_ci_pending"
+    },
+    {
+      "command": "audit de la prochaine frontière RLS intra-tenant",
+      "status": "gap_identified_existing_conversation_plan_workflow_and_domain_event_rls_is_tenant_scoped_only_add_actor_thread_grant_policies_and_restricted_role_tests_next_no_os6"
     }
   ],
   "humanBlockers": [
