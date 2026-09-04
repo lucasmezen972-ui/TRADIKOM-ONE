@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 11, 14, 16-18, 22-23, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; le commit applicatif local `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052` est conservé sans push et la branche est en avance de deux commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; les commits applicatifs locaux `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052` et `9af546df640a555c76da755bd3139ce541a1196f` sont conservés sans push. Après le présent handoff, la branche est en avance de cinq commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -85,6 +85,16 @@
 - Preuves locales : 24 tests média/migrations verts; deux tests PostgreSQL/RLS ajoutés mais ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/672 tests verts, 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript et build production verts. Un scénario Playwright couvre le rendu, mais son exécution attend la CI PostgreSQL partagée.
 - État honnête : livré localement et mock uniquement. Aucun client Graph, stockage Supabase, antivirus, OCR/transcription, secret, message externe ou activation réelle n'est composé.
 
+## Tranche applicative locale terminée : file média dans le worker générique
+
+- `src/worker/runtime.ts` exécute désormais la file média après les événements durables et les rechecks, puis inclut son résumé dans le résultat et les logs structurés du batch.
+- Sans dépendances injectées, l'état est `not_configured` et aucune réservation n'est sélectionnée. Si un côté est `disabled`, l'état est `disabled`; aucun fetch, stockage, journal d'exécution ou pièce jointe n'est créé.
+- Seuls un provider, un stockage et un coffre tous prêts en mode `mock` autorisent la sélection. Sur PostgreSQL, la sélection globale exige explicitement le contexte système; chaque ligne conserve ensuite son `tenant_id` et est auditée sous `system_whatsapp_meta`.
+- Le créateur réel de l'endpoint reste le responsable durable de l'exécution, donc la clé étrangère utilisateur existante n'est ni contournée ni affaiblie. La policy reçoit l'identité système et s'exécute avant déchiffrement ou IO.
+- Le test vertical part d'un webhook Meta signé, laisse l'ingestion réserver le média, lance le worker générique, vérifie une seule pièce jointe canonique, puis relance le batch sans second fetch, stockage ou ajout.
+- Preuves locales : 43 tests ciblés verts et 2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; suite exhaustive 139 fichiers/675 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint, TypeScript, build production, continuity-check direct et `git diff --check` verts.
+- État honnête : livré localement au commit `9af546df640a555c76da755bd3139ce541a1196f`, mock uniquement. Aucun bootstrap de coffre depuis l'environnement, client Graph, stockage Supabase, antivirus, OCR/transcription, secret ou effet externe.
+
 ## Correctif de sécurité CI publié et prouvé
 
 - La CI `33628923602` du head média s'est arrêtée au contrôle des dépendances, avant migrations, tests ou build, sur deux avis élevés affectant `browserslist <= 4.28.6`.
@@ -97,10 +107,10 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'approbation explicite de l'utilisateur pour publier le checkpoint local et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
-2. Réconcilier le head distant en lecture seule, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
+1. Obtenir l'approbation explicite de l'utilisateur pour publier les cinq commits locaux et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+2. Vérifier que le head distant est encore exactement `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
 3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
-4. Sans publication, prochaine tranche locale non bloquée : composer la file média dans le worker générique avec un mode fail-closed et une identité système tenant-aware, toujours sans Graph ni stockage réel.
+4. Sans publication, prochaine tranche locale non bloquée : ajouter avant stockage une analyse de sécurité média injectable, durable et fail-closed, uniquement avec doubles `mock` et sans Graph ni stockage réel.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
