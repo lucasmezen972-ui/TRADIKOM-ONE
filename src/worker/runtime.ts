@@ -13,6 +13,11 @@ import {
   processPendingDomainEvents,
   type DomainEventWorkerSummary,
 } from "@/modules/workflows/worker";
+import {
+  processMetaWhatsAppMediaImportsSystemWorker,
+  type ChannelProviderMediaImportDependencies,
+  type ChannelProviderMediaImportWorkerSummary,
+} from "@/modules/channels/channel-provider-media-import-worker";
 
 export type WorkerMode = "once" | "poll";
 
@@ -40,6 +45,7 @@ export type WorkerBatchResult = {
   pendingAfter: number;
   summary: DomainEventWorkerSummary;
   sourceRechecks: ApiSourceRecheckSummary;
+  mediaImports: ChannelProviderMediaImportWorkerSummary;
   startedAt: string;
   completedAt: string;
 };
@@ -61,6 +67,7 @@ export type WorkerRuntimeOptions = {
   maxIterations?: number;
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   discoveryTransport?: DiscoveryTransport;
+  mediaImportDependencies?: ChannelProviderMediaImportDependencies;
 };
 
 export type WorkerBatchOptions = {
@@ -69,6 +76,7 @@ export type WorkerBatchOptions = {
   db?: DbClient;
   now?: Date;
   discoveryTransport?: DiscoveryTransport;
+  mediaImportDependencies?: ChannelProviderMediaImportDependencies;
 };
 
 const defaultBatchSize = 25;
@@ -93,6 +101,7 @@ export async function runWorkerFromEnvironment(
     db: options.db,
     batchSize: config.batchSize,
     discoveryTransport: options.discoveryTransport,
+    mediaImportDependencies: options.mediaImportDependencies,
   });
   logWorkerBatch(options.logger ?? writeStructuredWorkerLog, "worker.once", batch);
   return batch;
@@ -146,6 +155,7 @@ export async function runWorkerPoll(
       batchSize,
       correlationId: batchCorrelationId,
       discoveryTransport: options.discoveryTransport,
+      mediaImportDependencies: options.mediaImportDependencies,
     });
     iterations += 1;
     logWorkerBatch(logger, "worker.poll", lastBatch);
@@ -198,11 +208,13 @@ export async function runWorkerBatch(
         batchSize,
         now,
         options.discoveryTransport,
+        options.mediaImportDependencies,
       )
     : await runWithRuntimeDatabase(
         batchSize,
         now,
         options.discoveryTransport,
+        options.mediaImportDependencies,
       );
 
   return {
@@ -243,16 +255,29 @@ async function runWithRuntimeDatabase(
   batchSize: number,
   now: Date,
   discoveryTransport?: DiscoveryTransport,
+  mediaImportDependencies?: ChannelProviderMediaImportDependencies,
 ) {
   if (getDatabaseUrl()) {
     await getDb();
     return withSystemTransaction((db) =>
-      runWithClient(db, batchSize, now, discoveryTransport),
+      runWithClient(
+        db,
+        batchSize,
+        now,
+        discoveryTransport,
+        mediaImportDependencies,
+      ),
     );
   }
 
   const db = await getDb();
-  return runWithClient(db, batchSize, now, discoveryTransport);
+  return runWithClient(
+    db,
+    batchSize,
+    now,
+    discoveryTransport,
+    mediaImportDependencies,
+  );
 }
 
 async function runWithClient(
@@ -260,6 +285,7 @@ async function runWithClient(
   limit: number,
   now: Date,
   discoveryTransport?: DiscoveryTransport,
+  mediaImportDependencies?: ChannelProviderMediaImportDependencies,
 ) {
   const pendingBefore = await getPendingDomainEventCount(db, now);
   const summary = await processPendingDomainEvents(db, { limit, now });
@@ -268,9 +294,20 @@ async function runWithClient(
     now,
     transport: discoveryTransport,
   });
+  const mediaImports = await processMetaWhatsAppMediaImportsSystemWorker(
+    db,
+    mediaImportDependencies,
+    { limit, now },
+  );
   const pendingAfter = await getPendingDomainEventCount(db, now);
 
-  return { pendingBefore, summary, sourceRechecks, pendingAfter };
+  return {
+    pendingBefore,
+    summary,
+    sourceRechecks,
+    mediaImports,
+    pendingAfter,
+  };
 }
 
 function logWorkerBatch(
@@ -289,6 +326,7 @@ function logWorkerBatch(
     pendingAfter: batch.pendingAfter,
     summary: batch.summary,
     sourceRechecks: batch.sourceRechecks,
+    mediaImports: batch.mediaImports,
   });
 }
 

@@ -15,6 +15,7 @@ import {
   findChannelProviderMediaImportContext,
   findChannelProviderMediaImportExecution,
   listActionableChannelProviderMediaImports,
+  listActionableChannelProviderMediaImportsForSystem,
   reserveChannelProviderMediaImportExecution,
   type ChannelProviderMediaImportExecutionRow,
   type MediaImportFailureClassification,
@@ -27,6 +28,7 @@ const maxCanonicalAttachmentBytes = 25 * 1024 * 1024;
 const defaultMaxAttempts = 3;
 const defaultLeaseMs = 60_000;
 const defaultBaseBackoffMs = 1_000;
+const systemActorId = "system_whatsapp_meta";
 const workerRoles: Role[] = [
   "owner",
   "administrator",
@@ -127,6 +129,21 @@ export type ChannelProviderMediaImportWorkerOptions = {
   limit?: number;
 };
 
+export type ChannelProviderMediaImportWorkerSummary = {
+  state: MediaImportRuntimeMode;
+  selected: number;
+  processed: number;
+  succeeded: number;
+  retried: number;
+  failed: number;
+  skipped: number;
+};
+
+type MediaImportExecutionIdentity = {
+  actorId: string;
+  access: "tenant_member" | "system";
+};
+
 export class ChannelProviderMediaImportWorkerError extends Error {
   constructor(
     readonly code:
@@ -150,6 +167,22 @@ export async function processMetaWhatsAppMediaImport(
   dependencies: ChannelProviderMediaImportDependencies,
   options: ChannelProviderMediaImportWorkerOptions = {},
 ) {
+  return processMetaWhatsAppMediaImportAs(
+    db,
+    { actorId, access: "tenant_member" },
+    input,
+    dependencies,
+    options,
+  );
+}
+
+async function processMetaWhatsAppMediaImportAs(
+  db: DbClient,
+  identity: MediaImportExecutionIdentity,
+  input: z.input<typeof processInputSchema>,
+  dependencies: ChannelProviderMediaImportDependencies,
+  options: ChannelProviderMediaImportWorkerOptions,
+) {
   const parsed = processInputSchema.parse(input);
   const now = options.now ?? new Date(nowIso());
   const occurredAt = now.toISOString();
@@ -157,9 +190,11 @@ export async function processMetaWhatsAppMediaImport(
   const execution = await withTenantDbTransaction(
     db,
     parsed.tenantId,
-    actorId,
+    identity.actorId,
     async (transaction) => {
-      await assertWorkerAccess(transaction, actorId, parsed.tenantId);
+      if (identity.access === "tenant_member") {
+        await assertWorkerAccess(transaction, identity.actorId, parsed.tenantId);
+      }
       const context = await findChannelProviderMediaImportContext(transaction, parsed);
       if (!context) throw workerError("channel_provider_media_import_not_found");
       if (
@@ -178,7 +213,10 @@ export async function processMetaWhatsAppMediaImport(
           providerMode: dependencies.provider.state,
           storageMode: dependencies.storage.state,
           maxAttempts,
-          actorId,
+          actorId:
+            identity.access === "system"
+              ? context.endpoint_created_by
+              : identity.actorId,
           occurredAt,
         },
       );
@@ -190,15 +228,20 @@ export async function processMetaWhatsAppMediaImport(
         throw workerError("channel_provider_media_import_runtime_mismatch");
       }
       if (!reservation.replayed) {
-        await auditExecution(transaction, actorId, reservation.row, "reserved");
+        await auditExecution(
+          transaction,
+          identity.actorId,
+          reservation.row,
+          "reserved",
+        );
       }
       return reservation.row;
     },
   );
 
-  return attemptMetaWhatsAppMediaImport(
+  return attemptMetaWhatsAppMediaImportAs(
     db,
-    actorId,
+    identity,
     { tenantId: parsed.tenantId, mediaImportId: execution.media_import_id },
     dependencies,
     options,
@@ -212,6 +255,22 @@ export async function attemptMetaWhatsAppMediaImport(
   dependencies: ChannelProviderMediaImportDependencies,
   options: ChannelProviderMediaImportWorkerOptions = {},
 ) {
+  return attemptMetaWhatsAppMediaImportAs(
+    db,
+    { actorId, access: "tenant_member" },
+    input,
+    dependencies,
+    options,
+  );
+}
+
+async function attemptMetaWhatsAppMediaImportAs(
+  db: DbClient,
+  identity: MediaImportExecutionIdentity,
+  input: z.input<typeof processInputSchema>,
+  dependencies: ChannelProviderMediaImportDependencies,
+  options: ChannelProviderMediaImportWorkerOptions,
+) {
   const parsed = processInputSchema.parse(input);
   const attemptedAt = options.now ?? new Date(nowIso());
   const attemptedAtIso = attemptedAt.toISOString();
@@ -222,9 +281,11 @@ export async function attemptMetaWhatsAppMediaImport(
   const prepared = await withTenantDbTransaction(
     db,
     parsed.tenantId,
-    actorId,
+    identity.actorId,
     async (transaction) => {
-      await assertWorkerAccess(transaction, actorId, parsed.tenantId);
+      if (identity.access === "tenant_member") {
+        await assertWorkerAccess(transaction, identity.actorId, parsed.tenantId);
+      }
       const beforeClaim = await findChannelProviderMediaImportExecution(
         transaction,
         parsed,
@@ -238,7 +299,7 @@ export async function attemptMetaWhatsAppMediaImport(
       });
       if (!claimed) return { row: beforeClaim, replayed: true as const };
 
-      await auditExecution(transaction, actorId, claimed, "attempted");
+      await auditExecution(transaction, identity.actorId, claimed, "attempted");
       const context = await findChannelProviderMediaImportContext(transaction, parsed);
       if (
         !context ||
@@ -249,7 +310,7 @@ export async function attemptMetaWhatsAppMediaImport(
       ) {
         return finalizeWithoutIo(
           transaction,
-          actorId,
+          identity.actorId,
           claimed,
           leaseId,
           attemptedAtIso,
@@ -263,7 +324,7 @@ export async function attemptMetaWhatsAppMediaImport(
       ) {
         return finalizeWithoutIo(
           transaction,
-          actorId,
+          identity.actorId,
           claimed,
           leaseId,
           attemptedAtIso,
@@ -278,7 +339,7 @@ export async function attemptMetaWhatsAppMediaImport(
             : "media_import_not_configured";
         return finalizeWithoutIo(
           transaction,
-          actorId,
+          identity.actorId,
           claimed,
           leaseId,
           attemptedAtIso,
@@ -288,7 +349,7 @@ export async function attemptMetaWhatsAppMediaImport(
       }
       const policy = await evaluatePolicySafely(dependencies.evaluatePolicy, {
         tenantId: parsed.tenantId,
-        actorId,
+        actorId: identity.actorId,
         mediaImportId: parsed.mediaImportId,
         provider: "whatsapp_meta",
         mediaKind: context.media_kind,
@@ -296,7 +357,7 @@ export async function attemptMetaWhatsAppMediaImport(
       if (!policy.allowed) {
         return finalizeWithoutIo(
           transaction,
-          actorId,
+          identity.actorId,
           claimed,
           leaseId,
           attemptedAtIso,
@@ -307,7 +368,7 @@ export async function attemptMetaWhatsAppMediaImport(
       if (!dependencies.cipher || dependencies.cipher.keyVersion !== context.key_version) {
         return finalizeWithoutIo(
           transaction,
-          actorId,
+          identity.actorId,
           claimed,
           leaseId,
           attemptedAtIso,
@@ -337,7 +398,7 @@ export async function attemptMetaWhatsAppMediaImport(
       } catch {
         return finalizeWithoutIo(
           transaction,
-          actorId,
+          identity.actorId,
           claimed,
           leaseId,
           attemptedAtIso,
@@ -402,7 +463,7 @@ export async function attemptMetaWhatsAppMediaImport(
     }
     return finalizeIoOutcome(
       db,
-      actorId,
+      identity,
       prepared.row,
       leaseId,
       outcome,
@@ -431,12 +492,55 @@ export async function processMetaWhatsAppMediaImportWorker(
       limit,
     });
   });
-  const summary = { selected: due.length, processed: 0, succeeded: 0, retried: 0, failed: 0, skipped: 0 };
+  const summary = emptyWorkerSummary(
+    mediaImportRuntimeState(dependencies),
+    due.length,
+  );
   for (const item of due) {
     const result = await processMetaWhatsAppMediaImport(
       db,
       actorId,
       { tenantId, mediaImportId: item.media_import_id },
+      dependencies,
+      { ...options, now },
+    );
+    if (result.idempotentReplay) summary.skipped += 1;
+    else {
+      summary.processed += 1;
+      if (result.status === "succeeded") summary.succeeded += 1;
+      else if (result.retryable) summary.retried += 1;
+      else summary.failed += 1;
+    }
+  }
+  return summary;
+}
+
+/**
+ * Composition du worker applicatif. Sur PostgreSQL, l'appelant doit fournir un
+ * contexte `app.system_access=true`; la sélection globale reste alors bornée,
+ * puis chaque traitement conserve le `tenant_id` de sa réservation.
+ */
+export async function processMetaWhatsAppMediaImportsSystemWorker(
+  db: DbClient,
+  dependencies: ChannelProviderMediaImportDependencies | undefined,
+  options: ChannelProviderMediaImportWorkerOptions = {},
+): Promise<ChannelProviderMediaImportWorkerSummary> {
+  const state = mediaImportRuntimeState(dependencies);
+  if (state !== "mock" || !dependencies) return emptyWorkerSummary(state);
+
+  await assertSystemContextWhenPostgres(db);
+  const now = options.now ?? new Date(nowIso());
+  const limit = boundedInteger(options.limit, 25, 100);
+  const due = await listActionableChannelProviderMediaImportsForSystem(db, {
+    dueAt: now.toISOString(),
+    limit,
+  });
+  const summary = emptyWorkerSummary("mock", due.length);
+  for (const item of due) {
+    const result = await processMetaWhatsAppMediaImportAs(
+      db,
+      { actorId: systemActorId, access: "system" },
+      { tenantId: item.tenant_id, mediaImportId: item.media_import_id },
       dependencies,
       { ...options, now },
     );
@@ -471,7 +575,7 @@ type FinalOutcome = {
 
 async function finalizeIoOutcome(
   db: DbClient,
-  actorId: string,
+  identity: MediaImportExecutionIdentity,
   claimed: ChannelProviderMediaImportExecutionRow,
   leaseId: string,
   outcome: FinalOutcome,
@@ -491,8 +595,14 @@ async function finalizeIoOutcome(
       ? failedOutcome("permanent", "media_import_max_attempts_exceeded", false)
       : { ...outcome, retryable };
 
-  return withTenantDbTransaction(db, claimed.tenant_id, actorId, async (transaction) => {
-    await assertWorkerAccess(transaction, actorId, claimed.tenant_id);
+  return withTenantDbTransaction(
+    db,
+    claimed.tenant_id,
+    identity.actorId,
+    async (transaction) => {
+    if (identity.access === "tenant_member") {
+      await assertWorkerAccess(transaction, identity.actorId, claimed.tenant_id);
+    }
     if (attachment) {
       await insertConversationAttachment(transaction, {
         ...attachment,
@@ -512,9 +622,10 @@ async function finalizeIoOutcome(
     if (!finalized) {
       throw workerError("channel_provider_media_import_not_actionable");
     }
-    await auditExecution(transaction, actorId, finalized, "completed");
+    await auditExecution(transaction, identity.actorId, finalized, "completed");
     return mapExecution(finalized, false);
-  });
+    },
+  );
 }
 
 async function finalizeWithoutIo(
@@ -586,6 +697,53 @@ async function auditExecution(
 
 async function assertWorkerAccess(db: DbClient, actorId: string, tenantId: string) {
   await assertTenantAccess(db, actorId, tenantId, workerRoles);
+}
+
+function mediaImportRuntimeState(
+  dependencies: ChannelProviderMediaImportDependencies | undefined,
+): MediaImportRuntimeMode {
+  if (!dependencies) return "not_configured";
+  if (
+    dependencies.provider.state === "disabled" ||
+    dependencies.storage.state === "disabled"
+  ) {
+    return "disabled";
+  }
+  if (
+    dependencies.provider.state === "mock" &&
+    dependencies.storage.state === "mock" &&
+    dependencies.cipher
+  ) {
+    return "mock";
+  }
+  return "not_configured";
+}
+
+function emptyWorkerSummary(
+  state: MediaImportRuntimeMode,
+  selected = 0,
+): ChannelProviderMediaImportWorkerSummary {
+  return {
+    state,
+    selected,
+    processed: 0,
+    succeeded: 0,
+    retried: 0,
+    failed: 0,
+    skipped: 0,
+  };
+}
+
+async function assertSystemContextWhenPostgres(db: DbClient) {
+  const runtime = db as DbClient & { __runtime?: "postgres" };
+  if (runtime.__runtime !== "postgres") return;
+  const result = await db.query<{ allowed: boolean | string | number }>(
+    "select app_is_system() as allowed",
+  );
+  const allowed = result.rows[0]?.allowed;
+  if (!(allowed === true || allowed === "true" || allowed === 1)) {
+    throw new Error("Le worker média exige un contexte système PostgreSQL.");
+  }
 }
 
 async function evaluatePolicySafely(

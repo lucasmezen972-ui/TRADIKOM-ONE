@@ -42,6 +42,7 @@ export type ChannelProviderMediaImportContextRow = {
   encrypted_provider_reference: string | null;
   key_version: string | null;
   endpoint_status: "active" | "disabled";
+  endpoint_created_by: string;
   message_status: "received" | "pending" | "sent" | "delivered" | "failed";
 };
 
@@ -60,6 +61,7 @@ export async function findChannelProviderMediaImportContext(
             media_import.encrypted_provider_reference,
             media_import.key_version,
             endpoint.status as endpoint_status,
+            endpoint.created_by as endpoint_created_by,
             message.status as message_status
      from channel_provider_media_imports media_import
      join channel_provider_endpoints endpoint
@@ -73,6 +75,47 @@ export async function findChannelProviderMediaImportContext(
     [input.tenantId, input.mediaImportId],
   );
   return result.rows[0] ?? null;
+}
+
+export async function listActionableChannelProviderMediaImportsForSystem(
+  db: DbClient,
+  input: { dueAt: string; limit: number },
+) {
+  const result = await db.query<{
+    tenant_id: string;
+    media_import_id: string;
+  }>(
+    `select media_import.tenant_id, media_import.id as media_import_id
+     from channel_provider_media_imports media_import
+     left join channel_provider_media_import_executions execution
+       on execution.tenant_id = media_import.tenant_id
+      and execution.media_import_id = media_import.id
+     where media_import.provider = 'whatsapp_meta'
+       and media_import.reservation_status = 'pending'
+       and (
+         execution.id is null
+         or (
+           execution.attempts < execution.max_attempts
+           and execution.next_attempt_at <= $1
+           and (execution.lease_id is null or execution.lease_expires_at <= $1)
+           and (
+             execution.status = 'reserved'
+             or (
+               execution.status = 'failed'
+               and execution.retryable = true
+               and execution.failure_classification = 'temporary'
+             )
+           )
+         )
+       )
+     order by coalesce(execution.next_attempt_at, media_import.created_at) asc,
+              media_import.created_at asc,
+              media_import.tenant_id asc,
+              media_import.id asc
+     limit $2`,
+    [input.dueAt, input.limit],
+  );
+  return result.rows;
 }
 
 export async function reserveChannelProviderMediaImportExecution(

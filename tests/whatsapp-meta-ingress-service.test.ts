@@ -11,6 +11,7 @@ import {
   type ChannelProviderMediaReferenceCipher,
 } from "../src/modules/channels";
 import { getConversationThread } from "../src/modules/conversation-hub";
+import { runWorkerBatch } from "../src/worker/runtime";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const appSecret = "meta_app_secret_for_ingress_tests_123456";
@@ -410,6 +411,180 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     for (const sensitive of [mediaId, checksum, fileName, `mock:media/${checksum}`]) {
       expect(audits).not.toContain(sensitive);
     }
+  }, 20_000);
+
+  it("laisse la file générique fail-closed sans configuration média", async () => {
+    const setup = await createSetup();
+    const checksum = createHash("sha256")
+      .update(new TextEncoder().encode("%PDF-1.7\nfile fail-closed"))
+      .digest("hex");
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(
+        documentPayload({ mediaId: "2754859441498996", checksum }),
+      ),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    expect(inbound).toMatchObject({ accepted: true });
+
+    const batch = await runWorkerBatch({
+      db: setup.db,
+      now: new Date("2026-07-30T16:22:00.000Z"),
+    });
+
+    expect(batch.mediaImports).toEqual({
+      state: "not_configured",
+      selected: 0,
+      processed: 0,
+      succeeded: 0,
+      retried: 0,
+      failed: 0,
+      skipped: 0,
+    });
+    expect(
+      (await setup.db.query("select id from channel_provider_media_import_executions"))
+        .rows,
+    ).toEqual([]);
+    expect(
+      (await setup.db.query("select id from conversation_message_attachments")).rows,
+    ).toEqual([]);
+  }, 20_000);
+
+  it("désactive la file générique avant toute lecture ou écriture fournisseur", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\nfile désactivée");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(
+        documentPayload({ mediaId: "2754859441498998", checksum }),
+      ),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    const fetchMedia = vi.fn();
+    const storeMedia = vi.fn();
+
+    const batch = await runWorkerBatch({
+      db: setup.db,
+      now: new Date("2026-07-30T16:22:00.000Z"),
+      mediaImportDependencies: {
+        cipher: mediaReferenceCipher,
+        provider: { state: "disabled", fetch: fetchMedia },
+        storage: { state: "mock", store: storeMedia },
+        evaluatePolicy: vi.fn(),
+      },
+    });
+
+    expect(batch.mediaImports).toEqual({
+      state: "disabled",
+      selected: 0,
+      processed: 0,
+      succeeded: 0,
+      retried: 0,
+      failed: 0,
+      skipped: 0,
+    });
+    expect(fetchMedia).not.toHaveBeenCalled();
+    expect(storeMedia).not.toHaveBeenCalled();
+    expect(
+      (await setup.db.query("select id from channel_provider_media_import_executions"))
+        .rows,
+    ).toEqual([]);
+  }, 20_000);
+
+  it("reprend automatiquement une réservation signée via le worker générique mock", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\npreuve worker générique");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    const mediaId = "2754859441498997";
+    const fileName = "preuve-worker-generique.pdf";
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId, checksum, fileName })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const fetchMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      bytes,
+      mediaType: "application/pdf",
+    });
+    const storeMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      storageReference: `mock:media/${checksum}`,
+    });
+    const evaluatePolicy = vi.fn().mockResolvedValue({ allowed: true as const });
+    const mediaImportDependencies = {
+      cipher: mediaReferenceCipher,
+      provider: { state: "mock" as const, fetch: fetchMedia },
+      storage: { state: "mock" as const, store: storeMedia },
+      evaluatePolicy,
+    };
+
+    const first = await runWorkerBatch({
+      db: setup.db,
+      now: new Date("2026-07-30T16:22:00.000Z"),
+      mediaImportDependencies,
+    });
+    const replay = await runWorkerBatch({
+      db: setup.db,
+      now: new Date("2026-07-30T16:23:00.000Z"),
+      mediaImportDependencies,
+    });
+
+    expect(first.mediaImports).toEqual({
+      state: "mock",
+      selected: 1,
+      processed: 1,
+      succeeded: 1,
+      retried: 0,
+      failed: 0,
+      skipped: 0,
+    });
+    expect(replay.mediaImports).toEqual({
+      state: "mock",
+      selected: 0,
+      processed: 0,
+      succeeded: 0,
+      retried: 0,
+      failed: 0,
+      skipped: 0,
+    });
+    expect(fetchMedia).toHaveBeenCalledTimes(1);
+    expect(storeMedia).toHaveBeenCalledTimes(1);
+    expect(evaluatePolicy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: setup.tenant.id,
+        actorId: "system_whatsapp_meta",
+        provider: "whatsapp_meta",
+      }),
+    );
+    const thread = await getConversationThread(
+      setup.db,
+      setup.owner.id,
+      setup.tenant.id,
+      inbound.threadId,
+    );
+    expect(thread.messages[0]?.attachments).toEqual([
+      expect.objectContaining({ fileName, storageReference: `mock:media/${checksum}` }),
+    ]);
+    expect(
+      (
+        await setup.db.query<{ actor_id: string }>(
+          `select actor_id from audit_logs
+           where action = 'channel.provider_media_import_succeeded'`,
+        )
+      ).rows,
+    ).toEqual([{ actor_id: "system_whatsapp_meta" }]);
+    expect(
+      (
+        await setup.db.query<{ created_by: string }>(
+          "select created_by from channel_provider_media_import_executions",
+        )
+      ).rows,
+    ).toEqual([{ created_by: setup.owner.id }]);
   }, 20_000);
 
   it("planifie un retry temporaire sans doubler le stockage puis réussit", async () => {
