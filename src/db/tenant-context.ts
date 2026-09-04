@@ -37,6 +37,35 @@ export async function withTenantDbTransaction<T>(
   }
 }
 
+export async function withTenantSystemDbTransaction<T>(
+  db: DbClient,
+  tenantId: string,
+  actorId: string,
+  callback: (client: DbClient) => Promise<T>,
+) {
+  const client = db as TransactionClient;
+  if (client.__transaction) return callback(db);
+  if (client.__runtime === "postgres") {
+    if (!client.__withTransaction) {
+      throw new Error("PostgreSQL client does not expose transaction capability.");
+    }
+    return client.__withTransaction(
+      { tenantId, actorId, systemAccess: true },
+      callback,
+    );
+  }
+
+  await db.query("begin");
+  try {
+    const result = await callback(db);
+    await db.query("commit");
+    return result;
+  } catch (error) {
+    await db.query("rollback");
+    throw error;
+  }
+}
+
 export async function withSystemDbTransaction<T>(
   db: DbClient,
   callback: (client: DbClient) => Promise<T>,

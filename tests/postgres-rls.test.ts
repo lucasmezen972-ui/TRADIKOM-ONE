@@ -143,12 +143,21 @@ describeIfPostgres("PostgreSQL RLS", () => {
         and namespaces.nspname = 'public'
         and (
           not tables.relrowsecurity
-          or not exists (
-            select 1
-            from pg_policies as policies
-            where policies.schemaname = 'public'
-              and policies.tablename = columns.table_name
-              and policies.cmd = 'ALL'
+          or (
+            not exists (
+              select 1
+              from pg_policies as policies
+              where policies.schemaname = 'public'
+                and policies.tablename = columns.table_name
+                and policies.cmd = 'ALL'
+            )
+            and (
+              select count(distinct policies.cmd)
+              from pg_policies as policies
+              where policies.schemaname = 'public'
+                and policies.tablename = columns.table_name
+                and policies.cmd in ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+            ) < 4
           )
         )
       order by columns.table_name
@@ -262,6 +271,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
       tenantA.id,
       async (client) =>
         client.query<{ id: string }>("select id from conversation_messages"),
+      ownerA.id,
     );
     expect(tenantAMessages.rows).toEqual([{ id: conversation.messageAId }]);
     const tenantAPlans = await withTenantContext(
@@ -269,6 +279,7 @@ describeIfPostgres("PostgreSQL RLS", () => {
       tenantA.id,
       async (client) =>
         client.query<{ id: string }>("select id from conversation_action_plans"),
+      ownerA.id,
     );
     expect(tenantAPlans.rows).toEqual([{ id: conversation.planAId }]);
     const tenantAEmailRows = await withTenantContext(
@@ -3377,12 +3388,16 @@ async function withTenantContext<T>(
   pool: Pool,
   tenantId: string,
   callback: (client: PoolClient) => Promise<T>,
+  actorId?: string,
 ) {
   const client = await pool.connect();
 
   try {
     await client.query("begin");
     await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+    if (actorId) {
+      await client.query("select set_config('app.actor_id', $1, true)", [actorId]);
+    }
     const result = await callback(client);
     await client.query("commit");
     return result;

@@ -29,14 +29,25 @@ describeIfPostgres("RLS PostgreSQL de la classification des fils", () => {
     const unique = randomUUID().replaceAll("-", "");
     const tenantA = `tenant_thread_access_a_${unique}`;
     const tenantB = `tenant_thread_access_b_${unique}`;
+    const actorA = `user_thread_access_a_${unique}`;
     const threadA = `thread_access_a_${unique}`;
     const threadB = `thread_access_b_${unique}`;
+    await ownerDb.query(
+      `insert into users (id, name, email, password_hash, created_at)
+       values ($1, 'Acteur A', $1 || '@example.test', 'hash', $2)`,
+      [actorA, timestamp],
+    );
     await ownerDb.query(
       `insert into tenants (id, name, slug, category, created_at)
        values
          ($1, 'Organisation A', $1, 'Services', $3),
          ($2, 'Organisation B', $2, 'Services', $3)`,
       [tenantA, tenantB, timestamp],
+    );
+    await ownerDb.query(
+      `insert into memberships (tenant_id, user_id, role, created_at)
+       values ($1, $2, 'collaborator', $3)`,
+      [tenantA, actorA, timestamp],
     );
     await ownerDb.query(
       `insert into conversation_threads (
@@ -47,16 +58,25 @@ describeIfPostgres("RLS PostgreSQL de la classification des fils", () => {
          ($3, $4, 'open', null, 'secret', 'personal', $5, $5)`,
       [threadA, tenantA, threadB, tenantB, timestamp],
     );
+    await ownerDb.query(
+      `insert into conversation_thread_access_grants (
+         tenant_id, thread_id, user_id, scope, granted_by_user_id, granted_at
+       ) values ($1, $2, $3, 'team', $3, $4)`,
+      [tenantA, threadA, actorA, timestamp],
+    );
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
     const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
     restrictedPools.push(restrictedPool);
-    const own = await withTenantContext(restrictedPool, tenantA, (client) =>
-      client.query(
+    const own = await withTenantContext(
+      restrictedPool,
+      tenantA,
+      (client) => client.query(
         `select id, confidentiality_level, visibility_scope
          from conversation_threads order by id`,
       ),
+      actorA,
     );
     expect(own.rows).toEqual([{
       id: threadA,
@@ -72,6 +92,7 @@ describeIfPostgres("RLS PostgreSQL de la classification des fils", () => {
          where tenant_id = $1 and id = $2 returning id`,
         [tenantB, threadB],
       ),
+      actorA,
     );
     expect(crossUpdate.rows).toEqual([]);
     await expect(
@@ -86,6 +107,7 @@ describeIfPostgres("RLS PostgreSQL de la classification des fils", () => {
            )`,
           [tenantB, timestamp],
         ),
+        actorA,
       ),
     ).rejects.toThrow(/row-level security|violates/i);
   });
@@ -119,11 +141,15 @@ async function withTenantContext<T>(
   pool: Pool,
   tenantId: string,
   callback: (client: PoolClient) => Promise<T>,
+  actorId?: string,
 ) {
   const client = await pool.connect();
   try {
     await client.query("begin");
     await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+    if (actorId) {
+      await client.query("select set_config('app.actor_id', $1, true)", [actorId]);
+    }
     const result = await callback(client);
     await client.query("commit");
     return result;

@@ -1,6 +1,7 @@
 import {
   withSystemDbTransaction,
   withTenantDbTransaction,
+  withTenantSystemDbTransaction,
 } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { hashToken, id, nowIso } from "@/lib/security";
@@ -392,7 +393,7 @@ export async function configureConversationThreadAccess(
     }),
   );
 
-  return withTenantDbTransaction(
+  return withTenantSystemDbTransaction(
     db,
     parsed.tenantId,
     userId,
