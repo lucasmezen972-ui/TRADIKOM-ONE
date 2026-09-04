@@ -1,21 +1,21 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T22:48:15.000Z",
+  "updatedAt": "2026-09-04T23:27:26.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "517a8a73acf9f4f07afe254dd84c8489e2f6e37a",
+  "lastCommit": "8f156fb03b1b76406dea1c864b6e9f6435f81115",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_workflow_event_thread_access_complete_local_only_rls_extension_next_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_conversation_intra_tenant_rls_complete_local_only_postgres_ci_pending_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La non-fuite des événements durables liés aux plans Conversation OS-1/OS-4 est livrée localement. Les listes actives et dead-letter masquent les événements d'un fil inaccessible; annulation et relance génériques revalident le droit dans leur transaction; le payload n'est jamais rendu; une pagination bornée évite que des événements masqués évincent les événements génériques accessibles; seuls des agrégats de statut sans identifiant restent tenant-wide. Prochaine tranche de sécurité non bloquée : porter cette frontière d'accès dans les politiques RLS PostgreSQL des objets Conversation dérivés. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
+  "currentObjective": "La frontière d'accès des fils personal/team/case est désormais portée dans PostgreSQL RLS pour empêcher un rôle applicatif restreint de contourner le service par select ou écriture directe. Fils, participants de fil, messages, pièces jointes, hops, plans, étapes, validations, missions et événements dérivés héritent du droit actif; les objets workflow/domain_event génériques restent tenant-scoped; le bypass système est borné à app_is_system() et la configuration administrateur conserve un contexte serveur explicite. La preuve PostgreSQL réelle attend la CI faute de DATABASE_URL locale. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 15, 16, 17, 18, 22, 24, 28, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 16, 17, 18, 22, 28, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "6-7 Architecture cible et Conversation Hub canonique",
@@ -28,16 +28,16 @@
         "38-39 Abstraction IA et évaluations adversariales",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
-        "58 Provider runtime derrière policy, mission, idempotence et audit",
-        "62 WebChat minimal : fil, plans, décisions et travail en cours",
+        "Accès Conversation dérivé : fils, messages, pièces jointes, plans, missions et événements",
+        "RLS PostgreSQL : app.actor_id, membership actif, droits du fil et bypass système borné",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 exigent que les droits de la conversation suivent chaque preuve et action dérivée. Les pages 17-18 imposent permissions, mission durable et reprise idempotente. Les pages 22, 28, 32, 37 et 69 exigent isolation tenant/RLS, dead-letter inspectable, refus de permission, minimisation et tests workflow/sécurité. Filtrer les événements actifs et incidents/dead letters liés à un plan Conversation inaccessible; refuser leurs commandes génériques d'annulation et de relance après révocation dans la transaction de mutation. Ne jamais exposer le payload; conserver uniquement des agrégats de statut non identifiants. Les événements génériques non liés à Conversation restent compatibles. Aucun OS-6, CRM, Kanban, dashboard secondaire, provider réel, Graph, activation externe, LLM ou outil.",
-      "evidenceExpected": "Preuve obtenue localement : les lignes internes chargent le payload uniquement pour résoudre planId/runId, mais les types publics ne le rendent jamais; listes active et dead-letter masquées après révocation; annulation et relance retournent une absence non énumérable sans modifier statut, tentatives ou audit; pagination par lots de 50 prouvée avec treize reprises restreintes avant un événement générique visible; agrégats de statut non identifiants conservés tenant-wide; événements génériques et fils tenant compatibles. Ciblés 3 fichiers/27 tests verts; régression Conversation/workflows/vues 21 fichiers verts et 2 PostgreSQL ignorés, 96 tests verts et 2 ignorés; suite exhaustive 146 fichiers verts et 10 ignorés, 724 tests verts et 23 ignorés sans DATABASE_URL; ESLint complet, TypeScript, build production et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer en CI. Fournisseurs toujours disabled/not_configured/mock et zéro IO externe."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 imposent qu'un fil soit la source canonique et que ses droits suivent messages, pièces jointes et preuves. Les pages 16-18 imposent permissions, plans et missions durables. Les pages 22, 28, 32, 37-38 et 69 exigent isolation tenant/RLS, refus de permission, entrées non fiables et tests de sécurité. Remplacer les politiques tenant-only des objets Conversation et dérivés par une autorisation liée à app.actor_id et au droit actif du fil; conserver les objets workflow/domain_event génériques accessibles au tenant; refuser les select et écritures directes sur les objets protégés; garder app_is_system() comme unique bypass borné. Aucun OS-6, CRM, Kanban, dashboard secondaire, provider réel, Graph, activation externe, LLM ou outil.",
+      "evidenceExpected": "Preuve locale obtenue : migration RLS runtime 114 et miroir SQL 0108 identiques; six helpers SECURITY INVOKER et politiques séparées SELECT/INSERT/UPDATE/DELETE sur onze tables; droit de fil propagé aux relations, messages, pièces jointes, hops, plans, étapes, validations, workflow_runs, workflow_run_steps et domain_events; workflow/domain_event génériques compatibles; parsing événement fail-closed; drapeau système forgé couvert dans le test restricted-role. Le contexte serveur tenant+acteur+systemAccess est réservé à la configuration propriétaire/administrateur et testé. Toutes les migrations RLS passent le moteur embarqué. Ciblés : 14 tests verts et 1 PostgreSQL ignoré; régression Conversation/workflows : 105 verts et 3 ignorés; suite exhaustive : 147 fichiers/727 tests verts, 11 fichiers/24 tests ignorés; ESLint, TypeScript, build production et diff check verts. `db:verify` et le test restricted-role complet restent à exécuter en CI car DATABASE_URL est absente. Zéro secret, provider ou IO externe."
     }
   },
-  "nextAction": "Ajouter une migration additive runtime et son miroir SQL pour que les politiques RLS PostgreSQL des fils, messages, pièces jointes, plans, étapes, missions et événements dérivés appliquent app.actor_id et les droits actifs, avec bypass système borné; ajouter les tests restricted-role select/write et relations, sans affaiblir l'isolation tenant ni démarrer OS-6. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
-  "nextFile": "src/lib/db.ts",
+  "nextAction": "Attendre l'ordre explicite « publie et lance la CI », puis revérifier le head distant 28efa750935b2766de3410b8d9c0d5e3c4e2dbe8, publier uniquement en fast-forward sûr et exécuter la preuve PostgreSQL/RLS, migrations, Playwright et build sans contourner l'audit npm. Si la CI révèle un écart, corriger cette tranche avant toute nouvelle étape; goal-watch/OS-6 reste hors périmètre.",
+  "nextFile": "tests/conversation-derived-access-postgres-rls.test.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1700,6 +1700,22 @@
     {
       "command": "audit de la prochaine frontière RLS intra-tenant",
       "status": "gap_identified_existing_conversation_plan_workflow_and_domain_event_rls_is_tenant_scoped_only_add_actor_thread_grant_policies_and_restricted_role_tests_next_no_os6"
+    },
+    {
+      "command": "prompt maître, continuity-check, changelog et documentation RLS Supabase, puis GitHub le 2026-09-04T22:58Z",
+      "status": "passed_sha256_exact_71_pages_core_and_rls_pages_reviewed_direct_pnpm_ready_supabase_no_relevant_breaking_rls_change_official_operation_policies_reviewed_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_npm_timeout_no_mutation"
+    },
+    {
+      "command": "RLS intra-tenant des objets Conversation dérivés au commit local 8f156fb03b1b76406dea1c864b6e9f6435f81115",
+      "status": "passed_runtime_migration_114_sql_0108_six_security_invoker_helpers_eleven_tables_separate_select_insert_update_delete_policies_actor_membership_active_thread_grant_generic_workflows_events_compatible_safe_event_json_system_flag_forgery_denied_admin_configuration_context_bounded_no_external_io"
+    },
+    {
+      "command": "tests ciblés et régression Conversation workflows RLS",
+      "status": "passed_targeted_3_files_14_tests_1_postgres_test_skipped_regression_21_files_105_tests_3_postgres_tests_skipped_without_database_url_all_rls_migrations_syntax_green_in_embedded_engine"
+    },
+    {
+      "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T23:27Z",
+      "status": "passed_full_147_files_727_tests_11_files_24_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_database_verify_and_restricted_role_ci_pending"
     }
   ],
   "humanBlockers": [

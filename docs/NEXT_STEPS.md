@@ -4,9 +4,26 @@
 
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 10-18, 22-24, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; la protection des événements et incidents dérivés d'un plan Conversation est conservée localement dans `517a8a73acf9f4f07afe254dd84c8489e2f6e37a`, sans push. Après le présent handoff, la branche sera en avance de vingt-cinq commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates RLS 10-12, 16-18, 22, 28, 35-38 et 43-44 ont été relues directement le 4 septembre 2026.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; la RLS intra-tenant des objets Conversation dérivés est conservée localement dans `8f156fb03b1b76406dea1c864b6e9f6435f81115`, sans push. Après le présent handoff, la branche sera en avance de vingt-sept commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
+
+## Tranche applicative locale terminée : RLS intra-tenant héritée du fil
+
+- La migration runtime `114_os5_conversation_derived_access_rls` et son miroir `0108_os5_conversation_derived_access_rls.sql` sont strictement identiques. Six helpers `SECURITY INVOKER` appliquent tenant, `app.actor_id`, membership et droit actif du fil sans fonction `SECURITY DEFINER`.
+- Onze tables utilisent désormais des politiques distinctes `SELECT`, `INSERT`, `UPDATE` et `DELETE` : fils, participants de fil, messages, pièces jointes, hops, plans, étapes, validations, missions, étapes de mission et événements durables. Les policies de mise à jour contrôlent l'ancienne et la nouvelle ligne.
+- Les missions `conversation_plan:*` et les événements portant `planId` ou `runId` héritent du fil. Les workflows, validations et événements génériques restent tenant-scoped; un payload invalide ne provoque pas d'exception et `conversation.plan.execute` échoue fermé sans plan résolu.
+- Un rôle restreint ne peut pas transformer `app.system_access=true` en bypass : `app_is_system()` exige toujours l'appartenance au rôle propriétaire. La configuration des droits par propriétaire/administrateur utilise un contexte serveur tenant+acteur+system explicite, après contrôle de rôle dans la même transaction.
+- Les anciens tests PostgreSQL ont été alignés sur le contexte acteur et le contrôle global accepte soit une policy `ALL`, soit les quatre policies par opération. Le nouveau test restricted-role couvre acteur autorisé, membre exclu, autre tenant, lecture et mutation, objets génériques et drapeau système forgé.
+- Preuves locales : toutes les migrations RLS se chargent dans le moteur embarqué; ciblés 14 tests verts et 1 PostgreSQL ignoré; régression Conversation/workflows 105 verts et 3 ignorés; suite exhaustive 147 fichiers/727 tests verts et 11 fichiers/24 tests ignorés. ESLint, TypeScript, build production et diff check sont verts.
+- État honnête : livré localement au commit `8f156fb03b1b76406dea1c864b6e9f6435f81115`. Le comportement restricted-role et `db:verify` attendent PostgreSQL partagé en CI faute de `DATABASE_URL`; aucun fournisseur, secret, Graph, stockage réel, message, activation ou déploiement.
+
+## Reprise exacte
+
+1. Attendre l'ordre explicite « publie et lance la CI ».
+2. Recontrôler que le head distant est toujours `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; ne publier qu'en fast-forward sûr.
+3. Exiger une CI complète : audit npm, migrations et `db:verify`, tests PostgreSQL/RLS dont `conversation-derived-access-postgres-rls`, build et Playwright.
+4. Si la CI révèle un écart, corriger cette tranche avant d'ouvrir une autre étape. Ne pas basculer sur `goal-watch`/OS-6, CRM, Kanban ou dashboard secondaire.
 
 ## Tranche applicative locale terminée : autorisations durables des fils
 
@@ -193,10 +210,10 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les vingt-cinq commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les vingt-sept commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
 2. Vérifier que le head distant est encore exactement `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
-3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
-4. Sans publication, prochaine tranche locale non bloquée : ajouter une migration additive runtime et son miroir SQL pour appliquer `app.actor_id` et les droits actifs aux politiques RLS PostgreSQL des fils, messages, pièces jointes, plans, étapes, missions et événements dérivés; couvrir lecture/écriture restricted-role sans démarrer OS-6.
+3. Exiger une CI verte incluant audit npm, migrations PostgreSQL, `db:verify`, tests restricted-role/RLS, suite exhaustive, build et Playwright avant de classer la RLS intra-tenant prouvée CI.
+4. Si cette CI révèle un écart, corriger la tranche RLS avant toute nouvelle étape; sans publication, ne pas basculer sur `goal-watch`/OS-6, CRM, Kanban ou dashboard secondaire.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
