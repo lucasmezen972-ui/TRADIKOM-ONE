@@ -1,7 +1,12 @@
 import { getDb, migrate, type DbClient } from "@/lib/db";
 import {
+  createUnavailableAttachmentAccessDependencies,
   getConversationThread,
+  getAttachmentAccessRuntimeMode,
   listConversationThreads,
+  prepareConversationAttachmentAccess,
+  readConversationAttachment,
+  type AttachmentAccessDependencies,
 } from "@/modules/conversation-hub";
 import { createTestChannelAdapter } from "@/modules/channels/test-channel";
 import { createWebChannelAdapter } from "@/modules/channels/web-channel";
@@ -13,7 +18,17 @@ import {
   requestConversationActionPlanRetry,
 } from "@/modules/orchestrator";
 
-export function createConversationChannelServices(db: DbClient) {
+export type ConversationChannelServiceDependencies = {
+  attachmentAccess?: AttachmentAccessDependencies;
+};
+
+export function createConversationChannelServices(
+  db: DbClient,
+  dependencies: ConversationChannelServiceDependencies = {},
+) {
+  const attachmentAccess =
+    dependencies.attachmentAccess ??
+    createUnavailableAttachmentAccessDependencies("not_configured");
   return {
     web: createWebChannelAdapter(db),
     test: createTestChannelAdapter(db),
@@ -26,6 +41,33 @@ export function createConversationChannelServices(db: DbClient) {
       messageLimit?: number,
     ) =>
       getConversationThread(db, userId, tenantId, threadId, messageLimit),
+    attachmentAccessState: getAttachmentAccessRuntimeMode(attachmentAccess),
+    prepareAttachmentAccess: (
+      userId: string,
+      tenantId: string,
+      attachmentId: string,
+      ttlSeconds?: number,
+    ) =>
+      prepareConversationAttachmentAccess(
+        db,
+        userId,
+        tenantId,
+        { attachmentId, ...(ttlSeconds === undefined ? {} : { ttlSeconds }) },
+        attachmentAccess,
+      ),
+    readAttachment: (
+      userId: string,
+      tenantId: string,
+      attachmentId: string,
+      ticket: string,
+    ) =>
+      readConversationAttachment(
+        db,
+        userId,
+        tenantId,
+        { attachmentId, ticket },
+        attachmentAccess,
+      ),
     createPlan: (
       userId: string,
       tenantId: string,

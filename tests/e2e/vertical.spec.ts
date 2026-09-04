@@ -1278,6 +1278,9 @@ async function runConversationJourney(
     await expect(page.getByText("preuve-altérée.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("Stockage mock", { exact: true })).toHaveCount(2);
     await expect(
+      page.getByText("Téléchargement non configuré", { exact: true }),
+    ).toHaveCount(2);
+    await expect(
       page.getByText("Contenu externe non fiable", { exact: true }),
     ).toHaveCount(2);
     await expect(

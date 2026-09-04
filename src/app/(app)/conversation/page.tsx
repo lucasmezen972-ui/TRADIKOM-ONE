@@ -201,6 +201,11 @@ export default async function ConversationPage({
                                 ? "Stockage mock"
                                 : "Stockage sécurisé"}
                             </span>
+                            <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+                              {attachmentAccessLabel(
+                                services.attachmentAccessState,
+                              )}
+                            </span>
                             {attachment.extraction ? (
                               <div className="w-full rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-950">
                                 <p className="font-semibold">
@@ -563,6 +568,14 @@ function formatFileSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes} o`;
   if (sizeBytes < 1024 * 1024) return `${Math.ceil(sizeBytes / 1024)} Ko`;
   return `${(sizeBytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
+}
+
+function attachmentAccessLabel(
+  state: ConversationServices["attachmentAccessState"],
+) {
+  if (state === "disabled") return "Téléchargement désactivé";
+  if (state === "mock") return "Accès mock prêt";
+  return "Téléchargement non configuré";
 }
 
 function MessageForm({

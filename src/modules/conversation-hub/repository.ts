@@ -521,6 +521,20 @@ export async function listConversationAttachmentRows(
   return result.rows;
 }
 
+export async function findConversationAttachmentRow(
+  db: DbClient,
+  tenantId: string,
+  attachmentId: string,
+) {
+  const result = await db.query<ConversationAttachmentRow>(
+    `select *
+     from conversation_message_attachments
+     where tenant_id = $1 and id = $2`,
+    [tenantId, attachmentId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function listConversationRouteHopRows(
   db: DbClient,
   tenantId: string,
