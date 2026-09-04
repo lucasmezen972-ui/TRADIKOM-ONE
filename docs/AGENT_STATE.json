@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T17:49:00.000Z",
+  "updatedAt": "2026-09-04T18:41:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "734c8402de5183b840901bd978777d3fb9d16a84",
+  "lastCommit": "422317e8452b3cecea9c0514b8306787e65c6bee",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_attachment_access_complete_local_only_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_attachment_http_boundary_complete_local_only_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Accès court tenant-scoped aux pièces jointes livré localement : ticket opaque AES-256-GCM lié au tenant, à l'utilisateur et au fichier; durée 30-300 secondes; runtime storage explicitement disabled/not_configured/mock; policy avant émission et lecture; revalidation membership et métadonnées avant et après IO; contrôle taille/SHA-256; idempotence stable; audit sans ticket, contenu, nom, checksum ni référence. Le runtime applicatif reste not_configured par défaut et l'interface française l'indique. Prochaine tranche non bloquée : frontière HTTP/session tenant-scoped pour préparer et consommer le ticket sans activer de stockage réel.",
+  "currentObjective": "Frontière HTTP/session tenant-scoped des pièces jointes livrée localement : POST same-origin prépare le ticket, PUT consomme un JSON UTF-8 strict borné sans ticket dans l'URL; session/tenant obligatoires; réponses françaises sans codes internes; no-store/no-referrer/nosniff; nom de téléchargement assaini; route de production not_configured par défaut. Prochaine tranche conversation-first : rendre la confidentialité et la portée de visibilité de la conversation durables et obligatoirement transmises à la policy d'accès aux pièces jointes. Aucun stockage réel, Graph, secret ou effet externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -28,12 +28,12 @@
         "58-59 Runtime provider et webhook signé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Conformément aux pages 11, 22-24 et 37, une pièce jointe reste dans le Conversation Hub canonique, hérite des droits tenant/RLS, ne révèle jamais sa référence de stockage et n'est accessible que par un ticket opaque court lié à l'utilisateur. Le runtime injecté annonce disabled/not_configured/mock et reste not_configured dans l'application sans configuration. Policy avant émission et lecture, revalidation avant/après IO, contrôle taille/SHA-256, idempotence stable, erreurs bornées, audit sans contenu et état français sont obligatoires. Aucun OS-6, CRM, Kanban, dashboard, stockage réel, Graph, URL durable, activation externe, LLM ou outil.",
-      "evidenceExpected": "Preuve obtenue localement : PDF canonique 71 pages/SHA-256 exact et pages 3-7, 10-18, 22-24, 31-33, 35-38, 46, 48, 64-65, 69-71 relues; codec AES-256-GCM dont le ticket ne révèle aucun identifiant; durée 30-300 secondes; liaison tenant/utilisateur/pièce jointe; refus altéré, expiré, autre acteur/pièce/tenant; policy avant émission/lecture; revalidation après IO; contrôle taille/SHA-256; idempotence stable; états disabled/not_configured sans IO et mock seul actionnable; erreurs fournisseur normalisées; audits sans ticket/contenu/nom/checksum/référence; runtime application not_configured et message français. Tests ciblés 5 fichiers/50 tests verts avec 1 fichier/3 tests PostgreSQL-RLS ignorés; régression exhaustive 141 fichiers/693 tests verts avec 8 fichiers/21 tests PostgreSQL ignorés; ESLint, TypeScript, build, continuity-check direct et diff check verts. Playwright démarre l'application mais reste non probant localement car le processus test et le serveur ne partagent pas PGlite; CI PostgreSQL requise."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 11, 14, 22-24, 32, 37 et 64-65 imposent un adaptateur HTTP mince autour du Conversation Hub, session et tenant réévalués, policy dans le service, fichiers bornés, droits hérités, aucune référence de stockage exposée, états français explicites et provider not_configured sans clé. Le ticket court ne doit jamais entrer dans une URL, un log ou une erreur; les mutations HTTP vérifient l'origine, bornent/valident strictement le JSON, interdisent le cache, classent les réponses sans codes internes et produisent un téléchargement nosniff. Aucun OS-6, CRM, Kanban, dashboard, stockage réel, Graph, URL durable, activation externe, LLM ou outil.",
+      "evidenceExpected": "Preuve obtenue : PDF canonique 71 pages/SHA-256 exact et pages 3-7, 10-18, 22-24, 31-33, 35-38, 46, 48, 64-65, 69-71 relues; handler injecté et route Next.js; POST préparation/PUT consommation; origine/session/tenant avant métier; identifiant de chemin borné; ticket seulement en JSON UTF-8 strict limité à 4 Kio; réponses disabled/not_configured/denied/temporary/permanent françaises sans code interne; headers private no-store, nosniff, no-referrer et corrélation; Content-Disposition ASCII+UTF-8 sûr; route production not_configured et zéro provider réel. Tests HTTP adversariaux 17/17; intégration HTTP-service-stockage-audit 1/1; ciblés finaux 3 fichiers/26 tests; régression source exhaustive 142 fichiers/710 tests verts avec 8 fichiers/21 tests PostgreSQL ignorés; ESLint, TypeScript, build avec route inventoriée, continuity-check et diff check verts. PostgreSQL/RLS et Playwright restent à prouver après publication explicitement autorisée et CI complète."
     }
   },
-  "nextAction": "Sans publication, ajouter la frontière HTTP/session tenant-scoped qui prépare puis consomme le ticket court, avec réponses françaises, runtime not_configured par défaut et aucun fournisseur réel. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
-  "nextFile": "src/app/api/conversation/attachments/[attachmentId]/route.ts",
+  "nextAction": "Sans publication, ajouter au fil canonique une confidentialité et une portée de visibilité durables, tenant/RLS, puis les transmettre obligatoirement à la policy de préparation/lecture des pièces jointes. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
+  "nextFile": "src/lib/db.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1588,6 +1588,22 @@
     {
       "command": "Playwright Conversation avec serveur et PGlite temporaires isolés",
       "status": "blocked_before_conversation_on_login_error_because_test_process_and_next_server_do_not_share_local_pglite_ci_postgres_required_no_application_assertion_failed"
+    },
+    {
+      "command": "prompt maître, pnpm continuity-check et GitHub le 2026-09-04T18:19Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pnpm_ready_zero_errors_warnings_pr_open_draft_mergeable_unstable_remote_head_28efa75_continuity_green_ci_unchanged_no_push_or_rerun"
+    },
+    {
+      "command": "frontière HTTP pièces jointes aux commits locaux e24356f951a46abaf8cd5f95a37362463f778c0f et 422317e8452b3cecea9c0514b8306787e65c6bee",
+      "status": "passed_post_prepare_put_consume_same_origin_session_tenant_json_4k_ticket_not_in_url_french_safe_responses_no_store_no_referrer_nosniff_content_disposition_default_not_configured_mock_only_no_external_io"
+    },
+    {
+      "command": "tests HTTP adversariaux, intégration HTTP-service-stockage-audit et régression ciblée",
+      "status": "passed_http_17_tests_integration_1_test_final_3_files_26_tests_targeted_regression_5_files_61_tests_1_postgres_file_3_tests_skipped_without_database_url"
+    },
+    {
+      "command": "régression exhaustive source, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T18:37Z",
+      "status": "passed_full_142_files_710_tests_8_files_21_postgres_tests_skipped_lint_typecheck_build_route_inventoried_diff_google_fonts_network_only"
     }
   ],
   "humanBlockers": [

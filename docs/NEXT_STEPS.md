@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 10-18, 22-24, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; l'accès sécurisé aux pièces jointes est conservé localement dans `734c8402de5183b840901bd978777d3fb9d16a84`, sans push. Après le présent handoff, la branche sera en avance de quatorze commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; la frontière HTTP/session des pièces jointes est conservée localement dans `e24356f951a46abaf8cd5f95a37362463f778c0f` et sa preuve verticale dans `422317e8452b3cecea9c0514b8306787e65c6bee`, sans push. Après le présent handoff, la branche sera en avance de dix-sept commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -133,6 +133,15 @@
 - Le scénario Playwright est adapté. Son exécution locale lance l'application mais s'arrête à l'authentification parce que serveur et test ne partagent pas PGlite; aucune assertion Conversation n'est revendiquée avant CI PostgreSQL.
 - État honnête : livré localement au commit `734c8402de5183b840901bd978777d3fb9d16a84`, mock uniquement par injection de test. Aucun stockage réel, URL durable, Graph, secret ou effet externe.
 
+## Tranche applicative locale terminée : frontière HTTP/session des pièces jointes
+
+- Une route Conversation same-origin expose `POST` pour préparer un ticket court puis `PUT` pour le consommer. La session et le tenant sont résolus avant le service; l'origine, l'identifiant de chemin et la méthode sont refusés en amont lorsqu'ils sont invalides.
+- Le ticket transite uniquement dans un JSON UTF-8 strict borné à 4 Kio, jamais dans l'URL. Les réponses françaises distinguent accès prêt, refusé, désactivé, non configuré et indisponibilité sans exposer de code interne.
+- Toutes les réponses sont privées et non mises en cache, avec `no-referrer`, `nosniff` et corrélation. Le téléchargement binaire fixe type, taille et nom assaini en variantes ASCII et UTF-8.
+- La route de production délègue au service canonique avec runtime `not_configured` par défaut. Aucun client Graph, stockage réel, clé, URL durable ou message externe n'est ajouté.
+- Preuves : 17 tests HTTP adversariaux et 1 intégration réelle handler → service → stockage mock → audit; ciblés finaux 3 fichiers/26 tests; régression ciblée 5 fichiers/61 tests avec 1 fichier/3 tests PostgreSQL ignorés; suite exhaustive source 142 fichiers/710 tests verts avec 8 fichiers/21 tests PostgreSQL ignorés. ESLint, TypeScript, build production, continuity-check et diff check sont verts.
+- État honnête : livré localement aux commits `e24356f951a46abaf8cd5f95a37362463f778c0f` et `422317e8452b3cecea9c0514b8306787e65c6bee`, uniquement avec doubles mock en test et zéro IO externe.
+
 ## Correctif de sécurité CI publié et prouvé
 
 - La CI `33628923602` du head média s'est arrêtée au contrôle des dépendances, avant migrations, tests ou build, sur deux avis élevés affectant `browserslist <= 4.28.6`.
@@ -145,16 +154,17 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les quatorze commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les dix-sept commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
 2. Vérifier que le head distant est encore exactement `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
 3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
-4. Sans publication, prochaine tranche locale non bloquée : ajouter la frontière HTTP/session tenant-scoped qui prépare puis consomme le ticket court, avec réponses françaises et runtime `not_configured` par défaut, sans URL durable, téléchargement fournisseur, stockage réel, LLM ni outil.
+4. Sans publication, prochaine tranche locale non bloquée : rendre la confidentialité et la portée de visibilité du fil canonique durables et tenant/RLS, puis les transmettre obligatoirement à la policy de préparation et de lecture des pièces jointes, sans Graph, stockage réel, LLM ni outil.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
 
 ## Validation disponible
 
+- Frontière HTTP/session locale : 17 tests adversariaux et 1 intégration verticale; ciblés finaux 3 fichiers/26 tests verts; régression ciblée 5 fichiers/61 tests verts avec 1 fichier/3 tests PostgreSQL ignorés. La suite exhaustive source termine à 142 fichiers/710 tests verts et 8 fichiers/21 tests PostgreSQL ignorés; ESLint, TypeScript, build production avec route inventoriée, continuity-check et diff check sont verts. PostgreSQL/RLS et Playwright attendent la CI partagée.
 - Accès pièce jointe local : 5 fichiers conversation/média réussis, 1 fichier PostgreSQL/RLS ignoré, 50 tests réussis et 3 ignorés faute de `DATABASE_URL`; régression exhaustive 141 fichiers/693 tests verts et 8 fichiers/21 tests PostgreSQL ignorés. ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. Playwright est bloqué avant Conversation par l'absence de PostgreSQL partagé entre ses processus locaux.
 - Intégrité d'extraction locale : 4 fichiers/40 tests ciblés verts; régression exhaustive 140 fichiers/685 tests verts et 8 fichiers/21 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. Le scénario Playwright positif/négatif est adapté et attend la CI.
 - Extraction non fiable locale : 3 fichiers/38 tests ciblés verts, 1 fichier/3 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/681 tests verts et 8 fichiers/21 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright attendent la publication explicitement ordonnée puis la CI.
@@ -196,7 +206,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Livré et prouvé CI : dispatch mixte messages/statuts après un seul HMAC, borne globale, prévalidation commune et transaction unique.
 - Livré et prouvé CI : notices françaises pour cinq types média signés, sans téléchargement Graph, pièce jointe fictive ni métadonnée média persistée.
 - Livré et publié, CI externe bloquée : réservation d'import média tenant/RLS, référence fournisseur chiffrée, états explicites, rejeu/collision et audit sans contenu.
-- Livré localement, CI non déclenchée : worker média, scan obligatoire, extraction `external_untrusted_data` persistée/immuable, contrôle SHA-256 à la lecture, vue `data-only` non raccordée et accès court chiffré aux pièces jointes avec policy, revalidation et rendu français; doubles mock uniquement.
+- Livré localement, CI non déclenchée : worker média, scan obligatoire, extraction `external_untrusted_data` persistée/immuable, contrôle SHA-256 à la lecture, vue `data-only` non raccordée, accès court chiffré et frontière HTTP/session same-origin des pièces jointes avec policy, revalidation et réponses françaises; doubles mock uniquement.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -208,10 +218,10 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head 28efa75 est publié et sa continuité 33826756891 est verte. Le commit applicatif local 734c840 ajoute l'accès court sécurisé; la branche sera en avance de quatorze commits après le handoff. La CI 33826756939 a expiré deux fois sur l'API d'audit npm avant migrations/tests; demander l'approbation explicite pour publier et relancer, sans contourner l'audit.
+3. Le head 28efa75 est publié et sa continuité 33826756891 est verte. Les commits locaux 734c840, e24356f et 422317e ajoutent l'accès court, sa frontière HTTP/session et sa preuve verticale; la branche sera en avance de dix-sept commits après le handoff. La CI 33826756939 a expiré deux fois sur l'API d'audit npm avant migrations/tests; demander l'approbation explicite pour publier et relancer, sans contourner l'audit.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
-7. Sans publication, reprendre la frontière HTTP/session tenant-scoped de l'accès court, avec runtime not_configured par défaut, sans Graph, LLM, outil ni stockage réel avant autorisation distincte.
+7. Sans publication, ajouter au fil canonique une confidentialité et une portée de visibilité durables et tenant/RLS, puis les transmettre obligatoirement à la policy d'accès aux pièces jointes, sans Graph, LLM, outil ni stockage réel avant autorisation distincte.
 8. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.
 ```
