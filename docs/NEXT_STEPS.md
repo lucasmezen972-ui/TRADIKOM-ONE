@@ -4,8 +4,8 @@
 
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 10-18, 22-24, 35-38 et 64-65 ont été relues directement le 4 septembre 2026; les pages 23, 38 et 69 ont aussi été inspectées en rendu.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; les commits applicatifs locaux `279b061ec9609dbbf3e5d9aaf21ccd30c9c68052`, `9af546df640a555c76da755bd3139ce541a1196f`, `ca08001929a438f94cf13c889a9f99a0425b67b8` et `4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed` sont conservés sans push. Après le présent handoff, la branche sera en avance de neuf commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 10-18, 22-24, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; le contrôle d'intégrité est conservé localement dans `3df4f7c5f642bfca473820a4efe1f42838c3a5c5` et son scénario Playwright dans `15b2af7949e937b2f59a5cdd6db9728489fb1478`, sans push. Après le présent handoff, la branche sera en avance de douze commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -114,6 +114,15 @@
 - Preuves locales : 3 fichiers/38 tests verts et 1 fichier/3 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/681 tests verts et 8 fichiers/21 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. Le scénario Playwright est prêt mais attend la CI PostgreSQL.
 - État honnête : livré localement au commit `4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed`, extraction mock uniquement. Aucun extracteur/OCR/transcription, LLM, outil, Graph, stockage réel, secret ou effet externe n'est composé.
 
+## Tranche applicative locale terminée : intégrité à la lecture et vue `data-only`
+
+- Toute lecture canonique recalcule le SHA-256 du texte extrait. Un hash incohérent, un format invalide ou un enregistrement partiel retourne seulement `integrity: failed`; le texte et son empreinte ne quittent pas le service.
+- Le contrat de sortie distingue strictement `verified` et `failed`. Conversation affiche « Extraction mock · intégrité vérifiée » pour une preuve valide et « Extraction masquée — intégrité non vérifiée. » en échec fermé.
+- Une fonction séparée prépare une future vue `data-only` uniquement à partir d'une extraction vérifiée. Elle borne le contenu à 8 000 caractères, masque liens publics, adresses privées, jetons Bearer, affectations de secrets et blocs PEM, puis fixe `instructionsAllowed: false`, `toolAccess: forbidden` et `policyMutation: forbidden`.
+- Cette vue n'est appelée par aucun code de production : aucun planificateur, orchestrateur, LLM ou outil n'y est raccordé. L'isolation tenant/RLS et l'immutabilité restent portées par la pièce jointe existante; aucun audit ne reçoit le texte.
+- Preuves locales : 4 fichiers/40 tests ciblés verts; régression exhaustive 140 fichiers/685 tests verts et 8 fichiers/21 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. Le scénario Playwright couvre contenu vérifié et altéré, mais attend la CI PostgreSQL.
+- État honnête : livré localement dans `3df4f7c5f642bfca473820a4efe1f42838c3a5c5` et `15b2af7949e937b2f59a5cdd6db9728489fb1478`; mock uniquement, sans effet externe.
+
 ## Correctif de sécurité CI publié et prouvé
 
 - La CI `33628923602` du head média s'est arrêtée au contrôle des dépendances, avant migrations, tests ou build, sur deux avis élevés affectant `browserslist <= 4.28.6`.
@@ -126,16 +135,17 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les neuf commits locaux et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les douze commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
 2. Vérifier que le head distant est encore exactement `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
 3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
-4. Sans publication, prochaine tranche locale non bloquée : vérifier le SHA-256 du texte extrait lors de la lecture et préparer une vue filtrée `data-only` pour un futur consommateur, sans brancher LLM, outil, OCR, transcription, Graph ni stockage réel.
+4. Sans publication, prochaine tranche locale non bloquée : préparer un accès de pièce jointe tenant-scoped à durée courte avec états stockage `disabled`/`not_configured`/`mock`, sans URL durable, téléchargement fournisseur, stockage réel, LLM ni outil.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
 
 ## Validation disponible
 
+- Intégrité d'extraction locale : 4 fichiers/40 tests ciblés verts; régression exhaustive 140 fichiers/685 tests verts et 8 fichiers/21 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. Le scénario Playwright positif/négatif est adapté et attend la CI.
 - Extraction non fiable locale : 3 fichiers/38 tests ciblés verts, 1 fichier/3 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/681 tests verts et 8 fichiers/21 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright attendent la publication explicitement ordonnée puis la CI.
 - Scanner média local : 2 fichiers/30 tests ciblés verts, 1 fichier/2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/678 tests verts et 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. PostgreSQL/RLS et Playwright attendent la publication explicitement ordonnée puis la CI.
 - Régression coffre/Meta : 14 fichiers réussis, 2 fichiers PostgreSQL ignorés, 91 tests réussis et 2 ignorés faute de `DATABASE_URL`.
@@ -175,7 +185,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Livré et prouvé CI : dispatch mixte messages/statuts après un seul HMAC, borne globale, prévalidation commune et transaction unique.
 - Livré et prouvé CI : notices françaises pour cinq types média signés, sans téléchargement Graph, pièce jointe fictive ni métadonnée média persistée.
 - Livré et publié, CI externe bloquée : réservation d'import média tenant/RLS, référence fournisseur chiffrée, états explicites, rejeu/collision et audit sans contenu.
-- Livré localement, CI non déclenchée : worker média, scan obligatoire et extraction `external_untrusted_data` persistée/immuable, avec rendu français et doubles mock uniquement.
+- Livré localement, CI non déclenchée : worker média, scan obligatoire, extraction `external_untrusted_data` persistée/immuable, contrôle SHA-256 à la lecture, échec fermé et vue `data-only` non raccordée, avec rendu français et doubles mock uniquement.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
 - Mock : transport Meta injecté uniquement dans les tests, sans réseau.
@@ -187,10 +197,10 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head 28efa75 est publié et sa continuité 33826756891 est verte. La CI 33826756939 a expiré deux fois sur l'API d'audit npm avant migrations/tests; demander l'approbation explicite pour la relancer, sans contourner l'audit.
+3. Le head 28efa75 est publié et sa continuité 33826756891 est verte. Les commits applicatifs locaux 3df4f7c et 15b2af7 ajoutent le contrôle d'intégrité et le scénario UI. La CI 33826756939 a expiré deux fois sur l'API d'audit npm avant migrations/tests; demander l'approbation explicite pour publier et relancer, sans contourner l'audit.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
-7. Après CI verte, reprendre le contrôle d'intégrité à la lecture et la vue filtrée `data-only`, sans Graph, LLM, outil ni stockage réel avant autorisation distincte.
+7. Sans publication, reprendre l'accès court et tenant-scoped aux pièces jointes avec stockage explicitement disabled/not_configured/mock, sans Graph, LLM, outil ni stockage réel avant autorisation distincte.
 8. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.
 ```
