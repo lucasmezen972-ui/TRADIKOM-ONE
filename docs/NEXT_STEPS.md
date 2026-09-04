@@ -4,8 +4,8 @@
 
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 11, 14, 22-23 et 64-65 ont été relues directement le 4 septembre 2026; les pages 48 et 69 ont été contrôlées visuellement.
-- Le head local et distant publié est `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucun avis ni défaut applicatif n'a été produit. La troisième relance exige maintenant une approbation utilisateur explicite après l'échec réseau du contrôleur d'autorisation.
+- Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 11, 14, 16-18, 22-23, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; le dépôt local contient le handoff documentaire `cb99df8` et la nouvelle tranche applicative non publiée. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
@@ -74,6 +74,17 @@
 - La réservation est atomique avec le message et le binding. Aucun `fetch`, Graph, stockage, binaire ou `conversation_message_attachments` n'est ajouté.
 - Les tests locaux ciblés et d'ingestion sont verts; PostgreSQL/RLS reste ignoré localement faute de `DATABASE_URL`. La tranche est publiée mais ne sera classée prouvée CI qu'après une exécution complète incluant migrations PostgreSQL, RLS, suite exhaustive et Playwright.
 
+## Tranche applicative locale terminée : import média durable en mock
+
+- Les migrations runtime `107/108` et miroirs SQL `0101/0102` ajoutent une exécution tenant-scoped liée par relation composée à la réservation, avec RLS, index tenant-leading, identité immuable, bail, compteur de tentatives et reprise après échec temporaire.
+- Le worker vérifie le membership, l'endpoint actif et la policy avant de déchiffrer. Il ne peut appeler que des adaptateurs déclarés `mock`; `disabled` et `not_configured` terminent sans lecture ni stockage.
+- Le provider mock reçoit une limite d'octets. Le cœur contrôle ensuite taille réelle, cohérence type média/type métier, signature binaire et SHA-256 avant tout stockage.
+- Le stockage mock reçoit une clé d'idempotence stable. Une réussite crée dans la même transaction exactement une pièce jointe canonique; le rejeu ne refait ni fetch, ni stockage, ni insertion.
+- L'écran Conversation affiche la provenance « WhatsApp », le nom et la taille du fichier et le badge « Stockage mock ». Ni checksum ni référence de stockage ne sont affichés.
+- Les audits conservent seulement modes, état, classification et compteur; Media ID, nom, MIME, checksum, contenu, ciphertext et référence de stockage restent absents.
+- Preuves locales : 24 tests média/migrations verts; deux tests PostgreSQL/RLS ajoutés mais ignorés sans `DATABASE_URL`; régression exhaustive 139 fichiers/672 tests verts, 8 fichiers/20 tests PostgreSQL ignorés; ESLint complet, TypeScript et build production verts. Un scénario Playwright couvre le rendu, mais son exécution attend la CI PostgreSQL partagée.
+- État honnête : livré localement et mock uniquement. Aucun client Graph, stockage Supabase, antivirus, OCR/transcription, secret, message externe ou activation réelle n'est composé.
+
 ## Correctif de sécurité CI publié et prouvé
 
 - La CI `33628923602` du head média s'est arrêtée au contrôle des dépendances, avant migrations, tests ou build, sur deux avis élevés affectant `browserslist <= 4.28.6`.
@@ -86,10 +97,10 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'approbation explicite de l'utilisateur, puis relancer la CI `33826756939` du head publié sans supprimer, ignorer ni affaiblir `pnpm audit`.
-2. Exiger une CI verte incluant PostgreSQL/RLS avant de classer la réservation prouvée.
-3. Après cette preuve, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69 et actualiser `masterPrompt.alignment` pour le traitement différé des réservations.
-4. Préparer sans réseau réel le contrat provider/storage et un journal durable des tentatives : déchiffrement tenant-scoped, limites taille/type, checksum, états explicites, compensation et doubles mock. Ne créer une pièce jointe canonique qu'après une preuve de stockage contrôlé.
+1. Obtenir l'approbation explicite de l'utilisateur pour publier le checkpoint local et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+2. Réconcilier le head distant en lecture seule, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
+3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
+4. Sans publication, prochaine tranche locale non bloquée : composer la file média dans le worker générique avec un mode fail-closed et une identité système tenant-aware, toujours sans Graph ni stockage réel.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.

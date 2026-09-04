@@ -1,37 +1,39 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T11:35:00.000Z",
+  "updatedAt": "2026-09-04T12:11:47.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_meta_media_import_reservation_published_ci_rerun_approval_required_human_otp_pending",
+  "status": "os5_meta_media_import_mock_worker_complete_local_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La réservation durable tenant/RLS de l'import média entrant est publiée au head exact 28efa75 et sa continuité est verte. Les deux tentatives de CI 33826756939 se sont arrêtées avant migrations et tests uniquement parce que l'API d'audit du registre npm a expiré; aucun échec applicatif ni avis de vulnérabilité n'a été produit. La troisième relance n'a pas été lancée : le contrôleur d'autorisation a échoué sur une erreur réseau et exige désormais une approbation utilisateur explicite, sans contournement. Conserver le contrôle fail-closed et obtenir une CI complète avant le worker d'import mock. Aucun téléchargement Graph, stockage binaire ou pièce jointe canonique n'est revendiqué; l'activation Meta reste bloquée par le code SMS humain.",
+  "currentObjective": "La tranche applicative locale traite désormais une réservation média Meta pending avec des doubles provider/storage explicitement mock : policy avant lecture, bail et retry durables, contrôle taille/type binaire/checksum, stockage mock idempotent, une seule pièce jointe canonique et affichage français dans Conversation avec provenance WhatsApp et badge Stockage mock. Aucun appel Graph, stockage réel ou fournisseur actif n'est composé. Le checkpoint reste local tant qu'une approbation explicite n'autorise pas sa publication et le déclenchement d'une nouvelle CI; l'activation Meta reste bloquée par le code SMS humain.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 11, 14, 22, 23, 31, 32, 33, 46, 48, 64, 65, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 11, 14, 16, 17, 18, 22, 23, 31, 32, 33, 35, 36, 37, 38, 46, 48, 64, 65, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "7 et 9 Conversation Hub canonique et adaptateurs de canaux",
+        "11-13 Capability manifest, plan validé et exécution durable",
         "17-18 PostgreSQL, RLS, multimodal et pièces jointes non fiables",
         "26-28 Roadmap, Definition of Done et reprise",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
+        "30-33 Shadow, conséquences, données sensibles et entrées externes non fiables",
         "58-59 Runtime provider et webhook signé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Poursuivre le service d'ingestion conversation-first tant que l'activation réelle OS-5 attend le code SMS humain. Les pages 11, 14, 22-23 et 64-65 imposent une action durable tenant-aware, la signature avant parsing, une référence de média non fiable protégée, des relations composites, RLS, idempotence et audit sans contenu. La tranche réserve l'import des médias Meta après ingestion canonique, chiffre la référence fournisseur avec authentification du contexte tenant/endpoint/message, distingue not_configured, pending et failed, et ne déclenche ni Graph, ni stockage, ni pièce jointe canonique. Aucun OS-6, CRM, Kanban ou dashboard; toute activation, création de token persistant ou action fournisseur exige une autorisation distincte.",
-      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 22-23, 31-33, 46, 48, 64-65 et 69-71 relues directement; pages 48 et 69 inspectées visuellement. Preuve attendue : migrations runtime et SQL miroir pour une réservation tenant-scoped avec RLS, index tenant-leading et relations composées; référence Meta chiffrée en AES-256-GCM avec AAD tenant/endpoint/message/provider et version de clé, jamais écrite en clair; idempotence avec collision refusée; états not_configured/pending/failed cohérents; audit sans media ID, checksum, MIME, nom ou contenu; transaction atomique avec le message entrant; zéro fetch, zéro pièce jointe canonique et aucun comportement réel simulé. Tests unitaires, intégration, migrations, PostgreSQL/RLS en CI, régression Meta, ESLint, TypeScript, build, continuity-check et diff check. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Après la réservation d'import déjà livrée, compléter le service d'ingestion conversation-first par une activité durable et idempotente. Les pages 11, 14, 16-18, 22-23, 35-38 et 64-65 imposent une frontière provider explicite, des entrées externes non fiables, des limites de taille, la validation du type binaire et du checksum, un stockage immuable, des relations tenant composites, RLS, classification d'échec et audit sans contenu sensible. Les fournisseurs de cette preuve doivent rester mock; disabled et not_configured doivent rester explicites. Aucun OS-6, CRM, Kanban, dashboard, Graph réel, stockage réel ou activation externe.",
+      "evidenceExpected": "PDF canonique revérifié à 71 pages et SHA-256 exact; pages 3-7, 11, 14, 16-18, 22-23, 31-33, 35-38, 46, 48, 64-65 et 69-71 relues directement. Preuve attendue : migrations runtime et SQL miroir pour un journal de tentative tenant-scoped avec RLS et index tenant-leading; contrat provider/storage limité à mock/disabled/not_configured; déchiffrement lié au tenant/endpoint/message; validation bornée des octets, signature binaire, MIME et SHA-256 avant stockage; création atomique d'une seule pièce jointe canonique après stockage immuable mock; rejeu sans double fetch, stockage ni pièce jointe; échecs temporary/permanent/validation/not_configured durables; audit sans contenu, référence, ciphertext, nom ou checksum. Tests unitaires, intégration bout en bout webhook signé vers pièce jointe, migrations, PostgreSQL/RLS lorsque DATABASE_URL existe, régression Meta, ESLint, TypeScript, build, continuity-check direct et diff check. Zéro secret, Graph, message externe, endpoint public, activation, déploiement ou dépense."
     }
   },
-  "nextAction": "Après approbation explicite de l'utilisateur, relancer la CI 33826756939 sans contourner ni affaiblir l'audit npm. Après CI verte seulement, relire les pages 11, 14, 22-23, 32, 48, 64-65 et 69 puis préparer, sans réseau réel, le contrat provider/storage et le journal durable des tentatives d'import avec doubles mock.",
-  "nextFile": "src/modules/channels/channel-provider-media-import-worker.ts",
+  "nextAction": "Après approbation explicite, réconcilier le head distant, publier le checkpoint local en fast-forward et laisser la nouvelle CI prouver migrations PostgreSQL/RLS et Playwright. Sans cette approbation, poursuivre localement la composition fail-closed du worker générique sans Graph ni stockage réel.",
+  "nextFile": "src/worker/runtime.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -477,7 +479,13 @@
     "heartbeat 2026-09-04T09:45Z : PDF SHA-256 exact, 71 pages, pages cœur et candidates relues directement, pages 48 et 69 inspectées en rendu",
     "pnpm agent:continuity-check retenté : wrapper bloqué sur réinstallation sans réseau/TTY; script versionné direct à relancer après docs",
     "troisième relance CI non exécutée : contrôleur d'autorisation en erreur réseau, approbation utilisateur explicite désormais requise; aucun contournement",
-    "continuity-check direct final 2026-09-04T11:34Z : ready, zéro erreur et zéro avertissement; JSON et git diff --check verts"
+    "continuity-check direct final 2026-09-04T11:34Z : ready, zéro erreur et zéro avertissement; JSON et git diff --check verts",
+    "tranche applicative locale d'import média mock : exécution tenant/RLS avec bail, retry, policy, validation taille/type/checksum, stockage idempotent et pièce jointe canonique visible en français",
+    "tests ciblés média/migrations : 2 fichiers réussis, 24 tests réussis; 1 fichier PostgreSQL et 2 tests RLS ignorés faute de DATABASE_URL",
+    "régression exhaustive locale : 139 fichiers réussis, 8 ignorés, 672 tests réussis et 20 ignorés; ESLint complet, TypeScript et build production verts",
+    "Playwright média ajouté pour provenance WhatsApp, nom de fichier et badge Stockage mock; exécution locale non revendiquée faute de PostgreSQL partagé",
+    "GitHub relu sans mutation : PR #11 ouverte, brouillon, MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte et CI 33826756939 inchangée rouge avant tests sur timeout npm audit",
+    "pnpm agent:continuity-check tenté : wrapper local bloqué par réinstallation pnpm sans réseau/TTY; script versionné direct à exécuter après documentation"
   ],
   "lastValidation": [
     {
@@ -1475,6 +1483,26 @@
     {
       "command": "continuity-check direct, JSON et git diff --check finaux après handoff CI",
       "status": "passed_ready_zero_errors_zero_warnings_json_valid_diff_clean"
+    },
+    {
+      "command": "worker d'import média Meta mock, migrations runtime 107/108 et miroirs 0101/0102",
+      "status": "passed_durable_lease_retry_policy_tenant_rls_mock_only_size_binary_type_checksum_idempotent_storage_single_canonical_attachment_safe_audit"
+    },
+    {
+      "command": "tests ciblés import média, migrations et RLS",
+      "status": "passed_2_files_24_tests_1_postgres_file_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "Vitest et ESLint complets, TypeScript et build Next.js production",
+      "status": "passed_139_files_672_tests_8_files_20_postgres_tests_skipped_lint_typecheck_build_google_fonts_network_only"
+    },
+    {
+      "command": "Playwright de la pièce jointe média dans Conversation",
+      "status": "scenario_added_whatsapp_provenance_french_ui_mock_storage_badge_checksum_hidden_local_execution_requires_shared_postgres_ci_pending"
+    },
+    {
+      "command": "PR #11 et workflows relus le 2026-09-04T12:11Z",
+      "status": "unchanged_open_draft_mergeable_unstable_head_28efa75_continuity_green_ci_failed_before_tests_on_npm_audit_timeout_no_rerun_or_push"
     }
   ],
   "humanBlockers": [

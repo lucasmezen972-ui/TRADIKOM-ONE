@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ListChecks,
   MessageCircle,
+  Paperclip,
   Radio,
   RotateCcw,
   Send,
@@ -79,13 +80,13 @@ export default async function ConversationPage({
           </p>
           <h1 className="mt-1 text-4xl font-bold">Conversation</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            Un fil canonique partagé entre le web et le canal de test, avec
-            déduplication, provenance et audit.
+            Un fil canonique partagé entre les canaux, avec déduplication,
+            provenance, pièces jointes sécurisées et audit.
           </p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900">
           <ShieldCheck size={17} aria-hidden />
-          Aucun fournisseur externe
+          Canaux contrôlés et audités
         </span>
       </header>
 
@@ -157,6 +158,10 @@ export default async function ConversationPage({
                 const isWeb = identity?.channelKind === "web";
                 const isOrchestrator =
                   message.provenance.adapterKey === "orchestrator-mock";
+                const channelLabel = conversationChannelLabel(
+                  identity?.channelKind,
+                  message.provenance.adapterKey,
+                );
                 return (
                   <article
                     key={message.id}
@@ -170,11 +175,7 @@ export default async function ConversationPage({
                   >
                     <div className="flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.1em] opacity-70">
                       <span>
-                        {isWeb
-                          ? "Web"
-                          : isOrchestrator
-                            ? "TRADIKOM ONE"
-                            : "Canal de test"}
+                        {isOrchestrator ? "TRADIKOM ONE" : channelLabel}
                       </span>
                       <time dateTime={message.occurredAt}>
                         {formatDate(message.occurredAt)}
@@ -183,6 +184,27 @@ export default async function ConversationPage({
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
                       {message.text}
                     </p>
+                    {message.attachments.length > 0 ? (
+                      <ul className="mt-3 grid gap-2" aria-label="Pièces jointes">
+                        {message.attachments.map((attachment) => (
+                          <li
+                            key={attachment.id}
+                            className="flex flex-wrap items-center gap-2 rounded-lg border border-current/15 bg-white/70 px-3 py-2 text-xs normal-case tracking-normal text-slate-800"
+                          >
+                            <Paperclip size={15} aria-hidden />
+                            <span className="font-semibold">{attachment.fileName}</span>
+                            <span className="text-slate-500">
+                              {formatFileSize(attachment.sizeBytes)}
+                            </span>
+                            <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-950">
+                              {attachment.storageReference.startsWith("mock:")
+                                ? "Stockage mock"
+                                : "Stockage sécurisé"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </article>
                 );
               })
@@ -497,6 +519,25 @@ function missionStatusLabel(status: string) {
     rejected: "refusée",
     cancelled: "annulée",
   }[status] ?? "état contrôlé";
+}
+
+function conversationChannelLabel(
+  channelKind: string | undefined,
+  adapterKey: string,
+) {
+  if (adapterKey === "whatsapp-meta") return "WhatsApp";
+  if (channelKind === "web") return "Web";
+  if (channelKind === "test") return "Canal de test";
+  if (channelKind === "email") return "E-mail";
+  if (channelKind === "voice") return "Voix";
+  if (channelKind === "collaboration") return "Collaboration";
+  return "Messagerie";
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) return `${sizeBytes} o`;
+  if (sizeBytes < 1024 * 1024) return `${Math.ceil(sizeBytes / 1024)} Ko`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
 }
 
 function MessageForm({

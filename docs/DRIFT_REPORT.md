@@ -1,5 +1,33 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 4 septembre 2026, 12:11 UTC
+
+- Branche : `codex/tradikom-one-os`; head distant publié `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; handoff local antérieur `cb99df84cd5740bfe1fff88159e9ab8f1683cc12` et tranche applicative courante non publiée.
+- Travail effectué : exécution durable des réservations média Meta avec doubles provider/storage mock, contrôles taille/type binaire/checksum, policy, retry, stockage idempotent, création atomique d'une pièce jointe canonique et rendu français dans Conversation.
+- Impact north star : un média reçu par WhatsApp devient une preuve visible dans la conversation sans nouveau module CRM, Kanban ou dashboard et sans confondre mock et fournisseur réel.
+- Risques contenus : aucun Graph, stockage Supabase, antivirus, OCR/transcription, secret, endpoint public, message, activation, fusion, déploiement ou dépense. `tmp/` reste non suivi et hors index.
+- GitHub inchangé : PR #11 ouverte, brouillon et `MERGEABLE/UNSTABLE`; continuité `33826756891` verte, CI `33826756939` rouge avant tests uniquement sur timeout npm audit. Aucun rerun ou push indirect sans approbation explicite.
+
+## Alignement prompt maître
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre strict et reprise exacte | Parcours webhook signé → import mock durable → pièce jointe visible; quatre documents de reprise actualisés; aucun CRM/Kanban/dashboard/OS-6 | Publication et CI complète soumises à approbation explicite |
+| 11, 14, 16-18, 64-65 | Hub canonique, frontière provider, policy, idempotence, action durable et erreurs classées | Contrats provider/storage `mock`/`disabled`/`not_configured`, bail, retry, backoff, policy avant lecture et stockage idempotent | Composition dans le worker générique; provider Graph réel non autorisé |
+| 22-23, 35-38 | Tenant/RLS, média externe non fiable, taille/type/checksum, stockage immuable et audit sans donnée sensible | Migrations runtime 107/108 et miroirs 0101/0102; RLS et FK composées; validations octets; pièce jointe après stockage mock; audit sans Media ID, contenu, nom, MIME, checksum, ciphertext ou référence | PostgreSQL/RLS à exécuter en CI; stockage Supabase/ACL, antivirus, OCR/transcription non livrés |
+| 32, 69 | DoD et matrice unit/intégration/RLS/provider/workflow/Playwright/sécurité | 24 tests ciblés verts; régression exhaustive 139 fichiers/672 tests verts; ESLint, TypeScript et build verts; scénario Playwright ajouté | 8 fichiers/20 tests PostgreSQL ignorés sans `DATABASE_URL`; nouveau Playwright non exécuté localement; CI requise |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification actuelle
+
+- Livré localement : worker média, migrations, rendu Conversation et tests mock.
+- Réel connecté : aucun nouveau fournisseur; Graph et stockage réel non composés.
+- Sandbox : aucune appelée.
+- Mock : fetch et stockage média uniquement via doubles injectés; affichage explicite « Stockage mock ».
+- Bloqué humain : approbation avant publication/CI; code SMS Meta; confirmation distincte avant token persistant.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
+
 ## Checkpoint — 4 septembre 2026, 09:45 UTC
 
 - Branche : `codex/tradikom-one-os`.

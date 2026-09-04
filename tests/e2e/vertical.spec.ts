@@ -1,6 +1,13 @@
+import { createHash, createHmac } from "node:crypto";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { getDb } from "../../src/lib/db";
 import { createServices } from "../../src/lib/services";
+import {
+  createChannelProviderMediaReferenceCipher,
+  processMetaWhatsAppMediaImport,
+  receivePreparedMetaWhatsAppWebhook,
+  registerAuthorizedMetaWhatsAppEndpoint,
+} from "../../src/modules/channels";
 import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 
 test("demo user can publish site lead into CRM", async ({ page }) => {
@@ -1128,6 +1135,109 @@ async function runConversationJourney(
     ).toBeVisible();
     await expect(page.getByText("Exécuté", { exact: true })).toBeVisible();
     await expect(page.getByText("Réussie", { exact: false })).toHaveCount(2);
+
+    const mediaBytes = new TextEncoder().encode("%PDF-1.7\npreuve Playwright mock");
+    const mediaChecksum = createHash("sha256").update(mediaBytes).digest("hex");
+    const mediaAppSecret = "meta_e2e_app_secret_32_bytes_minimum";
+    const mediaFingerprintSecret = "meta-e2e-fingerprint-secret-32-bytes";
+    const mediaCipher = createChannelProviderMediaReferenceCipher({
+      keyMaterial: "meta-e2e-media-key-material-32-bytes-minimum",
+      keyVersion: "media-e2e-v1",
+    });
+    const numericSuffix = `${Date.now()}`;
+    const endpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+      db,
+      {
+        tenantId: tenant.id,
+        actorId: user.id,
+        externalAccountId: `81${numericSuffix}`,
+        phoneNumberId: `82${numericSuffix}`,
+      },
+      mediaFingerprintSecret,
+    );
+    const mediaPayload = {
+      object: "whatsapp_business_account",
+      entry: [{
+        id: `81${numericSuffix}`,
+        changes: [{
+          field: "messages",
+          value: {
+            metadata: { phone_number_id: `82${numericSuffix}` },
+            messages: [{
+              id: `wamid.e2e_media_${numericSuffix}`,
+              from: "596696000000",
+              timestamp: "1760000000",
+              type: "document",
+              document: {
+                id: `83${numericSuffix}`,
+                mime_type: "application/pdf",
+                sha256: mediaChecksum,
+                filename: "preuve-conversation.pdf",
+                caption: "Preuve importée",
+              },
+            }],
+          },
+        }],
+      }],
+    };
+    const rawBody = JSON.stringify(mediaPayload);
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      db,
+      {
+        rawBody,
+        signature: `sha256=${createHmac("sha256", mediaAppSecret)
+          .update(rawBody)
+          .digest("hex")}`,
+      },
+      {
+        appSecret: mediaAppSecret,
+        fingerprintSecret: mediaFingerprintSecret,
+        mediaReferenceCipher: mediaCipher,
+        receivedAt: "2026-09-04T12:00:00.000Z",
+      },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("Le média Playwright doit être réservé.");
+    }
+    const imported = await processMetaWhatsAppMediaImport(
+      db,
+      user.id,
+      {
+        tenantId: tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      {
+        cipher: mediaCipher,
+        provider: {
+          state: "mock",
+          async fetch(input) {
+            expect(input.endpointId).toBe(endpoint.endpointId);
+            return {
+              status: "succeeded",
+              bytes: mediaBytes,
+              mediaType: "application/pdf",
+            };
+          },
+        },
+        storage: {
+          state: "mock",
+          async store() {
+            return {
+              status: "succeeded",
+              storageReference: `mock:media/${mediaChecksum}`,
+            };
+          },
+        },
+        evaluatePolicy: async () => ({ allowed: true }),
+      },
+      { now: new Date("2026-09-04T12:01:00.000Z") },
+    );
+    expect(imported.status).toBe("succeeded");
+    await page.goto(`/conversation?fil=${encodeURIComponent(inbound.threadId)}`);
+    await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
+    await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("Stockage mock", { exact: true })).toBeVisible();
+    await expect(page.getByText(mediaChecksum, { exact: false })).toHaveCount(0);
 
     const evidence = await db.query<{
       runs: number;

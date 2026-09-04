@@ -45,6 +45,8 @@ export * from "@/modules/channels/channel-provider-secrets-service";
 export * from "@/modules/channels/channel-provider-media-reference-crypto";
 export * from "@/modules/channels/channel-provider-media-imports-repository";
 export * from "@/modules/channels/channel-provider-media-imports-service";
+export * from "@/modules/channels/channel-provider-media-import-executions-repository";
+export * from "@/modules/channels/channel-provider-media-import-worker";
 export * from "@/modules/channels/whatsapp-twilio-ingress-service";
 export * from "@/modules/channels/teams-microsoft-webhook";
 export * from "@/modules/channels/teams-microsoft-webhook-http";

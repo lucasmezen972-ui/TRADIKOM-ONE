@@ -106,6 +106,70 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
       ),
     ).rejects.toThrow(/row-level security|violates/i);
   });
+
+  it("isole aussi le journal durable des exécutions média", async () => {
+    if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const fixtureA = await seedReservation(ownerDb, "a");
+    const fixtureB = await seedReservation(ownerDb, "b");
+    await seedExecution(ownerDb, fixtureA, "a");
+    await seedExecution(ownerDb, fixtureB, "b");
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    const ownRows = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) => client.query<{ id: string }>(
+        "select id from channel_provider_media_import_executions order by id",
+      ),
+    );
+    expect(ownRows.rows).toEqual([{ id: `execution_media_rls_a_${fixtureA.unique}` }]);
+    const crossUpdate = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) => client.query(
+        `update channel_provider_media_import_executions
+         set updated_at = $1
+         where tenant_id = $2 and media_import_id = $3 returning id`,
+        [timestamp, fixtureB.tenantId, fixtureB.reservationId],
+      ),
+    );
+    expect(crossUpdate.rows).toEqual([]);
+    const crossDelete = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) => client.query(
+        `delete from channel_provider_media_import_executions
+         where tenant_id = $1 and media_import_id = $2 returning id`,
+        [fixtureB.tenantId, fixtureB.reservationId],
+      ),
+    );
+    expect(crossDelete.rows).toEqual([]);
+    await expect(
+      withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
+        client.query(
+          `insert into channel_provider_media_import_executions (
+             id, tenant_id, media_import_id, provider, provider_mode,
+             storage_mode, status, failure_classification, safe_error_code,
+             retryable, attempts, max_attempts, next_attempt_at,
+             last_attempted_at, lease_id, lease_expires_at, attachment_id,
+             created_by, created_at, updated_at
+           ) values (
+             'execution_media_rls_cross', $1, $2, 'whatsapp_meta', 'mock',
+             'mock', 'reserved', null, null, null, 0, 3, $3, null, null,
+             null, null, $4, $3, $3
+           )`,
+          [fixtureB.tenantId, fixtureB.reservationId, timestamp, fixtureB.userId],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+  });
 });
 
 type OwnerDb = ReturnType<typeof pgPoolAsSqlClient>;
@@ -205,7 +269,32 @@ async function seedReservation(db: OwnerDb, suffix: "a" | "b") {
       timestamp,
     ],
   );
-  return { endpointId, messageId, reservationId, tenantId };
+  return { endpointId, messageId, reservationId, tenantId, unique, userId };
+}
+
+async function seedExecution(
+  db: OwnerDb,
+  fixture: Awaited<ReturnType<typeof seedReservation>>,
+  suffix: "a" | "b",
+) {
+  await db.query(
+    `insert into channel_provider_media_import_executions (
+       id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+       status, failure_classification, safe_error_code, retryable, attempts,
+       max_attempts, next_attempt_at, last_attempted_at, lease_id,
+       lease_expires_at, attachment_id, created_by, created_at, updated_at
+     ) values (
+       $1, $2, $3, 'whatsapp_meta', 'mock', 'mock', 'reserved', null, null,
+       null, 0, 3, $4, null, null, null, null, $5, $4, $4
+     )`,
+    [
+      `execution_media_rls_${suffix}_${fixture.unique}`,
+      fixture.tenantId,
+      fixture.reservationId,
+      timestamp,
+      fixture.userId,
+    ],
+  );
 }
 
 async function createRestrictedRole(ownerPool: Pool) {

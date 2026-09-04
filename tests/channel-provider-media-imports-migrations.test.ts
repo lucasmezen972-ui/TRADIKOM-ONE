@@ -24,6 +24,14 @@ describe("migrations des réservations d'import média fournisseur", () => {
         "os5ChannelProviderMediaImportsRlsMigrationSql",
         "../src/db/migrations/0100_os5_channel_provider_media_imports_rls.sql",
       ],
+      [
+        "os5ChannelProviderMediaImportExecutionsMigrationSql",
+        "../src/db/migrations/0101_os5_channel_provider_media_import_executions.sql",
+      ],
+      [
+        "os5ChannelProviderMediaImportExecutionsRlsMigrationSql",
+        "../src/db/migrations/0102_os5_channel_provider_media_import_executions_rls.sql",
+      ],
     ] as const;
     for (const [constant, mirrorPath] of definitions) {
       const mirror = readFileSync(new URL(mirrorPath, import.meta.url), "utf8");
@@ -34,6 +42,12 @@ describe("migrations des réservations d'import média fournisseur", () => {
     );
     expect(getMigrationIds(true)).toContain(
       "106_os5_channel_provider_media_imports_rls",
+    );
+    expect(getMigrationIds()).toContain(
+      "107_os5_channel_provider_media_import_executions",
+    );
+    expect(getMigrationIds(true)).toContain(
+      "108_os5_channel_provider_media_import_executions_rls",
     );
   });
 
@@ -104,6 +118,67 @@ describe("migrations des réservations d'import média fournisseur", () => {
         [timestamp],
       ),
     ).rejects.toThrow(/immutable/i);
+  });
+
+  it("journalise l'exécution sans octets ni référence fournisseur et protège son identité", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    await seedContext(db, "a");
+    await seedContext(db, "b");
+    await insertPendingReservation(
+      db,
+      "reservation_a",
+      "tenant_a",
+      "endpoint_a",
+      "message_a",
+    );
+    await db.query(
+      `insert into channel_provider_media_import_executions (
+         id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+         status, failure_classification, safe_error_code, retryable, attempts,
+         max_attempts, next_attempt_at, last_attempted_at, lease_id,
+         lease_expires_at, attachment_id, created_by, created_at, updated_at
+       ) values (
+         'execution_a', 'tenant_a', 'reservation_a', 'whatsapp_meta',
+         'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
+         null, null, null, null, 'user_a', $1, $1
+       )`,
+      [timestamp],
+    );
+    const forbidden = await db.query<{ column_name: string }>(
+      `select column_name
+       from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'channel_provider_media_import_executions'
+         and column_name in (
+           'bytes', 'content', 'payload', 'raw_payload', 'provider_reference',
+           'encrypted_provider_reference', 'storage_reference', 'checksum_sha256',
+           'file_name', 'media_type'
+         )`,
+    );
+    expect(forbidden.rows).toEqual([]);
+    await expect(
+      db.query(
+        `update channel_provider_media_import_executions
+         set provider_mode = 'disabled'
+         where tenant_id = 'tenant_a' and id = 'execution_a'`,
+      ),
+    ).rejects.toThrow(/identity_immutable/i);
+    await expect(
+      db.query(
+        `insert into channel_provider_media_import_executions (
+           id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+           status, failure_classification, safe_error_code, retryable, attempts,
+           max_attempts, next_attempt_at, last_attempted_at, lease_id,
+           lease_expires_at, attachment_id, created_by, created_at, updated_at
+         ) values (
+           'execution_cross', 'tenant_b', 'reservation_a', 'whatsapp_meta',
+           'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
+           null, null, null, null, 'user_b', $1, $1
+         )`,
+        [timestamp],
+      ),
+    ).rejects.toThrow(/foreign key|violates/i);
   });
 });
 

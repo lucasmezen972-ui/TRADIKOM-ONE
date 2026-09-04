@@ -1,9 +1,10 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import {
   createChannelProviderMediaReferenceCipher,
+  processMetaWhatsAppMediaImport,
   receivePreparedMetaWhatsAppWebhook,
   registerAuthorizedMetaWhatsAppEndpoint,
   setAuthorizedMetaWhatsAppEndpointStatus,
@@ -312,6 +313,328 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     for (const ephemeral of [mediaId, checksum, fileName, "application/pdf"]) {
       expect(persisted).not.toContain(ephemeral);
     }
+  }, 20_000);
+
+  it("transforme un média signé en pièce jointe canonique avec deux fournisseurs mock explicites", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\npreuve mock immuable");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    const mediaId = "2754859441498991";
+    const fileName = "preuve-worker.pdf";
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId, checksum, fileName })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const fetchMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      bytes,
+      mediaType: "application/pdf",
+    });
+    const storeMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      storageReference: `mock:media/${checksum}`,
+    });
+    const dependencies = {
+      cipher: mediaReferenceCipher,
+      provider: { state: "mock" as const, fetch: fetchMedia },
+      storage: { state: "mock" as const, store: storeMedia },
+      evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
+    };
+    const first = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      dependencies,
+      { now: new Date("2026-07-30T16:22:00.000Z") },
+    );
+    const replay = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      dependencies,
+      { now: new Date("2026-07-30T16:23:00.000Z") },
+    );
+
+    expect(first).toMatchObject({
+      status: "succeeded",
+      attempts: 1,
+      providerMode: "mock",
+      storageMode: "mock",
+      idempotentReplay: false,
+    });
+    expect(replay).toMatchObject({
+      status: "succeeded",
+      attachmentId: first.attachmentId,
+      idempotentReplay: true,
+    });
+    expect(fetchMedia).toHaveBeenCalledTimes(1);
+    expect(storeMedia).toHaveBeenCalledTimes(1);
+    const thread = await getConversationThread(
+      setup.db,
+      setup.owner.id,
+      setup.tenant.id,
+      inbound.threadId,
+    );
+    expect(thread.messages[0]?.attachments).toEqual([
+      expect.objectContaining({
+        id: first.attachmentId,
+        kind: "document",
+        fileName,
+        mediaType: "application/pdf",
+        sizeBytes: bytes.byteLength,
+        storageReference: `mock:media/${checksum}`,
+        checksumSha256: checksum,
+      }),
+    ]);
+    expect(
+      (await setup.db.query("select id from conversation_message_attachments")).rows,
+    ).toHaveLength(1);
+    const audits = JSON.stringify(
+      (
+        await setup.db.query(
+          `select action, safe_metadata from audit_logs
+           where action like 'channel.provider_media_import_%'`,
+        )
+      ).rows,
+    );
+    for (const sensitive of [mediaId, checksum, fileName, `mock:media/${checksum}`]) {
+      expect(audits).not.toContain(sensitive);
+    }
+  }, 20_000);
+
+  it("planifie un retry temporaire sans doubler le stockage puis réussit", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\nretry mock");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId: "2754859441498992", checksum })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const fetchMedia = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: "failed" as const,
+        classification: "temporary" as const,
+        safeErrorCode: "media_provider_timeout",
+        retryable: true,
+      })
+      .mockResolvedValueOnce({
+        status: "succeeded" as const,
+        bytes,
+        mediaType: "application/pdf",
+      });
+    const storeMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      storageReference: `mock:media/${checksum}`,
+    });
+    const dependencies = {
+      cipher: mediaReferenceCipher,
+      provider: { state: "mock" as const, fetch: fetchMedia },
+      storage: { state: "mock" as const, store: storeMedia },
+      evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
+    };
+    const first = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      dependencies,
+      { now: new Date("2026-07-30T16:22:00.000Z"), baseBackoffMs: 1_000 },
+    );
+    const second = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      dependencies,
+      { now: new Date("2026-07-30T16:22:02.000Z"), baseBackoffMs: 1_000 },
+    );
+    expect(first).toMatchObject({
+      status: "failed",
+      classification: "temporary",
+      retryable: true,
+      attempts: 1,
+    });
+    expect(second).toMatchObject({
+      status: "succeeded",
+      retryable: false,
+      attempts: 2,
+    });
+    expect(fetchMedia).toHaveBeenCalledTimes(2);
+    expect(storeMedia).toHaveBeenCalledTimes(1);
+  }, 20_000);
+
+  it("reste fail-closed quand le provider n'est pas configuré", async () => {
+    const setup = await createSetup();
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId: "2754859441498993" })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const fetchMedia = vi.fn();
+    const storeMedia = vi.fn();
+    const result = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      {
+        cipher: mediaReferenceCipher,
+        provider: { state: "not_configured", fetch: fetchMedia },
+        storage: { state: "mock", store: storeMedia },
+        evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
+      },
+      { now: new Date("2026-07-30T16:22:00.000Z") },
+    );
+    expect(result).toMatchObject({
+      status: "denied",
+      classification: "not_configured",
+      safeErrorCode: "media_import_not_configured",
+      retryable: false,
+      providerMode: "not_configured",
+      storageMode: "mock",
+    });
+    expect(fetchMedia).not.toHaveBeenCalled();
+    expect(storeMedia).not.toHaveBeenCalled();
+    expect(
+      (await setup.db.query("select id from conversation_message_attachments")).rows,
+    ).toEqual([]);
+  }, 20_000);
+
+  it.each([
+    {
+      label: "checksum incohérent",
+      bytes: new TextEncoder().encode("%PDF-1.7\nchecksum invalide"),
+      checksum: "d".repeat(64),
+      maxBytes: undefined,
+      errorCode: "media_checksum_mismatch",
+    },
+    {
+      label: "signature binaire incohérente",
+      bytes: new TextEncoder().encode("contenu qui n'est pas un PDF"),
+      checksum: null,
+      maxBytes: undefined,
+      errorCode: "media_binary_type_invalid",
+    },
+    {
+      label: "taille supérieure à la limite",
+      bytes: new TextEncoder().encode("%PDF-1.7\ncontenu trop grand"),
+      checksum: null,
+      maxBytes: 8,
+      errorCode: "media_too_large",
+    },
+  ])("refuse un média externe non fiable : $label", async (scenario) => {
+    const setup = await createSetup();
+    const checksum =
+      scenario.checksum ??
+      createHash("sha256").update(scenario.bytes).digest("hex");
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(
+        documentPayload({ mediaId: "2754859441498994", checksum }),
+      ),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const storeMedia = vi.fn();
+    const result = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      {
+        cipher: mediaReferenceCipher,
+        provider: {
+          state: "mock",
+          fetch: vi.fn().mockResolvedValue({
+            status: "succeeded" as const,
+            bytes: scenario.bytes,
+            mediaType: "application/pdf",
+          }),
+        },
+        storage: { state: "mock", store: storeMedia },
+        evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
+      },
+      {
+        now: new Date("2026-07-30T16:22:00.000Z"),
+        maxBytes: scenario.maxBytes,
+      },
+    );
+    expect(result).toMatchObject({
+      status: "failed",
+      classification: "validation",
+      safeErrorCode: scenario.errorCode,
+      retryable: false,
+    });
+    expect(storeMedia).not.toHaveBeenCalled();
+    expect(
+      (await setup.db.query("select id from conversation_message_attachments")).rows,
+    ).toEqual([]);
+  }, 20_000);
+
+  it("refuse par politique avant déchiffrement et lecture fournisseur", async () => {
+    const setup = await createSetup();
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId: "2754859441498995" })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const fetchMedia = vi.fn();
+    const storeMedia = vi.fn();
+    const result = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      {
+        cipher: mediaReferenceCipher,
+        provider: { state: "mock", fetch: fetchMedia },
+        storage: { state: "mock", store: storeMedia },
+        evaluatePolicy: vi
+          .fn()
+          .mockResolvedValue({ allowed: false as const, code: "policy_media_denied" }),
+      },
+      { now: new Date("2026-07-30T16:22:00.000Z") },
+    );
+    expect(result).toMatchObject({
+      status: "denied",
+      classification: "policy",
+      safeErrorCode: "policy_media_denied",
+    });
+    expect(fetchMedia).not.toHaveBeenCalled();
+    expect(storeMedia).not.toHaveBeenCalled();
   }, 20_000);
 
   it("réserve honnêtement not_configured sans clé", async () => {
@@ -864,7 +1187,11 @@ function webhook(overrides: PayloadOverrides = {}) {
   return signedPayload(payload(overrides));
 }
 
-function documentPayload(input: { mediaId: string }) {
+function documentPayload(input: {
+  mediaId: string;
+  checksum?: string;
+  fileName?: string;
+}) {
   const value = payload({ messageId: "wamid.meta_document_reservation" });
   const messages = value.entry[0].changes[0].value.messages as unknown as Array<
     Record<string, unknown>
@@ -877,8 +1204,8 @@ function documentPayload(input: { mediaId: string }) {
     document: {
       id: input.mediaId,
       mime_type: "application/pdf",
-      sha256: "c".repeat(64),
-      filename: "preuve-confidentielle.pdf",
+      sha256: input.checksum ?? "c".repeat(64),
+      filename: input.fileName ?? "preuve-confidentielle.pdf",
       caption: "Document demandé",
     },
   };
