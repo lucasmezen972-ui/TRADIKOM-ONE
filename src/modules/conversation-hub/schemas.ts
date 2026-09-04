@@ -33,6 +33,20 @@ export const channelKindSchema = z.enum([
   "test",
 ]);
 
+export const confidentialityLevelSchema = z.enum([
+  "public",
+  "internal",
+  "restricted",
+  "secret",
+]);
+
+export const visibilityScopeSchema = z.enum([
+  "personal",
+  "team",
+  "case",
+  "tenant",
+]);
+
 export const channelIdentitySchema = z
   .object({
     id: boundedIdentifierSchema,
@@ -77,6 +91,8 @@ export const canonicalThreadSchema = z
     tenantId: boundedIdentifierSchema,
     status: z.enum(["open", "awaiting_validation", "resolved", "archived"]),
     subject: z.string().trim().min(1).max(200).optional(),
+    confidentialityLevel: confidentialityLevelSchema,
+    visibilityScope: visibilityScopeSchema,
     participantIdentityIds: participantIdentityIdsSchema,
     createdAt: timestampSchema,
     updatedAt: timestampSchema,

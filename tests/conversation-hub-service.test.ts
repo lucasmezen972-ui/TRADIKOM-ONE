@@ -55,6 +55,8 @@ describe("service du Conversation Hub", () => {
       id: first.threadId,
       tenantId: context.tenantId,
       status: "open",
+      confidentialityLevel: "internal",
+      visibilityScope: "tenant",
       createdAt: timestamp,
       lastMessageAt: timestamp,
     });
@@ -128,7 +130,12 @@ describe("service du Conversation Hub", () => {
         context.userId,
         context.tenantId,
       ),
-    ).toMatchObject([{ id: first.threadId, tenantId: context.tenantId }]);
+    ).toMatchObject([{
+      id: first.threadId,
+      tenantId: context.tenantId,
+      confidentialityLevel: "internal",
+      visibilityScope: "tenant",
+    }]);
 
     const audits = await context.db.query<{
       action: string;

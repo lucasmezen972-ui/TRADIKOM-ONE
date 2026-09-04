@@ -34,6 +34,8 @@ export type ConversationThreadRow = {
   tenant_id: string;
   status: "open" | "awaiting_validation" | "resolved" | "archived";
   subject: string | null;
+  confidentiality_level: "public" | "internal" | "restricted" | "secret";
+  visibility_scope: "personal" | "team" | "case" | "tenant";
   created_at: string;
   updated_at: string;
   last_message_at: string | null;
@@ -75,6 +77,12 @@ export type ConversationAttachmentRow = {
   extracted_text_sha256: string | null;
   extracted_at: string | null;
   created_at: string;
+};
+
+export type ConversationAttachmentAccessRow = ConversationAttachmentRow & {
+  thread_id: string;
+  confidentiality_level: ConversationThreadRow["confidentiality_level"];
+  visibility_scope: ConversationThreadRow["visibility_scope"];
 };
 
 export type ConversationRouteHopRow = {
@@ -201,19 +209,24 @@ export async function insertConversationThread(
     tenantId: string;
     status: ConversationThreadRow["status"];
     subject: string | null;
+    confidentialityLevel: ConversationThreadRow["confidentiality_level"];
+    visibilityScope: ConversationThreadRow["visibility_scope"];
     createdAt: string;
     updatedAt: string;
   },
 ) {
   await db.query(
     `insert into conversation_threads (
-       id, tenant_id, status, subject, created_at, updated_at
-     ) values ($1, $2, $3, $4, $5, $6)`,
+       id, tenant_id, status, subject, confidentiality_level, visibility_scope,
+       created_at, updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       input.id,
       input.tenantId,
       input.status,
       input.subject,
+      input.confidentialityLevel,
+      input.visibilityScope,
       input.createdAt,
       input.updatedAt,
     ],
@@ -227,20 +240,25 @@ export async function insertConversationThreadIfAbsent(
     tenantId: string;
     status: ConversationThreadRow["status"];
     subject: string | null;
+    confidentialityLevel: ConversationThreadRow["confidentiality_level"];
+    visibilityScope: ConversationThreadRow["visibility_scope"];
     createdAt: string;
     updatedAt: string;
   },
 ) {
   await db.query(
     `insert into conversation_threads (
-       id, tenant_id, status, subject, created_at, updated_at
-     ) values ($1, $2, $3, $4, $5, $6)
+       id, tenant_id, status, subject, confidentiality_level, visibility_scope,
+       created_at, updated_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8)
      on conflict (id) do nothing`,
     [
       input.id,
       input.tenantId,
       input.status,
       input.subject,
+      input.confidentialityLevel,
+      input.visibilityScope,
       input.createdAt,
       input.updatedAt,
     ],
@@ -530,6 +548,27 @@ export async function findConversationAttachmentRow(
     `select *
      from conversation_message_attachments
      where tenant_id = $1 and id = $2`,
+    [tenantId, attachmentId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function findConversationAttachmentAccessRow(
+  db: DbClient,
+  tenantId: string,
+  attachmentId: string,
+) {
+  const result = await db.query<ConversationAttachmentAccessRow>(
+    `select attachment.*, message.thread_id,
+            thread.confidentiality_level, thread.visibility_scope
+     from conversation_message_attachments attachment
+     join conversation_messages message
+       on message.tenant_id = attachment.tenant_id
+      and message.id = attachment.message_id
+     join conversation_threads thread
+       on thread.tenant_id = message.tenant_id
+      and thread.id = message.thread_id
+     where attachment.tenant_id = $1 and attachment.id = $2`,
     [tenantId, attachmentId],
   );
   return result.rows[0] ?? null;

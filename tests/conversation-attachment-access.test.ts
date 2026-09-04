@@ -107,6 +107,27 @@ describe("accès sécurisé aux pièces jointes de conversation", () => {
       "read",
       "read",
     ]);
+    expect(evaluatePolicy.mock.calls.map(([input]) => ({
+      threadId: input.threadId,
+      confidentialityLevel: input.confidentialityLevel,
+      visibilityScope: input.visibilityScope,
+    }))).toEqual([
+      expect.objectContaining({
+        threadId: expect.stringMatching(/^conversation_thread_/),
+        confidentialityLevel: "internal",
+        visibilityScope: "tenant",
+      }),
+      expect.objectContaining({
+        threadId: expect.stringMatching(/^conversation_thread_/),
+        confidentialityLevel: "internal",
+        visibilityScope: "tenant",
+      }),
+      expect.objectContaining({
+        threadId: expect.stringMatching(/^conversation_thread_/),
+        confidentialityLevel: "internal",
+        visibilityScope: "tenant",
+      }),
+    ]);
 
     const audits = await context.db.query<{
       action: string;
@@ -217,6 +238,60 @@ describe("accès sécurisé aux pièces jointes de conversation", () => {
       safeErrorCode: "attachment_access_read_denied",
     });
     expect(storageRead).not.toHaveBeenCalled();
+  });
+
+  it("transmet la confidentialité et la visibilité durables à chaque évaluation", async () => {
+    const context = await setup("attachment-classification@example.com");
+    await context.db.query(
+      `update conversation_threads
+       set confidentiality_level = 'restricted', visibility_scope = 'team'
+       where tenant_id = $1`,
+      [context.tenantId],
+    );
+    const evaluatePolicy = vi.fn(async (input: PolicyInput) => {
+      if (
+        input.confidentialityLevel !== "restricted" ||
+        input.visibilityScope !== "team"
+      ) {
+        return {
+          allowed: false as const,
+          code: "attachment_access_classification_denied",
+        };
+      }
+      return { allowed: true as const };
+    });
+    const dependencies = mockDependencies({
+      read: async () => ({ status: "succeeded" as const, bytes: mediaBytes }),
+      evaluatePolicy,
+    });
+    const prepared = await prepareConversationAttachmentAccess(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { attachmentId },
+      dependencies,
+      { now },
+    );
+    if (prepared.status !== "ready") throw new Error("Ticket attendu.");
+    await expect(
+      readConversationAttachment(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { attachmentId, ticket: prepared.ticket },
+        dependencies,
+        { now },
+      ),
+    ).resolves.toMatchObject({ status: "succeeded" });
+    expect(evaluatePolicy).toHaveBeenCalledTimes(2);
+    expect(evaluatePolicy.mock.calls.map(([input]) => input.operation)).toEqual([
+      "prepare",
+      "read",
+    ]);
+    expect(evaluatePolicy.mock.calls[0]?.[0]).toMatchObject({
+      confidentialityLevel: "restricted",
+      visibilityScope: "team",
+    });
   });
 
   it("rejette un ticket altéré, expiré, lié à un autre acteur ou à une autre pièce", async () => {
@@ -404,6 +479,44 @@ describe("accès sécurisé aux pièces jointes de conversation", () => {
     expect(audit.rows[0]?.safe_metadata).not.toContain(
       "attachment-access-remplace",
     );
+  });
+
+  it("ferme la lecture si les droits du fil changent pendant l'accès au stockage", async () => {
+    const context = await setup("attachment-access-race@example.com");
+    const dependencies = mockDependencies({
+      read: async () => {
+        await context.db.query(
+          `update conversation_threads
+           set confidentiality_level = 'secret', visibility_scope = 'personal'
+           where tenant_id = $1`,
+          [context.tenantId],
+        );
+        return { status: "succeeded" as const, bytes: mediaBytes };
+      },
+    });
+    const prepared = await prepareConversationAttachmentAccess(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { attachmentId },
+      dependencies,
+      { now },
+    );
+    if (prepared.status !== "ready") throw new Error("Ticket attendu.");
+
+    await expect(
+      readConversationAttachment(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { attachmentId, ticket: prepared.ticket },
+        dependencies,
+        { now },
+      ),
+    ).rejects.toMatchObject({
+      code: "attachment_access_metadata_invalid",
+      message: "Cette pièce jointe n'est pas disponible.",
+    });
   });
 
   it("classe les erreurs fournisseur sans laisser le fournisseur injecter l'audit", async () => {

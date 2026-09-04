@@ -57,6 +57,8 @@ describe("contrats du Conversation Hub", () => {
         tenantId: identity.tenantId,
         status: "open",
         subject: "Demande de devis",
+        confidentialityLevel: "internal",
+        visibilityScope: "tenant",
         participantIdentityIds: [identity.id],
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -65,6 +67,8 @@ describe("contrats du Conversation Hub", () => {
     ).toMatchObject({
       id: "thread_1",
       tenantId: identity.tenantId,
+      confidentialityLevel: "internal",
+      visibilityScope: "tenant",
       participantIdentityIds: [identity.id],
     });
     expect(
@@ -239,7 +243,22 @@ describe("contrats du Conversation Hub", () => {
         id: "thread_unbounded",
         tenantId: identity.tenantId,
         status: "open",
+        confidentialityLevel: "internal",
+        visibilityScope: "tenant",
         participantIdentityIds: tooManyParticipants,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      canonicalThreadSchema.safeParse({
+        id: "thread_access_invalid",
+        tenantId: identity.tenantId,
+        status: "open",
+        confidentialityLevel: "confidentiel",
+        visibilityScope: "tout_le_monde",
+        participantIdentityIds: [identity.id],
         createdAt: timestamp,
         updatedAt: timestamp,
       }).success,

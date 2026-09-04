@@ -149,6 +149,16 @@ export default async function ConversationPage({
         </aside>
 
         <section className="flex min-w-0 flex-col" aria-label="Fil canonique">
+          {thread ? (
+            <div className="flex flex-wrap gap-2 border-b border-slate-200 px-5 py-3 text-xs font-semibold text-slate-700 lg:px-7">
+              <span className="rounded-full bg-slate-100 px-3 py-1">
+                Confidentialité : {confidentialityLabel(thread.confidentialityLevel)}
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">
+                Visibilité : {visibilityLabel(thread.visibilityScope)}
+              </span>
+            </div>
+          ) : null}
           <div className="flex-1 space-y-4 overflow-y-auto p-5 lg:p-7">
             {thread ? (
               thread.messages.map((message) => {
@@ -576,6 +586,24 @@ function attachmentAccessLabel(
   if (state === "disabled") return "Téléchargement désactivé";
   if (state === "mock") return "Accès mock prêt";
   return "Téléchargement non configuré";
+}
+
+function confidentialityLabel(level: string) {
+  return {
+    public: "Publique",
+    internal: "Interne",
+    restricted: "Restreinte",
+    secret: "Secrète",
+  }[level] ?? "Contrôlée";
+}
+
+function visibilityLabel(scope: string) {
+  return {
+    personal: "Personnelle",
+    team: "Équipe",
+    case: "Dossier",
+    tenant: "Organisation",
+  }[scope] ?? "Contrôlée";
 }
 
 function MessageForm({

@@ -1273,6 +1273,12 @@ async function runConversationJourney(
       ],
     );
     await page.goto(`/conversation?fil=${encodeURIComponent(inbound.threadId)}`);
+    await expect(
+      page.getByText("Confidentialité : Interne", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Visibilité : Organisation", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-altérée.pdf", { exact: true })).toBeVisible();

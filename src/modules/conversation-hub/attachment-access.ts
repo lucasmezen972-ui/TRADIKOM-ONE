@@ -7,8 +7,8 @@ import { recordAuditLog } from "@/modules/audit";
 import type { AttachmentAccessTicketCodec } from "@/modules/conversation-hub/attachment-access-ticket";
 import { AttachmentAccessTicketError } from "@/modules/conversation-hub/attachment-access-ticket";
 import {
-  findConversationAttachmentRow,
-  type ConversationAttachmentRow,
+  findConversationAttachmentAccessRow,
+  type ConversationAttachmentAccessRow,
 } from "@/modules/conversation-hub/repository";
 import { assertTenantAccess } from "@/modules/tenants";
 
@@ -66,6 +66,14 @@ const persistedAttachmentSchema = z
       .max(512)
       .regex(/^[A-Za-z0-9][A-Za-z0-9/_.:-]*$/),
     checksum_sha256: z.string().regex(/^[A-Fa-f0-9]{64}$/),
+    thread_id: boundedIdentifierSchema,
+    confidentiality_level: z.enum([
+      "public",
+      "internal",
+      "restricted",
+      "secret",
+    ]),
+    visibility_scope: z.enum(["personal", "team", "case", "tenant"]),
   })
   .passthrough();
 
@@ -99,7 +107,10 @@ export type AttachmentAccessPolicyEvaluator = (input: {
   userId: string;
   attachmentId: string;
   messageId: string;
-  kind: ConversationAttachmentRow["kind"];
+  threadId: string;
+  confidentialityLevel: ConversationAttachmentAccessRow["confidentiality_level"];
+  visibilityScope: ConversationAttachmentAccessRow["visibility_scope"];
+  kind: ConversationAttachmentAccessRow["kind"];
   sizeBytes: number;
   operation: "prepare" | "read";
 }) =>
@@ -410,7 +421,11 @@ async function requireAttachment(
   tenantId: string,
   attachmentId: string,
 ) {
-  const row = await findConversationAttachmentRow(db, tenantId, attachmentId);
+  const row = await findConversationAttachmentAccessRow(
+    db,
+    tenantId,
+    attachmentId,
+  );
   if (!row) {
     throw new ConversationAttachmentAccessError("attachment_access_not_found");
   }
@@ -425,7 +440,7 @@ async function requireAttachment(
 
 async function evaluatePolicy(
   evaluator: AttachmentAccessPolicyEvaluator,
-  attachment: ConversationAttachmentRow,
+  attachment: ConversationAttachmentAccessRow,
   userId: string,
   operation: "prepare" | "read",
 ) {
@@ -435,6 +450,9 @@ async function evaluatePolicy(
       userId,
       attachmentId: attachment.id,
       messageId: attachment.message_id,
+      threadId: attachment.thread_id,
+      confidentialityLevel: attachment.confidentiality_level,
+      visibilityScope: attachment.visibility_scope,
       kind: attachment.kind,
       sizeBytes: attachment.size_bytes,
       operation,
@@ -450,7 +468,7 @@ async function evaluatePolicy(
 }
 
 function validateDownloadedBytes(
-  attachment: ConversationAttachmentRow,
+  attachment: ConversationAttachmentAccessRow,
   bytes: Uint8Array,
 ): AttachmentAccessFailed | null {
   if (
@@ -498,7 +516,7 @@ async function auditReadFailure(
   db: DbClient,
   userId: string,
   tenantId: string,
-  attachment: ConversationAttachmentRow,
+  attachment: ConversationAttachmentAccessRow,
   failure: AttachmentAccessFailed,
 ) {
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
@@ -569,11 +587,14 @@ async function recordAccessAudit(
 }
 
 function sameStoredObject(
-  expected: ConversationAttachmentRow,
-  current: ConversationAttachmentRow,
+  expected: ConversationAttachmentAccessRow,
+  current: ConversationAttachmentAccessRow,
 ) {
   return (
     current.message_id === expected.message_id &&
+    current.thread_id === expected.thread_id &&
+    current.confidentiality_level === expected.confidentiality_level &&
+    current.visibility_scope === expected.visibility_scope &&
     current.kind === expected.kind &&
     current.file_name === expected.file_name &&
     current.media_type === expected.media_type &&
