@@ -1,39 +1,43 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T21:02:00.000Z",
+  "updatedAt": "2026-09-04T21:47:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "8d6e329b363cac96b5cfb793f82abab7e9aee273",
+  "lastCommit": "754316a5466ca16b730ef0e521852dcce3459b7e",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_thread_access_grants_complete_local_only_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_plan_thread_access_propagation_complete_local_only_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche conversation-first d'autorisations utilisateur durables des fils est livrée localement : personal/team/case exigent un droit actif; tenant reste compatible; listes, lectures, ingestion humaine et pièces jointes ferment l'accès sans droit; une révocation pendant l'IO est détectée; configuration atomique, idempotente, réservée aux rôles administrateurs et auditée sans contenu. Prochaine tranche applicative non bloquée : propager cette frontière aux plans, validations, exécutions et reprises OS-1/OS-4 liés au fil. Aucun OS-6, stockage réel, Graph, secret ou effet externe.",
+  "currentObjective": "La propagation des autorisations du fil aux plans Conversation OS-1/OS-4 est livrée localement. Création, lecture, liste, décision, exécution et reprise exigent désormais un accès actif au fil; la création contrôle avant génération puis avant persistance; toute mutation/reprise ferme l'accès après révocation; la liste et les contrôles génériques des missions ne contournent plus le fil. La finalisation système d'une mission déjà autorisée reste durable et bornée. Prochaine tranche non bloquée : appliquer la même non-fuite aux événements actifs et incidents de workflow liés à un plan restreint. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 17, 18, 22, 23, 24, 31, 32, 33, 35, 36, 37, 38, 46, 47, 48, 64, 65, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 15, 16, 17, 18, 22, 24, 28, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
-        "7 et 9 Conversation Hub canonique et adaptateurs de canaux",
-        "11-13 Capability manifest, plan validé et exécution durable",
-        "17-18 PostgreSQL, RLS, multimodal et pièces jointes non fiables",
+        "6-7 Architecture cible et Conversation Hub canonique",
+        "10-13 Connector Fabric, Capability Manifest, plans structurés et missions durables",
+        "17 Supabase/PostgreSQL/RLS et isolation tenant",
+        "19 UX conversationnelle française et décisions accessibles",
+        "23 Observabilité et erreurs sans contenu sensible",
         "26-28 Roadmap, Definition of Done et reprise",
+        "30-33 Shadow, conséquences, données sensibles et entrées externes non fiables",
+        "38-39 Abstraction IA et évaluations adversariales",
         "41 Premier parcours démontrable",
         "43 Ordre exact de la prochaine exécution",
-        "30-33 Shadow, conséquences, données sensibles et entrées externes non fiables",
-        "58-59 Runtime provider et webhook signé",
+        "58 Provider runtime derrière policy, mission, idempotence et audit",
+        "62 WebChat minimal : fil, plans, décisions et travail en cours",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-13 imposent au Conversation Hub de répondre avec quels droits un message est accessible et rappellent qu'un canal n'accorde aucun droit : ils suivent l'identité interne et le tenant. Les pages 22, 32 et 37 imposent relations composées, RLS, index tenant-leading, droits d'accès, minimisation et tests restricted-role cross-tenant. Ajouter des autorisations utilisateur durables liées au fil et au membership du même tenant; personal/team/case exigent un droit actif de portée correspondante, tenant reste accessible aux membres. Les listes, lectures, préparation et consommation des pièces jointes doivent fermer l'accès sans droit et détecter une révocation pendant l'IO. La configuration doit être atomique, idempotente et auditée sans contenu. Aucun OS-6, CRM, Kanban, dashboard, provider réel, stockage réel, Graph, activation externe, LLM ou outil.",
-      "evidenceExpected": "Preuve obtenue localement : migrations runtime 112/113 et miroirs SQL 0106/0107; table tenant-owned de droits et registre d'opérations idempotentes reliés par clés composées aux fils et memberships; contraintes, unicité, index tenant-leading et RLS propriétaire/administrateur avec lignes utilisateur en lecture; service atomique et idempotent avec audit sans liste d'utilisateurs ni contenu; compatibilité tenant; filtrage des listes, lectures et ingestion humaine pour personal/team/case; accès aux pièces jointes refusé avant stockage sans droit et fermé si le droit est révoqué pendant l'IO; badge français. Après le dernier durcissement RLS : ciblés 6 fichiers verts et 1 PostgreSQL ignoré, 27 tests verts et 1 ignoré sans DATABASE_URL; ESLint ciblé et TypeScript verts. Avant ce dernier durcissement SQL : régression Conversation/Meta/média 21 fichiers verts et 3 ignorés, 158 tests verts et 5 ignorés; suite exhaustive 146 fichiers verts et 10 ignorés, 722 tests verts et 23 ignorés; lint complet et build production verts. PostgreSQL/RLS et Playwright restent à prouver en CI. Fournisseurs toujours not_configured/mock et zéro IO externe."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 exigent que les droits suivent la conversation canonique. Les pages 17-18 imposent qu'un plan soit validé contre les permissions avant exécution et que toute exécution passe par une mission durable/idempotente. Les pages 22, 32, 37 et 69 exigent isolation tenant/RLS, refus de permission, minimisation et tests unitaires, intégration, workflow, sécurité et Playwright. Appliquer le contrôle d'accès du fil à chaque entrée utilisateur des plans : création depuis le message, lecture, liste, décision, exécution et reprise. Revalider avant chaque mutation sensible et lancement/reprise de mission; une révocation doit fermer l'accès sans altérer la preuve durable. Conserver le bypass système uniquement pour la finalisation asynchrone déjà autorisée. Aucun OS-6, CRM, Kanban, dashboard, provider réel, Graph, activation externe, LLM ou outil.",
+      "evidenceExpected": "Preuve obtenue localement : garde fondée sur tenant, fil et utilisateur appliquée avant génération puis avant persistance; get/list sans fuite; décision et exécution refusées après révocation sans modifier approval, plan, mission ou audit; reprise revalidée dans sa transaction de mutation, y compris contre une révocation injectée entre les deux transactions; liste et contrôles génériques des missions conversationnelles filtrés; tenant compatible et finalisation système durable inchangée; audit sans identifiant de bénéficiaire ni contenu. Tests ciblés 3 fichiers/16 tests verts; régression orchestrateur/workflows/Conversation 14 fichiers verts et 1 PostgreSQL ignoré, 53 tests verts et 1 ignoré; suite exhaustive 146 fichiers verts et 10 ignorés, 724 tests verts et 23 ignorés sans DATABASE_URL; ESLint complet, TypeScript, build production, continuity-check et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer en CI. Fournisseurs toujours disabled/not_configured/mock et zéro IO externe."
     }
   },
-  "nextAction": "Propager les droits durables du fil aux plans Conversation : création, lecture, liste, décision, exécution et reprise doivent refuser personal/team/case sans droit actif, tout en conservant les exigences de rôle et le bypass système strictement borné à la finalisation durable. Ajouter les preuves de révocation et de non-fuite avant de poursuivre OS-5. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
-  "nextFile": "src/modules/orchestrator/service.ts",
+  "nextAction": "Filtrer les événements actifs, la vue de file et les incidents/dead letters liés à un conversation_plan inaccessible, puis empêcher leur annulation ou relance générique sans droit actif; conserver les agrégats sûrs et ajouter les tests de non-fuite/révocation. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
+  "nextFile": "src/modules/workflows/service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -486,7 +490,15 @@
     "Playwright média ajouté pour provenance WhatsApp, nom de fichier et badge Stockage mock; exécution locale non revendiquée faute de PostgreSQL partagé",
     "GitHub relu sans mutation : PR #11 ouverte, brouillon, MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte et CI 33826756939 inchangée rouge avant tests sur timeout npm audit",
     "pnpm agent:continuity-check tenté : wrapper local bloqué par réinstallation pnpm sans réseau/TTY; script versionné direct à exécuter après documentation",
-    "commit local contrôlé 279b061ec9609dbbf3e5d9aaf21ccd30c9c68052; 15 fichiers applicatifs/tests/docs, tmp exclu, aucun push ni CI déclenchée"
+    "commit local contrôlé 279b061ec9609dbbf3e5d9aaf21ccd30c9c68052; 15 fichiers applicatifs/tests/docs, tmp exclu, aucun push ni CI déclenchée",
+    "heartbeat 2026-09-04T21:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages plans/workflows 10-12, 15-18, 22, 24, 28, 35-38, 43-44, 64 et 68 relues directement; pages 17, 32, 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check : ready, zéro erreur et zéro avertissement",
+    "GitHub relu sans mutation : PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte, CI 33826756939 rouge avant tests sur timeout npm audit",
+    "contrôles de fil sur create/get/list/decide/execute/retry, revalidation transactionnelle de reprise et filtrage des missions génériques; aucun IO externe",
+    "tests ciblés 3 fichiers/16 tests verts; régression élargie 14 fichiers réussis, 1 ignoré, 53 tests réussis et 1 ignoré sans DATABASE_URL",
+    "suite exhaustive 146 fichiers réussis, 10 ignorés, 724 tests réussis et 23 ignorés; ESLint complet, TypeScript, build production et git diff --check verts",
+    "commit fonctionnel local 754316a5466ca16b730ef0e521852dcce3459b7e; tmp exclu, aucun push ni CI déclenchée"
   ],
   "lastValidation": [
     {
@@ -1640,6 +1652,26 @@
     {
       "command": "audit de propagation des droits vers les plans OS-1 et missions OS-4",
       "status": "gap_identified_create_get_list_decide_execute_and_retry_only_assert_tenant_membership_next_vertical_slice_no_os6"
+    },
+    {
+      "command": "prompt maître, continuity-check, Supabase changelog et GitHub le 2026-09-04T21:23Z",
+      "status": "passed_sha256_exact_71_pages_core_and_plan_workflow_pages_reviewed_pages_17_32_48_69_rendered_pnpm_ready_supabase_no_relevant_breaking_rls_change_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_npm_timeout_no_mutation"
+    },
+    {
+      "command": "propagation des droits de fil aux plans et missions au commit local 754316a5466ca16b730ef0e521852dcce3459b7e",
+      "status": "passed_create_pre_generation_and_pre_persistence_get_list_decide_execute_retry_and_generic_workflow_list_controls_fail_closed_non_enumerating_revocation_transaction_lock_system_finalization_unchanged_no_external_io"
+    },
+    {
+      "command": "tests ciblés puis régression orchestrateur workflows Conversation",
+      "status": "passed_targeted_3_files_16_tests_regression_14_files_53_tests_1_postgres_file_1_test_skipped_without_database_url"
+    },
+    {
+      "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T21:46Z",
+      "status": "passed_full_146_files_724_tests_10_files_23_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_playwright_ci_pending"
+    },
+    {
+      "command": "audit de la prochaine frontière workflow",
+      "status": "gap_identified_active_queue_events_and_dead_letters_may_still_expose_or_control_restricted_conversation_plan_next_slice_no_os6"
     }
   ],
   "humanBlockers": [

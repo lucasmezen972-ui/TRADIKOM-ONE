@@ -5,7 +5,7 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates 10-18, 22-24, 35-38 et 64-65 ont été relues directement le 4 septembre 2026.
-- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; les autorisations durables des fils sont conservées localement dans `8d6e329b363cac96b5cfb793f82abab7e9aee273`, sans push. Après le présent handoff, la branche sera en avance de vingt-et-un commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
+- Le head distant publié reste `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; la propagation des droits aux plans et missions est conservée localement dans `754316a5466ca16b730ef0e521852dcce3459b7e`, sans push. Après le présent handoff, la branche sera en avance de vingt-trois commits. La continuité `33826756891` est verte. La CI `33826756939` s'est arrêtée deux fois avant migrations/tests uniquement sur un timeout de l'API d'audit npm; aucune relance ni publication indirecte n'a été déclenchée sans approbation explicite.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. L'inscription Meta for Developers est ouverte dans Chrome et attend le code SMS à six chiffres saisi directement par l'utilisateur; le bouton Continuer est encore désactivé.
 
 ## Tranche applicative locale terminée : autorisations durables des fils
@@ -17,6 +17,16 @@
 - L'interface Conversation affiche en français si le fil est ouvert à l'organisation ou soumis à autorisation explicite. Aucun écran CRM, Kanban ou dashboard secondaire n'est ajouté.
 - Preuves finales après durcissement RLS : 6 fichiers ciblés verts et 1 PostgreSQL ignoré, 27 tests verts et 1 ignoré faute de `DATABASE_URL`; ESLint ciblé et TypeScript verts. Avant le dernier changement SQL, la régression Conversation/Meta/média comptait 158 tests verts et 5 ignorés; la suite exhaustive 722 tests verts et 23 ignorés; lint complet et build production verts.
 - État honnête : livré localement au commit `8d6e329b363cac96b5cfb793f82abab7e9aee273`; PostgreSQL/RLS réel et Playwright attendent la CI. Aucun Graph, stockage réel, secret, message externe, activation ou déploiement.
+
+## Tranche applicative locale terminée : droits hérités par les plans et missions
+
+- La création d'un plan vérifie l'accès au fil avant même d'appeler le générateur, puis le revalide avant toute persistance. Une révocation pendant la génération ne peut donc créer ni plan, ni validation, ni message, ni audit.
+- Lecture, liste, décision et exécution refusent de façon non énumérable un plan dont le fil `personal`/`team`/`case` n'est plus accessible. Le rôle tenant seul ne suffit plus; les fils `tenant` restent compatibles.
+- La reprise manuelle vérifie d'abord le plan puis revalide le droit dans la transaction qui modifie réellement la mission. Un test injecte une révocation exactement entre les deux transactions et prouve zéro événement de reprise, zéro audit et compteur inchangé.
+- La liste générique « travail en cours » masque les missions d'un plan inaccessible. Les contrôles génériques annuler/approuver/refuser/relancer appliquent la même garde afin qu'une route secondaire ne contourne pas Conversation.
+- La finalisation système asynchrone d'une mission déjà autorisée reste bornée, idempotente et inchangée. Elle ne crée aucun droit utilisateur et n'ouvre aucune lecture; le résultat reste dans le fil protégé.
+- Preuves : ciblés 3 fichiers/16 tests verts; régression orchestrateur/workflows/Conversation 14 fichiers verts et 1 PostgreSQL ignoré, 53 tests verts et 1 ignoré; suite exhaustive 146 fichiers verts et 10 ignorés, 724 tests verts et 23 ignorés sans `DATABASE_URL`. ESLint complet, TypeScript, build production, continuity-check et diff check sont verts.
+- État honnête : livré localement au commit `754316a5466ca16b730ef0e521852dcce3459b7e`; PostgreSQL/RLS et Playwright attendent la CI. Aucun provider, LLM, Graph, stockage réel, secret ou effet externe.
 
 ## Tranche locale terminée : coffre chiffré WhatsApp Meta
 
@@ -174,16 +184,17 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Prochaine action concrète
 
-1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les vingt-et-un commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
+1. Obtenir l'ordre explicite « publie et lance la CI » pour publier les vingt-trois commits locaux après le handoff et déclencher une nouvelle CI sans supprimer, ignorer ni affaiblir `pnpm audit`.
 2. Vérifier que le head distant est encore exactement `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`, puis pousser uniquement en fast-forward les fichiers contrôlés; conserver `tmp/` hors index.
 3. Exiger une CI verte incluant migrations PostgreSQL, RLS et le nouveau scénario Playwright avant de classer l'import média prouvé CI.
-4. Sans publication, prochaine tranche locale non bloquée : propager les autorisations du fil aux plans Conversation — création, lecture, liste, décision, exécution et reprise — afin que les workflows OS-1/OS-4 refusent `personal`/`team`/`case` sans droit actif, avec tests de révocation et sans démarrer OS-6.
+4. Sans publication, prochaine tranche locale non bloquée : filtrer les événements actifs, la file et les incidents/dead letters liés à un plan Conversation inaccessible, puis empêcher leur annulation ou relance générique après révocation; conserver seulement les agrégats sûrs et ne pas démarrer OS-6.
 5. Le checkpoint fournisseur reste la saisie du code SMS directement dans Meta par l'utilisateur, qui indique ensuite seulement que l'étape est terminée; ne jamais transmettre le code dans le chat.
 6. Dans la console officielle, inventorier l'application, le WABA et le Phone Number ID. Demander une confirmation au moment exact avant toute création d'un token persistant.
 7. Une requête Graph réelle, un stockage Supabase réel, un webhook public, un message de preuve, une activation, un déploiement ou une dépense nécessitent une autorisation distincte.
 
 ## Validation disponible
 
+- Droits des plans et missions : création contrôlée avant génération puis persistance, lecture/liste/décision/exécution fermées, reprise revalidée atomiquement et missions génériques masquées. Ciblés 3 fichiers/16 tests verts; régression 14 fichiers/53 tests verts avec 1 fichier/1 test PostgreSQL ignoré; suite exhaustive 146 fichiers/724 tests verts avec 10 fichiers/23 tests ignorés sans `DATABASE_URL`. ESLint complet, TypeScript, build production, continuity-check et diff check verts. PostgreSQL/RLS et Playwright restent à confirmer en CI.
 - Autorisations durables des fils : migrations 112/113 et miroirs 0106/0107, configuration idempotente propriétaire/administrateur, filtrage des fils/messages et pièce jointe fermée sur révocation. Après le dernier durcissement RLS, 6 fichiers ciblés verts et 1 PostgreSQL ignoré, 27 tests verts et 1 ignoré sans `DATABASE_URL`; ESLint ciblé et TypeScript verts. Avant ce changement SQL final, régression Conversation/Meta/média 21 fichiers/158 tests verts avec 3 fichiers/5 tests ignorés; suite exhaustive 146 fichiers/722 tests verts avec 10 fichiers/23 tests ignorés; lint complet et build production verts. PostgreSQL/RLS et Playwright doivent être confirmés par CI.
 - Classification des fils locale : ciblés 5 fichiers/21 tests verts et 1 fichier/1 test PostgreSQL ignoré; régression Conversation/Meta/média 19 fichiers/151 tests verts et 2 fichiers/4 tests PostgreSQL ignorés. La suite exhaustive termine à 144 fichiers/715 tests verts et 9 fichiers/22 tests PostgreSQL ignorés; ESLint, TypeScript, build production, continuity-check et diff check sont verts. Le scénario Playwright des badges français est adapté mais attend la CI PostgreSQL partagée.
 - Frontière HTTP/session locale : 17 tests adversariaux et 1 intégration verticale; ciblés finaux 3 fichiers/26 tests verts; régression ciblée 5 fichiers/61 tests verts avec 1 fichier/3 tests PostgreSQL ignorés. La suite exhaustive source termine à 142 fichiers/710 tests verts et 8 fichiers/21 tests PostgreSQL ignorés; ESLint, TypeScript, build production avec route inventoriée, continuity-check et diff check sont verts. PostgreSQL/RLS et Playwright attendent la CI partagée.
@@ -240,10 +251,10 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head 28efa75 est publié et sa continuité 33826756891 est verte. Le commit local 8d6e329 ajoute les autorisations durables personal/team/case, leur RLS et leur application aux fils/messages/pièces jointes; la branche sera en avance de vingt-et-un commits après le handoff. La CI 33826756939 a expiré deux fois sur l'API d'audit npm avant migrations/tests; demander l'approbation explicite pour publier et relancer, sans contourner l'audit.
+3. Le head 28efa75 est publié et sa continuité 33826756891 est verte. Le commit local 754316a propage les autorisations du fil à la création, lecture, décision, exécution, reprise et liste générique des missions; la branche sera en avance de vingt-trois commits après le handoff. La CI 33826756939 a expiré deux fois sur l'API d'audit npm avant migrations/tests; demander l'approbation explicite pour publier et relancer, sans contourner l'audit.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
-7. Sans publication, propager les droits de fil aux plans Conversation OS-1/OS-4 : création, lecture, liste, décision, exécution et reprise doivent échouer sans droit actif; ne pas démarrer goal-watch/OS-6.
+7. Sans publication, appliquer les droits du fil aux événements actifs et incidents/dead letters des plans Conversation, y compris leurs contrôles génériques; ne pas démarrer goal-watch/OS-6.
 8. Maintenir français visible, tenant/RLS, idempotence, actions durables, audit sans PII et états disabled/not_configured/mock honnêtes.
 ```
