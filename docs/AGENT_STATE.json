@@ -1,21 +1,21 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T19:41:00.000Z",
+  "updatedAt": "2026-09-04T21:02:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "8900ac5836c504c970d32ee88f8f87bdb515a591",
+  "lastCommit": "8d6e329b363cac96b5cfb793f82abab7e9aee273",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_thread_confidentiality_visibility_complete_local_only_ci_publish_approval_required_human_otp_pending",
+  "status": "os5_thread_access_grants_complete_local_only_ci_publish_approval_required_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Confidentialité et visibilité du fil livrées localement : migration additive 111 et miroir 0105, valeurs bornées public/internal/restricted/secret et personal/team/case/tenant, défaut historique internal/tenant, index tenant-leading et RLS existante couverte par un test PostgreSQL dédié. Les lectures du Conversation Hub exposent les deux états en français. L'accès aux pièces jointes les charge par jointure tenant-scoped, les transmet obligatoirement à la policy en prepare/read et ferme la lecture s'ils changent pendant l'IO. Prochaine tranche conversation-first : introduire des autorisations de fil durables pour faire respecter personal/team/case au-delà de la seule appartenance au tenant. Aucun stockage réel, Graph, secret ou effet externe.",
+  "currentObjective": "La tranche conversation-first d'autorisations utilisateur durables des fils est livrée localement : personal/team/case exigent un droit actif; tenant reste compatible; listes, lectures, ingestion humaine et pièces jointes ferment l'accès sans droit; une révocation pendant l'IO est détectée; configuration atomique, idempotente, réservée aux rôles administrateurs et auditée sans contenu. Prochaine tranche applicative non bloquée : propager cette frontière aux plans, validations, exécutions et reprises OS-1/OS-4 liés au fil. Aucun OS-6, stockage réel, Graph, secret ou effet externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 23, 24, 31, 32, 33, 35, 36, 37, 38, 46, 48, 64, 65, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 17, 18, 22, 23, 24, 31, 32, 33, 35, 36, 37, 38, 46, 47, 48, 64, 65, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "7 et 9 Conversation Hub canonique et adaptateurs de canaux",
@@ -28,12 +28,12 @@
         "58-59 Runtime provider et webhook signé",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 et 23 imposent au Conversation Hub de conserver les niveaux de confidentialité, de pouvoir répondre avec quels droits un message est accessible et de faire hériter les pièces jointes de la confidentialité du fil. Les pages 22, 32 et 37 imposent migration additive, tenant_id, contraintes, RLS, classification obligatoire et tests cross-tenant. Ajouter deux colonnes non nulles bornées au fil canonique, conserver des défauts sûrs pour l'historique, les exposer dans les lectures conversationnelles et les transmettre obligatoirement à la policy d'accès lors de prepare/read. Une mutation pendant l'IO doit être détectée et refusée. Aucun OS-6, CRM, Kanban, dashboard, provider réel, stockage réel, Graph, activation externe, LLM ou outil.",
-      "evidenceExpected": "Preuve obtenue : migration runtime 111 et miroir SQL 0105 identiques; upgrade depuis 110 vers défauts internal/tenant; contraintes des deux vocabulaires et index tenant-leading; schémas/types/repository/service cohérents; lecture Conversation et badges français Confidentialité/Visibilité; jointure attachment-message-thread tenant-scoped; policy recevant threadId, confidentialityLevel et visibilityScope à la préparation et à la lecture; revalidation post-IO fermée sur mutation des droits. Ciblés 5 fichiers/21 tests verts et 1 fichier/1 test PostgreSQL ignoré; régression Conversation/Meta/média 19 fichiers/151 tests verts et 2 fichiers/4 tests PostgreSQL ignorés; suite exhaustive 144 fichiers/715 tests verts et 9 fichiers/22 tests PostgreSQL ignorés; ESLint, TypeScript, build production, continuity-check et diff check verts. Playwright est adapté mais attend PostgreSQL partagé en CI. Fournisseurs toujours not_configured/mock et zéro IO externe."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-13 imposent au Conversation Hub de répondre avec quels droits un message est accessible et rappellent qu'un canal n'accorde aucun droit : ils suivent l'identité interne et le tenant. Les pages 22, 32 et 37 imposent relations composées, RLS, index tenant-leading, droits d'accès, minimisation et tests restricted-role cross-tenant. Ajouter des autorisations utilisateur durables liées au fil et au membership du même tenant; personal/team/case exigent un droit actif de portée correspondante, tenant reste accessible aux membres. Les listes, lectures, préparation et consommation des pièces jointes doivent fermer l'accès sans droit et détecter une révocation pendant l'IO. La configuration doit être atomique, idempotente et auditée sans contenu. Aucun OS-6, CRM, Kanban, dashboard, provider réel, stockage réel, Graph, activation externe, LLM ou outil.",
+      "evidenceExpected": "Preuve obtenue localement : migrations runtime 112/113 et miroirs SQL 0106/0107; table tenant-owned de droits et registre d'opérations idempotentes reliés par clés composées aux fils et memberships; contraintes, unicité, index tenant-leading et RLS propriétaire/administrateur avec lignes utilisateur en lecture; service atomique et idempotent avec audit sans liste d'utilisateurs ni contenu; compatibilité tenant; filtrage des listes, lectures et ingestion humaine pour personal/team/case; accès aux pièces jointes refusé avant stockage sans droit et fermé si le droit est révoqué pendant l'IO; badge français. Après le dernier durcissement RLS : ciblés 6 fichiers verts et 1 PostgreSQL ignoré, 27 tests verts et 1 ignoré sans DATABASE_URL; ESLint ciblé et TypeScript verts. Avant ce dernier durcissement SQL : régression Conversation/Meta/média 21 fichiers verts et 3 ignorés, 158 tests verts et 5 ignorés; suite exhaustive 146 fichiers verts et 10 ignorés, 722 tests verts et 23 ignorés; lint complet et build production verts. PostgreSQL/RLS et Playwright restent à prouver en CI. Fournisseurs toujours not_configured/mock et zéro IO externe."
     }
   },
-  "nextAction": "Sans publication, concevoir des autorisations de fil durables et tenant/RLS pour faire respecter les portées personal/team/case par la policy d'accès, avec défaut tenant compatible et aucun changement fournisseur. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
-  "nextFile": "src/lib/db.ts",
+  "nextAction": "Propager les droits durables du fil aux plans Conversation : création, lecture, liste, décision, exécution et reprise doivent refuser personal/team/case sans droit actif, tout en conservant les exigences de rôle et le bypass système strictement borné à la finalisation durable. Ajouter les preuves de révocation et de non-fuite avant de poursuivre OS-5. Après l'ordre explicite publie et lance la CI, réconcilier le head distant 28efa75 avant toute publication fast-forward.",
+  "nextFile": "src/modules/orchestrator/service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1620,6 +1620,26 @@
     {
       "command": "régression exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T19:40Z",
       "status": "passed_full_144_files_715_tests_9_files_22_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_playwright_adapted_ci_pending"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub le 2026-09-04T20:24Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_11_22_48_69_rendered_pnpm_ready_zero_errors_warnings_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_on_npm_audit_timeout_no_mutation"
+    },
+    {
+      "command": "autorisations durables des fils au commit local 8d6e329b363cac96b5cfb793f82abab7e9aee273",
+      "status": "passed_migrations_112_113_sql_0106_0107_composite_relations_memberships_rls_tenant_leading_indexes_owner_admin_configuration_idempotent_operations_access_filtered_lists_reads_human_ingestion_attachments_revocation_post_io_french_badge_no_external_io"
+    },
+    {
+      "command": "tests ciblés finaux des droits de fil après durcissement RLS",
+      "status": "passed_6_files_27_tests_1_postgres_file_1_test_skipped_without_database_url_targeted_eslint_and_typescript_green"
+    },
+    {
+      "command": "régressions et build avant le dernier durcissement SQL RLS",
+      "status": "passed_conversation_meta_media_21_files_158_tests_3_files_5_tests_skipped_full_146_files_722_tests_10_files_23_tests_skipped_lint_and_production_build_green"
+    },
+    {
+      "command": "audit de propagation des droits vers les plans OS-1 et missions OS-4",
+      "status": "gap_identified_create_get_list_decide_execute_and_retry_only_assert_tenant_membership_next_vertical_slice_no_os6"
     }
   ],
   "humanBlockers": [
