@@ -123,16 +123,27 @@ export const messageAttachmentSchema = z
   })
   .strict();
 
-export const externalUntrustedDataExtractionSchema = z
-  .object({
-    trustBoundary: z.literal("external_untrusted_data"),
-    mode: z.literal("mock"),
-    extractorKey: boundedIdentifierSchema,
-    text: z.string().min(1).max(16_000),
-    textSha256: z.string().regex(/^[A-Fa-f0-9]{64}$/),
-    extractedAt: timestampSchema,
-  })
-  .strict();
+export const externalUntrustedDataExtractionSchema = z.discriminatedUnion(
+  "integrity",
+  [
+    z
+      .object({
+        trustBoundary: z.literal("external_untrusted_data"),
+        mode: z.literal("mock"),
+        extractorKey: boundedIdentifierSchema,
+        integrity: z.literal("verified"),
+        text: z.string().min(1).max(16_000),
+        extractedAt: timestampSchema,
+      })
+      .strict(),
+    z
+      .object({
+        trustBoundary: z.literal("external_untrusted_data"),
+        integrity: z.literal("failed"),
+      })
+      .strict(),
+  ],
+);
 
 export const canonicalMessageAttachmentSchema = messageAttachmentSchema
   .extend({

@@ -1254,9 +1254,10 @@ async function runConversationJourney(
     await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("Stockage mock", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("Contenu externe non fiable · extraction mock", {
-        exact: true,
-      }),
+      page.getByText("Contenu externe non fiable", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Extraction mock · intégrité vérifiée", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("Contenu de preuve extrait sans modèle ni outil.", {

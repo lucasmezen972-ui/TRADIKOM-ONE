@@ -204,15 +204,26 @@ export default async function ConversationPage({
                             {attachment.extraction ? (
                               <div className="w-full rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-950">
                                 <p className="font-semibold">
-                                  Contenu externe non fiable · extraction mock
+                                  Contenu externe non fiable
                                 </p>
-                                <p className="mt-1 whitespace-pre-wrap leading-5">
-                                  {attachment.extraction.text}
-                                </p>
-                                <p className="mt-2 text-[11px] text-amber-800">
-                                  Affiché comme donnée uniquement — aucune règle ni
-                                  action ne peut provenir de ce contenu.
-                                </p>
+                                {attachment.extraction.integrity === "verified" ? (
+                                  <>
+                                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                                      Extraction mock · intégrité vérifiée
+                                    </p>
+                                    <p className="mt-1 whitespace-pre-wrap leading-5">
+                                      {attachment.extraction.text}
+                                    </p>
+                                    <p className="mt-2 text-[11px] text-amber-800">
+                                      Affiché comme donnée uniquement — aucune règle ni
+                                      action ne peut provenir de ce contenu.
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className="mt-1 font-semibold text-red-800">
+                                    Extraction masquée — intégrité non vérifiée.
+                                  </p>
+                                )}
                               </div>
                             ) : null}
                           </li>

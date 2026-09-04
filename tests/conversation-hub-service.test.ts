@@ -76,6 +76,44 @@ describe("service du Conversation Hub", () => {
         routeTrace: input.routeTrace,
       },
     });
+
+    const alteredText = "password=contenu-altéré-à-masquer";
+    await context.db.query(
+      `insert into conversation_message_attachments (
+         id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+         storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+         extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+         created_at
+       ) values (
+         'attachment_integrity_failed', $1, $2, 'document', 'altéré.pdf',
+         'application/pdf', 32, 'mock:media/integrity-failed', $3,
+         'external_untrusted_data', 'mock', 'mock_external_text_v1', $4, $5,
+         $6, $6
+       )`,
+      [
+        context.tenantId,
+        first.messageId,
+        "c".repeat(64),
+        alteredText,
+        "d".repeat(64),
+        timestamp,
+      ],
+    );
+    const integrityThread = await getConversationThread(
+      context.db,
+      context.userId,
+      context.tenantId,
+      first.threadId,
+    );
+    const alteredAttachment = integrityThread.messages[0]?.attachments.find(
+      (attachment) => attachment.id === "attachment_integrity_failed",
+    );
+    expect(alteredAttachment?.extraction).toEqual({
+      trustBoundary: "external_untrusted_data",
+      integrity: "failed",
+    });
+    expect(JSON.stringify(alteredAttachment)).not.toContain(alteredText);
+
     await expect(
       listConversationThreads(
         context.db,

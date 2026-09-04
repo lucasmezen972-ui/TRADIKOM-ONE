@@ -433,10 +433,8 @@ describe("ingestion WhatsApp Cloud Meta", () => {
           trustBoundary: "external_untrusted_data",
           mode: "mock",
           extractorKey: "mock_external_text_v1",
+          integrity: "verified",
           text: extractedText,
-          textSha256: createHash("sha256")
-            .update(extractedText, "utf8")
-            .digest("hex"),
           extractedAt: "2026-07-30T16:22:00.000Z",
         },
       }),
