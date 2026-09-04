@@ -102,6 +102,22 @@ export type ImmutableMediaStorageAdapter = {
   >;
 };
 
+export type MediaSecurityScanAdapter = {
+  readonly state: MediaImportRuntimeMode;
+  scan(input: {
+    tenantId: string;
+    mediaImportId: string;
+    idempotencyKey: string;
+    bytes: Uint8Array;
+    mediaType: string;
+    checksumSha256: string;
+  }): Promise<
+    | { status: "clean" }
+    | { status: "unsafe"; safeErrorCode: string }
+    | MediaImportFailureResult
+  >;
+};
+
 export type MediaImportPolicyEvaluator = (input: {
   tenantId: string;
   actorId: string;
@@ -116,6 +132,7 @@ export type MediaImportPolicyEvaluator = (input: {
 export type ChannelProviderMediaImportDependencies = {
   cipher?: ChannelProviderMediaReferenceCipher;
   provider: MetaWhatsAppMediaFetchAdapter;
+  scanner: MediaSecurityScanAdapter;
   storage: ImmutableMediaStorageAdapter;
   evaluatePolicy: MediaImportPolicyEvaluator;
 };
@@ -211,6 +228,7 @@ async function processMetaWhatsAppMediaImportAs(
           tenantId: parsed.tenantId,
           mediaImportId: parsed.mediaImportId,
           providerMode: dependencies.provider.state,
+          scannerMode: dependencies.scanner.state,
           storageMode: dependencies.storage.state,
           maxAttempts,
           actorId:
@@ -223,6 +241,7 @@ async function processMetaWhatsAppMediaImportAs(
       if (!reservation.row) throw workerError("channel_provider_media_import_not_found");
       if (
         reservation.row.provider_mode !== dependencies.provider.state ||
+        reservation.row.scanner_mode !== dependencies.scanner.state ||
         reservation.row.storage_mode !== dependencies.storage.state
       ) {
         throw workerError("channel_provider_media_import_runtime_mismatch");
@@ -320,6 +339,7 @@ async function attemptMetaWhatsAppMediaImportAs(
       }
       if (
         claimed.provider_mode !== dependencies.provider.state ||
+        claimed.scanner_mode !== dependencies.scanner.state ||
         claimed.storage_mode !== dependencies.storage.state
       ) {
         return finalizeWithoutIo(
@@ -332,9 +352,15 @@ async function attemptMetaWhatsAppMediaImportAs(
           "media_runtime_mode_mismatch",
         );
       }
-      if (claimed.provider_mode !== "mock" || claimed.storage_mode !== "mock") {
+      if (
+        claimed.provider_mode !== "mock" ||
+        claimed.scanner_mode !== "mock" ||
+        claimed.storage_mode !== "mock"
+      ) {
         const code =
-          claimed.provider_mode === "disabled" || claimed.storage_mode === "disabled"
+          claimed.provider_mode === "disabled" ||
+          claimed.scanner_mode === "disabled" ||
+          claimed.storage_mode === "disabled"
             ? "media_import_disabled"
             : "media_import_not_configured";
         return finalizeWithoutIo(
@@ -436,7 +462,7 @@ async function attemptMetaWhatsAppMediaImportAs(
       if (!validated.ok) {
         outcome = failedOutcome("validation", validated.code, false);
       } else {
-        const stored = await storeSafely(dependencies.storage, {
+        const scanned = await scanSafely(dependencies.scanner, {
           tenantId: parsed.tenantId,
           mediaImportId: parsed.mediaImportId,
           idempotencyKey,
@@ -444,20 +470,34 @@ async function attemptMetaWhatsAppMediaImportAs(
           mediaType: validated.mediaType,
           checksumSha256: validated.checksumSha256,
         });
-        if (stored.status === "failed") {
-          outcome = failureOutcome(stored);
+        if (scanned.status === "failed") {
+          outcome = failureOutcome(scanned);
+        } else if (scanned.status === "unsafe") {
+          outcome = failedOutcome("validation", scanned.safeErrorCode, false);
         } else {
-          outcome = succeededOutcome();
-          attachment = {
-            id: deterministicAttachmentId(prepared.row.id),
-            messageId: prepared.request.messageId,
-            kind: attachmentKind(prepared.request.reference.mediaKind),
-            fileName: safeFileName(prepared.request.reference),
+          const stored = await storeSafely(dependencies.storage, {
+            tenantId: parsed.tenantId,
+            mediaImportId: parsed.mediaImportId,
+            idempotencyKey,
+            bytes: fetched.bytes,
             mediaType: validated.mediaType,
-            sizeBytes: fetched.bytes.byteLength,
-            storageReference: stored.storageReference,
             checksumSha256: validated.checksumSha256,
-          };
+          });
+          if (stored.status === "failed") {
+            outcome = failureOutcome(stored);
+          } else {
+            outcome = succeededOutcome();
+            attachment = {
+              id: deterministicAttachmentId(prepared.row.id),
+              messageId: prepared.request.messageId,
+              kind: attachmentKind(prepared.request.reference.mediaKind),
+              fileName: safeFileName(prepared.request.reference),
+              mediaType: validated.mediaType,
+              sizeBytes: fetched.bytes.byteLength,
+              storageReference: stored.storageReference,
+              checksumSha256: validated.checksumSha256,
+            };
+          }
         }
       }
     }
@@ -682,6 +722,7 @@ async function auditExecution(
     metadata: {
       provider: execution.provider,
       providerMode: execution.provider_mode,
+      scannerMode: execution.scanner_mode,
       storageMode: execution.storage_mode,
       status: execution.status,
       classification: execution.failure_classification,
@@ -705,12 +746,14 @@ function mediaImportRuntimeState(
   if (!dependencies) return "not_configured";
   if (
     dependencies.provider.state === "disabled" ||
+    dependencies.scanner.state === "disabled" ||
     dependencies.storage.state === "disabled"
   ) {
     return "disabled";
   }
   if (
     dependencies.provider.state === "mock" &&
+    dependencies.scanner.state === "mock" &&
     dependencies.storage.state === "mock" &&
     dependencies.cipher
   ) {
@@ -798,6 +841,26 @@ async function storeSafely(
     return parseFailure(result);
   } catch {
     return temporaryFailure("media_storage_unavailable");
+  }
+}
+
+async function scanSafely(
+  adapter: MediaSecurityScanAdapter,
+  input: Parameters<MediaSecurityScanAdapter["scan"]>[0],
+) {
+  try {
+    if (adapter.state !== "mock") return providerUnavailable(adapter.state);
+    const result = await adapter.scan(input);
+    if (result.status === "clean") return { status: "clean" as const };
+    if (result.status === "unsafe") {
+      return {
+        status: "unsafe" as const,
+        safeErrorCode: safeErrorCodeSchema.parse(result.safeErrorCode),
+      };
+    }
+    return parseFailure(result);
+  } catch {
+    return temporaryFailure("media_security_scanner_unavailable");
   }
 }
 
@@ -990,6 +1053,7 @@ function mapExecution(row: ChannelProviderMediaImportExecutionRow, replayed: boo
     maxAttempts: Number(row.max_attempts),
     attachmentId: row.attachment_id,
     providerMode: row.provider_mode,
+    scannerMode: row.scanner_mode,
     storageMode: row.storage_mode,
     idempotentReplay: replayed,
   };

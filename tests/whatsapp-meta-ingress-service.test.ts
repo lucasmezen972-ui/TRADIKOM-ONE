@@ -339,9 +339,11 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       status: "succeeded" as const,
       storageReference: `mock:media/${checksum}`,
     });
+    const scanMedia = vi.fn().mockResolvedValue({ status: "clean" as const });
     const dependencies = {
       cipher: mediaReferenceCipher,
       provider: { state: "mock" as const, fetch: fetchMedia },
+      scanner: { state: "mock" as const, scan: scanMedia },
       storage: { state: "mock" as const, store: storeMedia },
       evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
     };
@@ -370,6 +372,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       status: "succeeded",
       attempts: 1,
       providerMode: "mock",
+      scannerMode: "mock",
       storageMode: "mock",
       idempotentReplay: false,
     });
@@ -379,7 +382,22 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       idempotentReplay: true,
     });
     expect(fetchMedia).toHaveBeenCalledTimes(1);
+    expect(scanMedia).toHaveBeenCalledTimes(1);
     expect(storeMedia).toHaveBeenCalledTimes(1);
+    expect(scanMedia).toHaveBeenCalledWith({
+      tenantId: setup.tenant.id,
+      mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      idempotencyKey: expect.stringMatching(/^media-import:/),
+      bytes,
+      mediaType: "application/pdf",
+      checksumSha256: checksum,
+    });
+    expect(fetchMedia.mock.invocationCallOrder[0]).toBeLessThan(
+      scanMedia.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(scanMedia.mock.invocationCallOrder[0]).toBeLessThan(
+      storeMedia.mock.invocationCallOrder[0] ?? 0,
+    );
     const thread = await getConversationThread(
       setup.db,
       setup.owner.id,
@@ -409,6 +427,73 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       ).rows,
     );
     for (const sensitive of [mediaId, checksum, fileName, `mock:media/${checksum}`]) {
+      expect(audits).not.toContain(sensitive);
+    }
+  }, 20_000);
+
+  it("bloque un verdict de sécurité dangereux avant stockage et sans détail sensible dans l'audit", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\ncontenu mock dangereux");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    const mediaId = "2754859441498999";
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId, checksum })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const scanMedia = vi.fn().mockResolvedValue({
+      status: "unsafe" as const,
+      safeErrorCode: "media_security_unsafe",
+    });
+    const storeMedia = vi.fn();
+    const result = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      {
+        cipher: mediaReferenceCipher,
+        provider: {
+          state: "mock",
+          fetch: vi.fn().mockResolvedValue({
+            status: "succeeded" as const,
+            bytes,
+            mediaType: "application/pdf",
+          }),
+        },
+        scanner: { state: "mock", scan: scanMedia },
+        storage: { state: "mock", store: storeMedia },
+        evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
+      },
+      { now: new Date("2026-07-30T16:22:00.000Z") },
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      classification: "validation",
+      safeErrorCode: "media_security_unsafe",
+      retryable: false,
+      scannerMode: "mock",
+    });
+    expect(scanMedia).toHaveBeenCalledTimes(1);
+    expect(storeMedia).not.toHaveBeenCalled();
+    expect(
+      (await setup.db.query("select id from conversation_message_attachments")).rows,
+    ).toEqual([]);
+    const audits = JSON.stringify(
+      (
+        await setup.db.query(
+          `select action, safe_metadata from audit_logs
+           where action like 'channel.provider_media_import_%'`,
+        )
+      ).rows,
+    );
+    for (const sensitive of [mediaId, checksum, "contenu mock dangereux"]) {
       expect(audits).not.toContain(sensitive);
     }
   }, 20_000);
@@ -450,6 +535,49 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     ).toEqual([]);
   }, 20_000);
 
+  it("laisse la file générique fermée quand le scanner n'est pas configuré", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\nscanner absent");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(documentPayload({ mediaId: "2754859441498990", checksum })),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    const fetchMedia = vi.fn();
+    const scanMedia = vi.fn();
+    const storeMedia = vi.fn();
+
+    const batch = await runWorkerBatch({
+      db: setup.db,
+      now: new Date("2026-07-30T16:22:00.000Z"),
+      mediaImportDependencies: {
+        cipher: mediaReferenceCipher,
+        provider: { state: "mock", fetch: fetchMedia },
+        scanner: { state: "not_configured", scan: scanMedia },
+        storage: { state: "mock", store: storeMedia },
+        evaluatePolicy: vi.fn(),
+      },
+    });
+
+    expect(batch.mediaImports).toEqual({
+      state: "not_configured",
+      selected: 0,
+      processed: 0,
+      succeeded: 0,
+      retried: 0,
+      failed: 0,
+      skipped: 0,
+    });
+    expect(fetchMedia).not.toHaveBeenCalled();
+    expect(scanMedia).not.toHaveBeenCalled();
+    expect(storeMedia).not.toHaveBeenCalled();
+    expect(
+      (await setup.db.query("select id from channel_provider_media_import_executions"))
+        .rows,
+    ).toEqual([]);
+  }, 20_000);
+
   it("désactive la file générique avant toute lecture ou écriture fournisseur", async () => {
     const setup = await createSetup();
     const bytes = new TextEncoder().encode("%PDF-1.7\nfile désactivée");
@@ -470,6 +598,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       mediaImportDependencies: {
         cipher: mediaReferenceCipher,
         provider: { state: "disabled", fetch: fetchMedia },
+        scanner: cleanMediaScanner(),
         storage: { state: "mock", store: storeMedia },
         evaluatePolicy: vi.fn(),
       },
@@ -519,6 +648,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     const mediaImportDependencies = {
       cipher: mediaReferenceCipher,
       provider: { state: "mock" as const, fetch: fetchMedia },
+      scanner: cleanMediaScanner(),
       storage: { state: "mock" as const, store: storeMedia },
       evaluatePolicy,
     };
@@ -619,6 +749,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     const dependencies = {
       cipher: mediaReferenceCipher,
       provider: { state: "mock" as const, fetch: fetchMedia },
+      scanner: cleanMediaScanner(),
       storage: { state: "mock" as const, store: storeMedia },
       evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
     };
@@ -657,6 +788,83 @@ describe("ingestion WhatsApp Cloud Meta", () => {
     expect(storeMedia).toHaveBeenCalledTimes(1);
   }, 20_000);
 
+  it("replanifie un scanner temporairement indisponible puis stocke une seule fois", async () => {
+    const setup = await createSetup();
+    const bytes = new TextEncoder().encode("%PDF-1.7\nretry scanner mock");
+    const checksum = createHash("sha256").update(bytes).digest("hex");
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      setup.db,
+      signedPayload(
+        documentPayload({ mediaId: "2754859441498998", checksum }),
+      ),
+      { appSecret, fingerprintSecret, mediaReferenceCipher, receivedAt },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("La réservation média doit être créée.");
+    }
+    const fetchMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      bytes,
+      mediaType: "application/pdf",
+    });
+    const scanMedia = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: "failed" as const,
+        classification: "temporary" as const,
+        safeErrorCode: "media_security_scanner_timeout",
+        retryable: true,
+      })
+      .mockResolvedValueOnce({ status: "clean" as const });
+    const storeMedia = vi.fn().mockResolvedValue({
+      status: "succeeded" as const,
+      storageReference: `mock:media/${checksum}`,
+    });
+    const dependencies = {
+      cipher: mediaReferenceCipher,
+      provider: { state: "mock" as const, fetch: fetchMedia },
+      scanner: { state: "mock" as const, scan: scanMedia },
+      storage: { state: "mock" as const, store: storeMedia },
+      evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
+    };
+    const first = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      dependencies,
+      { now: new Date("2026-07-30T16:22:00.000Z"), baseBackoffMs: 1_000 },
+    );
+    const second = await processMetaWhatsAppMediaImport(
+      setup.db,
+      setup.owner.id,
+      {
+        tenantId: setup.tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      dependencies,
+      { now: new Date("2026-07-30T16:22:02.000Z"), baseBackoffMs: 1_000 },
+    );
+
+    expect(first).toMatchObject({
+      status: "failed",
+      classification: "temporary",
+      safeErrorCode: "media_security_scanner_timeout",
+      retryable: true,
+      attempts: 1,
+    });
+    expect(second).toMatchObject({
+      status: "succeeded",
+      retryable: false,
+      attempts: 2,
+    });
+    expect(fetchMedia).toHaveBeenCalledTimes(2);
+    expect(scanMedia).toHaveBeenCalledTimes(2);
+    expect(storeMedia).toHaveBeenCalledTimes(1);
+  }, 20_000);
+
   it("reste fail-closed quand le provider n'est pas configuré", async () => {
     const setup = await createSetup();
     const inbound = await receivePreparedMetaWhatsAppWebhook(
@@ -679,6 +887,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       {
         cipher: mediaReferenceCipher,
         provider: { state: "not_configured", fetch: fetchMedia },
+        scanner: cleanMediaScanner(),
         storage: { state: "mock", store: storeMedia },
         evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
       },
@@ -690,6 +899,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       safeErrorCode: "media_import_not_configured",
       retryable: false,
       providerMode: "not_configured",
+      scannerMode: "mock",
       storageMode: "mock",
     });
     expect(fetchMedia).not.toHaveBeenCalled();
@@ -754,6 +964,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
             mediaType: "application/pdf",
           }),
         },
+        scanner: cleanMediaScanner(),
         storage: { state: "mock", store: storeMedia },
         evaluatePolicy: vi.fn().mockResolvedValue({ allowed: true as const }),
       },
@@ -796,6 +1007,7 @@ describe("ingestion WhatsApp Cloud Meta", () => {
       {
         cipher: mediaReferenceCipher,
         provider: { state: "mock", fetch: fetchMedia },
+        scanner: cleanMediaScanner(),
         storage: { state: "mock", store: storeMedia },
         evaluatePolicy: vi
           .fn()
@@ -1394,6 +1606,13 @@ function signedPayload(value: unknown) {
     signature: `sha256=${createHmac("sha256", appSecret)
       .update(rawBody)
       .digest("hex")}`,
+  };
+}
+
+function cleanMediaScanner() {
+  return {
+    state: "mock" as const,
+    scan: vi.fn().mockResolvedValue({ status: "clean" as const }),
   };
 }
 

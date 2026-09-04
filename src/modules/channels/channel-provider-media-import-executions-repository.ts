@@ -14,6 +14,7 @@ export type ChannelProviderMediaImportExecutionRow = {
   media_import_id: string;
   provider: "whatsapp_meta";
   provider_mode: MediaImportRuntimeMode;
+  scanner_mode: MediaImportRuntimeMode;
   storage_mode: MediaImportRuntimeMode;
   status: "reserved" | "succeeded" | "failed" | "denied";
   failure_classification: MediaImportFailureClassification | null;
@@ -125,6 +126,7 @@ export async function reserveChannelProviderMediaImportExecution(
     tenantId: string;
     mediaImportId: string;
     providerMode: MediaImportRuntimeMode;
+    scannerMode: MediaImportRuntimeMode;
     storageMode: MediaImportRuntimeMode;
     maxAttempts: number;
     actorId: string;
@@ -133,13 +135,14 @@ export async function reserveChannelProviderMediaImportExecution(
 ) {
   const result = await db.query<ChannelProviderMediaImportExecutionRow>(
     `insert into channel_provider_media_import_executions (
-       id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+       id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
+       storage_mode,
        status, failure_classification, safe_error_code, retryable, attempts,
        max_attempts, next_attempt_at, last_attempted_at, lease_id,
        lease_expires_at, attachment_id, created_by, created_at, updated_at
      ) values (
-       $1, $2, $3, 'whatsapp_meta', $4, $5, 'reserved', null, null, null, 0,
-       $6, $7, null, null, null, null, $8, $7, $7
+       $1, $2, $3, 'whatsapp_meta', $4, $5, $6, 'reserved', null, null, null, 0,
+       $7, $8, null, null, null, null, $9, $8, $8
      )
      on conflict (tenant_id, media_import_id) do nothing
      returning *`,
@@ -148,6 +151,7 @@ export async function reserveChannelProviderMediaImportExecution(
       input.tenantId,
       input.mediaImportId,
       input.providerMode,
+      input.scannerMode,
       input.storageMode,
       input.maxAttempts,
       input.occurredAt,

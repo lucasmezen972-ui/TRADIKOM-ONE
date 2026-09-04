@@ -32,6 +32,10 @@ describe("migrations des réservations d'import média fournisseur", () => {
         "os5ChannelProviderMediaImportExecutionsRlsMigrationSql",
         "../src/db/migrations/0102_os5_channel_provider_media_import_executions_rls.sql",
       ],
+      [
+        "os5ChannelProviderMediaSecurityScanMigrationSql",
+        "../src/db/migrations/0103_os5_channel_provider_media_security_scan.sql",
+      ],
     ] as const;
     for (const [constant, mirrorPath] of definitions) {
       const mirror = readFileSync(new URL(mirrorPath, import.meta.url), "utf8");
@@ -48,6 +52,9 @@ describe("migrations des réservations d'import média fournisseur", () => {
     );
     expect(getMigrationIds(true)).toContain(
       "108_os5_channel_provider_media_import_executions_rls",
+    );
+    expect(getMigrationIds()).toContain(
+      "109_os5_channel_provider_media_security_scan",
     );
   });
 
@@ -133,14 +140,41 @@ describe("migrations des réservations d'import média fournisseur", () => {
       "message_a",
     );
     await db.query(
+      `insert into conversation_message_attachments (
+         id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+         storage_reference, checksum_sha256, created_at
+       ) values (
+         'attachment_a', 'tenant_a', 'message_a', 'document', 'preuve.pdf',
+         'application/pdf', 32, 'mock:media/attachment_a', $1, $2
+       )`,
+      ["a".repeat(64), timestamp],
+    );
+    await expect(
+      db.query(
+        `insert into channel_provider_media_import_executions (
+           id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
+           storage_mode, status, failure_classification, safe_error_code,
+           retryable, attempts, max_attempts, next_attempt_at, last_attempted_at,
+           lease_id, lease_expires_at, attachment_id, created_by, created_at,
+           updated_at
+         ) values (
+           'execution_without_scan', 'tenant_a', 'reservation_a',
+           'whatsapp_meta', 'mock', 'not_configured', 'mock', 'succeeded', null,
+           null, false, 1, 3, $1, $1, null, null, 'attachment_a', 'user_a', $1, $1
+         )`,
+        [timestamp],
+      ),
+    ).rejects.toThrow(/scan_required/i);
+    await db.query(
       `insert into channel_provider_media_import_executions (
-         id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+         id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
+         storage_mode,
          status, failure_classification, safe_error_code, retryable, attempts,
          max_attempts, next_attempt_at, last_attempted_at, lease_id,
          lease_expires_at, attachment_id, created_by, created_at, updated_at
        ) values (
          'execution_a', 'tenant_a', 'reservation_a', 'whatsapp_meta',
-         'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
+         'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
          null, null, null, null, 'user_a', $1, $1
        )`,
       [timestamp],
@@ -153,27 +187,29 @@ describe("migrations des réservations d'import média fournisseur", () => {
          and column_name in (
            'bytes', 'content', 'payload', 'raw_payload', 'provider_reference',
            'encrypted_provider_reference', 'storage_reference', 'checksum_sha256',
-           'file_name', 'media_type'
+           'file_name', 'media_type', 'scan_result', 'scanner_details',
+           'malware_signature'
          )`,
     );
     expect(forbidden.rows).toEqual([]);
     await expect(
       db.query(
         `update channel_provider_media_import_executions
-         set provider_mode = 'disabled'
+         set scanner_mode = 'disabled'
          where tenant_id = 'tenant_a' and id = 'execution_a'`,
       ),
     ).rejects.toThrow(/identity_immutable/i);
     await expect(
       db.query(
         `insert into channel_provider_media_import_executions (
-           id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+           id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
+           storage_mode,
            status, failure_classification, safe_error_code, retryable, attempts,
            max_attempts, next_attempt_at, last_attempted_at, lease_id,
            lease_expires_at, attachment_id, created_by, created_at, updated_at
          ) values (
            'execution_cross', 'tenant_b', 'reservation_a', 'whatsapp_meta',
-           'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
+           'mock', 'mock', 'mock', 'reserved', null, null, null, 0, 3, $1,
            null, null, null, null, 'user_b', $1, $1
          )`,
         [timestamp],

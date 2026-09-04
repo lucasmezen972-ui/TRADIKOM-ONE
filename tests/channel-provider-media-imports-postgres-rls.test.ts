@@ -156,13 +156,13 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
         client.query(
           `insert into channel_provider_media_import_executions (
              id, tenant_id, media_import_id, provider, provider_mode,
-             storage_mode, status, failure_classification, safe_error_code,
+             scanner_mode, storage_mode, status, failure_classification, safe_error_code,
              retryable, attempts, max_attempts, next_attempt_at,
              last_attempted_at, lease_id, lease_expires_at, attachment_id,
              created_by, created_at, updated_at
            ) values (
              'execution_media_rls_cross', $1, $2, 'whatsapp_meta', 'mock',
-             'mock', 'reserved', null, null, null, 0, 3, $3, null, null,
+             'mock', 'mock', 'reserved', null, null, null, 0, 3, $3, null, null,
              null, null, $4, $3, $3
            )`,
           [fixtureB.tenantId, fixtureB.reservationId, timestamp, fixtureB.userId],
@@ -279,12 +279,13 @@ async function seedExecution(
 ) {
   await db.query(
     `insert into channel_provider_media_import_executions (
-       id, tenant_id, media_import_id, provider, provider_mode, storage_mode,
+       id, tenant_id, media_import_id, provider, provider_mode, scanner_mode,
+       storage_mode,
        status, failure_classification, safe_error_code, retryable, attempts,
        max_attempts, next_attempt_at, last_attempted_at, lease_id,
        lease_expires_at, attachment_id, created_by, created_at, updated_at
      ) values (
-       $1, $2, $3, 'whatsapp_meta', 'mock', 'mock', 'reserved', null, null,
+       $1, $2, $3, 'whatsapp_meta', 'mock', 'mock', 'mock', 'reserved', null, null,
        null, 0, 3, $4, null, null, null, null, $5, $4, $4
      )`,
     [

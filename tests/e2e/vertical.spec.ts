@@ -1219,6 +1219,12 @@ async function runConversationJourney(
             };
           },
         },
+        scanner: {
+          state: "mock",
+          async scan() {
+            return { status: "clean" };
+          },
+        },
         storage: {
           state: "mock",
           async store() {
