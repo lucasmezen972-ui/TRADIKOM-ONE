@@ -290,6 +290,59 @@ export const conversationThreadListSchema = z
   })
   .strict();
 
+export const conversationThreadAccessConfigurationSchema = z
+  .object({
+    tenantId: boundedIdentifierSchema,
+    threadId: boundedIdentifierSchema,
+    visibilityScope: visibilityScopeSchema,
+    grantedUserIds: z.array(boundedIdentifierSchema).max(100),
+    idempotencyKey: idempotencyKeySchema,
+  })
+  .strict()
+  .superRefine((configuration, context) => {
+    if (
+      new Set(configuration.grantedUserIds).size !==
+      configuration.grantedUserIds.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["grantedUserIds"],
+        message: "Une personne ne peut recevoir qu'un droit par fil.",
+      });
+    }
+    if (
+      configuration.visibilityScope === "tenant" &&
+      configuration.grantedUserIds.length !== 0
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["grantedUserIds"],
+        message: "La portée organisation ne nécessite aucun droit individuel.",
+      });
+    }
+    if (
+      configuration.visibilityScope === "personal" &&
+      configuration.grantedUserIds.length !== 1
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["grantedUserIds"],
+        message: "Une conversation personnelle doit avoir une seule personne.",
+      });
+    }
+    if (
+      (configuration.visibilityScope === "team" ||
+        configuration.visibilityScope === "case") &&
+      configuration.grantedUserIds.length === 0
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["grantedUserIds"],
+        message: "Cette portée doit conserver au moins une personne autorisée.",
+      });
+    }
+  });
+
 export type ChannelKind = z.infer<typeof channelKindSchema>;
 export type ChannelIdentity = z.infer<typeof channelIdentitySchema>;
 export type CanonicalThread = z.infer<typeof canonicalThreadSchema>;
@@ -305,4 +358,7 @@ export type ConversationThreadLookup = z.infer<
 >;
 export type ConversationThreadList = z.infer<
   typeof conversationThreadListSchema
+>;
+export type ConversationThreadAccessConfiguration = z.infer<
+  typeof conversationThreadAccessConfigurationSchema
 >;

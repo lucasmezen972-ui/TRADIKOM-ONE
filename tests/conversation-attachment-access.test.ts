@@ -12,7 +12,10 @@ import {
   type AttachmentAccessPolicyEvaluator,
   type AttachmentStorageAccessAdapter,
 } from "../src/modules/conversation-hub";
-import { ingestConversationMessage } from "../src/modules/conversation-hub/service";
+import {
+  configureConversationThreadAccess,
+  ingestConversationMessage,
+} from "../src/modules/conversation-hub/service";
 
 const opened: Array<{ close: () => Promise<void> }> = [];
 const now = new Date("2026-09-04T17:30:00.000Z");
@@ -242,9 +245,16 @@ describe("accès sécurisé aux pièces jointes de conversation", () => {
 
   it("transmet la confidentialité et la visibilité durables à chaque évaluation", async () => {
     const context = await setup("attachment-classification@example.com");
+    await configureConversationThreadAccess(context.db, context.userId, {
+      tenantId: context.tenantId,
+      threadId: context.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [context.userId],
+      idempotencyKey: "thread-access:attachment-classification",
+    });
     await context.db.query(
       `update conversation_threads
-       set confidentiality_level = 'restricted', visibility_scope = 'team'
+       set confidentiality_level = 'restricted'
        where tenant_id = $1`,
       [context.tenantId],
     );
@@ -292,6 +302,37 @@ describe("accès sécurisé aux pièces jointes de conversation", () => {
       confidentialityLevel: "restricted",
       visibilityScope: "team",
     });
+  });
+
+  it("refuse un membre du tenant sans droit de fil avant policy ou stockage", async () => {
+    const context = await setup("attachment-grant-denied@example.com");
+    const excluded = await addMember(context, "attachment-grant-excluded@example.com");
+    await configureConversationThreadAccess(context.db, context.userId, {
+      tenantId: context.tenantId,
+      threadId: context.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [context.userId],
+      idempotencyKey: "thread-access:attachment-owner-only",
+    });
+    const read = vi.fn();
+    const evaluatePolicy = vi.fn(async () => ({ allowed: true as const }));
+    const dependencies = mockDependencies({ read, evaluatePolicy });
+
+    await expect(
+      prepareConversationAttachmentAccess(
+        context.db,
+        excluded.userId,
+        context.tenantId,
+        { attachmentId },
+        dependencies,
+        { now },
+      ),
+    ).rejects.toMatchObject({
+      code: "attachment_access_not_found",
+      message: "Cette pièce jointe n'est pas disponible.",
+    });
+    expect(evaluatePolicy).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
   });
 
   it("rejette un ticket altéré, expiré, lié à un autre acteur ou à une autre pièce", async () => {
@@ -519,6 +560,67 @@ describe("accès sécurisé aux pièces jointes de conversation", () => {
     });
   });
 
+  it("ferme et audite la lecture si le droit utilisateur est révoqué pendant l'IO", async () => {
+    const context = await setup("attachment-grant-race@example.com");
+    const replacement = await addMember(
+      context,
+      "attachment-grant-replacement@example.com",
+    );
+    await configureConversationThreadAccess(context.db, context.userId, {
+      tenantId: context.tenantId,
+      threadId: context.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [context.userId],
+      idempotencyKey: "thread-access:attachment-before-io",
+    });
+    const dependencies = mockDependencies({
+      read: async () => {
+        await configureConversationThreadAccess(context.db, context.userId, {
+          tenantId: context.tenantId,
+          threadId: context.threadId,
+          visibilityScope: "team",
+          grantedUserIds: [replacement.userId],
+          idempotencyKey: "thread-access:attachment-during-io",
+        });
+        return { status: "succeeded" as const, bytes: mediaBytes };
+      },
+    });
+    const prepared = await prepareConversationAttachmentAccess(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { attachmentId },
+      dependencies,
+      { now },
+    );
+    if (prepared.status !== "ready") throw new Error("Ticket attendu.");
+
+    await expect(
+      readConversationAttachment(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { attachmentId, ticket: prepared.ticket },
+        dependencies,
+        { now },
+      ),
+    ).rejects.toMatchObject({
+      code: "attachment_access_metadata_invalid",
+      message: "Cette pièce jointe n'est pas disponible.",
+    });
+    const audits = await context.db.query<{ safe_metadata: string }>(
+      `select safe_metadata
+       from audit_logs
+       where tenant_id = $1 and target_id = $2
+         and action = 'conversation.attachment_access_failed'`,
+      [context.tenantId, attachmentId],
+    );
+    expect(audits.rows.at(-1)?.safe_metadata).toContain(
+      "attachment_access_metadata_invalid",
+    );
+    expect(JSON.stringify(audits.rows)).not.toContain(replacement.userId);
+  });
+
   it("classe les erreurs fournisseur sans laisser le fournisseur injecter l'audit", async () => {
     const context = await setup("attachment-provider-error@example.com");
     for (const [classification, providerCode, expectedCode] of [
@@ -572,8 +674,12 @@ async function setup(email: string) {
   const db = await createMemoryDb();
   opened.push(db);
   const tenant = await createTenant(db, email);
-  await insertMessageWithAttachments(db, tenant.userId, tenant.tenantId);
-  return { db, ...tenant };
+  const threadId = await insertMessageWithAttachments(
+    db,
+    tenant.userId,
+    tenant.tenantId,
+  );
+  return { db, ...tenant, threadId };
 }
 
 async function createTenant(db: TestDb, email: string) {
@@ -613,7 +719,7 @@ async function insertMessageWithAttachments(
   userId: string,
   tenantId: string,
 ) {
-  await ingestConversationMessage(db, userId, {
+  const result = await ingestConversationMessage(db, userId, {
     tenantId,
     channelIdentity: {
       id: "identity_attachment_access",
@@ -655,6 +761,7 @@ async function insertMessageWithAttachments(
     ],
     occurredAt: now.toISOString(),
   });
+  return result.threadId;
 }
 
 function mockDependencies(input: {

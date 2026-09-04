@@ -157,6 +157,9 @@ export default async function ConversationPage({
               <span className="rounded-full bg-slate-100 px-3 py-1">
                 Visibilité : {visibilityLabel(thread.visibilityScope)}
               </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">
+                Accès : {accessRuleLabel(thread.visibilityScope)}
+              </span>
             </div>
           ) : null}
           <div className="flex-1 space-y-4 overflow-y-auto p-5 lg:p-7">
@@ -604,6 +607,12 @@ function visibilityLabel(scope: string) {
     case: "Dossier",
     tenant: "Organisation",
   }[scope] ?? "Contrôlée";
+}
+
+function accessRuleLabel(scope: string) {
+  return scope === "tenant"
+    ? "Membres de l’organisation"
+    : "Autorisation explicite requise";
 }
 
 function MessageForm({

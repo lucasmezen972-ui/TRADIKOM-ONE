@@ -1279,6 +1279,9 @@ async function runConversationJourney(
     await expect(
       page.getByText("Visibilité : Organisation", { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByText("Accès : Membres de l’organisation", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-altérée.pdf", { exact: true })).toBeVisible();

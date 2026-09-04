@@ -41,6 +41,27 @@ export type ConversationThreadRow = {
   last_message_at: string | null;
 };
 
+export type ConversationThreadAccessGrantRow = {
+  tenant_id: string;
+  thread_id: string;
+  user_id: string;
+  scope: "personal" | "team" | "case";
+  granted_by_user_id: string;
+  granted_at: string;
+};
+
+export type ConversationThreadAccessOperationRow = {
+  id: string;
+  tenant_id: string;
+  thread_id: string;
+  idempotency_key_hash: string;
+  input_fingerprint: string;
+  requested_by_user_id: string;
+  visibility_scope: ConversationThreadRow["visibility_scope"];
+  grant_count: number;
+  configured_at: string;
+};
+
 export type ConversationMessageRow = {
   id: string;
   tenant_id: string;
@@ -83,6 +104,9 @@ export type ConversationAttachmentAccessRow = ConversationAttachmentRow & {
   thread_id: string;
   confidentiality_level: ConversationThreadRow["confidentiality_level"];
   visibility_scope: ConversationThreadRow["visibility_scope"];
+  access_grantee_user_id: string | null;
+  access_grant_scope: ConversationThreadAccessGrantRow["scope"] | null;
+  access_granted_at: string | null;
 };
 
 export type ConversationRouteHopRow = {
@@ -200,6 +224,252 @@ export async function listConversationThreadRows(
     [tenantId, limit],
   );
   return result.rows;
+}
+
+export async function findAccessibleConversationThreadRow(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+  threadId: string,
+) {
+  const result = await db.query<ConversationThreadRow>(
+    `select thread.*
+     from conversation_threads thread
+     where thread.tenant_id = $1 and thread.id = $2
+       and (
+         thread.visibility_scope = 'tenant'
+         or exists (
+           select 1
+           from conversation_thread_access_grants access_grant
+           where access_grant.tenant_id = thread.tenant_id
+             and access_grant.thread_id = thread.id
+             and access_grant.user_id = $3
+             and access_grant.scope = thread.visibility_scope
+         )
+       )
+     for share of thread`,
+    [tenantId, threadId, userId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listAccessibleConversationThreadRows(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+  limit: number,
+) {
+  const result = await db.query<ConversationThreadRow>(
+    `select thread.*
+     from conversation_threads thread
+     where thread.tenant_id = $1
+       and (
+         thread.visibility_scope = 'tenant'
+         or exists (
+           select 1
+           from conversation_thread_access_grants access_grant
+           where access_grant.tenant_id = thread.tenant_id
+             and access_grant.thread_id = thread.id
+             and access_grant.user_id = $2
+             and access_grant.scope = thread.visibility_scope
+         )
+       )
+     order by coalesce(thread.last_message_at, thread.created_at) desc,
+              thread.id desc
+     limit $3`,
+    [tenantId, userId, limit],
+  );
+  return result.rows;
+}
+
+export async function canUserAccessConversationThread(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+  threadId: string,
+) {
+  const result = await db.query<{ allowed: boolean }>(
+    `select exists (
+       select 1
+       from conversation_threads thread
+       where thread.tenant_id = $1 and thread.id = $2
+         and (
+           thread.visibility_scope = 'tenant'
+           or exists (
+             select 1
+             from conversation_thread_access_grants access_grant
+             where access_grant.tenant_id = thread.tenant_id
+               and access_grant.thread_id = thread.id
+               and access_grant.user_id = $3
+               and access_grant.scope = thread.visibility_scope
+           )
+         )
+     ) as allowed`,
+    [tenantId, threadId, userId],
+  );
+  return result.rows[0]?.allowed === true;
+}
+
+export async function lockConversationThreadRow(
+  db: DbClient,
+  tenantId: string,
+  threadId: string,
+) {
+  const result = await db.query<ConversationThreadRow>(
+    `select *
+     from conversation_threads
+     where tenant_id = $1 and id = $2
+     for update`,
+    [tenantId, threadId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listConversationThreadAccessGrantRows(
+  db: DbClient,
+  tenantId: string,
+  threadId: string,
+) {
+  const result = await db.query<ConversationThreadAccessGrantRow>(
+    `select *
+     from conversation_thread_access_grants
+     where tenant_id = $1 and thread_id = $2
+     order by user_id asc`,
+    [tenantId, threadId],
+  );
+  return result.rows;
+}
+
+export async function listExistingTenantMemberIds(
+  db: DbClient,
+  tenantId: string,
+  userIds: string[],
+) {
+  if (userIds.length === 0) return [];
+  const placeholders = userIds
+    .map((_, index) => `$${index + 2}`)
+    .join(", ");
+  const result = await db.query<{ user_id: string }>(
+    `select user_id
+     from memberships
+     where tenant_id = $1 and user_id in (${placeholders})
+     order by user_id asc`,
+    [tenantId, ...userIds],
+  );
+  return result.rows.map((row) => row.user_id);
+}
+
+export async function findConversationThreadAccessOperation(
+  db: DbClient,
+  tenantId: string,
+  idempotencyKeyHash: string,
+) {
+  const result = await db.query<ConversationThreadAccessOperationRow>(
+    `select *
+     from conversation_thread_access_operations
+     where tenant_id = $1 and idempotency_key_hash = $2`,
+    [tenantId, idempotencyKeyHash],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function insertConversationThreadAccessOperationIfAbsent(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    threadId: string;
+    idempotencyKeyHash: string;
+    inputFingerprint: string;
+    requestedByUserId: string;
+    visibilityScope: ConversationThreadRow["visibility_scope"];
+    grantCount: number;
+    configuredAt: string;
+  },
+) {
+  const result = await db.query<ConversationThreadAccessOperationRow>(
+    `insert into conversation_thread_access_operations (
+       id, tenant_id, thread_id, idempotency_key_hash, input_fingerprint,
+       requested_by_user_id, visibility_scope, grant_count, configured_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     on conflict (tenant_id, idempotency_key_hash) do nothing
+     returning *`,
+    [
+      input.id,
+      input.tenantId,
+      input.threadId,
+      input.idempotencyKeyHash,
+      input.inputFingerprint,
+      input.requestedByUserId,
+      input.visibilityScope,
+      input.grantCount,
+      input.configuredAt,
+    ],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function replaceConversationThreadAccessGrants(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    threadId: string;
+    scope: "personal" | "team" | "case" | "tenant";
+    userIds: string[];
+    grantedByUserId: string;
+    grantedAt: string;
+  },
+) {
+  await db.query(
+    `delete from conversation_thread_access_grants
+     where tenant_id = $1 and thread_id = $2`,
+    [input.tenantId, input.threadId],
+  );
+  if (input.scope === "tenant" || input.userIds.length === 0) return;
+  const values: string[] = [];
+  const parameters: unknown[] = [];
+  for (const userId of input.userIds) {
+    const offset = parameters.length;
+    values.push(
+      `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`,
+    );
+    parameters.push(
+      input.tenantId,
+      input.threadId,
+      userId,
+      input.scope,
+      input.grantedByUserId,
+      input.grantedAt,
+    );
+  }
+  await db.query(
+    `insert into conversation_thread_access_grants (
+       tenant_id, thread_id, user_id, scope, granted_by_user_id, granted_at
+     ) values ${values.join(", ")}`,
+    parameters,
+  );
+}
+
+export async function updateConversationThreadVisibilityScope(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    threadId: string;
+    visibilityScope: ConversationThreadRow["visibility_scope"];
+    updatedAt: string;
+  },
+) {
+  await db.query(
+    `update conversation_threads
+     set visibility_scope = $1, updated_at = $2
+     where tenant_id = $3 and id = $4`,
+    [
+      input.visibilityScope,
+      input.updatedAt,
+      input.tenantId,
+      input.threadId,
+    ],
+  );
 }
 
 export async function insertConversationThread(
@@ -556,11 +826,15 @@ export async function findConversationAttachmentRow(
 export async function findConversationAttachmentAccessRow(
   db: DbClient,
   tenantId: string,
+  userId: string,
   attachmentId: string,
 ) {
   const result = await db.query<ConversationAttachmentAccessRow>(
     `select attachment.*, message.thread_id,
-            thread.confidentiality_level, thread.visibility_scope
+            thread.confidentiality_level, thread.visibility_scope,
+            access_grant.user_id as access_grantee_user_id,
+            access_grant.scope as access_grant_scope,
+            access_grant.granted_at as access_granted_at
      from conversation_message_attachments attachment
      join conversation_messages message
        on message.tenant_id = attachment.tenant_id
@@ -568,8 +842,17 @@ export async function findConversationAttachmentAccessRow(
      join conversation_threads thread
        on thread.tenant_id = message.tenant_id
       and thread.id = message.thread_id
-     where attachment.tenant_id = $1 and attachment.id = $2`,
-    [tenantId, attachmentId],
+     left join conversation_thread_access_grants access_grant
+       on access_grant.tenant_id = thread.tenant_id
+      and access_grant.thread_id = thread.id
+      and access_grant.user_id = $3
+      and access_grant.scope = thread.visibility_scope
+     where attachment.tenant_id = $1 and attachment.id = $2
+       and (
+         thread.visibility_scope = 'tenant'
+         or access_grant.user_id is not null
+       )`,
+    [tenantId, attachmentId, userId],
   );
   return result.rows[0] ?? null;
 }

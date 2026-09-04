@@ -74,8 +74,39 @@ const persistedAttachmentSchema = z
       "secret",
     ]),
     visibility_scope: z.enum(["personal", "team", "case", "tenant"]),
+    access_grantee_user_id: boundedIdentifierSchema.nullable(),
+    access_grant_scope: z.enum(["personal", "team", "case"]).nullable(),
+    access_granted_at: z.string().datetime({ offset: true }).nullable(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((attachment, context) => {
+    const hasCompleteGrant =
+      attachment.access_grantee_user_id !== null &&
+      attachment.access_grant_scope !== null &&
+      attachment.access_granted_at !== null;
+    if (attachment.visibility_scope === "tenant") {
+      if (
+        attachment.access_grantee_user_id !== null ||
+        attachment.access_grant_scope !== null ||
+        attachment.access_granted_at !== null
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Un fil organisation ne doit pas dépendre d'un droit individuel.",
+        });
+      }
+      return;
+    }
+    if (
+      !hasCompleteGrant ||
+      attachment.access_grant_scope !== attachment.visibility_scope
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Le droit du fil ne correspond pas à sa portée.",
+      });
+    }
+  });
 
 export type AttachmentAccessRuntimeMode =
   | "disabled"
@@ -188,6 +219,7 @@ export async function prepareConversationAttachmentAccess(
     const attachment = await requireAttachment(
       transaction,
       tenantId,
+      userId,
       parsed.attachmentId,
     );
     const runtimeMode = getAttachmentAccessRuntimeMode(dependencies);
@@ -259,6 +291,7 @@ export async function readConversationAttachment(
       const attachment = await requireAttachment(
         transaction,
         tenantId,
+        userId,
         parsed.attachmentId,
       );
       const runtimeMode = getAttachmentAccessRuntimeMode(dependencies);
@@ -376,16 +409,17 @@ export async function readConversationAttachment(
     userId,
     async (transaction) => {
       await assertTenantAccess(transaction, userId, tenantId);
-      const current = await requireAttachment(
+      const current = await findAuthorizedAttachment(
         transaction,
         tenantId,
+        userId,
         prepared.attachment.id,
       );
-      if (!sameStoredObject(prepared.attachment, current)) {
+      if (!current || !sameStoredObject(prepared.attachment, current)) {
         await recordAccessAudit(transaction, {
           tenantId,
           userId,
-          attachmentId: current.id,
+          attachmentId: prepared.attachment.id,
           action: "conversation.attachment_access_failed",
           outcome: "failed",
           safeErrorCode: "attachment_access_metadata_invalid",
@@ -419,16 +453,34 @@ export async function readConversationAttachment(
 async function requireAttachment(
   db: DbClient,
   tenantId: string,
+  userId: string,
   attachmentId: string,
 ) {
-  const row = await findConversationAttachmentAccessRow(
+  const row = await findAuthorizedAttachment(
     db,
     tenantId,
+    userId,
     attachmentId,
   );
   if (!row) {
     throw new ConversationAttachmentAccessError("attachment_access_not_found");
   }
+  return row;
+}
+
+async function findAuthorizedAttachment(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+  attachmentId: string,
+) {
+  const row = await findConversationAttachmentAccessRow(
+    db,
+    tenantId,
+    userId,
+    attachmentId,
+  );
+  if (!row) return null;
   const parsed = persistedAttachmentSchema.safeParse(row);
   if (!parsed.success) {
     throw new ConversationAttachmentAccessError(
@@ -521,16 +573,17 @@ async function auditReadFailure(
 ) {
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId);
-    const current = await requireAttachment(
+    const current = await findAuthorizedAttachment(
       transaction,
       tenantId,
+      userId,
       attachment.id,
     );
-    if (!sameStoredObject(attachment, current)) {
+    if (!current || !sameStoredObject(attachment, current)) {
       await recordAccessAudit(transaction, {
         tenantId,
         userId,
-        attachmentId: current.id,
+        attachmentId: attachment.id,
         action: "conversation.attachment_access_failed",
         outcome: "failed",
         safeErrorCode: "attachment_access_metadata_invalid",
@@ -595,6 +648,9 @@ function sameStoredObject(
     current.thread_id === expected.thread_id &&
     current.confidentiality_level === expected.confidentiality_level &&
     current.visibility_scope === expected.visibility_scope &&
+    current.access_grantee_user_id === expected.access_grantee_user_id &&
+    current.access_grant_scope === expected.access_grant_scope &&
+    current.access_granted_at === expected.access_granted_at &&
     current.kind === expected.kind &&
     current.file_name === expected.file_name &&
     current.media_type === expected.media_type &&

@@ -37,6 +37,8 @@ describe("migrations du Conversation Hub", () => {
       "conversation_message_route_hops",
       "conversation_messages",
       "conversation_participants",
+      "conversation_thread_access_grants",
+      "conversation_thread_access_operations",
       "conversation_thread_participants",
       "conversation_threads",
     ]);

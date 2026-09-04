@@ -498,6 +498,16 @@ function getMigrations(enableRls: boolean) {
       id: "111_os5_conversation_thread_access_classification",
       sql: os5ConversationThreadAccessClassificationMigrationSql,
     },
+    {
+      id: "112_os5_conversation_thread_access_grants",
+      sql: os5ConversationThreadAccessGrantsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "113_os5_conversation_thread_access_grants_rls",
+          sql: os5ConversationThreadAccessGrantsRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -5958,6 +5968,168 @@ create index if not exists idx_conversation_threads_tenant_access
   on conversation_threads (
     tenant_id, confidentiality_level, visibility_scope, updated_at desc
   );
+`;
+
+const os5ConversationThreadAccessGrantsMigrationSql = `
+create table if not exists conversation_thread_access_grants (
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  user_id text not null,
+  scope text not null,
+  granted_by_user_id text not null,
+  granted_at text not null,
+  primary key (tenant_id, thread_id, user_id),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, user_id)
+    references memberships(tenant_id, user_id) on delete cascade,
+  check (scope in ('personal', 'team', 'case')),
+  check (char_length(granted_by_user_id) between 1 and 160)
+);
+
+create unique index if not exists idx_conversation_thread_access_personal
+  on conversation_thread_access_grants (tenant_id, thread_id)
+  where scope = 'personal';
+create index if not exists idx_conversation_thread_access_tenant_user
+  on conversation_thread_access_grants (tenant_id, user_id, scope, thread_id);
+create index if not exists idx_conversation_thread_access_tenant_thread
+  on conversation_thread_access_grants (tenant_id, thread_id, scope, user_id);
+
+create table if not exists conversation_thread_access_operations (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  idempotency_key_hash text not null,
+  input_fingerprint text not null,
+  requested_by_user_id text not null,
+  visibility_scope text not null,
+  grant_count integer not null,
+  configured_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, idempotency_key_hash),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, requested_by_user_id)
+    references memberships(tenant_id, user_id) on delete cascade,
+  check (idempotency_key_hash ~ '^[a-f0-9]{64}$'),
+  check (input_fingerprint ~ '^[a-f0-9]{64}$'),
+  check (visibility_scope in ('personal', 'team', 'case', 'tenant')),
+  check (grant_count between 0 and 100)
+);
+
+create index if not exists idx_conversation_thread_access_operations_tenant_thread
+  on conversation_thread_access_operations (tenant_id, thread_id, configured_at desc);
+`;
+
+const os5ConversationThreadAccessGrantsRlsMigrationSql = `
+alter table conversation_thread_access_grants enable row level security;
+alter table conversation_thread_access_operations enable row level security;
+
+drop policy if exists tenant_isolation on conversation_thread_access_grants;
+drop policy if exists conversation_thread_access_grants_select
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_select
+  on conversation_thread_access_grants for select
+  using (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and (
+        user_id = nullif(current_setting('app.actor_id', true), '')
+        or exists (
+          select 1 from memberships actor_membership
+          where actor_membership.tenant_id = conversation_thread_access_grants.tenant_id
+            and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+            and actor_membership.role in ('owner', 'administrator')
+        )
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_grants_insert
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_insert
+  on conversation_thread_access_grants for insert
+  with check (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and granted_by_user_id = nullif(current_setting('app.actor_id', true), '')
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_grants.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_grants_update
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_update
+  on conversation_thread_access_grants for update
+  using (app_is_system())
+  with check (app_is_system());
+drop policy if exists conversation_thread_access_grants_delete
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_delete
+  on conversation_thread_access_grants for delete
+  using (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_grants.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+
+drop policy if exists tenant_isolation on conversation_thread_access_operations;
+drop policy if exists conversation_thread_access_operations_select
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_select
+  on conversation_thread_access_operations for select
+  using (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_operations.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_operations_insert
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_insert
+  on conversation_thread_access_operations for insert
+  with check (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and requested_by_user_id = nullif(current_setting('app.actor_id', true), '')
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_operations.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_operations_update
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_update
+  on conversation_thread_access_operations for update
+  using (app_is_system())
+  with check (app_is_system());
+drop policy if exists conversation_thread_access_operations_delete
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_delete
+  on conversation_thread_access_operations for delete
+  using (app_is_system());
 `;
 
 const os5ChannelProviderActivationAuthorizationsMigrationSql = `

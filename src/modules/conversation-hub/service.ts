@@ -3,15 +3,19 @@ import {
   withTenantDbTransaction,
 } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
-import { id, nowIso } from "@/lib/security";
+import { hashToken, id, nowIso } from "@/lib/security";
 import type { Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import { ConversationHubError } from "@/modules/conversation-hub/errors";
 import { readExternalUntrustedDataExtraction } from "@/modules/conversation-hub/external-untrusted-data";
 import {
+  canUserAccessConversationThread,
+  findAccessibleConversationThreadRow,
   findConversationIdentityByExternalSubject,
   findConversationMessageByIdempotencyKey,
   findConversationThreadRow,
+  findConversationThreadAccessOperation,
+  insertConversationThreadAccessOperationIfAbsent,
   insertConversationAttachment,
   insertConversationIdentityIfAbsent,
   insertConversationMessageIfAbsent,
@@ -24,12 +28,17 @@ import {
   listConversationIdentityRows,
   listConversationMessageRows,
   listConversationRouteHopRows,
-  listConversationThreadRows,
+  listAccessibleConversationThreadRows,
+  listExistingTenantMemberIds,
+  lockConversationThreadRow,
+  replaceConversationThreadAccessGrants,
+  updateConversationThreadVisibilityScope,
   updateConversationThreadLastMessage,
   type ConversationChannelIdentityRow,
   type ConversationMessageRow,
 } from "@/modules/conversation-hub/repository";
 import {
+  conversationThreadAccessConfigurationSchema,
   conversationThreadListSchema,
   conversationThreadLookupSchema,
   messageIngressSchema,
@@ -62,7 +71,7 @@ export async function ingestConversationMessage(
         parsed.tenantId,
         conversationWriteRoles,
       );
-      return persistConversationMessage(transaction, userId, parsed, false);
+      return persistConversationMessage(transaction, userId, parsed, false, true);
     },
   );
 }
@@ -80,7 +89,7 @@ export async function ingestSystemConversationMessage(
     );
   }
   return withSystemDbTransaction(db, (transaction) =>
-    persistConversationMessage(transaction, systemActorId, parsed, true),
+    persistConversationMessage(transaction, systemActorId, parsed, true, false),
   );
 }
 
@@ -89,6 +98,7 @@ async function persistConversationMessage(
   actorId: string,
   parsed: MessageIngress,
   createRequestedThreadIfMissing: boolean,
+  enforceActorAccess: boolean,
 ) {
   const replay = await findConversationMessageByIdempotencyKey(
     transaction,
@@ -96,18 +106,46 @@ async function persistConversationMessage(
     parsed.idempotencyKey,
   );
   if (replay) {
+    if (enforceActorAccess) {
+      await assertConversationThreadAccess(
+        transaction,
+        actorId,
+        parsed.tenantId,
+        replay.thread_id,
+      );
+    }
     assertReplayMatchesIngress(replay, parsed);
     await auditReplay(transaction, actorId, replay);
     return ingressResult(replay, true);
   }
 
   const identity = await ensureConversationIdentity(transaction, parsed);
-  const thread = await ensureConversationThread(
+  let thread = await ensureConversationThread(
     transaction,
     parsed.tenantId,
     parsed.threadId,
     createRequestedThreadIfMissing,
   );
+  if (enforceActorAccess) {
+    const lockedThread = await lockConversationThreadRow(
+      transaction,
+      parsed.tenantId,
+      thread.id,
+    );
+    if (!lockedThread) {
+      throw new ConversationHubError(
+        "conversation_thread_not_found",
+        "Conversation introuvable.",
+      );
+    }
+    await assertConversationThreadAccess(
+      transaction,
+      actorId,
+      parsed.tenantId,
+      lockedThread.id,
+    );
+    thread = lockedThread;
+  }
   const createdAt = nowIso();
   await insertThreadParticipantIfAbsent(transaction, {
     tenantId: parsed.tenantId,
@@ -226,9 +264,10 @@ export async function listConversationThreads(
   const parsed = conversationThreadListSchema.parse({ limit });
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId);
-    const threads = await listConversationThreadRows(
+    const threads = await listAccessibleConversationThreadRows(
       transaction,
       tenantId,
+      userId,
       parsed.limit,
     );
     return threads.map((thread) => ({
@@ -254,7 +293,12 @@ async function readConversationThread(
 ) {
   await assertTenantAccess(db, userId, tenantId);
   const parsed = conversationThreadLookupSchema.parse({ threadId, messageLimit });
-  const thread = await findConversationThreadRow(db, tenantId, parsed.threadId);
+  const thread = await findAccessibleConversationThreadRow(
+    db,
+    tenantId,
+    userId,
+    parsed.threadId,
+  );
   if (!thread) {
     throw new ConversationHubError(
       "conversation_thread_not_found",
@@ -324,6 +368,232 @@ async function readConversationThread(
       createdAt: message.created_at,
     })),
   };
+}
+
+export async function configureConversationThreadAccess(
+  db: DbClient,
+  userId: string,
+  input: {
+    tenantId: string;
+    threadId: string;
+    visibilityScope: "personal" | "team" | "case" | "tenant";
+    grantedUserIds: string[];
+    idempotencyKey: string;
+  },
+) {
+  const parsed = conversationThreadAccessConfigurationSchema.parse(input);
+  const grantedUserIds = [...parsed.grantedUserIds].sort();
+  const idempotencyKeyHash = hashToken(parsed.idempotencyKey);
+  const inputFingerprint = hashToken(
+    JSON.stringify({
+      threadId: parsed.threadId,
+      visibilityScope: parsed.visibilityScope,
+      grantedUserIds,
+    }),
+  );
+
+  return withTenantDbTransaction(
+    db,
+    parsed.tenantId,
+    userId,
+    async (transaction) => {
+      await assertTenantAccess(transaction, userId, parsed.tenantId, [
+        "owner",
+        "administrator",
+      ]);
+      const replay = await findConversationThreadAccessOperation(
+        transaction,
+        parsed.tenantId,
+        idempotencyKeyHash,
+      );
+      if (replay) {
+        assertAccessOperationMatches(replay, parsed.threadId, inputFingerprint);
+        await auditConversationThreadAccess(transaction, {
+          tenantId: parsed.tenantId,
+          userId,
+          threadId: replay.thread_id,
+          visibilityScope: replay.visibility_scope,
+          grantCount: replay.grant_count,
+          idempotentReplay: true,
+        });
+        return accessConfigurationResult(replay, true);
+      }
+
+      const thread = await lockConversationThreadRow(
+        transaction,
+        parsed.tenantId,
+        parsed.threadId,
+      );
+      if (!thread) {
+        throw new ConversationHubError(
+          "conversation_thread_not_found",
+          "Conversation introuvable.",
+        );
+      }
+      const existingMemberIds = await listExistingTenantMemberIds(
+        transaction,
+        parsed.tenantId,
+        grantedUserIds,
+      );
+      if (
+        existingMemberIds.length !== grantedUserIds.length ||
+        existingMemberIds.some(
+          (memberId, index) => memberId !== grantedUserIds[index],
+        )
+      ) {
+        throw new ConversationHubError(
+          "conversation_thread_access_invalid_grantee",
+          "Une personne autorisée n'appartient pas à cette organisation.",
+        );
+      }
+
+      const configuredAt = nowIso();
+      const operation = await insertConversationThreadAccessOperationIfAbsent(
+        transaction,
+        {
+          id: id("conversation_thread_access_operation"),
+          tenantId: parsed.tenantId,
+          threadId: parsed.threadId,
+          idempotencyKeyHash,
+          inputFingerprint,
+          requestedByUserId: userId,
+          visibilityScope: parsed.visibilityScope,
+          grantCount: grantedUserIds.length,
+          configuredAt,
+        },
+      );
+      if (!operation) {
+        const concurrentReplay = await findConversationThreadAccessOperation(
+          transaction,
+          parsed.tenantId,
+          idempotencyKeyHash,
+        );
+        if (!concurrentReplay) {
+          throw new ConversationHubError(
+            "conversation_thread_access_idempotency_conflict",
+            "La configuration d'accès n'a pas pu être réservée.",
+          );
+        }
+        assertAccessOperationMatches(
+          concurrentReplay,
+          parsed.threadId,
+          inputFingerprint,
+        );
+        return accessConfigurationResult(concurrentReplay, true);
+      }
+
+      await replaceConversationThreadAccessGrants(transaction, {
+        tenantId: parsed.tenantId,
+        threadId: parsed.threadId,
+        scope: parsed.visibilityScope,
+        userIds: grantedUserIds,
+        grantedByUserId: userId,
+        grantedAt: configuredAt,
+      });
+      await updateConversationThreadVisibilityScope(transaction, {
+        tenantId: parsed.tenantId,
+        threadId: parsed.threadId,
+        visibilityScope: parsed.visibilityScope,
+        updatedAt: configuredAt,
+      });
+      await auditConversationThreadAccess(transaction, {
+        tenantId: parsed.tenantId,
+        userId,
+        threadId: parsed.threadId,
+        previousVisibilityScope: thread.visibility_scope,
+        visibilityScope: parsed.visibilityScope,
+        grantCount: grantedUserIds.length,
+        idempotentReplay: false,
+      });
+      return accessConfigurationResult(operation, false);
+    },
+  );
+}
+
+async function assertConversationThreadAccess(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  threadId: string,
+) {
+  if (
+    !(await canUserAccessConversationThread(db, tenantId, userId, threadId))
+  ) {
+    throw new ConversationHubError(
+      "conversation_thread_not_found",
+      "Conversation introuvable.",
+    );
+  }
+}
+
+function assertAccessOperationMatches(
+  operation: {
+    thread_id: string;
+    input_fingerprint: string;
+  },
+  threadId: string,
+  inputFingerprint: string,
+) {
+  if (
+    operation.thread_id !== threadId ||
+    operation.input_fingerprint !== inputFingerprint
+  ) {
+    throw new ConversationHubError(
+      "conversation_thread_access_idempotency_conflict",
+      "Cette clé d'idempotence correspond à une autre configuration d'accès.",
+    );
+  }
+}
+
+function accessConfigurationResult(
+  operation: {
+    thread_id: string;
+    visibility_scope: "personal" | "team" | "case" | "tenant";
+    grant_count: number;
+    configured_at: string;
+  },
+  idempotentReplay: boolean,
+) {
+  return {
+    threadId: operation.thread_id,
+    visibilityScope: operation.visibility_scope,
+    grantedUserCount: operation.grant_count,
+    configuredAt: operation.configured_at,
+    idempotentReplay,
+  };
+}
+
+async function auditConversationThreadAccess(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    userId: string;
+    threadId: string;
+    previousVisibilityScope?: "personal" | "team" | "case" | "tenant";
+    visibilityScope: "personal" | "team" | "case" | "tenant";
+    grantCount: number;
+    idempotentReplay: boolean;
+  },
+) {
+  await recordAuditLog(db, {
+    tenantId: input.tenantId,
+    actorId: input.userId,
+    action: input.idempotentReplay
+      ? "conversation.thread_access_replayed"
+      : "conversation.thread_access_configured",
+    targetType: "conversation_thread",
+    targetId: input.threadId,
+    metadata: {
+      ...(input.previousVisibilityScope
+        ? { previousVisibilityScope: input.previousVisibilityScope }
+        : {}),
+      visibilityScope: input.visibilityScope,
+      grantedUserCount: input.grantCount,
+      idempotentReplay: input.idempotentReplay,
+      userIdsStoredInAudit: false,
+      contentStoredInAudit: false,
+    },
+  });
 }
 
 async function ensureConversationIdentity(db: DbClient, input: MessageIngress) {

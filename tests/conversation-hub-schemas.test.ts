@@ -4,6 +4,7 @@ import {
   canonicalThreadSchema,
   channelIdentitySchema,
   channelKindSchema,
+  conversationThreadAccessConfigurationSchema,
   messageIngressSchema,
 } from "../src/modules/conversation-hub/schemas";
 
@@ -314,5 +315,44 @@ describe("contrats du Conversation Hub", () => {
         rawPayload: { token: "ne-doit-pas-entrer" },
       }).success,
     ).toBe(false);
+  });
+
+  it("borne les droits de fil selon la portée demandée", () => {
+    const base = {
+      tenantId: identity.tenantId,
+      threadId: "thread_access_1",
+      idempotencyKey: "thread-access:configuration-1",
+    };
+    expect(
+      conversationThreadAccessConfigurationSchema.safeParse({
+        ...base,
+        visibilityScope: "tenant",
+        grantedUserIds: [],
+      }).success,
+    ).toBe(true);
+    expect(
+      conversationThreadAccessConfigurationSchema.safeParse({
+        ...base,
+        visibilityScope: "personal",
+        grantedUserIds: ["user_1"],
+      }).success,
+    ).toBe(true);
+    for (const invalid of [
+      { visibilityScope: "tenant", grantedUserIds: ["user_1"] },
+      { visibilityScope: "personal", grantedUserIds: [] },
+      {
+        visibilityScope: "personal",
+        grantedUserIds: ["user_1", "user_2"],
+      },
+      { visibilityScope: "team", grantedUserIds: [] },
+      { visibilityScope: "case", grantedUserIds: ["user_1", "user_1"] },
+    ]) {
+      expect(
+        conversationThreadAccessConfigurationSchema.safeParse({
+          ...base,
+          ...invalid,
+        }).success,
+      ).toBe(false);
+    }
   });
 });
