@@ -1249,13 +1249,37 @@ async function runConversationJourney(
       { now: new Date("2026-09-04T12:01:00.000Z") },
     );
     expect(imported.status).toBe("succeeded");
+    const alteredText = "password=contenu-e2e-altéré-à-masquer";
+    await db.query(
+      `insert into conversation_message_attachments (
+         id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+         storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+         extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+         created_at
+       ) values (
+         $1, $2, $3, 'document', 'preuve-altérée.pdf', 'application/pdf', 32,
+         $4, $5, 'external_untrusted_data', 'mock',
+         'mock_external_text_v1', $6, $7, $8, $8
+       )`,
+      [
+        `attachment_e2e_integrity_${numericSuffix}`,
+        tenant.id,
+        inbound.messages[0].messageId,
+        `mock:media/integrity-${numericSuffix}`,
+        "e".repeat(64),
+        alteredText,
+        "f".repeat(64),
+        "2026-09-04T12:02:00.000Z",
+      ],
+    );
     await page.goto(`/conversation?fil=${encodeURIComponent(inbound.threadId)}`);
     await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
-    await expect(page.getByText("Stockage mock", { exact: true })).toBeVisible();
+    await expect(page.getByText("preuve-altérée.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("Stockage mock", { exact: true })).toHaveCount(2);
     await expect(
       page.getByText("Contenu externe non fiable", { exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(2);
     await expect(
       page.getByText("Extraction mock · intégrité vérifiée", { exact: true }),
     ).toBeVisible();
@@ -1264,6 +1288,12 @@ async function runConversationJourney(
         exact: true,
       }),
     ).toBeVisible();
+    await expect(
+      page.getByText("Extraction masquée — intégrité non vérifiée.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(alteredText, { exact: false })).toHaveCount(0);
     await expect(page.getByText(mediaChecksum, { exact: false })).toHaveCount(0);
 
     const evidence = await db.query<{
