@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T03:32:05.000Z",
+  "updatedAt": "2026-09-05T03:58:42.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "c038df459e8e883bb5c77c6932b7a577a8f56f85",
-  "publishedHeadObserved": "25cafcdaa9031cf7835068cc2487d921c0ff6d51",
-  "status": "os5_meta_activation_checkpoint_local_proven_ci_pending",
+  "publishedHeadObserved": "d899d95e7d3c590b5fe603d8269fdf1fe9203807",
+  "status": "os5_meta_activation_checkpoint_published_ci_proven_human_meta_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le checkpoint d'activation WhatsApp Meta est livré localement dans Conversation au commit c038df4 : état serveur réel en français, prochaine action et effet externe explicites, sans nom ou valeur de secret ni bouton d'activation/envoi. Le transport reste fail-closed hors mock/ready. Les tests ciblés, la régression locale 160 fichiers/740 tests, ESLint, TypeScript, build et continuity-check sont verts; 24 tests PostgreSQL sont ignorés faute de DATABASE_URL et le scénario Playwright adapté attend la CI partagée. Aucun OS-6, Graph, secret, message, fusion, déploiement ou dépense.",
+  "currentObjective": "Le checkpoint d'activation WhatsApp Meta est livré dans Conversation au commit c038df4 et publié avec son handoff au head d899d95. Il affiche l'état serveur réel en français, la prochaine action et l'effet externe, sans nom ou valeur de secret ni bouton d'activation/envoi. La CI 33942266316 est entièrement verte : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright dont Conversation desktop/mobile. La continuité 33942266310 est verte. Le prochain checkpoint OS-5 reste humain dans Meta; aucun OS-6, Graph, secret, message, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,10 +31,10 @@
         "69-71 Matrice de tests et auto-contrôle final"
       ],
       "requirement": "Poursuivre OS-5 dans l'ordre de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 14, 24 et 29-31, exposer directement dans Conversation l'état réel du connecteur WhatsApp Meta (disabled, not_configured, awaiting_human_auth, mock ou ready), une prochaine action en français et la nature de l'effet externe. Ne jamais afficher les noms ou valeurs de secrets, ne jamais déduire une validation humaine non prouvée et maintenir le transport fermé hors mock/ready. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban ou dashboard secondaire.",
-      "evidenceExpected": "Preuve locale obtenue au commit c038df4 : modèle déterministe couvrant les cinq états; aucune fuite des configurations manquantes ou valeurs sensibles; carte accessible dans Conversation, issue du registre serveur sans appel réseau; 33 tests ciblés puis 160 fichiers/740 tests de régression verts avec 24 tests PostgreSQL ignorés sans DATABASE_URL; ESLint, TypeScript, build production, audit au seuil high et continuity-check verts. Le scénario Playwright desktop/mobile est adapté et doit encore être exécuté en CI PostgreSQL avant de déclarer la tranche publiée et prouvée."
+      "evidenceExpected": "Preuve obtenue au head d899d95 : modèle déterministe couvrant les cinq états; aucune fuite des configurations manquantes ou valeurs sensibles; carte accessible dans Conversation, issue du registre serveur sans appel réseau. La CI 33942266316 a validé audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests sur PostgreSQL 17, build production et 20 Playwright, dont le checkpoint sur Conversation desktop/mobile. La continuité 33942266310 est verte. L'état reste fail-closed et aucune authentification humaine Meta n'est déduite."
     }
   },
-  "nextAction": "Publier c038df4 uniquement après un nouveau fetch et une preuve fast-forward, puis exiger la CI PostgreSQL/Playwright. Après preuve, reprendre le checkpoint humain Meta : code SMS saisi directement par l'utilisateur, inventaire officiel en lecture seule et confirmation au moment exact avant tout token persistant.",
+  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS à six chiffres dans Meta for Developers et indique seulement que l'étape est terminée; inventorier ensuite en lecture seule l'application, le WABA et le Phone Number ID, puis demander une confirmation au moment exact avant toute création de token persistant. Ne déclencher ni Graph, message, endpoint public, stockage réel, activation, fusion, déploiement ou dépense sans autorisation distincte.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -510,7 +510,11 @@
     "checkpoint d'activation WhatsApp Meta visible dans Conversation : cinq états français, prochaine action, effet externe et absence de secrets ou bouton d'activation/envoi",
     "tests ciblés 3 fichiers/33 tests puis régression exhaustive locale 160 fichiers/740 tests verts et 11 fichiers/24 tests PostgreSQL ignorés faute de DATABASE_URL",
     "ESLint complet, TypeScript, build Next.js production, audit high, continuity-check et git diff --check verts; deux avis transitifs modérés qs documentés",
-    "commit fonctionnel local c038df459e8e883bb5c77c6932b7a577a8f56f85; tmp exclu; CI PostgreSQL et Playwright en attente de publication sûre"
+    "commit fonctionnel local c038df459e8e883bb5c77c6932b7a577a8f56f85; tmp exclu; CI PostgreSQL et Playwright en attente de publication sûre",
+    "fetch final : origin/codex/tradikom-one-os toujours sur ed4aeea, ancêtre exact du head local; push fast-forward ed4aeea..d899d95 sans tmp",
+    "continuité 33942266310 verte sur d899d95",
+    "CI 33942266316 verte en 22 min 56 s : audit, migrations, db:verify, backup/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright",
+    "PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur d899d95; aucune fusion, déploiement, clé, Graph ou message externe"
   ],
   "lastValidation": [
     {
@@ -1759,7 +1763,19 @@
     },
     {
       "command": "Playwright Conversation desktop et mobile avec checkpoint Meta",
-      "status": "scenario_updated_ci_postgres_pending"
+      "status": "passed_in_ci_33942266316_default_disabled_external_effect_blocked_no_activation_or_send_button"
+    },
+    {
+      "command": "CI 33942266316 sur d899d95e7d3c590b5fe603d8269fdf1fe9203807",
+      "status": "passed_22m56s_audit_migrations_db_verify_backup_restore_lint_typecheck_160_files_764_tests_build_20_playwright_postgres_rls"
+    },
+    {
+      "command": "Tradikom One Continuity Check 33942266310 sur d899d95e7d3c590b5fe603d8269fdf1fe9203807",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après checkpoint Conversation/Meta",
+      "status": "open_draft_mergeable_head_d899d95_both_checks_success_no_merge_deploy_graph_secret_or_message"
     }
   ],
   "humanBlockers": [

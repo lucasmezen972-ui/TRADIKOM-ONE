@@ -2,27 +2,27 @@
 
 ## Checkpoint applicatif — 5 septembre 2026, 03:32 UTC
 
-- Branche : `codex/tradikom-one-os`; checkpoint applicatif local `c038df459e8e883bb5c77c6932b7a577a8f56f85`; parent distant observé `ed4aeeaf67a3d7fd933f980052db12c6a373a22a`; `tmp/` reste non suivi et hors index.
+- Branche : `codex/tradikom-one-os`; checkpoint applicatif `c038df459e8e883bb5c77c6932b7a577a8f56f85` publié avec son handoff au head `d899d95e7d3c590b5fe603d8269fdf1fe9203807`; `tmp/` reste non suivi et hors index. Le push `ed4aeea..d899d95` a été strictement fast-forward après fetch et contrôle d'ancêtre.
 - Travail effectué : un modèle déterministe transforme le manifeste WhatsApp Meta en un état français sûr, une prochaine action et une classification de l'effet externe. L'écran Conversation rend ce point de contrôle après authentification, sans API intermédiaire ni appel fournisseur.
 - Impact north star : l'utilisateur voit depuis la conversation principale pourquoi le canal réel ne peut pas encore agir et quelle étape débloque la suite, sans basculer vers CRM, Kanban ou dashboard secondaire.
 - Risques contenus : aucun nom de variable, valeur sensible ou `missingEnvironment` n'est projeté. Aucun bouton d'activation/envoi n'est ajouté. `disabled`, `not_configured` et `awaiting_human_auth` restent bloqués; `mock` reste simulé; `ready` n'est qu'une disponibilité technique soumise à l'endpoint tenant et à une autorisation distincte.
 - Preuves locales : 3 fichiers/33 tests ciblés; 160 fichiers/740 tests exhaustifs verts avec 11 fichiers/24 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint, TypeScript, build Next.js production, audit high, continuity-check et diff check verts. L'audit signale deux avis transitifs `qs` modérés, zéro high/critical.
-- Preuve restante : le scénario Playwright desktop/mobile est adapté mais attend la CI PostgreSQL partagée. Aucune preuve navigateur locale n'est revendiquée; aucun Graph, token, message, endpoint public, fusion, déploiement ou dépense.
+- Preuve autoritative : CI `33942266316` verte en 22 min 56 s avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests sur PostgreSQL 17, build et 20 Playwright dont Conversation desktop/mobile. Continuité `33942266310` verte. Aucun Graph, token, message, endpoint public, fusion, déploiement ou dépense.
 
 ## Alignement prompt maître — checkpoint Conversation/Meta
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre OS-5, états honnêtes et reprise exacte | Point de contrôle ajouté à Conversation au commit `c038df4`, sans module secondaire ni effet externe | Publication fast-forward et CI complète du nouveau head |
+| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre OS-5, états honnêtes et reprise exacte | Point de contrôle ajouté à Conversation au commit `c038df4`, publié et prouvé sans module secondaire ni effet externe | Checkpoint humain Meta avant fournisseur réel |
 | 10-18, 24, 26-31, 43-44, 64-68 | Connecteur fail-closed; blocage humain explicite; interface française; preuve visible et fournisseur identifiable | Cinq états traduits, prochaine action, effet externe bloqué/mock/possible; aucun bouton d'activation ou d'envoi; aucun appel réseau | Validation SMS Meta non prouvée; inventaire officiel app/WABA/Phone Number ID non effectué |
 | 16-18, 22-23, 35-38 | Ne pas exposer les secrets ou entrées sensibles; conserver les frontières tenant et provider | La présentation ne retourne ni configuration manquante, ni nom de variable, ni valeur sensible; le registre est lu côté serveur après session | Token persistant, endpoint public, stockage réel et Graph toujours absents |
-| 32, 69 | DoD et matrice unit/intégration/provider/sécurité/Playwright | 33 tests ciblés, 740 tests exhaustifs, lint, typecheck, build et continuité verts; scénario Playwright desktop/mobile ajouté | 24 tests PostgreSQL ignorés localement et Playwright non exécuté sans base partagée; CI requise |
+| 32, 69 | DoD et matrice unit/intégration/provider/sécurité/Playwright | CI `33942266316` : audit, migrations, `db:verify`, backup/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright verts; continuité `33942266310` verte | Aucun écart de preuve identifié pour cette tranche; deux avis transitifs modérés `qs` restent à suivre |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
 ## Classification du checkpoint Conversation/Meta
 
-- Livré localement : modèle de présentation et carte Conversation avec état, action suivante et effet externe.
+- Livré, publié et prouvé CI : modèle de présentation et carte Conversation avec état, action suivante et effet externe.
 - Réel connecté : aucun; le registre par défaut reste `disabled` et aucun endpoint tenant réel n'est composé.
 - Sandbox : aucune appelée.
 - Mock : état pris en charge par la présentation et testé sans réseau; aucun mock activé dans le runtime de la page.

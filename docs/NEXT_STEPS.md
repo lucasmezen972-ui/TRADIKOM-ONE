@@ -5,18 +5,18 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates OS-5 10-18, 22-24, 26-33, 35-38, 43-44 et 64-68 ont été relues directement le 5 septembre 2026; les pages 48 et 69 ont aussi été contrôlées en rendu.
-- Le head applicatif local est `c038df459e8e883bb5c77c6932b7a577a8f56f85`; le dernier head distant observé et prouvé reste `ed4aeeaf67a3d7fd933f980052db12c6a373a22a`. La PR #11 est ouverte, en brouillon et fusionnable. La continuité `33938405850` et la CI `33938405789` sont vertes sur ce parent; la CI PostgreSQL/Playwright du nouveau checkpoint attend sa publication sûre. `tmp/` reste non suivi et hors index.
+- Le commit applicatif `c038df459e8e883bb5c77c6932b7a577a8f56f85` et son handoff `d899d95e7d3c590b5fe603d8269fdf1fe9203807` sont publiés. La PR #11 est ouverte, en brouillon et fusionnable. La continuité `33942266310` et la CI complète `33942266316` sont vertes sur ce head; `tmp/` reste non suivi et hors index.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. La boîte d'inscription Meta ouverte dans Chrome n'a fourni aucun signal fiable de validation SMS pendant ce run; l'étape reste donc bloquée humainement, sans déduire qu'elle est terminée.
 - Les mentions « preuves locales » et « attente CI » conservées dans le détail des tranches décrivent leur checkpoint de création; elles sont toutes levées pour le code publié jusqu'à `25cafcd` par la preuve finale `33936955678`.
 
-## Tranche applicative locale : checkpoint d'activation Meta dans Conversation
+## Tranche applicative publiée et prouvée CI : checkpoint d'activation Meta dans Conversation
 
 - L'écran principal Conversation affiche maintenant une carte « WhatsApp Cloud API (Meta) » issue du registre serveur, après authentification de l'utilisateur. Elle ne consulte aucun fournisseur et n'effectue aucun appel réseau.
 - Les cinq états sont présentés en français : désactivé, configuration requise, validation humaine requise, simulation et prêt techniquement. Chaque état indique une prochaine action et distingue effet bloqué, simulé ou seulement possible après autorisation.
 - La carte ne renvoie jamais `missingEnvironment`, les noms de variables ou une valeur sensible. Elle ne contient aucun bouton d'activation ou d'envoi. Même l'état prêt rappelle qu'un endpoint tenant et une autorisation d'envoi restent requis.
 - Preuves locales : 3 fichiers/33 tests ciblés verts; suite exhaustive 160 fichiers/740 tests verts et 11 fichiers/24 tests PostgreSQL ignorés faute de `DATABASE_URL`; ESLint, TypeScript, build Next.js production, audit au seuil high, continuity-check et diff check verts. Deux avis transitifs `qs` modérés, aucun high/critical.
-- Le scénario Playwright Conversation desktop/mobile vérifie la carte désactivée par défaut, l'effet externe bloqué et l'absence de boutons d'activation/envoi. Il attend la CI PostgreSQL partagée avant d'être déclaré exécuté.
-- État honnête : livré localement au commit `c038df459e8e883bb5c77c6932b7a577a8f56f85`, sans Graph, secret, token, message externe, endpoint public, fusion, déploiement ou dépense.
+- Preuve autoritative : CI `33942266316` verte en 22 min 56 s avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build production et 20 Playwright. Le parcours Conversation desktop/mobile valide la carte désactivée par défaut, l'effet externe bloqué et l'absence de boutons d'activation/envoi. Continuité `33942266310` verte.
+- État honnête : livré, publié et prouvé au head `d899d95e7d3c590b5fe603d8269fdf1fe9203807`, sans Graph, secret, token, message externe, endpoint public, fusion, déploiement ou dépense.
 
 ## Tranche applicative publiée et prouvée CI : RLS intra-tenant héritée du fil
 
@@ -32,11 +32,10 @@
 
 ## Reprise exacte
 
-1. Publier le checkpoint uniquement après un nouveau fetch et une preuve fast-forward; exiger ensuite audit, migrations, `db:verify`, RLS PostgreSQL, suite exhaustive, build et Playwright verts.
-2. L'utilisateur saisit lui-même le code SMS à six chiffres dans l'onglet Meta for Developers puis indique seulement que l'étape est terminée; ne jamais demander ni afficher le code.
-3. Après validation, inventorier en lecture seule dans la console officielle l'application, le WABA et le Phone Number ID, sans copier de secret dans le chat, les logs ou Git.
-4. Demander une confirmation immédiatement avant toute création d'un token persistant; le stocker ensuite uniquement par référence serveur dans le coffre existant.
-5. Exiger une autorisation distincte avant Graph, message de preuve, webhook public, stockage réel, activation, fusion, déploiement ou dépense. Ne pas démarrer `goal-watch`/OS-6, CRM, Kanban ou dashboard secondaire.
+1. L'utilisateur saisit lui-même le code SMS à six chiffres dans l'onglet Meta for Developers puis indique seulement que l'étape est terminée; ne jamais demander ni afficher le code.
+2. Après validation, inventorier en lecture seule dans la console officielle l'application, le WABA et le Phone Number ID, sans copier de secret dans le chat, les logs ou Git.
+3. Demander une confirmation immédiatement avant toute création d'un token persistant; le stocker ensuite uniquement par référence serveur dans le coffre existant.
+4. Exiger une autorisation distincte avant Graph, message de preuve, webhook public, stockage réel, activation, fusion, déploiement ou dépense. Ne pas démarrer `goal-watch`/OS-6, CRM, Kanban ou dashboard secondaire.
 
 ## Tranche publiée et prouvée CI : autorisations durables des fils
 
