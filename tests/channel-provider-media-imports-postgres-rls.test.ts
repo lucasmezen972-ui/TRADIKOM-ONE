@@ -196,6 +196,7 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
            from conversation_message_attachments
            order by id`,
         ),
+      fixtureA.userId,
     );
     expect(ownRows.rows).toEqual([{ extracted_text: "Donnée externe tenant a" }]);
     const crossRows = await withTenantContext(
@@ -207,6 +208,7 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
            where tenant_id = $1`,
           [fixtureB.tenantId],
         ),
+      fixtureA.userId,
     );
     expect(crossRows.rows).toEqual([]);
   });
@@ -233,6 +235,11 @@ async function seedReservation(db: OwnerDb, suffix: "a" | "b") {
     `insert into tenants (id, name, slug, category, created_at)
      values ($1, $2, $3, 'Services', $4)`,
     [tenantId, `Organisation ${suffix}`, tenantId, timestamp],
+  );
+  await db.query(
+    `insert into memberships (tenant_id, user_id, role, created_at)
+     values ($1, $2, 'owner', $3)`,
+    [tenantId, userId, timestamp],
   );
   await db.query(
     `insert into conversation_participants (
@@ -396,11 +403,15 @@ async function withTenantContext<T>(
   pool: Pool,
   tenantId: string,
   callback: (client: PoolClient) => Promise<T>,
+  actorId?: string,
 ) {
   const client = await pool.connect();
   try {
     await client.query("begin");
     await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+    if (actorId) {
+      await client.query("select set_config('app.actor_id', $1, true)", [actorId]);
+    }
     const result = await callback(client);
     await client.query("commit");
     return result;

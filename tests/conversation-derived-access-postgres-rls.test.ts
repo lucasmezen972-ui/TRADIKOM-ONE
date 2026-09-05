@@ -278,17 +278,16 @@ async function seedFixture(
        text_content, adapter_key, external_message_id, idempotency_key,
        correlation_id, causation_id, safe_error_code, occurred_at, created_at
      ) values
-       ($1, $2, $3, $7, 'internal', 'text', 'received', 'Protégé', 'test',
-        null, $8, $9, null, null, $10, $10),
-       ($4, $2, $5, $7, 'internal', 'text', 'received', 'Tenant', 'test',
-        null, $11, $12, null, null, $10, $10)`,
+       ($1, $2, $3, $6, 'internal', 'text', 'received', 'Protégé', 'test',
+        null, $7, $8, null, null, $9, $9),
+       ($4, $2, $5, $6, 'internal', 'text', 'received', 'Tenant', 'test',
+        null, $10, $11, null, null, $9, $9)`,
     [
       protectedMessage,
       tenantA,
       protectedThread,
       tenantMessage,
       tenantThread,
-      unique,
       identity,
       `protected-idempotency-${unique}`,
       `protected-correlation-${unique}`,
@@ -302,15 +301,14 @@ async function seedFixture(
        id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
        storage_reference, checksum_sha256, created_at
      ) values
-       ($1, $2, $3, 'document', 'protege.txt', 'text/plain', 8, $7, $8, $9),
-       ($4, $2, $5, 'document', 'tenant.txt', 'text/plain', 6, $10, $11, $9)`,
+       ($1, $2, $3, 'document', 'protege.txt', 'text/plain', 8, $6, $7, $8),
+       ($4, $2, $5, 'document', 'tenant.txt', 'text/plain', 6, $9, $10, $8)`,
     [
       protectedAttachment,
       tenantA,
       protectedMessage,
       tenantAttachment,
       tenantMessage,
-      unique,
       `mock://protected/${unique}`,
       "a".repeat(64),
       timestamp,
@@ -357,9 +355,9 @@ async function seedFixture(
        id, tenant_id, workflow_key, trigger_name, status, summary, error,
        retry_count, created_at
      ) values
-       ($1, $2, $3, 'conversation.plan.execute', 'running', 'Plan', null, 0, $6),
-       ($4, $2, 'generic.workflow', 'generic.event', 'running', 'Générique', null, 0, $6)`,
-    [conversationRun, tenantA, `conversation_plan:${plan}`, genericRun, unique, timestamp],
+       ($1, $2, $3, 'conversation.plan.execute', 'running', 'Plan', null, 0, $5),
+       ($4, $2, 'generic.workflow', 'generic.event', 'running', 'Générique', null, 0, $5)`,
+    [conversationRun, tenantA, `conversation_plan:${plan}`, genericRun, timestamp],
   );
   await db.query(
     `insert into workflow_run_steps (
