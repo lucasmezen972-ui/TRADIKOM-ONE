@@ -342,6 +342,178 @@ function getMigrations(enableRls: boolean) {
       id: "078_opportunity_board_position",
       sql: opportunityBoardPositionMigrationSql,
     },
+    {
+      id: "079_os1_conversation_hub",
+      sql: os1ConversationHubMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "080_os1_conversation_hub_rls",
+          sql: os1ConversationHubRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "081_os1_conversation_action_plans",
+      sql: os1ConversationActionPlansMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "082_os1_conversation_action_plans_rls",
+          sql: os1ConversationActionPlansRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "083_os2_email_provider_events",
+      sql: os2EmailProviderEventsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "084_os2_email_provider_events_rls",
+          sql: os2EmailProviderEventsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "085_os2_channel_provider_endpoints",
+      sql: os2ChannelProviderEndpointsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "086_os2_channel_provider_endpoints_rls",
+          sql: os2ChannelProviderEndpointsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "087_os4_workflow_definition_snapshots",
+      sql: os4WorkflowDefinitionSnapshotsMigrationSql,
+    },
+    {
+      id: "088_os5_channel_provider_deliveries",
+      sql: os5ChannelProviderDeliveriesMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "089_os5_channel_provider_deliveries_rls",
+          sql: os5ChannelProviderDeliveriesRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "090_os5_channel_provider_delivery_retries",
+      sql: os5ChannelProviderDeliveryRetriesMigrationSql,
+    },
+    {
+      id: "091_os5_channel_provider_delivery_events",
+      sql: os5ChannelProviderDeliveryEventsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "092_os5_channel_provider_delivery_events_rls",
+          sql: os5ChannelProviderDeliveryEventsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "093_os5_channel_provider_secret_versions",
+      sql: os5ChannelProviderSecretVersionsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "094_os5_channel_provider_secret_versions_rls",
+          sql: os5ChannelProviderSecretVersionsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "095_os5_channel_provider_activation_authorizations",
+      sql: os5ChannelProviderActivationAuthorizationsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "096_os5_channel_provider_activation_authorizations_rls",
+          sql: os5ChannelProviderActivationAuthorizationsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "097_os5_channel_provider_activation_consumptions",
+      sql: os5ChannelProviderActivationConsumptionsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "098_os5_channel_provider_activation_consumptions_rls",
+          sql: os5ChannelProviderActivationConsumptionsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "099_os2_whatsapp_meta_endpoint_provider",
+      sql: os2WhatsAppMetaEndpointProviderMigrationSql,
+    },
+    {
+      id: "100_os5_whatsapp_meta_outbound_provider",
+      sql: os5WhatsAppMetaOutboundProviderMigrationSql,
+    },
+    {
+      id: "101_os5_channel_provider_identity_bindings",
+      sql: os5ChannelProviderIdentityBindingsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "102_os5_channel_provider_identity_bindings_rls",
+          sql: os5ChannelProviderIdentityBindingsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "103_os5_channel_provider_secret_versions_meta",
+      sql: os5ChannelProviderSecretVersionsMetaMigrationSql,
+    },
+    {
+      id: "104_os5_whatsapp_meta_delivery_events",
+      sql: os5WhatsAppMetaDeliveryEventsMigrationSql,
+    },
+    {
+      id: "105_os5_channel_provider_media_imports",
+      sql: os5ChannelProviderMediaImportsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "106_os5_channel_provider_media_imports_rls",
+          sql: os5ChannelProviderMediaImportsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "107_os5_channel_provider_media_import_executions",
+      sql: os5ChannelProviderMediaImportExecutionsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "108_os5_channel_provider_media_import_executions_rls",
+          sql: os5ChannelProviderMediaImportExecutionsRlsMigrationSql,
+        }]
+      : []),
+    {
+      id: "109_os5_channel_provider_media_security_scan",
+      sql: os5ChannelProviderMediaSecurityScanMigrationSql,
+    },
+    {
+      id: "110_os5_media_untrusted_extraction",
+      sql: os5MediaUntrustedExtractionMigrationSql,
+    },
+    {
+      id: "111_os5_conversation_thread_access_classification",
+      sql: os5ConversationThreadAccessClassificationMigrationSql,
+    },
+    {
+      id: "112_os5_conversation_thread_access_grants",
+      sql: os5ConversationThreadAccessGrantsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "113_os5_conversation_thread_access_grants_rls",
+          sql: os5ConversationThreadAccessGrantsRlsMigrationSql,
+        }]
+      : []),
+    ...(enableRls
+      ? [{
+          id: "114_os5_conversation_derived_access_rls",
+          sql: os5ConversationDerivedAccessRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -4012,6 +4184,24 @@ create index if not exists idx_opportunities_tenant_assigned
   on opportunities (tenant_id, assigned_user_id);
 `;
 
+const pipelineDetailRlsMigrationSql = `
+alter table opportunity_changes enable row level security;
+
+drop policy if exists tenant_isolation on opportunity_changes;
+create policy tenant_isolation on opportunity_changes
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const approvalSnoozeMigrationSql = `
+alter table approvals add column if not exists snoozed_until text;
+alter table approvals add column if not exists snoozed_by text references users(id);
+alter table approvals add column if not exists snooze_reason text;
+
+create index if not exists idx_approvals_tenant_status_snoozed
+  on approvals (tenant_id, status, snoozed_until);
+`;
+
 const tenantAssetsMigrationSql = `
 create table if not exists tenant_assets (
   id text primary key,
@@ -4042,10 +4232,39 @@ create policy tenant_isolation on tenant_assets
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
 
-/**
- * Nouvelle table tenant-scopée : la migration RLS générique ne couvre que les
- * tables présentes quand elle s'exécute, d'où la migration d'isolation dédiée.
- */
+const tenantPreferencesMigrationSql = `
+alter table tenants
+  add column if not exists stalled_opportunity_days integer not null default 7;
+
+alter table tenants
+  drop constraint if exists tenants_stalled_opportunity_days_range;
+
+alter table tenants
+  add constraint tenants_stalled_opportunity_days_range
+  check (stalled_opportunity_days between 1 and 90);
+`;
+
+const strategicRefusalLearningMigrationSql = `
+alter table strategic_recommendations
+  add column if not exists mute_lifted_at text;
+
+alter table strategic_recommendations
+  add column if not exists mute_lifted_by text references users(id);
+
+alter table strategic_recommendations
+  drop constraint if exists strategic_recommendations_mute_lift_pairing;
+
+alter table strategic_recommendations
+  add constraint strategic_recommendations_mute_lift_pairing
+  check (
+    (mute_lifted_at is null and mute_lifted_by is null)
+    or (mute_lifted_at is not null and mute_lifted_by is not null)
+  );
+
+create index if not exists idx_strategic_recommendations_tenant_rule_decided
+  on strategic_recommendations (tenant_id, rule_key, decided_at desc);
+`;
+
 const emailSuppressionsMigrationSql = `
 create table if not exists email_suppressions (
   id text primary key,
@@ -4074,50 +4293,6 @@ create policy tenant_isolation on email_suppressions
   with check (app_is_system() or tenant_id = app_current_tenant_id());
 `;
 
-/**
- * Une règle refusée est mise en sourdine ; la levée est explicite et tracée
- * sur la décision de refus elle-même, qui reste intacte dans l'historique.
- * Colonnes additives sur une table déjà couverte par la RLS.
- */
-const strategicRefusalLearningMigrationSql = `
-alter table strategic_recommendations
-  add column if not exists mute_lifted_at text;
-
-alter table strategic_recommendations
-  add column if not exists mute_lifted_by text references users(id);
-
-alter table strategic_recommendations
-  drop constraint if exists strategic_recommendations_mute_lift_pairing;
-
-alter table strategic_recommendations
-  add constraint strategic_recommendations_mute_lift_pairing
-  check (
-    (mute_lifted_at is null and mute_lifted_by is null)
-    or (mute_lifted_at is not null and mute_lifted_by is not null)
-  );
-
-create index if not exists idx_strategic_recommendations_tenant_rule_decided
-  on strategic_recommendations (tenant_id, rule_key, decided_at desc);
-`;
-
-/**
- * Colonne nullable et sans reprise de données : une opportunité jamais
- * réordonnée garde `null` et conserve le tri par date de mise à jour. Les
- * positions ne sont attribuées qu'au premier déplacement manuel.
- */
-const opportunityBoardPositionMigrationSql = `
-alter table opportunities
-  add column if not exists board_position integer;
-
-create index if not exists idx_opportunities_tenant_stage_position
-  on opportunities (tenant_id, stage_id, board_position);
-`;
-
-/**
- * Seconde préférence d'organisation, même table et même raisonnement que
- * `073_tenant_preferences` : colonne additive, contrainte SQL en miroir des
- * bornes zod, aucune migration d'isolation à ajouter.
- */
 const tenantMutePreferenceMigrationSql = `
 alter table tenants
   add column if not exists strategic_mute_days integer not null default 30;
@@ -4130,36 +4305,2334 @@ alter table tenants
   check (strategic_mute_days between 1 and 365);
 `;
 
-/**
- * Colonne additive sur une table qui porte déjà sa politique RLS : rien à
- * ajouter côté isolation, contrairement à une nouvelle table.
- */
-const tenantPreferencesMigrationSql = `
-alter table tenants
-  add column if not exists stalled_opportunity_days integer not null default 7;
+const opportunityBoardPositionMigrationSql = `
+alter table opportunities
+  add column if not exists board_position integer;
 
-alter table tenants
-  drop constraint if exists tenants_stalled_opportunity_days_range;
-
-alter table tenants
-  add constraint tenants_stalled_opportunity_days_range
-  check (stalled_opportunity_days between 1 and 90);
+create index if not exists idx_opportunities_tenant_stage_position
+  on opportunities (tenant_id, stage_id, board_position);
 `;
 
-const approvalSnoozeMigrationSql = `
-alter table approvals add column if not exists snoozed_until text;
-alter table approvals add column if not exists snoozed_by text references users(id);
-alter table approvals add column if not exists snooze_reason text;
+const os1ConversationHubMigrationSql = `
+create table if not exists conversation_participants (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  role text not null,
+  display_name text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  check (role in ('customer', 'member', 'assistant', 'system')),
+  check (display_name is null or char_length(display_name) between 1 and 160),
+  check (updated_at >= created_at)
+);
 
-create index if not exists idx_approvals_tenant_status_snoozed
-  on approvals (tenant_id, status, snoozed_until);
+create table if not exists conversation_channel_identities (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  participant_id text not null,
+  channel_kind text not null,
+  adapter_key text not null,
+  external_subject_id text not null,
+  display_name text,
+  role text not null,
+  state text not null,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, adapter_key, external_subject_id),
+  foreign key (tenant_id, participant_id)
+    references conversation_participants(tenant_id, id) on delete cascade,
+  check (channel_kind in (
+    'web', 'messaging', 'email', 'voice', 'collaboration', 'test'
+  )),
+  check (char_length(adapter_key) between 1 and 160),
+  check (char_length(external_subject_id) between 1 and 256),
+  check (display_name is null or char_length(display_name) between 1 and 160),
+  check (role in ('customer', 'member', 'assistant', 'system')),
+  check (state in ('active', 'unverified', 'blocked', 'revoked')),
+  check (updated_at >= created_at)
+);
+
+create table if not exists conversation_threads (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  status text not null,
+  subject text,
+  created_at text not null,
+  updated_at text not null,
+  last_message_at text,
+  unique (tenant_id, id),
+  check (status in ('open', 'awaiting_validation', 'resolved', 'archived')),
+  check (subject is null or char_length(subject) between 1 and 200),
+  check (updated_at >= created_at),
+  check (last_message_at is null or last_message_at >= created_at)
+);
+
+create table if not exists conversation_thread_participants (
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  channel_identity_id text not null,
+  joined_at text not null,
+  left_at text,
+  primary key (tenant_id, thread_id, channel_identity_id),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities(tenant_id, id) on delete cascade,
+  check (left_at is null or left_at >= joined_at)
+);
+
+create table if not exists conversation_messages (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  channel_identity_id text not null,
+  direction text not null,
+  kind text not null,
+  status text not null,
+  text_content text,
+  adapter_key text not null,
+  external_message_id text,
+  idempotency_key text not null,
+  correlation_id text not null,
+  causation_id text,
+  safe_error_code text,
+  occurred_at text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, idempotency_key),
+  unique (tenant_id, adapter_key, external_message_id),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities(tenant_id, id) on delete restrict,
+  check (direction in ('inbound', 'outbound', 'internal')),
+  check (kind in ('text', 'system', 'plan', 'approval', 'result')),
+  check (status in ('received', 'pending', 'sent', 'delivered', 'failed')),
+  check (text_content is null or char_length(text_content) between 1 and 16000),
+  check (char_length(adapter_key) between 1 and 160),
+  check (external_message_id is null or char_length(external_message_id) between 1 and 256),
+  check (char_length(idempotency_key) between 8 and 160),
+  check (char_length(correlation_id) between 8 and 160),
+  check (causation_id is null or char_length(causation_id) between 1 and 160),
+  check (safe_error_code is null or char_length(safe_error_code) between 1 and 160),
+  check (created_at >= occurred_at)
+);
+
+create table if not exists conversation_message_attachments (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  message_id text not null,
+  kind text not null,
+  file_name text not null,
+  media_type text not null,
+  size_bytes integer not null,
+  storage_reference text not null,
+  checksum_sha256 text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  foreign key (tenant_id, message_id)
+    references conversation_messages(tenant_id, id) on delete cascade,
+  check (kind in ('document', 'image', 'audio', 'video', 'file')),
+  check (char_length(file_name) between 1 and 255),
+  check (char_length(media_type) between 3 and 120),
+  check (size_bytes between 1 and 26214400),
+  check (char_length(storage_reference) between 1 and 512),
+  check (checksum_sha256 ~ '^[A-Fa-f0-9]{64}$')
+);
+
+create table if not exists conversation_message_route_hops (
+  tenant_id text not null references tenants(id) on delete cascade,
+  message_id text not null,
+  position integer not null,
+  adapter_key text not null,
+  channel_identity_id text not null,
+  external_message_id text,
+  primary key (tenant_id, message_id, position),
+  unique (tenant_id, message_id, adapter_key, channel_identity_id),
+  foreign key (tenant_id, message_id)
+    references conversation_messages(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities(tenant_id, id) on delete restrict,
+  check (position between 0 and 7),
+  check (char_length(adapter_key) between 1 and 160),
+  check (external_message_id is null or char_length(external_message_id) between 1 and 256)
+);
+
+create index if not exists idx_conversation_participants_tenant_role
+  on conversation_participants (tenant_id, role, updated_at desc);
+create index if not exists idx_conversation_channel_identities_tenant_participant
+  on conversation_channel_identities (tenant_id, participant_id, updated_at desc);
+create index if not exists idx_conversation_threads_tenant_status
+  on conversation_threads (tenant_id, status, updated_at desc);
+create index if not exists idx_conversation_thread_participants_tenant_identity
+  on conversation_thread_participants (tenant_id, channel_identity_id, thread_id);
+create index if not exists idx_conversation_messages_tenant_thread_time
+  on conversation_messages (tenant_id, thread_id, occurred_at, id);
+create index if not exists idx_conversation_messages_tenant_correlation
+  on conversation_messages (tenant_id, correlation_id, occurred_at);
+create index if not exists idx_conversation_message_attachments_tenant_message
+  on conversation_message_attachments (tenant_id, message_id, id);
+create index if not exists idx_conversation_message_route_hops_tenant_identity
+  on conversation_message_route_hops (tenant_id, channel_identity_id, message_id);
 `;
 
-const pipelineDetailRlsMigrationSql = `
-alter table opportunity_changes enable row level security;
+const os1ConversationHubRlsMigrationSql = `
+alter table conversation_participants enable row level security;
+alter table conversation_channel_identities enable row level security;
+alter table conversation_threads enable row level security;
+alter table conversation_thread_participants enable row level security;
+alter table conversation_messages enable row level security;
+alter table conversation_message_attachments enable row level security;
+alter table conversation_message_route_hops enable row level security;
 
-drop policy if exists tenant_isolation on opportunity_changes;
-create policy tenant_isolation on opportunity_changes
+drop policy if exists tenant_isolation on conversation_participants;
+create policy tenant_isolation on conversation_participants
+  for all
   using (app_is_system() or tenant_id = app_current_tenant_id())
   with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_channel_identities;
+create policy tenant_isolation on conversation_channel_identities
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_threads;
+create policy tenant_isolation on conversation_threads
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_thread_participants;
+create policy tenant_isolation on conversation_thread_participants
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_messages;
+create policy tenant_isolation on conversation_messages
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_message_attachments;
+create policy tenant_isolation on conversation_message_attachments
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_message_route_hops;
+create policy tenant_isolation on conversation_message_route_hops
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os1ConversationActionPlansMigrationSql = `
+create table if not exists conversation_action_plans (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  source_message_id text not null,
+  schema_version integer not null,
+  generation_source text not null,
+  model_reference text,
+  approval_status text not null,
+  intent text not null,
+  business_goal text not null,
+  confidence real not null,
+  risk_summary text not null,
+  estimated_cost_minor integer not null default 0,
+  estimated_cost_currency text not null default 'EUR',
+  plan_json text not null,
+  plan_fingerprint text not null,
+  created_by text not null references users(id) on delete restrict,
+  created_at text not null,
+  updated_at text not null,
+  decided_by text references users(id) on delete restrict,
+  decided_at text,
+  decision_reason text,
+  unique (tenant_id, id),
+  unique (tenant_id, source_message_id, plan_fingerprint),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, source_message_id)
+    references conversation_messages(tenant_id, id) on delete restrict,
+  check (schema_version = 1),
+  check (generation_source in ('deterministic_mock', 'model')),
+  check (
+    (generation_source = 'model' and model_reference is not null) or
+    (generation_source = 'deterministic_mock' and model_reference is null)
+  ),
+  check (approval_status in (
+    'draft', 'awaiting_approval', 'approved', 'rejected', 'executed'
+  )),
+  check (char_length(intent) between 1 and 2000),
+  check (char_length(business_goal) between 1 and 2000),
+  check (confidence between 0 and 1),
+  check (char_length(risk_summary) between 1 and 2000),
+  check (estimated_cost_minor >= 0),
+  check (estimated_cost_currency ~ '^[A-Z]{3}$'),
+  check (char_length(plan_json) between 2 and 64000),
+  check (plan_fingerprint ~ '^[A-Fa-f0-9]{64}$'),
+  check (updated_at >= created_at),
+  check (
+    (approval_status in ('draft', 'awaiting_approval') and
+      decided_at is null and decided_by is null and decision_reason is null) or
+    (approval_status in ('approved', 'rejected', 'executed') and
+      decided_at is not null and decided_by is not null and
+      decision_reason is not null and char_length(decision_reason) between 1 and 500)
+  )
+);
+
+create table if not exists conversation_action_plan_steps (
+  tenant_id text not null references tenants(id) on delete cascade,
+  plan_id text not null,
+  position integer not null,
+  step_id text not null,
+  capability text not null,
+  mode text not null,
+  execution_environment text not null,
+  risk text not null,
+  requires_approval integer not null,
+  reversible text not null,
+  input_json text not null,
+  evidence_required_json text not null,
+  idempotency_key text not null,
+  status text not null,
+  primary key (tenant_id, plan_id, position),
+  unique (tenant_id, plan_id, step_id),
+  unique (tenant_id, idempotency_key),
+  foreign key (tenant_id, plan_id)
+    references conversation_action_plans(tenant_id, id) on delete cascade,
+  check (position between 0 and 11),
+  check (char_length(step_id) between 1 and 160),
+  check (capability ~ '^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$'),
+  check (mode in ('read', 'write', 'execute', 'subscribe')),
+  check (execution_environment = 'mock'),
+  check (risk in ('low', 'medium', 'high', 'critical')),
+  check (requires_approval in (0, 1)),
+  check (reversible in ('true', 'false', 'compensation_only')),
+  check (char_length(input_json) between 2 and 16000),
+  check (char_length(evidence_required_json) between 2 and 16000),
+  check (char_length(idempotency_key) between 8 and 160),
+  check (status in ('planned', 'approved', 'running', 'succeeded', 'failed', 'cancelled'))
+);
+
+create or replace function enforce_conversation_action_plan_immutability()
+returns trigger language plpgsql as $$
+begin
+  if new.id is distinct from old.id
+    or new.tenant_id is distinct from old.tenant_id
+    or new.thread_id is distinct from old.thread_id
+    or new.source_message_id is distinct from old.source_message_id
+    or new.schema_version is distinct from old.schema_version
+    or new.generation_source is distinct from old.generation_source
+    or new.model_reference is distinct from old.model_reference
+    or new.intent is distinct from old.intent
+    or new.business_goal is distinct from old.business_goal
+    or new.confidence is distinct from old.confidence
+    or new.risk_summary is distinct from old.risk_summary
+    or new.estimated_cost_minor is distinct from old.estimated_cost_minor
+    or new.estimated_cost_currency is distinct from old.estimated_cost_currency
+    or new.plan_json is distinct from old.plan_json
+    or new.plan_fingerprint is distinct from old.plan_fingerprint
+    or new.created_by is distinct from old.created_by
+    or new.created_at is distinct from old.created_at then
+    raise exception 'conversation_action_plan_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function enforce_conversation_action_plan_step_immutability()
+returns trigger language plpgsql as $$
+begin
+  if new.tenant_id is distinct from old.tenant_id
+    or new.plan_id is distinct from old.plan_id
+    or new.position is distinct from old.position
+    or new.step_id is distinct from old.step_id
+    or new.capability is distinct from old.capability
+    or new.mode is distinct from old.mode
+    or new.execution_environment is distinct from old.execution_environment
+    or new.risk is distinct from old.risk
+    or new.requires_approval is distinct from old.requires_approval
+    or new.reversible is distinct from old.reversible
+    or new.input_json is distinct from old.input_json
+    or new.evidence_required_json is distinct from old.evidence_required_json
+    or new.idempotency_key is distinct from old.idempotency_key then
+    raise exception 'conversation_action_plan_step_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists conversation_action_plan_immutability
+  on conversation_action_plans;
+create trigger conversation_action_plan_immutability
+before update on conversation_action_plans
+for each row execute function enforce_conversation_action_plan_immutability();
+
+drop trigger if exists conversation_action_plan_step_immutability
+  on conversation_action_plan_steps;
+create trigger conversation_action_plan_step_immutability
+before update on conversation_action_plan_steps
+for each row execute function enforce_conversation_action_plan_step_immutability();
+
+create unique index if not exists uq_approvals_conversation_action_plan
+  on approvals (tenant_id, target_type, target_id)
+  where target_type = 'conversation_action_plan';
+create index if not exists idx_conversation_action_plans_tenant_status
+  on conversation_action_plans (tenant_id, approval_status, updated_at desc);
+create index if not exists idx_conversation_action_plans_tenant_thread
+  on conversation_action_plans (tenant_id, thread_id, created_at desc);
+create index if not exists idx_conversation_action_plan_steps_tenant_capability
+  on conversation_action_plan_steps (tenant_id, capability, status);
+`;
+
+const os1ConversationActionPlansRlsMigrationSql = `
+alter table conversation_action_plans enable row level security;
+alter table conversation_action_plan_steps enable row level security;
+
+drop policy if exists tenant_isolation on conversation_action_plans;
+create policy tenant_isolation on conversation_action_plans
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on conversation_action_plan_steps;
+create policy tenant_isolation on conversation_action_plan_steps
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os2EmailProviderEventsMigrationSql = `
+create unique index if not exists uq_invitations_tenant_id
+  on invitations (tenant_id, id);
+
+create table if not exists email_provider_deliveries (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  source_type text not null,
+  source_id text not null,
+  provider text not null,
+  provider_message_id text not null,
+  recipient_hash text not null,
+  status text not null,
+  last_event_at text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, id, provider_message_id),
+  unique (provider, provider_message_id),
+  foreign key (tenant_id, source_id)
+    references invitations(tenant_id, id) on delete cascade,
+  check (char_length(id) between 1 and 160),
+  check (source_type = 'invitation'),
+  check (char_length(source_id) between 1 and 160),
+  check (provider = 'resend'),
+  check (char_length(provider_message_id) between 1 and 256),
+  check (provider_message_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
+  check (recipient_hash ~ '^[A-Fa-f0-9]{64}$'),
+  check (status in ('sent', 'delayed', 'delivered', 'failed')),
+  check (updated_at >= created_at)
+);
+
+create table if not exists email_provider_events (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  delivery_id text not null,
+  provider text not null,
+  external_event_id text not null,
+  provider_message_id text not null,
+  event_type text not null,
+  delivery_status text not null,
+  occurred_at text not null,
+  received_at text not null,
+  unique (tenant_id, id),
+  unique (provider, external_event_id),
+  foreign key (tenant_id, delivery_id, provider_message_id)
+    references email_provider_deliveries(
+      tenant_id, id, provider_message_id
+    ) on delete cascade,
+  check (char_length(id) between 1 and 160),
+  check (char_length(delivery_id) between 1 and 160),
+  check (provider = 'resend'),
+  check (char_length(external_event_id) between 1 and 256),
+  check (external_event_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
+  check (char_length(provider_message_id) between 1 and 256),
+  check (provider_message_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
+  check (event_type in (
+    'email.sent',
+    'email.delivered',
+    'email.delivery_delayed',
+    'email.bounced',
+    'email.complained',
+    'email.failed',
+    'email.suppressed'
+  )),
+  check (delivery_status in ('sent', 'delayed', 'delivered', 'failed'))
+);
+
+create or replace function reject_email_provider_event_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'email_provider_events rows are immutable';
+end;
+$$;
+
+drop trigger if exists email_provider_events_immutable_update
+  on email_provider_events;
+create trigger email_provider_events_immutable_update
+before update on email_provider_events
+for each row execute function reject_email_provider_event_update();
+
+create index if not exists idx_email_provider_deliveries_tenant_provider
+  on email_provider_deliveries (tenant_id, provider, provider_message_id);
+create index if not exists idx_email_provider_deliveries_tenant_source
+  on email_provider_deliveries (tenant_id, source_type, source_id, created_at desc);
+create index if not exists idx_email_provider_events_tenant_delivery
+  on email_provider_events (tenant_id, delivery_id, occurred_at, id);
+create index if not exists idx_email_provider_events_tenant_external
+  on email_provider_events (tenant_id, provider, external_event_id);
+`;
+
+const os2EmailProviderEventsRlsMigrationSql = `
+alter table email_provider_deliveries enable row level security;
+alter table email_provider_events enable row level security;
+
+drop policy if exists tenant_isolation on email_provider_deliveries;
+create policy tenant_isolation on email_provider_deliveries
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+
+drop policy if exists tenant_isolation on email_provider_events;
+create policy tenant_isolation on email_provider_events
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os2ChannelProviderEndpointsMigrationSql = `
+create table if not exists channel_provider_endpoints (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  external_account_id text not null,
+  destination_fingerprint text not null,
+  status text not null,
+  created_by text not null references users(id) on delete restrict,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (provider, external_account_id, destination_fingerprint),
+  check (char_length(id) between 1 and 160),
+  check (provider in (
+    'whatsapp_twilio',
+    'teams_microsoft',
+    'slack',
+    'email_resend'
+  )),
+  check (char_length(external_account_id) between 1 and 256),
+  check (external_account_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
+  check (destination_fingerprint ~ '^[a-f0-9]{64}$'),
+  check (status in ('active', 'disabled')),
+  check (char_length(created_by) between 1 and 160),
+  check (updated_at >= created_at)
+);
+
+create or replace function protect_channel_provider_endpoint_identity()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.external_account_id <> old.external_account_id
+     or new.destination_fingerprint <> old.destination_fingerprint
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_endpoints identity is immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_endpoints_protect_identity
+  on channel_provider_endpoints;
+create trigger channel_provider_endpoints_protect_identity
+before update on channel_provider_endpoints
+for each row execute function protect_channel_provider_endpoint_identity();
+
+create index if not exists idx_channel_provider_endpoints_tenant_provider
+  on channel_provider_endpoints (tenant_id, provider, status, updated_at desc);
+create index if not exists idx_channel_provider_endpoints_created_by
+  on channel_provider_endpoints (created_by);
+`;
+
+const os2ChannelProviderEndpointsRlsMigrationSql = `
+alter table channel_provider_endpoints enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_endpoints;
+create policy tenant_isolation on channel_provider_endpoints
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os2WhatsAppMetaEndpointProviderMigrationSql = `
+alter table channel_provider_endpoints
+  drop constraint if exists channel_provider_endpoints_provider_check;
+
+alter table channel_provider_endpoints
+  add constraint channel_provider_endpoints_provider_check check (provider in (
+    'whatsapp_twilio',
+    'whatsapp_meta',
+    'teams_microsoft',
+    'slack',
+    'email_resend'
+  ));
+`;
+
+const os5WhatsAppMetaOutboundProviderMigrationSql = `
+create unique index if not exists uq_channel_provider_endpoints_tenant_id_provider
+  on channel_provider_endpoints (tenant_id, id, provider);
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_provider_check;
+
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_provider_check check (provider in (
+    'whatsapp_twilio',
+    'whatsapp_meta'
+  ));
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_provider_endpoint_fkey;
+
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_provider_endpoint_fkey
+  foreign key (tenant_id, endpoint_id, provider)
+  references channel_provider_endpoints (tenant_id, id, provider)
+  on delete restrict
+  not valid;
+`;
+
+const os5ChannelProviderIdentityBindingsMigrationSql = `
+create table if not exists channel_provider_identity_bindings (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  channel_identity_id text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, channel_identity_id),
+  foreign key (tenant_id, endpoint_id, provider)
+    references channel_provider_endpoints (tenant_id, id, provider)
+    on delete restrict,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities (tenant_id, id)
+    on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_meta'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (char_length(channel_identity_id) between 1 and 160)
+);
+
+create or replace function protect_channel_provider_identity_binding()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.endpoint_id <> old.endpoint_id
+     or new.channel_identity_id <> old.channel_identity_id
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_identity_binding_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_identity_bindings_protect_identity
+  on channel_provider_identity_bindings;
+create trigger channel_provider_identity_bindings_protect_identity
+before update on channel_provider_identity_bindings
+for each row execute function protect_channel_provider_identity_binding();
+
+create index if not exists idx_channel_provider_identity_bindings_tenant_endpoint
+  on channel_provider_identity_bindings (
+    tenant_id, provider, endpoint_id, channel_identity_id
+  );
+`;
+
+const os5ChannelProviderIdentityBindingsRlsMigrationSql = `
+alter table channel_provider_identity_bindings enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_identity_bindings;
+create policy tenant_isolation on channel_provider_identity_bindings
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os4WorkflowDefinitionSnapshotsMigrationSql = `
+alter table workflow_runs
+  add column if not exists definition_snapshot text;
+alter table workflow_runs
+  add column if not exists definition_version integer;
+
+alter table workflow_runs
+  drop constraint if exists workflow_runs_definition_snapshot_pair;
+alter table workflow_runs
+  add constraint workflow_runs_definition_snapshot_pair check (
+    (definition_snapshot is null and definition_version is null)
+    or (
+      definition_snapshot is not null
+      and definition_version is not null
+      and definition_version between 1 and 1000000
+      and char_length(definition_snapshot) between 2 and 65536
+    )
+  );
+
+create or replace function protect_workflow_run_definition_snapshot()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.definition_snapshot is distinct from old.definition_snapshot
+     or new.definition_version is distinct from old.definition_version then
+    raise exception 'workflow_run_definition_snapshot_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists workflow_runs_protect_definition_snapshot
+  on workflow_runs;
+create trigger workflow_runs_protect_definition_snapshot
+before update on workflow_runs
+for each row execute function protect_workflow_run_definition_snapshot();
+
+create index if not exists idx_workflow_runs_tenant_definition_version
+  on workflow_runs (tenant_id, definition_version, created_at desc);
+`;
+
+const os5ChannelProviderDeliveriesMigrationSql = `
+create table if not exists channel_provider_deliveries (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  message_id text not null,
+  channel_identity_id text not null,
+  idempotency_key text not null,
+  request_fingerprint text not null,
+  status text not null,
+  external_message_id text,
+  failure_classification text,
+  safe_error_code text,
+  retryable boolean,
+  created_by text not null references users(id) on delete restrict,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, idempotency_key),
+  foreign key (tenant_id, endpoint_id)
+    references channel_provider_endpoints(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, message_id)
+    references conversation_messages(tenant_id, id) on delete restrict,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities(tenant_id, id) on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_twilio'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (char_length(message_id) between 1 and 160),
+  check (char_length(channel_identity_id) between 1 and 160),
+  check (char_length(idempotency_key) between 8 and 160),
+  check (request_fingerprint ~ '^[a-f0-9]{64}$'),
+  check (status in ('reserved', 'accepted', 'delivered', 'failed', 'denied')),
+  check (
+    external_message_id is null
+    or (
+      char_length(external_message_id) between 1 and 256
+      and external_message_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+    )
+  ),
+  check (
+    failure_classification is null
+    or failure_classification in (
+      'temporary', 'permanent', 'auth', 'rate_limit', 'policy',
+      'validation', 'not_configured'
+    )
+  ),
+  check (
+    safe_error_code is null
+    or (
+      char_length(safe_error_code) between 1 and 160
+      and safe_error_code ~ '^[a-z][a-z0-9_]*$'
+    )
+  ),
+  check (
+    (status = 'reserved'
+      and external_message_id is null
+      and failure_classification is null
+      and safe_error_code is null
+      and retryable is null)
+    or (status in ('accepted', 'delivered')
+      and external_message_id is not null
+      and failure_classification is null
+      and safe_error_code is null
+      and retryable = false)
+    or (status in ('failed', 'denied')
+      and external_message_id is null
+      and failure_classification is not null
+      and safe_error_code is not null
+      and retryable is not null)
+  ),
+  check (char_length(created_by) between 1 and 160),
+  check (updated_at >= created_at)
+);
+
+create or replace function protect_channel_provider_delivery_identity()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.endpoint_id <> old.endpoint_id
+     or new.message_id <> old.message_id
+     or new.channel_identity_id <> old.channel_identity_id
+     or new.idempotency_key <> old.idempotency_key
+     or new.request_fingerprint <> old.request_fingerprint
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_delivery_identity_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_deliveries_protect_identity
+  on channel_provider_deliveries;
+create trigger channel_provider_deliveries_protect_identity
+before update on channel_provider_deliveries
+for each row execute function protect_channel_provider_delivery_identity();
+
+create index if not exists idx_channel_provider_deliveries_tenant_message
+  on channel_provider_deliveries (tenant_id, message_id, created_at desc);
+create index if not exists idx_channel_provider_deliveries_tenant_status
+  on channel_provider_deliveries (tenant_id, provider, status, updated_at desc);
+`;
+
+const os5ChannelProviderDeliveriesRlsMigrationSql = `
+alter table channel_provider_deliveries enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_deliveries;
+create policy tenant_isolation on channel_provider_deliveries
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderDeliveryRetriesMigrationSql = `
+alter table channel_provider_deliveries
+  add column if not exists attempts integer not null default 0;
+alter table channel_provider_deliveries
+  add column if not exists max_attempts integer not null default 3;
+alter table channel_provider_deliveries
+  add column if not exists next_attempt_at text;
+alter table channel_provider_deliveries
+  add column if not exists last_attempted_at text;
+alter table channel_provider_deliveries
+  add column if not exists lease_id text;
+alter table channel_provider_deliveries
+  add column if not exists lease_expires_at text;
+
+update channel_provider_deliveries
+set next_attempt_at = updated_at
+where next_attempt_at is null;
+
+alter table channel_provider_deliveries
+  alter column next_attempt_at set not null;
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_attempts_valid;
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_attempts_valid check (
+    attempts between 0 and max_attempts
+    and max_attempts between 1 and 10
+  );
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_retryable_classification_valid;
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_retryable_classification_valid check (
+    retryable is null
+    or retryable = false
+    or (
+      status = 'failed'
+      and failure_classification in ('temporary', 'rate_limit')
+    )
+  );
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_attempt_schedule_valid;
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_attempt_schedule_valid check (
+    next_attempt_at >= created_at
+    and (last_attempted_at is null or last_attempted_at >= created_at)
+  );
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_lease_valid;
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_lease_valid check (
+    (lease_id is null and lease_expires_at is null)
+    or (
+      lease_id is not null
+      and char_length(lease_id) between 8 and 160
+      and lease_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+      and lease_expires_at is not null
+      and last_attempted_at is not null
+      and lease_expires_at > last_attempted_at
+      and status in ('reserved', 'failed')
+      and attempts > 0
+      and attempts <= max_attempts
+    )
+  );
+
+create or replace function protect_channel_provider_delivery_identity()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.endpoint_id <> old.endpoint_id
+     or new.message_id <> old.message_id
+     or new.channel_identity_id <> old.channel_identity_id
+     or new.idempotency_key <> old.idempotency_key
+     or new.request_fingerprint <> old.request_fingerprint
+     or new.max_attempts <> old.max_attempts
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_delivery_identity_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create index if not exists idx_channel_provider_deliveries_tenant_retry
+  on channel_provider_deliveries (
+    tenant_id, provider, next_attempt_at, status, lease_expires_at
+  );
+`;
+
+const os5ChannelProviderDeliveryEventsMigrationSql = `
+do $$
+declare
+  status_constraint text;
+begin
+  for status_constraint in
+    select conname
+    from pg_constraint
+    where conrelid = 'channel_provider_deliveries'::regclass
+      and contype = 'c'
+      and position('EXTERNAL_MESSAGE_ID' in upper(pg_get_constraintdef(oid))) > 0
+      and position('FAILURE_CLASSIFICATION' in upper(pg_get_constraintdef(oid))) > 0
+      and position('RETRYABLE' in upper(pg_get_constraintdef(oid))) > 0
+  loop
+    execute format(
+      'alter table channel_provider_deliveries drop constraint %I',
+      status_constraint
+    );
+  end loop;
+end;
+$$;
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_status_payload_valid;
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_status_payload_valid check (
+    (status = 'reserved'
+      and external_message_id is null
+      and failure_classification is null
+      and safe_error_code is null
+      and retryable is null)
+    or (status in ('accepted', 'delivered')
+      and external_message_id is not null
+      and failure_classification is null
+      and safe_error_code is null
+      and retryable = false)
+    or (status = 'failed'
+      and failure_classification is not null
+      and safe_error_code is not null
+      and retryable is not null
+      and (
+        external_message_id is null
+        or (
+          external_message_id is not null
+          and failure_classification = 'permanent'
+          and safe_error_code = 'provider_delivery_failed'
+          and retryable = false
+        )
+      ))
+    or (status = 'denied'
+      and external_message_id is null
+      and failure_classification is not null
+      and safe_error_code is not null
+      and retryable is not null)
+  );
+
+create unique index if not exists uq_channel_provider_deliveries_provider_external
+  on channel_provider_deliveries (provider, external_message_id)
+  where external_message_id is not null;
+
+create table if not exists channel_provider_delivery_events (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  delivery_id text not null,
+  provider text not null,
+  event_key text not null,
+  status text not null,
+  safe_error_code text,
+  received_at text not null,
+  unique (tenant_id, id),
+  unique (provider, event_key),
+  foreign key (tenant_id, delivery_id)
+    references channel_provider_deliveries(tenant_id, id) on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_twilio'),
+  check (event_key ~ '^[a-f0-9]{64}$'),
+  check (status in ('accepted', 'delivered', 'failed')),
+  check (
+    (status in ('accepted', 'delivered') and safe_error_code is null)
+    or (status = 'failed' and safe_error_code = 'provider_delivery_failed')
+  )
+);
+
+create or replace function reject_channel_provider_delivery_event_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'channel_provider_delivery_event_immutable';
+end;
+$$;
+
+drop trigger if exists channel_provider_delivery_events_immutable
+  on channel_provider_delivery_events;
+create trigger channel_provider_delivery_events_immutable
+before update on channel_provider_delivery_events
+for each row execute function reject_channel_provider_delivery_event_update();
+
+create index if not exists idx_channel_provider_delivery_events_tenant_delivery
+  on channel_provider_delivery_events (tenant_id, delivery_id, received_at, id);
+`;
+
+const os5ChannelProviderDeliveryEventsRlsMigrationSql = `
+alter table channel_provider_delivery_events enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_delivery_events;
+create policy tenant_isolation on channel_provider_delivery_events
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderSecretVersionsMigrationSql = `
+create table if not exists channel_provider_secret_versions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  channel_identity_id text,
+  secret_scope text not null,
+  encrypted_payload text not null,
+  key_version text not null,
+  secret_version integer not null,
+  rotation_key_hash text not null,
+  revoked_at text,
+  revoked_by text references users(id) on delete restrict,
+  created_by text not null references users(id) on delete restrict,
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, rotation_key_hash),
+  foreign key (tenant_id, endpoint_id)
+    references channel_provider_endpoints(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, channel_identity_id)
+    references conversation_channel_identities(tenant_id, id) on delete cascade,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_twilio'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (
+    (secret_scope = 'endpoint' and channel_identity_id is null)
+    or (secret_scope = 'identity' and channel_identity_id is not null)
+  ),
+  check (char_length(encrypted_payload) between 64 and 16384),
+  check (char_length(key_version) between 1 and 80),
+  check (key_version ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'),
+  check (secret_version between 1 and 1000000),
+  check (rotation_key_hash ~ '^[a-f0-9]{64}$'),
+  check (
+    (revoked_at is null and revoked_by is null)
+    or (revoked_at is not null and revoked_by is not null and revoked_at >= created_at)
+  )
+);
+
+create unique index if not exists uq_channel_provider_secret_endpoint_version
+  on channel_provider_secret_versions (
+    tenant_id, provider, endpoint_id, secret_version
+  ) where secret_scope = 'endpoint';
+create unique index if not exists uq_channel_provider_secret_identity_version
+  on channel_provider_secret_versions (
+    tenant_id, provider, endpoint_id, channel_identity_id, secret_version
+  ) where secret_scope = 'identity';
+create unique index if not exists uq_channel_provider_secret_endpoint_active
+  on channel_provider_secret_versions (tenant_id, provider, endpoint_id)
+  where secret_scope = 'endpoint' and revoked_at is null;
+create unique index if not exists uq_channel_provider_secret_identity_active
+  on channel_provider_secret_versions (
+    tenant_id, provider, endpoint_id, channel_identity_id
+  ) where secret_scope = 'identity' and revoked_at is null;
+create index if not exists idx_channel_provider_secret_versions_tenant_scope
+  on channel_provider_secret_versions (
+    tenant_id, provider, secret_scope, endpoint_id, channel_identity_id,
+    secret_version desc
+  );
+
+create or replace function protect_channel_provider_secret_version()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.endpoint_id <> old.endpoint_id
+     or new.channel_identity_id is distinct from old.channel_identity_id
+     or new.secret_scope <> old.secret_scope
+     or new.encrypted_payload <> old.encrypted_payload
+     or new.key_version <> old.key_version
+     or new.secret_version <> old.secret_version
+     or new.rotation_key_hash <> old.rotation_key_hash
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at
+     or (old.revoked_at is not null and (
+       new.revoked_at is distinct from old.revoked_at
+       or new.revoked_by is distinct from old.revoked_by
+     ))
+     or ((new.revoked_at is null) <> (new.revoked_by is null)) then
+    raise exception 'channel_provider_secret_version_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_secret_versions_protect
+  on channel_provider_secret_versions;
+create trigger channel_provider_secret_versions_protect
+before update on channel_provider_secret_versions
+for each row execute function protect_channel_provider_secret_version();
+
+`;
+
+const os5ChannelProviderSecretVersionsRlsMigrationSql = `
+alter table channel_provider_secret_versions enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_secret_versions;
+create policy tenant_isolation on channel_provider_secret_versions
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderSecretVersionsMetaMigrationSql = `
+alter table channel_provider_secret_versions
+  drop constraint if exists channel_provider_secret_versions_provider_check;
+
+alter table channel_provider_secret_versions
+  add constraint channel_provider_secret_versions_provider_check
+  check (provider in ('whatsapp_twilio', 'whatsapp_meta'));
+
+alter table channel_provider_secret_versions
+  drop constraint if exists channel_provider_secret_versions_tenant_id_endpoint_id_fkey;
+
+alter table channel_provider_secret_versions
+  add constraint channel_provider_secret_versions_endpoint_provider_fkey
+  foreign key (tenant_id, endpoint_id, provider)
+  references channel_provider_endpoints (tenant_id, id, provider)
+  on delete cascade;
+`;
+
+const os5WhatsAppMetaDeliveryEventsMigrationSql = `
+create unique index if not exists uq_channel_provider_deliveries_tenant_id_provider
+  on channel_provider_deliveries (tenant_id, id, provider);
+
+alter table channel_provider_deliveries
+  drop constraint if exists channel_provider_deliveries_external_message_id_check;
+
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_external_message_id_check check (
+    external_message_id is null
+    or (
+      char_length(external_message_id) between 1 and 256
+      and (
+        (provider = 'whatsapp_twilio'
+          and external_message_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$')
+        or (provider = 'whatsapp_meta'
+          and external_message_id ~ '^wamid[.][-A-Za-z0-9._:+/=]+$')
+      )
+    )
+  );
+
+alter table channel_provider_delivery_events
+  drop constraint if exists channel_provider_delivery_events_provider_check;
+
+alter table channel_provider_delivery_events
+  add constraint channel_provider_delivery_events_provider_check
+  check (provider in ('whatsapp_twilio', 'whatsapp_meta'));
+
+alter table channel_provider_delivery_events
+  drop constraint if exists channel_provider_delivery_events_tenant_id_delivery_id_fkey;
+
+alter table channel_provider_delivery_events
+  add constraint channel_provider_delivery_events_delivery_provider_fkey
+  foreign key (tenant_id, delivery_id, provider)
+  references channel_provider_deliveries (tenant_id, id, provider)
+  on delete restrict;
+`;
+
+const os5ChannelProviderMediaImportsMigrationSql = `
+create table if not exists channel_provider_media_imports (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  message_id text not null,
+  media_kind text not null,
+  reservation_status text not null,
+  encrypted_provider_reference text,
+  key_version text,
+  request_fingerprint text not null,
+  safe_error_code text,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, message_id),
+  foreign key (tenant_id, endpoint_id, provider)
+    references channel_provider_endpoints (tenant_id, id, provider)
+    on delete restrict,
+  foreign key (tenant_id, message_id)
+    references conversation_messages (tenant_id, id)
+    on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_meta'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (char_length(message_id) between 1 and 160),
+  check (media_kind in ('image', 'audio', 'document', 'video', 'sticker')),
+  check (reservation_status in ('not_configured', 'pending', 'failed')),
+  check (
+    encrypted_provider_reference is null
+    or char_length(encrypted_provider_reference) between 64 and 16384
+  ),
+  check (
+    key_version is null
+    or (
+      char_length(key_version) between 1 and 80
+      and key_version ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+    )
+  ),
+  check (request_fingerprint ~ '^[a-f0-9]{64}$'),
+  check (
+    (reservation_status = 'pending'
+      and encrypted_provider_reference is not null
+      and key_version is not null
+      and safe_error_code is null)
+    or (reservation_status = 'not_configured'
+      and encrypted_provider_reference is null
+      and key_version is null
+      and safe_error_code = 'media_reference_vault_not_configured')
+    or (reservation_status = 'failed'
+      and encrypted_provider_reference is null
+      and key_version is null
+      and safe_error_code = 'media_reference_encryption_failed')
+  ),
+  check (updated_at >= created_at)
+);
+
+create or replace function reject_channel_provider_media_import_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'channel_provider_media_import_immutable';
+end;
+$$;
+
+drop trigger if exists channel_provider_media_imports_immutable
+  on channel_provider_media_imports;
+create trigger channel_provider_media_imports_immutable
+before update on channel_provider_media_imports
+for each row execute function reject_channel_provider_media_import_update();
+
+create index if not exists idx_channel_provider_media_imports_tenant_status
+  on channel_provider_media_imports (
+    tenant_id, provider, reservation_status, created_at, id
+  );
+`;
+
+const os5ChannelProviderMediaImportsRlsMigrationSql = `
+alter table channel_provider_media_imports enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_media_imports;
+create policy tenant_isolation on channel_provider_media_imports
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderMediaImportExecutionsMigrationSql = `
+create unique index if not exists uq_channel_provider_media_imports_tenant_id_provider
+  on channel_provider_media_imports (tenant_id, id, provider);
+
+create table if not exists channel_provider_media_import_executions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  media_import_id text not null,
+  provider text not null,
+  provider_mode text not null,
+  storage_mode text not null,
+  status text not null,
+  failure_classification text,
+  safe_error_code text,
+  retryable boolean,
+  attempts integer not null default 0,
+  max_attempts integer not null default 3,
+  next_attempt_at text not null,
+  last_attempted_at text,
+  lease_id text,
+  lease_expires_at text,
+  attachment_id text,
+  created_by text not null references users(id) on delete restrict,
+  created_at text not null,
+  updated_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, media_import_id),
+  foreign key (tenant_id, media_import_id, provider)
+    references channel_provider_media_imports (tenant_id, id, provider)
+    on delete restrict,
+  foreign key (tenant_id, attachment_id)
+    references conversation_message_attachments (tenant_id, id)
+    on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_meta'),
+  check (provider_mode in ('mock', 'disabled', 'not_configured')),
+  check (storage_mode in ('mock', 'disabled', 'not_configured')),
+  check (status in ('reserved', 'succeeded', 'failed', 'denied')),
+  check (
+    failure_classification is null
+    or failure_classification in (
+      'temporary', 'permanent', 'validation', 'policy', 'not_configured'
+    )
+  ),
+  check (
+    safe_error_code is null
+    or (
+      char_length(safe_error_code) between 1 and 160
+      and safe_error_code ~ '^[a-z][a-z0-9_]*$'
+    )
+  ),
+  check (attempts between 0 and max_attempts),
+  check (max_attempts between 1 and 10),
+  check (next_attempt_at >= created_at),
+  check (last_attempted_at is null or last_attempted_at >= created_at),
+  check (
+    (lease_id is null and lease_expires_at is null)
+    or (
+      lease_id is not null
+      and char_length(lease_id) between 8 and 160
+      and lease_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+      and lease_expires_at is not null
+      and last_attempted_at is not null
+      and lease_expires_at > last_attempted_at
+      and status in ('reserved', 'failed')
+      and attempts > 0
+    )
+  ),
+  check (
+    (status = 'reserved'
+      and failure_classification is null
+      and safe_error_code is null
+      and retryable is null
+      and attachment_id is null)
+    or (status = 'succeeded'
+      and provider_mode = 'mock'
+      and storage_mode = 'mock'
+      and failure_classification is null
+      and safe_error_code is null
+      and retryable = false
+      and attachment_id is not null)
+    or (status = 'failed'
+      and failure_classification in ('temporary', 'permanent', 'validation')
+      and safe_error_code is not null
+      and retryable is not null
+      and attachment_id is null)
+    or (status = 'denied'
+      and failure_classification in ('policy', 'not_configured')
+      and safe_error_code is not null
+      and retryable = false
+      and attachment_id is null)
+  ),
+  check (
+    retryable is null
+    or retryable = false
+    or (status = 'failed' and failure_classification = 'temporary')
+  ),
+  check (updated_at >= created_at)
+);
+
+create or replace function protect_channel_provider_media_import_execution_identity()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.media_import_id <> old.media_import_id
+     or new.provider <> old.provider
+     or new.provider_mode <> old.provider_mode
+     or new.storage_mode <> old.storage_mode
+     or new.max_attempts <> old.max_attempts
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_media_import_execution_identity_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_media_import_executions_protect_identity
+  on channel_provider_media_import_executions;
+create trigger channel_provider_media_import_executions_protect_identity
+before update on channel_provider_media_import_executions
+for each row execute function protect_channel_provider_media_import_execution_identity();
+
+create index if not exists idx_channel_provider_media_import_executions_tenant_due
+  on channel_provider_media_import_executions (
+    tenant_id, provider, next_attempt_at, status, lease_expires_at
+  );
+`;
+
+const os5ChannelProviderMediaImportExecutionsRlsMigrationSql = `
+alter table channel_provider_media_import_executions enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_media_import_executions;
+create policy tenant_isolation on channel_provider_media_import_executions
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderMediaSecurityScanMigrationSql = `
+alter table channel_provider_media_import_executions
+  add column if not exists scanner_mode text;
+
+update channel_provider_media_import_executions
+set scanner_mode = 'not_configured'
+where scanner_mode is null;
+
+alter table channel_provider_media_import_executions
+  alter column scanner_mode set not null;
+
+alter table channel_provider_media_import_executions
+  drop constraint if exists channel_provider_media_import_executions_scanner_mode_check;
+alter table channel_provider_media_import_executions
+  add constraint channel_provider_media_import_executions_scanner_mode_check check (
+    scanner_mode in ('mock', 'disabled', 'not_configured')
+  );
+
+create or replace function protect_channel_provider_media_import_execution_identity()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.media_import_id <> old.media_import_id
+     or new.provider <> old.provider
+     or new.provider_mode <> old.provider_mode
+     or new.scanner_mode <> old.scanner_mode
+     or new.storage_mode <> old.storage_mode
+     or new.max_attempts <> old.max_attempts
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_media_import_execution_identity_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function enforce_channel_provider_media_import_scan_success()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status = 'succeeded'
+     and (tg_op = 'INSERT' or old.status <> 'succeeded')
+     and new.scanner_mode <> 'mock' then
+    raise exception 'channel_provider_media_import_scan_required';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_media_import_executions_enforce_scan
+  on channel_provider_media_import_executions;
+create trigger channel_provider_media_import_executions_enforce_scan
+before insert or update on channel_provider_media_import_executions
+for each row execute function enforce_channel_provider_media_import_scan_success();
+`;
+
+const os5MediaUntrustedExtractionMigrationSql = `
+alter table channel_provider_media_import_executions
+  add column if not exists extractor_mode text;
+
+update channel_provider_media_import_executions
+set extractor_mode = 'not_configured'
+where extractor_mode is null;
+
+alter table channel_provider_media_import_executions
+  alter column extractor_mode set not null;
+
+alter table channel_provider_media_import_executions
+  drop constraint if exists channel_provider_media_import_executions_extractor_mode_check;
+alter table channel_provider_media_import_executions
+  add constraint channel_provider_media_import_executions_extractor_mode_check check (
+    extractor_mode in ('mock', 'disabled', 'not_configured')
+  );
+
+alter table conversation_message_attachments
+  add column if not exists trust_boundary text;
+alter table conversation_message_attachments
+  add column if not exists extractor_mode text;
+alter table conversation_message_attachments
+  add column if not exists extractor_key text;
+alter table conversation_message_attachments
+  add column if not exists extracted_text text;
+alter table conversation_message_attachments
+  add column if not exists extracted_text_sha256 text;
+alter table conversation_message_attachments
+  add column if not exists extracted_at text;
+
+alter table conversation_message_attachments
+  drop constraint if exists conversation_message_attachments_external_extraction_check;
+alter table conversation_message_attachments
+  add constraint conversation_message_attachments_external_extraction_check check (
+    (
+      trust_boundary is null
+      and extractor_mode is null
+      and extractor_key is null
+      and extracted_text is null
+      and extracted_text_sha256 is null
+      and extracted_at is null
+    )
+    or (
+      trust_boundary = 'external_untrusted_data'
+      and extractor_mode = 'mock'
+      and char_length(extractor_key) between 1 and 160
+      and char_length(extracted_text) between 1 and 16000
+      and extracted_text_sha256 ~ '^[A-Fa-f0-9]{64}$'
+      and char_length(extracted_at) between 20 and 40
+    )
+  );
+
+create or replace function protect_conversation_attachment_external_extraction()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.trust_boundary is distinct from old.trust_boundary
+     or new.extractor_mode is distinct from old.extractor_mode
+     or new.extractor_key is distinct from old.extractor_key
+     or new.extracted_text is distinct from old.extracted_text
+     or new.extracted_text_sha256 is distinct from old.extracted_text_sha256
+     or new.extracted_at is distinct from old.extracted_at then
+    raise exception 'conversation_attachment_external_extraction_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists conversation_message_attachments_protect_external_extraction
+  on conversation_message_attachments;
+create trigger conversation_message_attachments_protect_external_extraction
+before update on conversation_message_attachments
+for each row execute function protect_conversation_attachment_external_extraction();
+
+create or replace function protect_channel_provider_media_import_execution_identity()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.media_import_id <> old.media_import_id
+     or new.provider <> old.provider
+     or new.provider_mode <> old.provider_mode
+     or new.scanner_mode <> old.scanner_mode
+     or new.extractor_mode <> old.extractor_mode
+     or new.storage_mode <> old.storage_mode
+     or new.max_attempts <> old.max_attempts
+     or new.created_by <> old.created_by
+     or new.created_at <> old.created_at then
+    raise exception 'channel_provider_media_import_execution_identity_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function enforce_channel_provider_media_import_external_extraction()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status = 'succeeded'
+     and (tg_op = 'INSERT' or old.status <> 'succeeded') then
+    if new.extractor_mode <> 'mock' then
+      raise exception 'channel_provider_media_import_extractor_required';
+    end if;
+    if new.attachment_id is null or not exists (
+      select 1
+      from conversation_message_attachments attachment
+      where attachment.tenant_id = new.tenant_id
+        and attachment.id = new.attachment_id
+        and attachment.trust_boundary = 'external_untrusted_data'
+        and attachment.extractor_mode = 'mock'
+        and attachment.extractor_key is not null
+        and attachment.extracted_text is not null
+        and attachment.extracted_text_sha256 is not null
+    ) then
+      raise exception 'channel_provider_media_import_external_extraction_required';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_media_import_executions_enforce_external_extraction
+  on channel_provider_media_import_executions;
+create trigger channel_provider_media_import_executions_enforce_external_extraction
+before insert or update on channel_provider_media_import_executions
+for each row execute function enforce_channel_provider_media_import_external_extraction();
+`;
+
+const os5ConversationThreadAccessClassificationMigrationSql = `
+alter table conversation_threads
+  add column if not exists confidentiality_level text;
+alter table conversation_threads
+  add column if not exists visibility_scope text;
+
+update conversation_threads
+set confidentiality_level = 'internal'
+where confidentiality_level is null;
+
+update conversation_threads
+set visibility_scope = 'tenant'
+where visibility_scope is null;
+
+alter table conversation_threads
+  alter column confidentiality_level set default 'internal';
+alter table conversation_threads
+  alter column confidentiality_level set not null;
+alter table conversation_threads
+  alter column visibility_scope set default 'tenant';
+alter table conversation_threads
+  alter column visibility_scope set not null;
+
+alter table conversation_threads
+  drop constraint if exists conversation_threads_confidentiality_level_check;
+alter table conversation_threads
+  add constraint conversation_threads_confidentiality_level_check check (
+    confidentiality_level in ('public', 'internal', 'restricted', 'secret')
+  );
+
+alter table conversation_threads
+  drop constraint if exists conversation_threads_visibility_scope_check;
+alter table conversation_threads
+  add constraint conversation_threads_visibility_scope_check check (
+    visibility_scope in ('personal', 'team', 'case', 'tenant')
+  );
+
+create index if not exists idx_conversation_threads_tenant_access
+  on conversation_threads (
+    tenant_id, confidentiality_level, visibility_scope, updated_at desc
+  );
+`;
+
+const os5ConversationThreadAccessGrantsMigrationSql = `
+create table if not exists conversation_thread_access_grants (
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  user_id text not null,
+  scope text not null,
+  granted_by_user_id text not null,
+  granted_at text not null,
+  primary key (tenant_id, thread_id, user_id),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, user_id)
+    references memberships(tenant_id, user_id) on delete cascade,
+  check (scope in ('personal', 'team', 'case')),
+  check (char_length(granted_by_user_id) between 1 and 160)
+);
+
+create unique index if not exists idx_conversation_thread_access_personal
+  on conversation_thread_access_grants (tenant_id, thread_id)
+  where scope = 'personal';
+create index if not exists idx_conversation_thread_access_tenant_user
+  on conversation_thread_access_grants (tenant_id, user_id, scope, thread_id);
+create index if not exists idx_conversation_thread_access_tenant_thread
+  on conversation_thread_access_grants (tenant_id, thread_id, scope, user_id);
+
+create table if not exists conversation_thread_access_operations (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  thread_id text not null,
+  idempotency_key_hash text not null,
+  input_fingerprint text not null,
+  requested_by_user_id text not null,
+  visibility_scope text not null,
+  grant_count integer not null,
+  configured_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, idempotency_key_hash),
+  foreign key (tenant_id, thread_id)
+    references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, requested_by_user_id)
+    references memberships(tenant_id, user_id) on delete cascade,
+  check (idempotency_key_hash ~ '^[a-f0-9]{64}$'),
+  check (input_fingerprint ~ '^[a-f0-9]{64}$'),
+  check (visibility_scope in ('personal', 'team', 'case', 'tenant')),
+  check (grant_count between 0 and 100)
+);
+
+create index if not exists idx_conversation_thread_access_operations_tenant_thread
+  on conversation_thread_access_operations (tenant_id, thread_id, configured_at desc);
+`;
+
+const os5ConversationThreadAccessGrantsRlsMigrationSql = `
+alter table conversation_thread_access_grants enable row level security;
+alter table conversation_thread_access_operations enable row level security;
+
+drop policy if exists tenant_isolation on conversation_thread_access_grants;
+drop policy if exists conversation_thread_access_grants_select
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_select
+  on conversation_thread_access_grants for select
+  using (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and (
+        user_id = nullif(current_setting('app.actor_id', true), '')
+        or exists (
+          select 1 from memberships actor_membership
+          where actor_membership.tenant_id = conversation_thread_access_grants.tenant_id
+            and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+            and actor_membership.role in ('owner', 'administrator')
+        )
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_grants_insert
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_insert
+  on conversation_thread_access_grants for insert
+  with check (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and granted_by_user_id = nullif(current_setting('app.actor_id', true), '')
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_grants.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_grants_update
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_update
+  on conversation_thread_access_grants for update
+  using (app_is_system())
+  with check (app_is_system());
+drop policy if exists conversation_thread_access_grants_delete
+  on conversation_thread_access_grants;
+create policy conversation_thread_access_grants_delete
+  on conversation_thread_access_grants for delete
+  using (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_grants.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+
+drop policy if exists tenant_isolation on conversation_thread_access_operations;
+drop policy if exists conversation_thread_access_operations_select
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_select
+  on conversation_thread_access_operations for select
+  using (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_operations.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_operations_insert
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_insert
+  on conversation_thread_access_operations for insert
+  with check (
+    app_is_system()
+    or (
+      tenant_id = app_current_tenant_id()
+      and requested_by_user_id = nullif(current_setting('app.actor_id', true), '')
+      and exists (
+        select 1 from memberships actor_membership
+        where actor_membership.tenant_id = conversation_thread_access_operations.tenant_id
+          and actor_membership.user_id = nullif(current_setting('app.actor_id', true), '')
+          and actor_membership.role in ('owner', 'administrator')
+      )
+    )
+  );
+drop policy if exists conversation_thread_access_operations_update
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_update
+  on conversation_thread_access_operations for update
+  using (app_is_system())
+  with check (app_is_system());
+drop policy if exists conversation_thread_access_operations_delete
+  on conversation_thread_access_operations;
+create policy conversation_thread_access_operations_delete
+  on conversation_thread_access_operations for delete
+  using (app_is_system());
+`;
+
+const os5ChannelProviderActivationAuthorizationsMigrationSql = `
+create table if not exists channel_provider_activation_authorizations (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  authorization_scope text not null,
+  max_messages integer not null,
+  free_units_confirmed boolean not null,
+  idempotency_key_hash text not null,
+  authorized_by text not null references users(id) on delete restrict,
+  authorized_at text not null,
+  expires_at text not null,
+  revoked_at text,
+  revoked_by text references users(id) on delete restrict,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, idempotency_key_hash),
+  foreign key (tenant_id, endpoint_id)
+    references channel_provider_endpoints(tenant_id, id) on delete cascade,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_twilio'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (authorization_scope = 'twilio_whatsapp_sandbox'),
+  check (max_messages between 1 and 2),
+  check (free_units_confirmed = true),
+  check (idempotency_key_hash ~ '^[a-f0-9]{64}$'),
+  check (expires_at::timestamptz > authorized_at::timestamptz),
+  check (
+    (revoked_at is null and revoked_by is null)
+    or (revoked_at is not null and revoked_by is not null
+      and revoked_at::timestamptz >= authorized_at::timestamptz)
+  )
+);
+
+create index if not exists idx_channel_provider_activation_authorizations_tenant
+  on channel_provider_activation_authorizations (
+    tenant_id, provider, endpoint_id, authorization_scope, expires_at
+  );
+
+create or replace function protect_channel_provider_activation_authorization()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.tenant_id <> old.tenant_id
+     or new.provider <> old.provider
+     or new.endpoint_id <> old.endpoint_id
+     or new.authorization_scope <> old.authorization_scope
+     or new.max_messages <> old.max_messages
+     or new.free_units_confirmed <> old.free_units_confirmed
+     or new.idempotency_key_hash <> old.idempotency_key_hash
+     or new.authorized_by <> old.authorized_by
+     or new.authorized_at <> old.authorized_at
+     or new.expires_at <> old.expires_at
+     or (old.revoked_at is not null and (
+       new.revoked_at is distinct from old.revoked_at
+       or new.revoked_by is distinct from old.revoked_by
+     ))
+     or ((new.revoked_at is null) <> (new.revoked_by is null)) then
+    raise exception 'channel_provider_activation_authorization_immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_activation_authorizations_protect
+  on channel_provider_activation_authorizations;
+create trigger channel_provider_activation_authorizations_protect
+before update on channel_provider_activation_authorizations
+for each row execute function protect_channel_provider_activation_authorization();
+`;
+
+const os5ChannelProviderActivationAuthorizationsRlsMigrationSql = `
+alter table channel_provider_activation_authorizations enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_activation_authorizations;
+create policy tenant_isolation on channel_provider_activation_authorizations
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ChannelProviderActivationConsumptionsMigrationSql = `
+alter table channel_provider_activation_authorizations
+  add constraint channel_provider_activation_authorizations_budget_reference
+  unique (tenant_id, id, provider, endpoint_id);
+
+alter table channel_provider_deliveries
+  add constraint channel_provider_deliveries_budget_reference
+  unique (tenant_id, id, provider, endpoint_id);
+
+create table if not exists channel_provider_activation_consumptions (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  provider text not null,
+  endpoint_id text not null,
+  authorization_id text not null,
+  delivery_id text not null,
+  consumed_by text not null references users(id) on delete restrict,
+  consumed_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, provider, delivery_id),
+  foreign key (tenant_id, authorization_id, provider, endpoint_id)
+    references channel_provider_activation_authorizations(
+      tenant_id, id, provider, endpoint_id
+    ) on delete restrict,
+  foreign key (tenant_id, delivery_id, provider, endpoint_id)
+    references channel_provider_deliveries(
+      tenant_id, id, provider, endpoint_id
+    ) on delete restrict,
+  check (char_length(id) between 1 and 160),
+  check (provider = 'whatsapp_twilio'),
+  check (char_length(endpoint_id) between 1 and 160),
+  check (char_length(authorization_id) between 1 and 160),
+  check (char_length(delivery_id) between 1 and 160),
+  check (char_length(consumed_by) between 1 and 160)
+);
+
+create index if not exists idx_channel_provider_activation_consumptions_tenant
+  on channel_provider_activation_consumptions (
+    tenant_id, authorization_id, consumed_at, id
+  );
+
+create or replace function enforce_channel_provider_activation_budget()
+returns trigger
+language plpgsql
+as $$
+declare
+  authorization_max integer;
+  authorization_start timestamptz;
+  authorization_expiry timestamptz;
+  authorization_revoked text;
+  consumed_count integer;
+begin
+  select max_messages, authorized_at::timestamptz, expires_at::timestamptz,
+         revoked_at
+    into authorization_max, authorization_start, authorization_expiry,
+         authorization_revoked
+  from channel_provider_activation_authorizations
+  where tenant_id = new.tenant_id
+    and id = new.authorization_id
+    and provider = new.provider
+    and endpoint_id = new.endpoint_id
+  for update;
+
+  if authorization_max is null
+     or authorization_revoked is not null
+     or new.consumed_at::timestamptz < authorization_start
+     or new.consumed_at::timestamptz >= authorization_expiry then
+    raise exception 'channel_provider_activation_budget_invalid';
+  end if;
+
+  select count(*)::integer into consumed_count
+  from channel_provider_activation_consumptions
+  where tenant_id = new.tenant_id
+    and authorization_id = new.authorization_id;
+
+  if consumed_count >= authorization_max then
+    raise exception 'channel_provider_activation_budget_exhausted';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists channel_provider_activation_consumptions_budget
+  on channel_provider_activation_consumptions;
+create trigger channel_provider_activation_consumptions_budget
+before insert on channel_provider_activation_consumptions
+for each row execute function enforce_channel_provider_activation_budget();
+
+create or replace function reject_channel_provider_activation_consumption_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'channel_provider_activation_consumption_immutable';
+end;
+$$;
+
+drop trigger if exists channel_provider_activation_consumptions_immutable
+  on channel_provider_activation_consumptions;
+create trigger channel_provider_activation_consumptions_immutable
+before update on channel_provider_activation_consumptions
+for each row execute function reject_channel_provider_activation_consumption_update();
+`;
+
+const os5ChannelProviderActivationConsumptionsRlsMigrationSql = `
+alter table channel_provider_activation_consumptions enable row level security;
+
+drop policy if exists tenant_isolation on channel_provider_activation_consumptions;
+create policy tenant_isolation on channel_provider_activation_consumptions
+  for all
+  using (app_is_system() or tenant_id = app_current_tenant_id())
+  with check (app_is_system() or tenant_id = app_current_tenant_id());
+`;
+
+const os5ConversationDerivedAccessRlsMigrationSql = `
+create or replace function app_actor_can_access_conversation_thread(
+  target_tenant_id text,
+  target_thread_id text,
+  target_visibility_scope text
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+  select
+    target_tenant_id = app_current_tenant_id()
+    and exists (
+      select 1
+      from memberships actor_membership
+      where actor_membership.tenant_id = target_tenant_id
+        and actor_membership.user_id = nullif(
+          current_setting('app.actor_id', true),
+          ''
+        )
+    )
+    and (
+      target_visibility_scope = 'tenant'
+      or exists (
+        select 1
+        from conversation_thread_access_grants access_grant
+        where access_grant.tenant_id = target_tenant_id
+          and access_grant.thread_id = target_thread_id
+          and access_grant.user_id = nullif(
+            current_setting('app.actor_id', true),
+            ''
+          )
+          and access_grant.scope = target_visibility_scope
+      )
+    )
+$$;
+
+create or replace function app_actor_can_access_conversation_thread(
+  target_tenant_id text,
+  target_thread_id text
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+  select exists (
+    select 1
+    from conversation_threads thread
+    where thread.tenant_id = target_tenant_id
+      and thread.id = target_thread_id
+      and app_actor_can_access_conversation_thread(
+        thread.tenant_id,
+        thread.id,
+        thread.visibility_scope
+      )
+  )
+$$;
+
+create or replace function app_actor_can_access_conversation_message(
+  target_tenant_id text,
+  target_message_id text
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+  select exists (
+    select 1
+    from conversation_messages message
+    where message.tenant_id = target_tenant_id
+      and message.id = target_message_id
+      and app_actor_can_access_conversation_thread(
+        message.tenant_id,
+        message.thread_id
+      )
+  )
+$$;
+
+create or replace function app_actor_can_access_conversation_plan(
+  target_tenant_id text,
+  target_plan_id text
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+  select exists (
+    select 1
+    from conversation_action_plans plan
+    where plan.tenant_id = target_tenant_id
+      and plan.id = target_plan_id
+      and app_actor_can_access_conversation_thread(
+        plan.tenant_id,
+        plan.thread_id
+      )
+  )
+$$;
+
+create or replace function app_actor_can_access_workflow_run(
+  target_tenant_id text,
+  target_run_id text
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+  select exists (
+    select 1
+    from workflow_runs run
+    where run.tenant_id = target_tenant_id
+      and run.id = target_run_id
+      and (
+        run.workflow_key not like 'conversation_plan:%'
+        or app_actor_can_access_conversation_plan(
+          run.tenant_id,
+          substring(
+            run.workflow_key
+            from char_length('conversation_plan:') + 1
+          )
+        )
+      )
+  )
+$$;
+
+create or replace function app_actor_can_access_domain_event(
+  target_tenant_id text,
+  target_event_type text,
+  target_payload text
+)
+returns boolean
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+declare
+  parsed_payload jsonb;
+  target_run_id text;
+  target_plan_id text;
+begin
+  if target_tenant_id is distinct from app_current_tenant_id() then
+    return false;
+  end if;
+
+  begin
+    parsed_payload := target_payload::jsonb;
+  exception when others then
+    parsed_payload := '{}'::jsonb;
+  end;
+
+  target_run_id := nullif(parsed_payload ->> 'runId', '');
+  if target_run_id is not null then
+    return app_actor_can_access_workflow_run(
+      target_tenant_id,
+      target_run_id
+    );
+  end if;
+
+  target_plan_id := nullif(parsed_payload ->> 'planId', '');
+  if target_plan_id is not null then
+    return app_actor_can_access_conversation_plan(
+      target_tenant_id,
+      target_plan_id
+    );
+  end if;
+
+  return target_event_type <> 'conversation.plan.execute';
+end;
+$$;
+
+do $$
+declare
+  target_table text;
+  access_predicate text;
+  policy_name text;
+begin
+  for target_table, access_predicate in
+    select * from (values
+      (
+        'conversation_threads',
+        'app_actor_can_access_conversation_thread(tenant_id, id, visibility_scope)'
+      ),
+      (
+        'conversation_thread_participants',
+        'app_actor_can_access_conversation_thread(tenant_id, thread_id)'
+      ),
+      (
+        'conversation_messages',
+        'app_actor_can_access_conversation_thread(tenant_id, thread_id)'
+      ),
+      (
+        'conversation_message_attachments',
+        'app_actor_can_access_conversation_message(tenant_id, message_id)'
+      ),
+      (
+        'conversation_message_route_hops',
+        'app_actor_can_access_conversation_message(tenant_id, message_id)'
+      ),
+      (
+        'conversation_action_plans',
+        'app_actor_can_access_conversation_thread(tenant_id, thread_id)'
+      ),
+      (
+        'conversation_action_plan_steps',
+        'app_actor_can_access_conversation_plan(tenant_id, plan_id)'
+      ),
+      (
+        'workflow_runs',
+        $predicate$tenant_id = app_current_tenant_id()
+          and (
+            workflow_key not like 'conversation_plan:%'
+            or app_actor_can_access_conversation_plan(
+              tenant_id,
+              substring(
+                workflow_key
+                from char_length('conversation_plan:') + 1
+              )
+            )
+          )$predicate$
+      ),
+      (
+        'workflow_run_steps',
+        'app_actor_can_access_workflow_run(tenant_id, workflow_run_id)'
+      ),
+      (
+        'approvals',
+        $predicate$tenant_id = app_current_tenant_id()
+          and (
+            target_type <> 'conversation_action_plan'
+            or app_actor_can_access_conversation_plan(tenant_id, target_id)
+          )$predicate$
+      ),
+      (
+        'domain_events',
+        'app_actor_can_access_domain_event(tenant_id, event_type, payload)'
+      )
+    ) as policy_targets(table_name, predicate)
+  loop
+    execute format(
+      'drop policy if exists %I on %I',
+      'tenant_isolation',
+      target_table
+    );
+    execute format(
+      'drop policy if exists %I on %I',
+      'tenant_' || target_table,
+      target_table
+    );
+
+    foreach policy_name in array array[
+      target_table || '_actor_select',
+      target_table || '_actor_insert',
+      target_table || '_actor_update',
+      target_table || '_actor_delete'
+    ]
+    loop
+      execute format(
+        'drop policy if exists %I on %I',
+        policy_name,
+        target_table
+      );
+    end loop;
+
+    execute format(
+      'create policy %I on %I for select to public using (app_is_system() or (%s))',
+      target_table || '_actor_select',
+      target_table,
+      access_predicate
+    );
+    execute format(
+      'create policy %I on %I for insert to public with check (app_is_system() or (%s))',
+      target_table || '_actor_insert',
+      target_table,
+      access_predicate
+    );
+    execute format(
+      'create policy %I on %I for update to public using (app_is_system() or (%s)) with check (app_is_system() or (%s))',
+      target_table || '_actor_update',
+      target_table,
+      access_predicate,
+      access_predicate
+    );
+    execute format(
+      'create policy %I on %I for delete to public using (app_is_system() or (%s))',
+      target_table || '_actor_delete',
+      target_table,
+      access_predicate
+    );
+  end loop;
+end;
+$$;
 `;

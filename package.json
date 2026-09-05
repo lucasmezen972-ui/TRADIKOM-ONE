@@ -11,17 +11,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "agent:continuity-check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/agent/continuity-check.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:verify": "tsx scripts/verify-migrations.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/reset-db.ts",
     "db:generate": "drizzle-kit generate",
-    "agent:continuity-check": "tsx scripts/agent/continuity-check.ts",
     "worker": "tsx src/worker/index.ts",
     "maintenance": "tsx scripts/maintenance.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.4",
+    "@microsoft/teams.apps": "2.0.14",
     "csv-parse": "7.0.1",
     "csv-stringify": "6.8.1",
     "drizzle-orm": "0.45.2",
@@ -34,6 +35,8 @@
     "pg": "8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "svix": "1.99.1",
+    "twilio": "6.0.2",
     "yaml": "2.8.3",
     "zod": "4.4.3"
   },

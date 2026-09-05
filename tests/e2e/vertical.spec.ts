@@ -1,6 +1,15 @@
-import { expect, test, type Page } from "@playwright/test";
+import { createHash, createHmac } from "node:crypto";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { getDb } from "../../src/lib/db";
 import { createServices } from "../../src/lib/services";
+import {
+  createChannelProviderMediaReferenceCipher,
+  createChannelProviderSecretKeyring,
+  processMetaWhatsAppMediaImport,
+  receivePreparedMetaWhatsAppWebhook,
+  registerAuthorizedMetaWhatsAppEndpoint,
+  rotateMetaWhatsAppEndpointSecret,
+} from "../../src/modules/channels";
 import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 
 test("demo user can publish site lead into CRM", async ({ page }) => {
@@ -1029,6 +1038,389 @@ test("operational health distinguishes measured incidents from unknown telemetry
     }),
   ).toHaveCount(0);
 });
+
+test("Conversation completes an audited mock plan on desktop and mobile", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  for (const viewport of [
+    { label: "desktop", width: 1440, height: 900 },
+    { label: "mobile", width: 390, height: 844 },
+  ]) {
+    await runConversationJourney(browser, viewport);
+  }
+});
+
+async function runConversationJourney(
+  browser: Browser,
+  viewport: { label: string; width: number; height: number },
+) {
+  const db = await getDb();
+  const services = createServices(db);
+  const suffix = `${viewport.label}-${Date.now()}`;
+  const email = `conversation-${suffix}@example.com`;
+  const password = "ConversationE2E!2026";
+  const user = await services.registerUser({
+    name: `Responsable Conversation ${viewport.label}`,
+    email,
+    password,
+  });
+  const tenant = await services.createTenant(user.id, {
+    name: `Organisation Conversation ${viewport.label}`,
+    category: "Services",
+  });
+  const metaTenantState = viewport.label === "desktop" ? "ready" : "not_registered";
+  if (metaTenantState === "ready") {
+    const numericSuffix = `${Date.now()}${viewport.width}`;
+    const wabaId = `7${numericSuffix}`;
+    const phoneNumberId = `8${numericSuffix}`;
+    const endpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+      db,
+      {
+        tenantId: tenant.id,
+        actorId: user.id,
+        externalAccountId: wabaId,
+        phoneNumberId,
+      },
+      "conversation-e2e-meta-fingerprint-secret",
+    );
+    await rotateMetaWhatsAppEndpointSecret(
+      db,
+      {
+        tenantId: tenant.id,
+        actorId: user.id,
+        endpointId: endpoint.endpointId,
+        rotationKey: `conversation-meta-${numericSuffix}`,
+        secret: {
+          wabaId,
+          accessToken: "conversation-e2e-meta-token-never-real",
+          phoneNumberId,
+          graphApiVersion: "v23.0",
+          appSecret: "conversation-e2e-meta-app-secret-never-real",
+          webhookVerifyToken: "conversation-e2e-meta-webhook-token-never-real",
+        },
+      },
+      createChannelProviderSecretKeyring({
+        activeKeyVersion: "test-v1",
+        keys: { "test-v1": Buffer.alloc(32, 51) },
+      }),
+    );
+  }
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  const page = await context.newPage();
+  try {
+    await page.goto("/");
+    const loginForm = page.locator("form").filter({
+      has: page.getByRole("button", { name: "Se connecter" }),
+    });
+    await loginForm.getByPlaceholder("Email professionnel").fill(email);
+    await loginForm.getByPlaceholder("Mot de passe").fill(password);
+    await loginForm.getByRole("button", { name: "Se connecter" }).click();
+    await expect(page).toHaveURL(/aujourdhui/);
+
+    await page.goto("/conversation");
+    await expect(
+      page.getByRole("heading", { name: "Conversation", exact: true }),
+    ).toBeVisible();
+    const metaCheckpoint = page.getByRole("region", {
+      name: "WhatsApp Cloud API (Meta)",
+    });
+    await expect(metaCheckpoint).toBeVisible();
+    await expect(metaCheckpoint).toHaveAttribute(
+      "data-provider-state",
+      "disabled",
+    );
+    await expect(metaCheckpoint).toHaveAttribute(
+      "data-tenant-state",
+      metaTenantState,
+    );
+    const metaServerState = metaCheckpoint
+      .locator("dl > div")
+      .filter({ hasText: "État du serveur" });
+    await expect(
+      metaServerState.getByText("Désactivé", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      metaCheckpoint.getByText(
+        metaTenantState === "ready" ? "Organisation prête" : "Canal non relié",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(metaCheckpoint.getByText("Effet externe bloqué", { exact: true })).toBeVisible();
+    await expect(metaCheckpoint).toContainText(
+      "Aucun message externe ne peut partir.",
+    );
+    await expect(
+      metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
+    ).toHaveCount(0);
+    const webMessage = `Préparer un suivi client ${suffix}`;
+    const webForm = page.locator("form").filter({ hasText: "Écrire depuis le web" });
+    await webForm.getByLabel("Écrire depuis le web").fill(webMessage);
+    await webForm.getByRole("button", { name: "Envoyer" }).click();
+    await expect(page).toHaveURL(/envoye=web/);
+    await expect(page.getByText(webMessage)).toBeVisible();
+
+    const testMessage = `Confirmation depuis le canal test ${suffix}`;
+    const testForm = page
+      .locator("form")
+      .filter({ hasText: "Simuler le canal de test" });
+    await testForm.getByLabel("Simuler le canal de test").fill(testMessage);
+    await testForm.getByRole("button", { name: "Envoyer" }).click();
+    await expect(page).toHaveURL(/envoye=test/);
+    await expect(page.getByText(webMessage)).toBeVisible();
+    await expect(page.getByText(testMessage)).toBeVisible();
+
+    const prepare = page.getByRole("button", { name: "Préparer le plan" });
+    await prepare.focus();
+    await expect(prepare).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=cree/);
+    await expect(page.getByText("crm.contacts.search")).toBeVisible();
+    await expect(page.getByText("project.task.create")).toBeVisible();
+    await expect(page.getByText("0,00 €")).toBeVisible();
+
+    await page
+      .getByLabel("Motif de validation")
+      .fill("Parcours vérifié au clavier avant exécution mock.");
+    const approve = page.getByRole("button", { name: "Approuver une fois" });
+    await approve.focus();
+    await expect(approve).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=approved/);
+
+    const execute = page.getByRole("button", {
+      name: "Exécuter les deux étapes en mock",
+    });
+    await execute.focus();
+    await expect(execute).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=executed/);
+    await expect(
+      page.getByText(
+        "Exécution mock terminée : contact simulé retrouvé et tâche simulée préparée. Aucun effet externe.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(page.getByText("Exécuté", { exact: true })).toBeVisible();
+    await expect(page.getByText("Réussie", { exact: false })).toHaveCount(2);
+
+    const mediaBytes = new TextEncoder().encode("%PDF-1.7\npreuve Playwright mock");
+    const mediaChecksum = createHash("sha256").update(mediaBytes).digest("hex");
+    const mediaAppSecret = "meta_e2e_app_secret_32_bytes_minimum";
+    const mediaFingerprintSecret = "meta-e2e-fingerprint-secret-32-bytes";
+    const mediaCipher = createChannelProviderMediaReferenceCipher({
+      keyMaterial: "meta-e2e-media-key-material-32-bytes-minimum",
+      keyVersion: "media-e2e-v1",
+    });
+    const numericSuffix = `${Date.now()}`;
+    const endpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+      db,
+      {
+        tenantId: tenant.id,
+        actorId: user.id,
+        externalAccountId: `81${numericSuffix}`,
+        phoneNumberId: `82${numericSuffix}`,
+      },
+      mediaFingerprintSecret,
+    );
+    const mediaPayload = {
+      object: "whatsapp_business_account",
+      entry: [{
+        id: `81${numericSuffix}`,
+        changes: [{
+          field: "messages",
+          value: {
+            metadata: { phone_number_id: `82${numericSuffix}` },
+            messages: [{
+              id: `wamid.e2e_media_${numericSuffix}`,
+              from: "596696000000",
+              timestamp: "1760000000",
+              type: "document",
+              document: {
+                id: `83${numericSuffix}`,
+                mime_type: "application/pdf",
+                sha256: mediaChecksum,
+                filename: "preuve-conversation.pdf",
+                caption: "Preuve importée",
+              },
+            }],
+          },
+        }],
+      }],
+    };
+    const rawBody = JSON.stringify(mediaPayload);
+    const inbound = await receivePreparedMetaWhatsAppWebhook(
+      db,
+      {
+        rawBody,
+        signature: `sha256=${createHmac("sha256", mediaAppSecret)
+          .update(rawBody)
+          .digest("hex")}`,
+      },
+      {
+        appSecret: mediaAppSecret,
+        fingerprintSecret: mediaFingerprintSecret,
+        mediaReferenceCipher: mediaCipher,
+        receivedAt: "2026-09-04T12:00:00.000Z",
+      },
+    );
+    if (!inbound.accepted || !inbound.messages[0]?.mediaImport) {
+      throw new Error("Le média Playwright doit être réservé.");
+    }
+    const imported = await processMetaWhatsAppMediaImport(
+      db,
+      user.id,
+      {
+        tenantId: tenant.id,
+        mediaImportId: inbound.messages[0].mediaImport.reservationId,
+      },
+      {
+        cipher: mediaCipher,
+        provider: {
+          state: "mock",
+          async fetch(input) {
+            expect(input.endpointId).toBe(endpoint.endpointId);
+            return {
+              status: "succeeded",
+              bytes: mediaBytes,
+              mediaType: "application/pdf",
+            };
+          },
+        },
+        scanner: {
+          state: "mock",
+          async scan() {
+            return { status: "clean" };
+          },
+        },
+        extractor: {
+          state: "mock",
+          extractorKey: "mock_external_text_v1",
+          async extract() {
+            return {
+              status: "extracted",
+              text: "Contenu de preuve extrait sans modèle ni outil.",
+            };
+          },
+        },
+        storage: {
+          state: "mock",
+          async store() {
+            return {
+              status: "succeeded",
+              storageReference: `mock:media/${mediaChecksum}`,
+            };
+          },
+        },
+        evaluatePolicy: async () => ({ allowed: true }),
+      },
+      { now: new Date("2026-09-04T12:01:00.000Z") },
+    );
+    expect(imported.status).toBe("succeeded");
+    const alteredText = "password=contenu-e2e-altéré-à-masquer";
+    await db.query(
+      `insert into conversation_message_attachments (
+         id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+         storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+         extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+         created_at
+       ) values (
+         $1, $2, $3, 'document', 'preuve-altérée.pdf', 'application/pdf', 32,
+         $4, $5, 'external_untrusted_data', 'mock',
+         'mock_external_text_v1', $6, $7, $8, $8
+       )`,
+      [
+        `attachment_e2e_integrity_${numericSuffix}`,
+        tenant.id,
+        inbound.messages[0].messageId,
+        `mock:media/integrity-${numericSuffix}`,
+        "e".repeat(64),
+        alteredText,
+        "f".repeat(64),
+        "2026-09-04T12:02:00.000Z",
+      ],
+    );
+    await page.goto(`/conversation?fil=${encodeURIComponent(inbound.threadId)}`);
+    await expect(
+      page.getByText("Confidentialité : Interne", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Visibilité : Organisation", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Accès : Membres de l’organisation", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
+    await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("preuve-altérée.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("Stockage mock", { exact: true })).toHaveCount(2);
+    await expect(
+      page.getByText("Téléchargement non configuré", { exact: true }),
+    ).toHaveCount(2);
+    await expect(
+      page.getByText("Contenu externe non fiable", { exact: true }),
+    ).toHaveCount(2);
+    await expect(
+      page.getByText("Extraction mock · intégrité vérifiée", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Contenu de preuve extrait sans modèle ni outil.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Extraction masquée — intégrité non vérifiée.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(alteredText, { exact: false })).toHaveCount(0);
+    await expect(page.getByText(mediaChecksum, { exact: false })).toHaveCount(0);
+
+    const evidence = await db.query<{
+      runs: number;
+      steps: number;
+      runtime_evidence: number;
+      leaked_inputs: number;
+      routes: number;
+      audits: number;
+      tasks: number;
+    }>(
+      `select
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key like 'conversation_plan:%') as runs,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1
+           and action_name in ('mock_search_contact', 'mock_create_task')) as steps,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1
+           and action_name in ('mock_search_contact', 'mock_create_task')
+           and safe_metadata like '%"providerKey":"tradikom_mock"%') as runtime_evidence,
+         (select count(*)::int from workflow_run_steps where tenant_id = $1
+           and safe_metadata like '%Relancer le contact de la conversation%') as leaked_inputs,
+         (select count(*)::int
+            from conversation_message_route_hops as routes
+            join conversation_messages as messages
+              on messages.tenant_id = routes.tenant_id
+             and messages.id = routes.message_id
+           where routes.tenant_id = $1 and messages.kind = 'result') as routes,
+         (select count(*)::int from audit_logs where tenant_id = $1
+           and action = 'conversation.plan_executed') as audits,
+         (select count(*)::int from tasks where tenant_id = $1) as tasks`,
+      [tenant.id],
+    );
+    expect(evidence.rows[0]).toEqual({
+      runs: 1,
+      steps: 2,
+      runtime_evidence: 2,
+      leaked_inputs: 0,
+      routes: 2,
+      audits: 1,
+      tasks: 0,
+    });
+  } finally {
+    await context.close();
+  }
+}
 
 async function openDemo(page: Page) {
   await page.goto("/");

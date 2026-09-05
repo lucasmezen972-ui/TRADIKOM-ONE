@@ -1,21 +1,220 @@
-# Drift report
+# Rapport de dérive — TRADIKOM ONE OS
 
-Généré par `pnpm agent:continuity-check`. Ne pas éditer à la main.
+## Checkpoint applicatif — 5 septembre 2026, 04:49 UTC
 
-```json
-{
-  "checkedAt": "2026-08-03T10:48:37.173Z",
-  "status": "ready",
-  "missing": [],
-  "problems": [],
-  "state": {
-    "phase": "OS-0",
-    "branch": "claude/projet-doxqd8",
-    "lastCommit": "d002e07",
-    "updatedAt": "2026-08-03T00:00:00.000Z",
-    "nextTask": "OS-1 : Conversation Hub canonique — tables conversation_threads et canonical_messages avec migration RLS dediee, identite omnicanale, idempotence, anti-boucle, adaptateur web reel + adaptateur test mock explicite.",
-    "ageDays": 0
-  },
-  "nextInstruction": "Lire docs/AGENT_STATE.json puis reprendre la première tâche incomplète de docs/NEXT_STEPS.md."
-}
-```
+- Branche : `codex/tradikom-one-os`; tranche applicative `461156ae3ad7f44920fe64dc182780957cd2aaa2` puis correctif Playwright `82586e89045538fddf61fdb56fc563eabd6ed688` publiés strictement en fast-forward; `tmp/` reste non suivi et hors index.
+- Travail effectué : Conversation lit maintenant sous contexte tenant+acteur si l'organisation possède une configuration WhatsApp Meta, si elle est active et si ses accès chiffrés ne sont pas révoqués. Seuls des indicateurs booléens quittent le repository.
+- Impact north star : l'écran conversationnel dit désormais si le serveur et l'organisation sont réellement prêts, sans obliger l'utilisateur à comprendre une console fournisseur ni ouvrir un module secondaire.
+- Risques contenus : membership vérifié, filtre tenant explicite et RLS, aucune valeur ou référence fournisseur rendue, révocation reflétée, effet externe bloqué tant que serveur et organisation ne sont pas prêts. Aucun Graph, message, bouton d'activation, stockage réel, fusion, déploiement ou dépense.
+- Preuves locales : 161 fichiers/749 tests verts et 11 fichiers/24 tests PostgreSQL ignorés sans `DATABASE_URL`; tests ciblés, ESLint, TypeScript, build production, audit high, continuity-check et diff check verts.
+- Première CI `33945539636` : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus et build verts; 19 Playwright sur 20 verts. Le seul échec était un sélecteur strict ambigu sur deux libellés « Désactivé », corrigé sans changement fonctionnel dans `82586e8`.
+- Preuve autoritative : continuité `33946531695` verte; CI `33946531702` entièrement verte en 18 min 1 s avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build et 20/20 Playwright. PR #11 ouverte, brouillon, fusionnable et `CLEAN` au head `82586e8`.
+
+## Alignement prompt maître — préparation Meta tenant-scoped
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Continuer le produit par tranche Conversation utile, conserver la reprise exacte et les états honnêtes | Tranche visible livrée, publiée et prouvée CI sans CRM, Kanban, dashboard ni OS-6; documents de continuité actualisés | Validation SMS Meta toujours humaine |
+| 10-14, 24, 29-30, 64-68 | Conversation Hub comme vérité, adaptateur sans logique métier, fournisseur explicite et interface française simple | État serveur et état organisation séparés; quatre états tenant lisibles; serveur `mock`/`ready` sans tenant prêt bloqué; aucun appel fournisseur | Aucun provider réel, sandbox, Graph ou endpoint public |
+| 16-18, 22, 35-38 | Tenant, RLS, secrets protégés, action durable et refus fermé | Transaction tenant+acteur, membership, filtre tenant, RLS existante, agrégat booléen seulement, révocation reflétée et refus cross-tenant; restricted-role vert sur PostgreSQL 17 | Aucun écart identifié dans la frontière tenant de cette tranche |
+| 32, 69 | DoD unit/intégration/RLS/provider/sécurité/Playwright/a11y | Local : 161 fichiers/749 tests, lint, TypeScript, build, audit high, continuity-check et diff check verts; CI `33946531702` : 161 fichiers/773 tests PostgreSQL inclus, build et 20/20 Playwright verts | Aucun écart de preuve identifié pour cette tranche; deux avis transitifs `qs` modérés restent à suivre |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification du checkpoint tenant Meta
+
+- Livré, publié et prouvé CI : lecture tenant-scoped, classification sûre et rendu Conversation.
+- Réel connecté : aucun; aucun appel Graph ni transport activé.
+- Sandbox : aucune appelée.
+- Mock : secrets factices et états construits uniquement dans les tests; aucun réseau.
+- Bloqué humain : validation SMS Meta et confirmation distincte avant token persistant ou effet externe.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
+
+## Checkpoint applicatif — 5 septembre 2026, 03:32 UTC
+
+- Branche : `codex/tradikom-one-os`; checkpoint applicatif `c038df459e8e883bb5c77c6932b7a577a8f56f85` publié avec son handoff au head `d899d95e7d3c590b5fe603d8269fdf1fe9203807`; `tmp/` reste non suivi et hors index. Le push `ed4aeea..d899d95` a été strictement fast-forward après fetch et contrôle d'ancêtre.
+- Travail effectué : un modèle déterministe transforme le manifeste WhatsApp Meta en un état français sûr, une prochaine action et une classification de l'effet externe. L'écran Conversation rend ce point de contrôle après authentification, sans API intermédiaire ni appel fournisseur.
+- Impact north star : l'utilisateur voit depuis la conversation principale pourquoi le canal réel ne peut pas encore agir et quelle étape débloque la suite, sans basculer vers CRM, Kanban ou dashboard secondaire.
+- Risques contenus : aucun nom de variable, valeur sensible ou `missingEnvironment` n'est projeté. Aucun bouton d'activation/envoi n'est ajouté. `disabled`, `not_configured` et `awaiting_human_auth` restent bloqués; `mock` reste simulé; `ready` n'est qu'une disponibilité technique soumise à l'endpoint tenant et à une autorisation distincte.
+- Preuves locales : 3 fichiers/33 tests ciblés; 160 fichiers/740 tests exhaustifs verts avec 11 fichiers/24 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint, TypeScript, build Next.js production, audit high, continuity-check et diff check verts. L'audit signale deux avis transitifs `qs` modérés, zéro high/critical.
+- Preuve autoritative : CI `33942266316` verte en 22 min 56 s avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests sur PostgreSQL 17, build et 20 Playwright dont Conversation desktop/mobile. Continuité `33942266310` verte. Aucun Graph, token, message, endpoint public, fusion, déploiement ou dépense.
+
+## Alignement prompt maître — checkpoint Conversation/Meta
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre OS-5, états honnêtes et reprise exacte | Point de contrôle ajouté à Conversation au commit `c038df4`, publié et prouvé sans module secondaire ni effet externe | Checkpoint humain Meta avant fournisseur réel |
+| 10-18, 24, 26-31, 43-44, 64-68 | Connecteur fail-closed; blocage humain explicite; interface française; preuve visible et fournisseur identifiable | Cinq états traduits, prochaine action, effet externe bloqué/mock/possible; aucun bouton d'activation ou d'envoi; aucun appel réseau | Validation SMS Meta non prouvée; inventaire officiel app/WABA/Phone Number ID non effectué |
+| 16-18, 22-23, 35-38 | Ne pas exposer les secrets ou entrées sensibles; conserver les frontières tenant et provider | La présentation ne retourne ni configuration manquante, ni nom de variable, ni valeur sensible; le registre est lu côté serveur après session | Token persistant, endpoint public, stockage réel et Graph toujours absents |
+| 32, 69 | DoD et matrice unit/intégration/provider/sécurité/Playwright | CI `33942266316` : audit, migrations, `db:verify`, backup/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright verts; continuité `33942266310` verte | Aucun écart de preuve identifié pour cette tranche; deux avis transitifs modérés `qs` restent à suivre |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification du checkpoint Conversation/Meta
+
+- Livré, publié et prouvé CI : modèle de présentation et carte Conversation avec état, action suivante et effet externe.
+- Réel connecté : aucun; le registre par défaut reste `disabled` et aucun endpoint tenant réel n'est composé.
+- Sandbox : aucune appelée.
+- Mock : état pris en charge par la présentation et testé sans réseau; aucun mock activé dans le runtime de la page.
+- Bloqué humain : validation SMS Meta non prouvée; confirmation au moment exact avant token persistant; autorisation distincte avant Graph ou message.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
+
+## Checkpoint applicatif — 5 septembre 2026, 02:06 UTC
+
+- Branche : `codex/tradikom-one-os`; head applicatif publié et prouvé `25cafcdaa9031cf7835068cc2487d921c0ff6d51`; `tmp/` reste non suivi et hors index. Les publications ont été précédées de comparaisons d'ancêtre et sont restées strictement fast-forward.
+- Travail effectué : migration runtime `114` et miroir SQL `0108`, six helpers `SECURITY INVOKER` et politiques séparées par opération sur onze tables. Les objets liés à un plan, une mission ou un événement héritent du droit du fil; les objets génériques restent tenant-scoped.
+- Correctif de preuve : le contrôle de couverture RLS partage désormais une requête unique entre le vérificateur des migrations et les tests PostgreSQL. Il accepte une policy `ALL` ou les quatre opérations complètes et refuse RLS désactivée ou une opération manquante. Les fixtures PostgreSQL ont aussi été rendues uniques, sans paramètres clairsemés, avec membership et contexte acteur explicites.
+- Impact north star : la base PostgreSQL applique désormais la même confidentialité que le service Conversation aux fils, messages, pièces jointes, plans, validations, missions et événements, y compris contre une lecture directe par rôle restreint.
+- Risques contenus : membership et `app.actor_id` sont obligatoires, les mises à jour contrôlent ancienne et nouvelle ligne, les payloads invalides échouent fermé et un acteur restreint ne peut pas forger le bypass système. Le contexte serveur privilégié est limité à la configuration propriétaire/administrateur déjà contrôlée.
+- GitHub : PR #11 ouverte, brouillon et `MERGEABLE`; continuité `33936955672` verte et CI `33936955678` entièrement verte en 22 min 49 s, incluant PostgreSQL/RLS, 159 fichiers/757 tests, build et 20 Playwright. Aucun Graph, stockage réel, secret, message, fusion, déploiement ou dépense.
+
+## Alignement prompt maître
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre strict et reprise exacte | Frontière RLS du Conversation Hub livrée, publiée et prouvée sans CRM, Kanban, dashboard ni OS-6 | Checkpoint humain/fournisseur OS-5 avant tout fournisseur réel |
+| 10-12, 16-18, 22, 28, 35-38, 43-44 | Les droits du fil doivent se propager aux objets dérivés avec isolation tenant, RLS et actions durables | Six helpers invoker, politiques par opération sur onze tables, héritage plan/run/event, objets génériques compatibles; restricted-role exécuté sur PostgreSQL 17 | Aucun écart RLS identifié dans cette tranche |
+| 32, 69 | DoD et matrice unit/intégration/RLS/provider/workflow/Playwright/sécurité | CI `33936955678` : audit, migrations, `db:verify`, backup/restauration, lint, TypeScript, 159 fichiers/757 tests, build et 20 Playwright verts; continuité `33936955672` verte | Stockage/ACL réel, antivirus, OCR/transcription et Graph restent non implémentés/réels |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification actuelle
+
+- Livré, publié et prouvé CI : worker média, migrations, rendu Conversation, composition générique, scan mock, extraction `external_untrusted_data`, contrôle d'intégrité, vue `data-only` non raccordée, accès court, frontière HTTP/session, classification confidentialité/visibilité et autorisations durables personal/team/case appliquées dans le service et la RLS PostgreSQL aux fils, messages, pièces jointes, plans, validations, missions et événements.
+- Réel connecté : aucun nouveau fournisseur; Graph et stockage réel non composés.
+- Sandbox : aucune appelée.
+- Mock : fetch, scanner propre/dangereux/temporaire, extracteur, stockage média, codec et lecture HTTP uniquement via doubles injectés; classification et autorisations du fil sont réelles en base locale mais aucun fournisseur n'en dépend.
+- Bloqué humain : code SMS Meta saisi directement par l'utilisateur; confirmation distincte au moment exact avant token persistant.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
+
+## Checkpoint — 4 septembre 2026, 09:45 UTC
+
+- Branche : `codex/tradikom-one-os`.
+- Head local et distant publié : `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`.
+- PR #11 : ouverte, brouillon et fusionnable sur ce head; la continuité `33826756891` est verte.
+- CI `33826756939` : deux tentatives arrêtées avant migrations/tests par un timeout de l'API d'audit npm, sans avis de vulnérabilité ni échec applicatif.
+- Troisième relance non exécutée : le contrôleur d'autorisation a échoué sur une erreur réseau et exige une approbation utilisateur explicite; aucun contournement n'est tenté.
+- Provider examiné : WhatsApp Cloud API directe de Meta, non activé.
+- Worktree préservé : `tmp/` reste non suivi et hors index.
+
+## Impact north star
+
+La tranche locale rend l'attente d'un média actionnable et durable sans prétendre que son binaire a été importé : le message signé reste visible dans la conversation et une réservation protégée peut être traitée ultérieurement. Cela renforce directement le canal conversationnel sans ajouter d'interface métier. Aucun CRM, Kanban, dashboard secondaire ou travail OS-6 n'a remplacé cette priorité OS-5.
+
+## Alignement prompt maître
+
+Les pages 3-7, 11, 14, 22-23, 31-33, 46, 48, 64-65 et 69-71 du prompt maître ont été relues directement pour ce checkpoint; les pages 48 et 69 ont aussi été inspectées visuellement pendant ce heartbeat.
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 46, 48, 70-71 | Priorité conversation-first, ordre strict et continuité | Head `28efa75` publié; continuité verte; aucun CRM/Kanban/dashboard/OS-6 sélectionné | Approbation explicite pour relancer, puis CI complète après rétablissement du registre npm |
+| 11, 14 | Conversation Hub canonique, adaptateur sans logique métier et déduplication | Notice française conservée; référence fournisseur éphémère hors objet sérialisable; rejeu exact et collision testés | Import binaire différé |
+| 22-23 | Média externe non fiable, stockage avec ACL/checksum, minimisation et injection | Référence AES-256-GCM avec contexte tenant/provider/endpoint/message; aucune valeur média en clair, aucun binaire ou fausse pièce jointe | Contrôles réels taille/type, stockage immuable, antivirus, transcription/OCR |
+| 31-33 | Definition of Done : action durable, états honnêtes et preuve utilisable | Réservation tenant/RLS, relations composées, `pending`/`not_configured`/`failed`, audit sans contenu; tests locaux, lint, typecheck et build verts; continuité distante verte | CI bloquée avant tests par timeout npm; PostgreSQL/RLS, suite exhaustive et Playwright restent requis; fournisseur actif bloqué par SMS |
+| 64-65 | Runtime provider uniforme, webhook signé et fournisseur fail-closed | Ingestion et réservation atomiques; zéro Graph; provider réel toujours non activé | Meta for Developers attend le code SMS |
+| 69 | Matrice provider, intégration, sécurité et isolation | Matrice relue en rendu; chiffrement/AAD, migrations miroir, non-fuite, atomicité, RLS et collision couverts | Test RLS local ignoré sans `DATABASE_URL`; CI complète requise après panne npm |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Historique : travail alors publié avant sa preuve CI finale
+
+- Migrations runtime 105/106 et miroirs SQL 0099/0100 pour `channel_provider_media_imports`, avec relations composées tenant/endpoint/provider et tenant/message, index tenant-leading, contraintes d'état et politique RLS.
+- Référence fournisseur conservée de manière éphémère jusqu'au service d'ingestion, puis chiffrée en AES-256-GCM avec AAD tenant/provider/endpoint/message et version de clé.
+- Aucun Media ID, MIME, checksum, nom de fichier, URL, contenu ou payload en clair dans la réservation ou l'audit.
+- États durables `pending`, `not_configured` et `failed`; rejeu identique sans doublon et collision de référence refusée.
+- Réservation et audit dans la même transaction que le message canonique; aucun `fetch`, Graph, stockage, binaire ou pièce jointe canonique.
+- Cette limite historique est levée par la CI `33936955678` du head `25cafcd`; elle ne décrit plus l'état courant.
+
+## Travail livré, publié et prouvé CI
+
+- Normalisation stricte des messages Meta `image`, `audio`, `document`, `video` et `sticker`, avec MIME autorisés par type et champs média bornés.
+- Conservation de la légende utile et ajout d'une notice française explicite indiquant que l'import sécurisé reste en attente.
+- Suppression des métadonnées média à la frontière de normalisation : Media ID, checksum, nom de fichier et MIME ne sont pas propagés vers le Conversation Hub.
+- Zéro appel réseau et zéro ligne `conversation_message_attachments`; la tranche ne simule ni téléchargement, ni stockage, ni analyse du média.
+- Lot texte+média+statut atomique et idempotent, avec prévalidation commune, audit sans PII et replay complet sans doublon.
+- Dispatch unifié de chaque changement Meta signé vers messages entrants ou statuts de livraison après une seule vérification HMAC du corps brut.
+- Borne combinée de cent événements et refus strict d'un changement ambigu contenant `messages` et `statuses`, ou aucune famille reconnue.
+- Prévalidation de tous les endpoints et livraisons des deux familles avant toute mutation, puis transaction unique pour messages, bindings, événements et projections.
+- Rejeu mixte idempotent, signature invalide sans accès base et livraison inconnue annulant aussi le message valide du même lot.
+- Réponse HTTP réduite à `{ ok: true }` et audits prouvés sans contenu, numéros, Phone Number ID ni identifiants `wamid`.
+- Traitement de tous les messages texte d'une enveloppe Meta au lieu du seul premier élément.
+- Bornes strictes : dix `entry`, dix `changes` par entrée, dix `messages` par changement et cent messages maximum par requête.
+- Prévalidation de tous les couples WABA/Phone Number ID avant mutation; un endpoint ultérieur inconnu laisse zéro message, zéro binding et zéro audit conversationnel.
+- Résultats par message avec provenance, idempotence SHA-256 et rejeu indépendant; une enveloppe multi-tenant conserve deux identités et fils distincts.
+- Traitement de plusieurs statuts Meta dans une même enveloppe après une seule vérification HMAC du corps brut.
+- Bornes strictes : dix `entry`, dix `changes` par entrée, dix `statuses` par changement et cent statuts maximum par requête.
+- Prévalidation de toutes les références endpoint/livraison avant mutation; une référence ultérieure inconnue laisse zéro événement et zéro audit.
+- Résumé sûr du lot avec compte traité/rejoué/mis à jour, sans exposer WABA, Phone Number ID, `wamid`, destinataire, timestamp ou erreur fournisseur dans la réponse HTTP.
+- Notifications Meta `sent`, `delivered`, `read`, `failed` et `deleted` normalisées vers les états internes.
+- Dispatch du même webhook signé entre message entrant et statut sortant, sans parsing avant signature.
+- Résolution WABA/Phone Number ID vers un endpoint Meta actif avant corrélation du `wamid` à une livraison du même endpoint.
+- Migration runtime 104 et miroir SQL 0098 : événements immuables Meta, FK tenant/livraison/provider et `wamid` sortant opaque avec padding.
+- Déduplication des callbacks, projection monotone et convergence `failed` puis `read`, avec audit sans PII ni référence fournisseur.
+- Compatibilité additive avec `messaging_product`, `display_phone_number`, `contacts` et `timestamp`, sans relâcher les objets stricts ni les bornes.
+- Acceptation de `wamid` avec padding base64 jusqu'à 256 caractères; dérivation SHA-256 des clés d'idempotence et de corrélation au lieu d'y incorporer l'identifiant brut.
+- Fixture officielle entièrement anonymisée et test d'intégration signé avec Phone Number ID à 16 chiffres.
+- Preuve que le message et sa provenance utiles sont conservés une seule fois, tandis que les champs d'identité fournisseur restent hors audits, identités et liaisons.
+- Migration additive autorisant `whatsapp_meta` dans `channel_provider_secret_versions` sans réécrire l'historique appliqué.
+- Contrainte composée empêchant tout mélange de provider entre secret et endpoint.
+- Repository général tenant/provider-scoped, avec identité Meta active et liaison endpoint-identité obligatoire.
+- Service de rotation/révocation Meta endpoint et identité, idempotent et réservé aux rôles administrateurs du tenant.
+- Schémas bornés pour WABA, token, Phone Number ID, version Graph, secret d'application, jeton webhook et destination.
+- Résolveurs serveur séparés pour credentials, destination et vérification webhook; aucune lecture globale de secret.
+- Preuve d'intégration au transport Graph avec `fetch` factice uniquement.
+- Tests de non-fuite en base et audit, rotation de clé, révocation monotone, mauvais WABA, cross-tenant et identité non liée.
+- Test PostgreSQL/RLS adapté pour couvrir un tenant Twilio et un tenant Meta; il reste ignoré localement sans `DATABASE_URL`.
+- Aucun grant `anon`/`authenticated` ni exposition Data API n'a été ajouté, conformément à la séparation grants/RLS.
+
+## Validation honnête
+
+- Commits locaux `3df4f7c5f642bfca473820a4efe1f42838c3a5c5` et `15b2af7949e937b2f59a5cdd6db9728489fb1478` : SHA-256 revérifié à chaque lecture, suppression du contenu altéré, contrat `verified`/`failed`, vue `data-only` filtrée et bornée, rendu français et scénario Playwright positif/négatif. Tests ciblés 4 fichiers/40 tests verts; régression exhaustive 140 fichiers/685 tests verts et 8 fichiers/21 tests PostgreSQL ignorés. ESLint complet, TypeScript, build production, continuity-check direct et diff check verts. Playwright attend la CI PostgreSQL.
+- Commit local `4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed` : extraction obligatoire sous enveloppe `external_untrusted_data`, migration additive 110/0104, mode et contenu immuables, texte borné/hashé, contrat d'entrée non usurpable, audit sûr et rendu français. Tests ciblés : 3 fichiers/38 tests verts; 1 fichier/3 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`. Régression exhaustive : 139 fichiers/681 tests verts; 8 fichiers/21 tests PostgreSQL ignorés. ESLint, TypeScript, build production, continuity-check direct et diff check sont verts. Le scénario Playwright est adapté mais non exécuté localement faute de PostgreSQL partagé.
+- Commit local `ca08001929a438f94cf13c889a9f99a0425b67b8` : scan de sécurité obligatoire avant stockage, migration additive 109/0103, modes durables et audit sûr. Tests finaux ciblés : 2 fichiers/30 tests verts; 1 fichier/2 tests PostgreSQL/RLS ignorés sans `DATABASE_URL`. Régression exhaustive : 139 fichiers/678 tests verts; 8 fichiers/20 tests PostgreSQL ignorés. ESLint, TypeScript, build production, continuity-check direct et diff check sont verts. Le scénario Playwright est adapté mais non exécuté localement faute de PostgreSQL partagé.
+- Head `28efa75` : publication confirmée par fetch exact; continuité `33826756891` verte.
+- CI `33826756939` tentatives 1 et 2 : rouges uniquement parce que `pnpm audit` n'a pas reçu de réponse de `registry.npmjs.org/-/npm/v1/security/advisories/bulk` après retries. L'arrêt précède migrations, RLS, tests, build et Playwright; aucune de ces preuves n'est revendiquée sur ce head.
+- Troisième relance : non exécutée, car le contrôleur d'autorisation a échoué sur une erreur réseau et demande une approbation utilisateur explicite. Aucun autre mécanisme n'est utilisé pour déclencher indirectement la même action.
+- Reproduction locale de l'audit hors sandbox : même timeout du registre. Le contrôle n'est ni supprimé, ni ignoré, ni rendu permissif.
+- Parent `232f60a` : CI `33674098147` et continuité `33674098123` vertes; PR #11 ouverte, brouillon et `MERGEABLE/CLEAN` avant publication locale.
+- Réservation média locale : 4 fichiers ciblés réussis, 1 fichier PostgreSQL/RLS ignoré, 17 tests réussis et 1 ignoré; ingestion complète 13/13 verte. La régression Meta élargie a 19 fichiers et 135 tests réussis; deux scénarios ont uniquement dépassé le délai lors de sauts d'horloge locale puis ont repassé isolément en quelques secondes.
+- ESLint complet, TypeScript, build Next.js production et `git diff --check` sont verts. Le build a utilisé le réseau uniquement pour les polices Google déjà déclarées.
+- `pnpm agent:continuity-check` a été tenté mais son lanceur local a voulu réinstaller sans réseau ni TTY; le script versionné direct retourne `ready`, zéro erreur et zéro avertissement. La CI du futur head doit encore prouver migrations PostgreSQL, RLS, suite exhaustive et Playwright.
+- Head `0e92f38` : CI `33523760105` et continuité `33523760887` vertes, incluant migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/670 tests, build production et 20 Playwright pour l'enveloppe mixte.
+- Tranche média locale : nouveaux scénarios des cinq types, rejet d'entrée invalide, zéro réseau, zéro pièce jointe et lot mixte passent. La régression élargie compte 122 tests réussis et 2 PostgreSQL ignorés; deux timeouts liés aux sauts d'horloge locaux ont été relancés isolément et passent. ESLint complet, TypeScript, build production, continuity-check direct et `git diff --check` sont verts.
+- Head média `41c2fc8` : continuité `33628923623` verte; CI `33628923602` rouge uniquement sur l'audit préalable `browserslist 4.28.5`, avant migrations ou tests. La surcharge `4.28.7` met à jour le lockfile et `pnpm audit --prod --audit-level high` ne trouve plus de vulnérabilité connue; la nouvelle CI reste requise.
+- Head final `44350ec` : CI `33661150567` entièrement verte sur audit, migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 144 fichiers/674 tests, build et 20 Playwright; continuité `33661150706` verte.
+- Tranche mixte locale : test dédié 5/5 vert; régression ingress/webhook 6 fichiers/41 tests; régression Meta/coffre 18 fichiers/120 tests verts et 2 fichiers/2 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint complet, TypeScript, build production, continuity-check et `git diff --check` verts. La CI exhaustive du futur head n'est pas encore revendiquée.
+- Tranche entrante locale : 2 fichiers/13 tests ciblés verts; régression Meta 13 fichiers réussis, 3 fichiers PostgreSQL ignorés, 96 tests réussis et 3 ignorés sans `DATABASE_URL`; ESLint ciblé et complet, TypeScript, build production, continuity-check et `git diff --check` verts.
+- La suite exhaustive locale est restée silencieuse plus de trois minutes et a été interrompue sans assertion en échec; elle n'est pas présentée comme verte. La CI PostgreSQL/RLS, suite exhaustive et Playwright du futur head ne sont pas encore revendiqués.
+- Tranche statut locale : 4 fichiers/27 tests statut-migrations-HTTP verts, puis régression Meta 15 fichiers/97 tests verts.
+- ESLint ciblé et complet, TypeScript, `git diff --check`, continuity-check et build Next.js production verts. La tentative de build sandbox a recréé `node_modules`; le dossier incomplet a été déplacé dans `/private/tmp` et les 601 dépendances exactes restaurées depuis le store et le lockfile avant le build final.
+- La suite exhaustive, PostgreSQL/RLS et Playwright du nouveau head ne sont pas revendiqués avant la CI.
+- Correctif enveloppe : 4 fichiers/24 tests ingress-webhook verts, puis 17 fichiers/108 tests Meta et coffre verts.
+- ESLint complet, TypeScript, `git diff --check`, continuity-check (`ready`, zéro erreur/avertissement) et build Next.js production verts.
+- La CI `33425435804` est entièrement verte en 19 min 22 s : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/653 tests, build production et 20/20 Playwright. La continuité `33425435724` est verte.
+- Le handoff final `cb3e50b` est lui aussi prouvé : CI `33427555175` verte en 20 min 32 s et continuité `33427555275` verte; PR #11 `MERGEABLE/CLEAN`.
+- Tests ciblés : 14 fichiers réussis et 2 ignorés; 91 tests réussis et 2 PostgreSQL ignorés.
+- Migrations : miroir runtime/SQL, base neuve, upgrade depuis runtime 101 et refus du mauvais couple provider/endpoint validés sous PGlite.
+- ESLint complet, TypeScript, `git diff --check` et build Next.js production verts. Le build a été relancé hors sandbox uniquement pour les polices Google requises.
+- La suite `pnpm test` exhaustive locale est restée silencieuse et a été interrompue sans assertion en échec; elle n'est pas présentée comme verte localement.
+- `pnpm db:verify` local refuse sans `DATABASE_URL`; aucune clé ou URL PostgreSQL n'a été demandée.
+- La CI publiée `33422211572` lève ces limites : migrations PostgreSQL, backup/restauration, RLS, lint, typecheck, 142 fichiers/651 tests, build production et 20 Playwright verts en 19 min 15 s. La continuité `33422211485` est verte.
+
+## Classification des états
+
+- Livré et prouvé CI : coffre Meta chiffré, provider-scoped, versionné, révocable et audité sans secret.
+- Livré et prouvé CI : enveloppe webhook officielle, `wamid` opaque et clés internes hashées.
+- Livré et prouvé CI : notifications de statut Meta signées, immuables, idempotentes et monotones.
+- Livré et prouvé CI : lots de statuts Meta bornés, prévalidés et atomiques.
+- Livré et prouvé CI : lots de messages entrants Meta bornés, prévalidés, atomiques, idempotents et multi-tenant.
+- Livré et prouvé CI : enveloppe mixte messages/statuts authentifiée une fois, bornée, prévalidée et atomique.
+- Livré et prouvé CI : représentation conversationnelle française de cinq types média signés, sans téléchargement Graph ni stockage fictif.
+- Livré, publié et prouvé CI : réservation et worker média durables, composition générique, validation binaire/hachage, scanner puis extraction `external_untrusted_data` obligatoires, vérification SHA-256 à la lecture, vue `data-only` non raccordée, stockage/pièce jointe mock idempotents, accès court et frontière HTTP/session, classification durable et autorisations utilisateur personal/team/case appliquées dans le service et la RLS PostgreSQL aux fils, messages, pièces jointes, plans, validations, missions, événements actifs et incidents, avec interface visible en français.
+- Réel : aucun compte développeur finalisé, app, WABA, numéro, token, endpoint public, requête Graph ou message.
+- Sandbox : aucune configurée ou appelée.
+- Mock : fetch, scanner, extracteur et stockage injectés uniquement en test, sans réseau fournisseur, antivirus, OCR, LLM ni outil réel.
+- Bloqué humain : code SMS Meta saisi directement dans Meta for Developers; confirmation au moment exact avant création d'un token persistant et injection via gestionnaire de secrets.
+- Hors périmètre : fusion, production, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
+## Écarts restants et reprise
+
+Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les messages entrants, l'enveloppe mixte, la représentation et la réservation média, le worker mock, le scan/extraction, l'accès court, la classification des fils, les droits durables et leur héritage RLS jusqu'aux validations, missions et événements sont publiés et prouvés par la CI `33936955678` sur PostgreSQL 17. Le vérificateur accepte sans dérive une policy `ALL` ou les quatre opérations complètes; la suite compte 159 fichiers/757 tests et 20 Playwright verts. Les écarts réels restent stockage Supabase/ACL, antivirus, OCR/transcription et Graph. Le prochain checkpoint demeure Meta for Developers : l'utilisateur saisit le code SMS directement sans le transmettre au chat, puis indique seulement que l'étape est terminée. Après validation, inventorier l'app/WABA/Phone Number ID en lecture seule et demander une confirmation immédiatement avant toute création de token persistant. `goal-watch`/OS-6, CRM, Kanban et dashboard secondaire restent hors périmètre. Aucune requête Graph, stockage réel, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
-import { withTenantDbTransaction } from "../src/db/tenant-context";
+import {
+  withTenantDbTransaction,
+  withTenantSystemDbTransaction,
+} from "../src/db/tenant-context";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
@@ -17,6 +20,39 @@ afterEach(async () => {
 });
 
 describe("critical transaction boundaries", () => {
+  it("borne le bypass système de configuration au tenant et à l'acteur", async () => {
+    let capturedContext: unknown;
+    const db: DbClient & {
+      __runtime: "postgres";
+      __withTransaction: (
+        context: unknown,
+        callback: (client: DbClient) => Promise<unknown>,
+      ) => Promise<unknown>;
+    } = {
+      __runtime: "postgres",
+      async __withTransaction(context, callback) {
+        capturedContext = context;
+        return callback(db);
+      },
+      async query<T>() {
+        return { rows: [] as T[] };
+      },
+    };
+
+    await withTenantSystemDbTransaction(
+      db,
+      "tenant_access_configuration",
+      "actor_access_configuration",
+      async () => "ok",
+    );
+
+    expect(capturedContext).toEqual({
+      tenantId: "tenant_access_configuration",
+      actorId: "actor_access_configuration",
+      systemAccess: true,
+    });
+  });
+
   it("rolls back tenant, membership, defaults, and audit together", async () => {
     const db = await createMemoryDb();
     opened.push(db);

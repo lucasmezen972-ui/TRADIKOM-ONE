@@ -4,6 +4,7 @@ import { toJson } from "../src/lib/security";
 import {
   approveWorkflowRun,
   cancelWorkflowRun,
+  executeWorkflowDefinition,
   executeLeadFollowUpWorkflow,
   leadFollowUpWorkflow,
   requestManualWorkflowRetry,
@@ -240,6 +241,158 @@ describe("workflow resume", () => {
         "tenant_resume_retry",
         "Relance retry",
       ]),
+    ).toBe(1);
+  });
+
+  it("reprend une mission conversationnelle depuis son snapshot sans rejouer l'étape réussie", async () => {
+    const { db } = await setup();
+    const tenantId = "tenant_resume_snapshot";
+    const ownerId = "user_resume_snapshot";
+    await seedTenant(db, {
+      tenantId,
+      ownerId,
+      workflowDefinition: leadFollowUpWorkflow,
+    });
+    const definition = workflowDefinitionSchema.parse({
+      key: "conversation_plan:plan_snapshot",
+      version: 1,
+      trigger: "conversation.plan.execute",
+      active: true,
+      conditions: [],
+      actions: [
+        {
+          type: "mock_search_contact",
+          input: {
+            planStepId: "retrouver_contact",
+            capabilityInput: { query: "Contact de démonstration" },
+          },
+          idempotencyKey: "plan_snapshot:retrouver_contact",
+        },
+        {
+          type: "mock_create_task",
+          input: {
+            planStepId: "preparer_tache",
+            capabilityInput: { title: "Relancer le contact" },
+          },
+          idempotencyKey: "plan_snapshot:preparer_tache",
+        },
+      ],
+      retryPolicy: { maxAttempts: 3, backoffMs: 0 },
+      timeoutMs: 30_000,
+      approvalPolicy: "no_approval_required",
+    });
+    let interruptionInjected = false;
+    const interruptedDb: DbClient = {
+      query: async <T>(sql: string, params?: unknown[]) => {
+        if (
+          !interruptionInjected &&
+          sql.includes("insert into workflow_run_steps") &&
+          params?.[4] === "succeeded" &&
+          String(params?.[5]).includes('"actionIndex":1')
+        ) {
+          interruptionInjected = true;
+          throw new Error("Interruption simulée après la seconde activité.");
+        }
+        return db.query<T>(sql, params);
+      },
+    };
+
+    await expect(
+      executeWorkflowDefinition(interruptedDb, definition, {
+        id: "event_plan_snapshot",
+        tenantId,
+        actorId: ownerId,
+        type: definition.trigger,
+        payload: { planId: "plan_snapshot" },
+        correlationId: "corr_plan_snapshot",
+        causationId: "message_plan_snapshot",
+        idempotencyKey: "conversation.plan.execute:plan_snapshot",
+      }),
+    ).rejects.toThrow("Interruption simulée");
+
+    const runId = await loadRunId(db, tenantId);
+    const snapshot = await db.query<{
+      definition_snapshot: string;
+      definition_version: number;
+    }>(
+      `select definition_snapshot, definition_version
+       from workflow_runs where tenant_id = $1 and id = $2`,
+      [tenantId, runId],
+    );
+    expect(JSON.parse(snapshot.rows[0]?.definition_snapshot ?? "{}")).toMatchObject({
+      key: definition.key,
+      version: definition.version,
+    });
+    expect(snapshot.rows[0]?.definition_version).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("failed");
+
+    const firstSignal = await requestManualWorkflowRetry(
+      db,
+      ownerId,
+      tenantId,
+      { runId },
+    );
+    const replayedSignal = await requestManualWorkflowRetry(
+      db,
+      ownerId,
+      tenantId,
+      { runId },
+    );
+    expect(firstSignal).toEqual({ idempotentReplay: false });
+    expect(replayedSignal).toEqual({ idempotentReplay: true });
+
+    const summary = await processPendingDomainEvents(db, {
+      now: new Date("2999-01-01T00:00:00.000Z"),
+    });
+    expect(summary.succeeded).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("succeeded");
+
+    const actionSteps = await db.query<{
+      action_name: string;
+      status: string;
+      attempts: number;
+      safe_metadata: string;
+    }>(
+      `select action_name, status, attempts, safe_metadata
+       from workflow_run_steps
+       where tenant_id = $1
+         and action_name in ('mock_search_contact', 'mock_create_task')
+       order by created_at asc, id asc`,
+      [tenantId],
+    );
+    expect(actionSteps.rows).toMatchObject([
+      { action_name: "mock_search_contact", status: "succeeded", attempts: 1 },
+      { action_name: "mock_create_task", status: "failed", attempts: 1 },
+      { action_name: "mock_create_task", status: "succeeded", attempts: 2 },
+    ]);
+    expect(
+      actionSteps.rows.filter(
+        (step) =>
+          step.action_name === "mock_search_contact" &&
+          step.status === "succeeded",
+      ),
+    ).toHaveLength(1);
+    expect(actionSteps.rows.map((step) => step.safe_metadata).join(" ")).not.toContain(
+      "Contact de démonstration",
+    );
+    expect(actionSteps.rows.map((step) => step.safe_metadata).join(" ")).not.toContain(
+      "Relancer le contact",
+    );
+    expect(
+      await countRows(
+        db,
+        "domain_events",
+        "tenant_id = $1 and event_type = $2",
+        [tenantId, "workflow.resume"],
+      ),
+    ).toBe(1);
+    expect(
+      await countRows(
+        db,
+        "audit_logs",
+        "tenant_id = $1 and action = $2",
+        [tenantId, "workflow.manual_retry_requested"],
+      ),
     ).toBe(1);
   });
 });

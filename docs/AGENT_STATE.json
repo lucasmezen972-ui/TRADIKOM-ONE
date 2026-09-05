@@ -1,60 +1,1821 @@
 {
-  "schemaVersion": 1,
-  "northStar": "Construire le systeme d exploitation conversationnel de l entreprise : une seule conversation omnicanale, des connecteurs universels, des actions durables et prouvees, des objectifs permanents, des validations simples.",
-  "phase": "OS-0",
-  "phaseGoal": "Audit d entree et recadrage : documents d entree, drift report, automation de continuite.",
-  "updatedAt": "2026-08-03T00:00:00.000Z",
-  "branch": "claude/projet-doxqd8",
-  "pullRequest": {
-    "number": 10,
-    "state": "open",
-    "draft": true,
-    "mergeableState": "clean",
-    "url": "https://github.com/lucasmezen972-ui/TRADIKOM-ONE/pull/10"
+  "version": 1,
+  "updatedAt": "2026-09-05T05:30:00.000Z",
+  "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
+  "branch": "codex/tradikom-one-os",
+  "pullRequest": 11,
+  "lastCommit": "82586e89045538fddf61fdb56fc563eabd6ed688",
+  "publishedHeadObserved": "82586e89045538fddf61fdb56fc563eabd6ed688",
+  "status": "os5_meta_tenant_readiness_published_ci_proven_human_meta_sms_pending",
+  "currentPhase": "OS-5",
+  "currentObjective": "La lecture tenant-scoped de la préparation WhatsApp Meta est livrée au commit 461156a, corrigée sans changement fonctionnel au commit 82586e8, publiée et prouvée par la CI 33946531702 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build et 20 Playwright verts. Conversation distingue désormais l'état serveur de celui de l'organisation et bloque tout effet externe tant que les deux ne sont pas prêts. Le prochain checkpoint reste humain : validation SMS Meta directement dans la console officielle, sans transmettre le code.",
+  "masterPrompt": {
+    "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
+    "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
+    "pageCount": 71,
+    "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
+    "alignment": {
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "sections": [
+        "0-4 Mandat, north star, anti-dérive et continuité",
+        "6-7 Architecture cible et Conversation Hub canonique",
+        "10-15 Connector Fabric, Capability Manifest et connecteurs à authentification humaine",
+        "16-18 Sécurité applicative, journalisation et secrets",
+        "22-24 Stockage sécurisé, entrées externes non fiables et UX conversationnelle française",
+        "26-33 Roadmap OS-5, Definition of Done, reprise et critères de progression",
+        "35-38 Shadow, conséquences, données sensibles et évaluation adversariale",
+        "43-44 Premier parcours démontrable et preuves visibles",
+        "46 Règles absolues de dérive",
+        "48 Ordre exact de la prochaine exécution",
+        "64-68 Gouvernance, périmètre, documentation et handoff",
+        "69-71 Matrice de tests et auto-contrôle final"
+      ],
+      "requirement": "Poursuivre OS-5 dans l'ordre de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 10-14, 22, 24, 29, 31-32 et 64-69, faire de Conversation la surface de vérité du canal : combiner l'état technique du registre Meta avec la préparation durable de l'organisation, lue sous contexte tenant et acteur. Distinguer en français canal non relié, suspendu, accès sécurisé manquant et organisation prête; maintenir l'effet externe bloqué jusqu'à une combinaison réellement prête; ne retourner aucun identifiant fournisseur, secret ou contenu chiffré. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Preuve obtenue : lecture agrégée tenant-scoped sous transaction RLS et contrôle de membership, quatre états, révocation, isolation et sortie sans identifiant ou secret; localement 161 fichiers/749 tests hors PostgreSQL, lint, TypeScript, build, audit high, continuity-check et diff check verts. La CI autoritative 33946531702 a validé en 18 min 1 s audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build production et 20/20 Playwright. La continuité 33946531695 est verte et la PR #11 est ouverte, brouillon, fusionnable et CLEAN au head 82586e8."
+    }
   },
-  "lastCommit": "d002e07",
-  "lastGreenCi": {
-    "commit": "d002e07",
-    "check": "Lint, test, build, and E2E",
-    "conclusion": "success",
-    "completedAt": "2026-07-30T04:13:44Z"
-  },
-  "repositoryFacts": {
-    "tables": 83,
-    "runtimeMigrations": 78,
-    "sqlMirrors": 72,
-    "modules": 46,
-    "testFiles": 77,
-    "playwrightSpecs": 2,
-    "conversationPrimitives": 0,
-    "realOutboundIntegrations": ["resend_email"]
+  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers puis indique seulement que l'étape est terminée. Ensuite inventorier en lecture seule l'application, le WABA et le Phone Number ID; ne créer aucun token persistant et n'effectuer aucun Graph, message, webhook public, fusion, déploiement ou dépense sans l'autorisation distincte requise au moment exact.",
+  "nextFile": "docs/NEXT_STEPS.md",
+  "automation": {
+    "nativeId": "continuit-tradikom-one-os",
+    "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
+    "schedule": "Toutes les heures à la minute 17"
   },
   "commandsRun": [
-    "git status --short",
-    "git branch --all",
-    "git log --oneline --decorate -n 40",
-    "git rev-list --left-right --count origin/main...HEAD",
-    "gh api pulls/10 (via MCP GitHub)",
-    "gh api pulls/10/check-runs (via MCP GitHub)",
-    "pnpm lint",
+    "git status --short --branch",
+    "git branch --all --verbose --no-abbrev",
+    "git log --oneline --decorate --graph --all -n 60",
+    "gh pr view 10",
+    "gh pr checks 10",
+    "gh run view 30127033174 --log-failed",
+    "inspection PDF 71 pages",
+    "pnpm agent:continuity-check",
+    "pnpm audit --prod --audit-level high",
+    "git diff --check",
+    "Next.js dev et build locaux avec environnement CI",
+    "pnpm agent:continuity-check",
+    "gh pr view 11 --json ...",
+    "gh run list --branch codex/tradikom-one-os",
+    "pnpm vitest run tests/conversation-hub-schemas.test.ts",
+    "pnpm exec eslint src/modules/conversation-hub/schemas.ts tests/conversation-hub-schemas.test.ts",
     "pnpm typecheck",
-    "pnpm build",
-    "pnpm test"
+    "pnpm test",
+    "pnpm lint",
+    "pnpm build avec les variables locales factices du workflow CI",
+    "git diff --check",
+    "tests Conversation Hub ciblés, nouvelle tentative locale bornée",
+    "eslint ciblé, nouvelle tentative locale bornée",
+    "comparaison exacte des migrations runtime 067/068 et miroirs SQL 0061/0062",
+    "git diff --check ciblé migrations et tests",
+    "gh pr checks 11 - runs 30546099003 et 30546098944 verts",
+    "revue statique du repository et du service Conversation Hub",
+    "ESLint ciblé service borné après blocage Node local silencieux",
+    "pnpm agent:continuity-check borné après blocage Node local silencieux",
+    "Vitest, ESLint et TypeScript ciblés bornés après blocage Node local silencieux",
+    "contrôle statique des requêtes tenant-scoped, des marqueurs de conflit et de l'absence de fournisseurs",
+    "publication du service durci sur aee85da et démarrage de la CI 30548008916",
+    "revue test-first de l'adaptateur canal-test sans transport réseau",
+    "gh run view 30548008916 --log-failed",
+    "correction de la chronologie métier des fils pour les messages retardés",
+    "construction locale du canal web et de l'écran Conversation français",
+    "PR #11 - GitHub Actions 30549936954 vert sur e561f57",
+    "contrats, catalogue mock et migrations 069/070 des plans structurés",
+    "parité runtime/SQL 0063/0064",
+    "gh run view 30551054764 --log-failed",
+    "correction du fixture TypeScript ActionPlan",
+    "repository et service tenant-aware de création et décision des plans",
+    "python3 inspect_pr_checks.py --repo . --pr 11 --json",
+    "pnpm vitest run tests/orchestrator-service.test.ts - tentative locale bornée",
+    "pnpm exec eslint orchestrateur/service - tentative locale bornée",
+    "tsc --noEmit --pretty false - tentative locale bornée",
+    "contrôle statique tenant, RLS, audit, idempotence et absence de transport externe",
+    "pdfinfo et SHA-256 du prompt maître de 71 pages",
+    "extraction textuelle 71/71 pages et inspection visuelle des pages 1, 5, 31, 46, 69 et 71",
+    "création du référentiel paginé et du contrôle d'intégrité du prompt maître",
+    "mise à jour de l'automation native avec lecture paginée obligatoire",
+    "node --experimental-strip-types scripts/agent/continuity-check.ts",
+    "gh run view 30552219390 --log-failed",
+    "pnpm vitest run tests/orchestrator-service.test.ts - tentative locale bornée",
+    "implémentation du workflow durable mock et de la projection multicanale",
+    "relecture des pages 13-15 et 64-68 du prompt maître",
+    "audit du framework connecteur, des webhooks, de l'email courant et des branches PR #10",
+    "revue des exigences Twilio de vérification officielle et d'idempotence",
+    "contrat ChannelAdapter et registre des quatre fournisseurs sans accès réseau",
+    "consultation des documentations officielles Resend d'envoi, idempotence, erreurs et webhooks",
+    "extraction et durcissement du provider Resend sans sélection runtime",
+    "Vitest ciblé Email/Resend - tentative locale bornée",
+    "validation CI complète du provider Resend préparé",
+    "consultation officielle des événements, tags et garanties webhook Resend",
+    "pnpm view svix et ajout épinglé svix@1.99.1",
+    "pnpm audit --prod --audit-level high",
+    "vérificateur Svix sur corps brut et tests de signature/rejeu",
+    "CI complète du vérificateur Svix 30559230976",
+    "migrations 071/072 et miroirs 0065/0066 des événements email provider",
+    "contrôle de parité runtime/SQL des migrations email provider",
+    "diagnostic CI 30560346248 : 265 tests verts, deux fixtures de migration obsolètes corrigées",
+    "service tenant-aware de réservation livraison et ingestion webhook Resend",
+    "immutabilité SQL des événements, déduplication svix-id et ordre tardif sans régression",
+    "intégration invitation Resend sans adresse stockée et refus des réponses provider sans identifiant",
+    "route HTTP Resend fail-closed, corps brut UTF-8 borné et réponses provider sans PII",
+    "syntaxe TypeScript ciblée des fichiers HTTP Resend",
+    "CI 30562294162 et continuité 30562294361 entièrement vertes sur 6dd61b5",
+    "copie locale stable hors iCloud dans /Users/TRADIKOM/Developer/TRADIKOM-ONE",
+    "pnpm add --save-exact twilio@6.0.2",
+    "Vitest, ESLint et typecheck locaux du vérificateur Twilio",
+    "pnpm audit --prod --audit-level high après ajout Twilio",
+    "route HTTP Twilio fail-closed avec URL publique configurée obligatoire",
+    "23 tests ciblés Twilio/registre, ESLint, typecheck et build production local",
+    "enveloppe WhatsApp éphémère normalisée uniquement après signature",
+    "34 tests ciblés Twilio/registre, ESLint et typecheck complets",
+    "CI 30563781762 et continuité 30563781851 entièrement vertes sur 7609ad8",
+    "migrations 073/074 et miroirs 0067/0068 des endpoints fournisseur",
+    "service tenant-aware HMAC, statut et résolution système des endpoints",
+    "8 tests ciblés migration/service endpoints, ESLint et typecheck",
+    "CI 30564535609 et continuité 30564535551 entièrement vertes sur f4e4816",
+    "service entrant atomique signature vers Conversation Hub sans PII d'identité",
+    "tests intégration replay, mapping absent/désactivé, signature avant base et média sans fetch",
+    "CI 30565079771 et continuité 30565079790 entièrement vertes pour mapping et ingestion WhatsApp",
+    "consultation officielle du trust model et du SDK Microsoft Teams v2",
+    "pnpm add @microsoft/teams.apps@2.0.14 et audit production sans nouvel advisory actif",
+    "route Teams fail-closed, validateur JWT officiel et projection sans payload brut",
+    "12 tests Teams ciblés, ESLint et typecheck complets",
+    "suite complète 328 tests verts et build de production avec route Teams",
+    "continuité de fil externe réservée aux ingestions système et appliquée à WhatsApp/Teams",
+    "mapping Teams HMAC sur tenant Microsoft avec conflit inter-tenant et statut",
+    "ingestion Teams vers Conversation Hub avec replay, pseudonymisation et pièces jointes non téléchargées",
+    "27 tests ciblés canaux/Conversation Hub et typecheck complet",
+    "CI 4ecda6f et continuité entièrement vertes pour la frontière Teams",
+    "suite complète 333 tests verts et build production après ingestion Teams",
+    "consultation officielle Slack sur signature v0, corps brut et fenêtre anti-rejeu",
+    "frontière Slack fail-closed avec challenge signé et anti-boucle bot",
+    "14 tests Slack ciblés, ESLint et typecheck complet",
+    "suite complète 346 tests verts et build production avec route Slack",
+    "CI 9a4c659 et continuité entièrement vertes pour mapping/ingestion Teams",
+    "mapping Slack HMAC sur workspace avec conflit inter-tenant et statut",
+    "ingestion Slack avec replay event_id, fil stable, pseudonymisation et fichiers non téléchargés",
+    "30 tests ciblés canaux et typecheck complet",
+    "pnpm lint et pnpm test : 94 fichiers verts, 352 tests verts, 13 ignores",
+    "pnpm build avec environnement CI : build production vert et route Slack inventoriee",
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement",
+    "reverification 2026-08-18 : SHA-256, 71 pages et relecture PDF coeur/OS-5",
+    "gh pr view 11 et gh run list : CI 32077411092 et continuite 32077411096 vertes sur e845b23",
+    "pnpm agent:continuity-check 2026-08-18T10:28:41Z : ready, zero erreur et zero avertissement",
+    "git diff --check",
+    "verification SHA-256 et 71 pages du prompt maitre",
+    "relecture visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture visuelle des pages OS-2 13-15 et 64-68",
+    "gh pr view 11, gh pr checks 11 et gh run list sur codex/tradikom-one-os",
+    "rapport de validation OS-2 confronte aux pages 32 et 69",
+    "pnpm agent:continuity-check le 2026-08-02 : ready, zero erreur et zero avertissement",
+    "verification SHA-256 exacte et 71 pages du prompt maitre le 2026-08-03",
+    "relecture visuelle et textuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture visuelle et textuelle des pages OS-3 15-18, 26-30 et 35-38",
+    "audit de connector-execution, connectors, orchestrator et workflows",
+    "manifeste versionne et runtime strict tradikom_mock pour crm.contacts.search et project.task.create",
+    "tests runtime pour schemas, absence de reseau, retry temporaire, echec permanent, policy, provider disabled et compensation",
+    "tests conversation pour preuve durable, idempotence, audit sans entree metier et projection multicanale",
+    "pnpm lint, pnpm typecheck, pnpm test et build production locaux",
+    "CI 30782705428 et continuite 30782705423 vertes sur 232bbb4",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant OS-4",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-4 17-18, 28, 35-36",
+    "audit du moteur, du worker, du repository et de l'execution conversationnelle",
+    "migration 075 et miroir SQL 0069 pour snapshots de definition workflow immuables",
+    "test multi-step interruption, double signal humain, reprise worker et non-rejeu de la premiere capacite",
+    "7 tests cibles, ESLint cible, typecheck, lint, suite complete et build production locaux",
+    "parcours navigateur web, canal test, plan, approbation et execution mock sur desktop et mobile 390x844",
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement",
+    "commit dea0eab pousse; CI 30784805475 et continuite 30784805450 entierement vertes",
+    "verification SHA-256 exacte et 71 pages du prompt maitre le 2026-08-08",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-4 17-18, 28 et 35-36",
+    "audit executeConversationActionPlan, workflow.resume, worker et experience Conversation",
+    "finalisation atomique du plan depuis execution synchrone ou reprise worker",
+    "reconciliation des etapes depuis workflow_run_steps et projection resultat dedupliquee",
+    "signal de retry idempotent expose en francais dans Conversation",
+    "10 tests cibles orchestrateur/reprise, ESLint cible et typecheck verts",
+    "pnpm lint et pnpm test : 96 fichiers verts, 361 tests verts, 13 ignores",
+    "build production local vert avec configuration CI factice",
+    "parcours Chromium mobile compte vers conversation, deux etapes reussies, resultat visible, zero debordement",
+    "correctifs transitifs brace-expansion et nanoid; audit production sans vulnerabilite connue",
+    "commits f9c66dd et d2f920e pousses; CI 31240188121 et continuite 31240188120 entierement vertes",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-15, 26-30 et 64-68",
+    "audit comparatif repository-grounded Resend, WhatsApp/Twilio, Teams et Slack",
+    "consultation des documentations officielles actuelles Twilio, Resend, Slack et Microsoft",
+    "selection WhatsApp via Twilio Sandbox et checkpoint humain exact sans activation",
+    "pnpm lint, pnpm typecheck et pnpm test : 96 fichiers verts, 361 tests verts, 13 ignores",
+    "build production local vert avec configuration CI factice",
+    "CI 31240778430 et continuite 31240778429 entierement vertes sur 3109221",
+    "commit d27e3cf pousse; CI 31242028098 et continuite 31242028100 entierement vertes",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant le transport OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31242530450 / 31242530461 verts sur 6dae5db",
+    "migration runtime 076 et RLS 077 avec miroirs SQL 0070/0071 pour les livraisons fournisseur",
+    "adaptateur sortant WhatsApp/Twilio fail-closed et etat mock explicite avec transport injecte",
+    "service tenant-aware avec membership, policy, reservation durable, replay, classification, audit sur et reconciliation du message canonique",
+    "19 tests nouveaux puis 66 tests canaux cibles verts, ESLint cible et typecheck verts",
+    "pnpm audit production sans vulnerabilite connue et pnpm lint vert",
+    "build production local vert avec configuration CI factice",
+    "pnpm test et seconde suite Vitest complete bornes apres blocage local silencieux sans assertion en echec",
+    "pnpm agent:continuity-check : ready, zero erreur et zero avertissement",
+    "commit d5cad7e pousse; CI 31244919362 et continuite 31244919353 entierement vertes",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant le worker OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31245459338 / 31245459354 verts sur fe46bf5",
+    "migration runtime 078 et miroir SQL 0072 pour lease, tentatives, backoff et contraintes de retry",
+    "worker WhatsApp tenant-aware avec claim concurrent, lease expiree, meme idempotence, policy et membership reevalues",
+    "26 tests cibles puis 83 tests canaux/conversation verts; test PostgreSQL RLS dedie prepare et ignore sans DATABASE_URL local",
+    "pnpm audit production sans vulnerabilite, pnpm lint, pnpm typecheck et build production verts",
+    "pnpm test bloque silencieusement localement sans assertion; Playwright local non probant sans PostgreSQL partage et CI requise",
+    "commit fonctionnel 9241b88 pousse sur codex/tradikom-one-os",
+    "continuite 31247035021 verte sur 9241b88",
+    "CI PostgreSQL 31247035022 verte : audit, migrations, backup/restauration, lint, typecheck, 103 fichiers/401 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant les callbacks OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31247502526 / 31247502516 verts sur 45a912d",
+    "consultation officielle Twilio des statuts outbound, callbacks hors ordre et verification de signature",
+    "migrations runtime 079/080 et miroirs SQL 0073/0074 pour evenements immuables, reference unique et RLS",
+    "callbacks Twilio signes, dedupliques et monotones avec reconciliation livraison/message et audit sans PII",
+    "92 tests cibles/regression verts; test PostgreSQL RLS dedie ignore localement sans DATABASE_URL",
+    "pnpm audit production sans vulnerabilite, pnpm lint, pnpm typecheck, build et continuity-check verts",
+    "pnpm test bloque silencieusement localement sans assertion; CI PostgreSQL requise",
+    "commit fonctionnel 65176fb pousse sur codex/tradikom-one-os",
+    "continuite 31248824055 verte sur 65176fb; CI PostgreSQL 31248824059 verte avec migrations, backup/restauration, RLS, lint, typecheck, 104 fichiers/408 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant la frontiere client OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31249262463 / 31249262461 verts sur 12a588a",
+    "consultation officielle Twilio Message Resource, statusCallback et erreurs 20003/20429",
+    "frontiere Twilio a client injecte, resolutions ephemeres par references endpoint/identite et callback HTTPS",
+    "42 tests cibles puis 99 tests de regression en lots verts; un test PostgreSQL RLS ignore sans DATABASE_URL",
+    "pnpm audit production sans vulnerabilite, pnpm lint, pnpm typecheck, build et continuity-check verts",
+    "pnpm test et regression monolithique bloques silencieusement localement sans assertion; CI PostgreSQL requise",
+    "commit fonctionnel 3b96716 pousse; continuite 31250907674 et CI PostgreSQL 31250907675 entierement vertes avec 105 fichiers/427 tests et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant la fabrique officielle OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub PR #11 et runs 31258560475 / 31258560449 verts sur 8d80ec3",
+    "alignement prompt maitre actualise avant code pour la fabrique Twilio et le bootstrap keyring",
+    "fabrique officielle Twilio a options bornees, sans configuration globale ni reseau a la construction",
+    "bootstrap keyring strictement serveur depuis versions et references opaques injectees, sans fallback",
+    "62 tests cibles provider/securite verts, lint, typecheck, audit production, build et continuity-check verts",
+    "pnpm test local borne apres blocage Vitest silencieux sans assertion en echec; CI PostgreSQL requise",
+    "commit fonctionnel 423c9d1 pousse; continuite 31259897728 et CI PostgreSQL 31259897751 entierement vertes avec 111 fichiers/454 tests et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant autorisation durable OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle et visuelle des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "pnpm agent:continuity-check initial ready, zero erreur et zero avertissement",
+    "verification GitHub PR #11 et runs 31280628366 / 31280628367 verts sur d9afa82",
+    "alignement prompt maitre actualise avant code pour l'autorisation durable tenant-aware",
+    "migrations runtime 083/084 et miroirs SQL 0077/0078 pour autorisations d'activation immuables, revocables et RLS",
+    "service owner/administrator avec idempotence hashee, expiration, revocation monotone, audit sur et loader systeme tenant/endpoint-scoped",
+    "readiness asynchrone par authorization_id interne; refus absence, autre tenant, autre endpoint, expiration, revocation et loader indisponible sans resolver, client ou reseau",
+    "21 tests cibles puis 24 fichiers/148 tests canaux dont 145 verts et 3 PostgreSQL ignores sans DATABASE_URL",
+    "suite complete mono-worker 110 fichiers/459 tests verts, 5 fichiers et 16 tests ignores sans PostgreSQL",
+    "audit production sans vulnerabilite connue, lint, typecheck, build production et diff check verts",
+    "Playwright local non probant par abort PGlite; CI PostgreSQL/Playwright requise sans changement d'interface",
+    "commit fonctionnel 720db0e cree sans activation externe",
+    "commits 720db0e et 1597cc5 pousses sur codex/tradikom-one-os",
+    "continuite 31285026232 verte sur 1597cc5",
+    "CI PostgreSQL 31285026228 verte : audit, migrations, backup/restauration, RLS, lint, typecheck, 115 fichiers/476 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant consommation atomique OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71",
+    "relecture textuelle directe des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 avec rendus cibles 14, 17-18, 22, 26, 28-29, 35-37, 64 et 66",
+    "pnpm agent:continuity-check initial ready, zero erreur et zero avertissement",
+    "verification GitHub PR #11 et CI 31285823091 / continuite 31285823086 vertes sur 08abdbd",
+    "alignement prompt maitre actualise avant code pour la consommation atomique du budget d'activation",
+    "migrations runtime 085/086 et miroirs SQL 0079/0080 pour consommations tenant-owned, relations composites, verrou budget, immutabilite et RLS",
+    "repository et service bornes avec membership, endpoint actif, expiration, revocation, plafond 1/2, replay par delivery_id et audit sans contenu",
+    "15 tests cibles migrations/service/autorisation verts; test PostgreSQL concurrence/RLS prepare et ignore localement sans DATABASE_URL",
+    "regression canaux mono-worker 34 fichiers/198 tests verts et 4 tests PostgreSQL ignores sans DATABASE_URL",
+    "suite complete mono-worker 112 fichiers/467 tests verts et 17 tests ignores sans DATABASE_URL",
+    "audit production sans vulnerabilite connue, lint, typecheck, build production, continuity-check et diff check verts",
+    "pnpm db:verify local bloque proprement faute de DATABASE_URL; CI PostgreSQL autoritative requise",
+    "commit fonctionnel b561ac0 pousse sans activation externe",
+    "continuite 31286816855 et CI PostgreSQL 31286816871 entierement vertes sur b561ac0 avec migrations, backup/restauration, RLS, 118 fichiers/484 tests, build et 20 Playwright",
+    "verification SHA-256 exacte et 71 pages du prompt maitre avant integration outbound du budget OS-5",
+    "relecture textuelle et visuelle des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "pnpm agent:continuity-check initial ready, zero erreur et zero avertissement; PR #11 CLEAN et CI precedente verte",
+    "alignement prompt maitre actualise avant code pour imposer la consommation dans le chemin outbound ready",
+    "service outbound ready avec budget apres policy et avant adaptateur; authorization_id initial interne puis reprise par delivery_id",
+    "absence, expiration et revocation du budget finalisees en refus durable avant transport; mock et registre reel desactive inchanges",
+    "16 tests cibles verts puis regression canaux 41 fichiers/192 tests verts et 5 suites PostgreSQL ignorees sans DATABASE_URL",
+    "suite exhaustive en six lots mono-worker 118 fichiers, 471 tests verts, 6 fichiers et 17 tests PostgreSQL ignores sans DATABASE_URL",
+    "audit production sans vulnerabilite connue, lint, typecheck, build production, continuity-check et diff check verts",
+    "suite monolithique locale interrompue apres silence PGlite connu; preuve exhaustive obtenue par lots sans assertion en echec",
+    "commit fonctionnel f0acdfb pousse sans activation externe",
+    "continuite 31289096474 verte et CI PostgreSQL 31289096477 verte en 15m25s : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20 Playwright",
+    "verification SHA-256 exacte, 71 pages et continuity-check ready au checkpoint humain OS-5 le 2026-08-08",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle des pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
+    "verification GitHub du head f5a6c2b : PR #11 brouillon, mergeable, CLEAN, CI 31289691502 et continuite 31289691498 vertes",
+    "CI du head documentaire : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable, aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check ready au checkpoint humain OS-5 le 2026-08-09",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle des pages 3, 14, 31-32, 48, 66, 69 et 71",
+    "verification GitHub du head cca7e2a : PR #11 brouillon, mergeable, CLEAN, CI 31290349598 et continuite 31290349595 vertes",
+    "fichiers suivis propres et synchronises; tmp/pdfs non suivi preexistant preserve sans suppression",
+    "aucune nouvelle tache selectionnee le 2026-08-09 : checkpoint humain Twilio indispensable, aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 le 2026-08-11",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle des pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
+    "verification GitHub du head 8463c25 : PR #11 brouillon, mergeable, CLEAN, CI 31354943080 et continuite 31354943077 vertes",
+    "CI du head courant : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee le 2026-08-11 : checkpoint humain Twilio indispensable, aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur aad9261",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
+    "verification GitHub du head aad9261 : PR #11 brouillon, mergeable, CLEAN, CI 31525021392 et continuite 31525021312 vertes",
+    "CI du head aad9261 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee apres la synchronisation concurrente sur aad9261 : checkpoint humain Twilio indispensable et aucun effet externe",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur 76c98bc",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
+    "verification GitHub du head 76c98bc : PR #11 brouillon, mergeable, CLEAN, CI 31534721022 et continuite 31534721086 vertes",
+    "CI du head 76c98bc : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur 65f5fa9",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle des pages coeur determinantes 3, 5, 31-32, 48, 69 et 71 et des pages OS-5 14, 18, 22, 29, 35-37, 64 et 66",
+    "verification GitHub du head 65f5fa9 : PR #11 brouillon, mergeable, CLEAN, CI 31542280734 et continuite 31542280752 vertes",
+    "CI du head 65f5fa9 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee apres synchronisation sur 65f5fa9 : checkpoint humain Twilio indispensable et aucun effet externe",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur 6d291a8",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 26, 28-29, 35-37, 64 et 66",
+    "verification GitHub du head 6d291a8 : PR #11 brouillon, mergeable, CLEAN, CI 31546106045 et continuite 31546106032 vertes",
+    "CI du head 6d291a8 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur d663aaf",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 determinantes 14, 18, 22, 29, 35-37, 64 et 66",
+    "verification GitHub du head d663aaf : PR #11 brouillon, mergeable, CLEAN, CI 31577379203 et continuite 31577379206 vertes",
+    "CI du head d663aaf : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur 31f344e",
+    "relecture textuelle directe des pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "inspection visuelle de toutes les pages coeur et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub du head 31f344e : PR #11 brouillon, mergeable, CLEAN, CI 31595846330 et continuite 31595846550 vertes",
+    "CI du head 31f344e : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "verification SHA-256 exacte, 71 pages et continuity-check local ready au checkpoint humain OS-5 sur a3b4348 le 2026-08-17",
+    "relecture textuelle directe et inspection visuelle de toutes les pages coeur 3-7, 31-33, 46, 48 et 69-71 et des pages OS-5 13-18, 22, 26-30, 35-38 et 64-68",
+    "verification GitHub du head a3b4348 : PR #11 brouillon, mergeable, CLEAN, CI 31670585503 et continuite 31670585549 vertes",
+    "CI du head a3b4348 : audit, migrations, backup/restauration, RLS, lint, typecheck, 118 fichiers/488 tests, build et 20/20 Playwright",
+    "aucune nouvelle tache selectionnee le 2026-08-17 : checkpoint humain Twilio indispensable; aucun code, secret, compte, Sandbox, endpoint, message, depense, fusion ou deploiement",
+    "publication du checkpoint documentaire f9494df sans tmp ni fichier applicatif",
+    "continuite 32075910485 verte sur f9494df; CI 32075910534 en echec au dependency audit avant migrations et tests",
+    "diagnostic CI par inspect_pr_checks.py et reproduction locale de GHSA-2v37-7h3g-55p8 : nanoid 3.3.17 via next > postcss, correctif disponible en 3.3.18",
+    "aucune correction de dependance appliquee sans approbation explicite du workflow gh-fix-ci",
+    "autorisation explicite utilisateur recue pour la correction CI ciblee",
+    "override nanoid 3.3.17 vers 3.3.18 et regeneration minimale du pnpm-lock.yaml",
+    "pnpm audit production sans vulnerabilite connue; pnpm why confirme nanoid 3.3.18",
+    "pnpm lint et pnpm typecheck verts",
+    "CI=true pnpm vitest run --maxWorkers=1 : 112 fichiers/471 tests verts, 6 fichiers/17 tests PostgreSQL ignores sans DATABASE_URL",
+    "build production local vert avec environnement CI factice; continuity-check et diff check finaux a confirmer",
+    "pnpm agent:continuity-check le 2026-08-30 : ready avec seul avertissement de fraîcheur documentaire supérieur à sept jours",
+    "relecture directe du PDF canonique : SHA-256 exact, 71 pages, pages coeur 3-7, 31-33, 46, 48, 69-71 et pages OS-5 13-18, 22, 26-30, 35-38, 64-68",
+    "git fetch puis fast-forward strict de 787d54b vers 33777bf après preuve d'ascendance et absence de chevauchement avec le lot Meta local",
+    "tests Meta ciblés sur le head réconcilié : 12 fichiers verts, 65 tests verts et 1 test PostgreSQL/RLS ignoré sans DATABASE_URL",
+    "régression Twilio sortante : 5 fichiers et 38 tests verts",
+    "suite locale exhaustive sur le head réconcilié : 121 fichiers verts, 523 tests verts, 7 fichiers et 18 tests PostgreSQL ignorés sans DATABASE_URL",
+    "ESLint complet, TypeScript sans cache incrémental, build Next.js production et git diff --check verts sur le head réconcilié",
+    "commit local contrôlé eec609b du lot OS-5 Meta; 22 fichiers, tmp exclu",
+    "push fast-forward 33777bf vers 545c402 sur origin/codex/tradikom-one-os sans force",
+    "verification post-push : PR #11 head 545c402 brouillon CONFLICTING/DIRTY, aucun statusCheckRollup ni run créé pour le head",
+    "recherche locale PostgreSQL : aucun postgres, pg_ctl, initdb, Docker, Podman ou Colima; Homebrew ne contient pas de formule PostgreSQL",
+    "heartbeat 2026-08-31T03:18Z : PDF 71 pages et SHA-256 exact, pages coeur et OS-5 relues directement avec le runtime PDF fourni, continuity-check ready sans avertissement",
+    "GitHub au head b3642e3 : PR #11 OPEN DRAFT CONFLICTING/DIRTY, aucun statusCheckRollup ni run Actions créé; dernier run inchangé sur 33777bf",
+    "heartbeat 2026-08-31T04:18Z : PDF 71 pages et SHA-256 exact, pages coeur et OS-5 relues directement, continuity-check ready sans avertissement",
+    "fetch read-only : branche locale et origin synchronisées sur 39002dd; origin/main 2a73d05, divergence 24 commits main et 90 commits branche depuis aa46bb1",
+    "git merge-tree read-only : 16 fichiers conflictuels, dont 14 hunks pnpm-lock, 4 workflow, 4 db.ts, 2 continuity-check, 2 tenant service et un hunk dans chacun des autres fichiers",
+    "heartbeat 2026-08-31T05:18Z : dépôt stable lisible et inscriptible, PDF 71 pages et SHA-256 exact, pages coeur et OS-5 relues directement, tmp préservé",
+    "fast-forward strict 5111214 vers 7b9d4f3 après fetch, preuve d'ascendance et absence de chevauchement avec tmp; réconciliation publiée par 64192145 sans reset, clean, stash ou changement de branche",
+    "tests Meta post-réconciliation : 12 fichiers/65 tests verts et 2 fichiers PostgreSQL/RLS ignorés localement sans DATABASE_URL",
+    "pnpm agent:continuity-check relancé hors sandbox après EPERM du socket tsx : ready, zéro erreur et zéro avertissement",
+    "CI 33359971937 verte sur 7b9d4f3 : migrations PostgreSQL, backup/restauration, lint, typecheck, tests unitaires/intégration, build production et Playwright",
+    "continuité 33359971941 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN au head 7b9d4f3",
+    "continuity-check documentaire initial bloqué sur deux balises textuelles explicites dans DRIFT_REPORT et NEXT_STEPS, corrigées sans changement produit",
+    "pnpm agent:continuity-check final 2026-08-31T05:39:04Z : ready, zéro erreur et zéro avertissement",
+    "fetch final : origin a avancé de 7b9d4f3 à 575c321 par un commit strictement documentaire sur les quatre handoffs; continuité 33361142814 verte et CI 33361142777 en cours avant réconciliation locale",
+    "heartbeat 2026-08-31T06:18Z : dépôt stable courant, lisible, inscriptible et synchronisé sur 50e7cfa; tmp préservé",
+    "PDF canonique : SHA-256 exact, 71 pages, pages cœur et OS-5 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T06:21:31Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 50e7cfa; CI 33361459789 et continuité 33361459787 entièrement vertes",
+    "heartbeat 2026-08-31T07:17Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "fetch et fast-forward strict d784196 vers 19f2eca après preuve d'ascendance directe et absence de chevauchement avec tmp; aucun reset, clean, stash ou changement de branche",
+    "pnpm agent:continuity-check 2026-08-31T07:23:30Z : ready, zéro erreur et zéro avertissement avec le lanceur Node natif",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 19f2eca; CI 33365186452 et continuité 33365186446 entièrement vertes",
+    "heartbeat 2026-08-31T08:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T08:20:20Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 27c26f0; CI 33368600491 et continuité 33368600481 entièrement vertes",
+    "heartbeat 2026-08-31T09:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T09:19:47Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 6c459a8; CI 33372657873 et continuité 33372657701 entièrement vertes",
+    "heartbeat 2026-08-31T10:17Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T10:19:31Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 19e0f95; CI 33377409508 et continuité 33377409461 entièrement vertes",
+    "heartbeat 2026-08-31T11:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T11:20:09Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 4e31386; CI 33382142767 et continuité 33382142732 entièrement vertes",
+    "heartbeat 2026-08-31T12:19Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T12:21:48Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 70bdb47; CI 33386730276 et continuité 33386730332 entièrement vertes",
+    "heartbeat 2026-08-31T13:17Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T13:18:35Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur e0a3dd2; CI 33391760384 et continuité 33391760538 entièrement vertes",
+    "heartbeat 2026-08-31T14:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T14:19:49Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 6c2d780; CI 33396625266 et continuité 33396625267 entièrement vertes",
+    "heartbeat 2026-08-31T15:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-18, 22, 26-30, 35-38 et 64-68 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-08-31T15:19:44Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur c08be1b; CI 33402359544 et continuité 33402359545 entièrement vertes",
+    "run manuel 2026-08-31T16:02Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages candidates 14, 29 et 64 relues directement; pages 29, 32, 48, 64, 69 et 71 inspectées en rendu",
+    "transport Graph Meta éphémère, placeholders et procédure d'activation sans composition réseau réelle",
+    "Vitest ciblé et régression Meta : 7 fichiers réussis, 55 tests réussis, 1 fichier/1 test PostgreSQL RLS ignoré sans DATABASE_URL; ESLint et typecheck verts",
+    "suite complète et build locaux non conclusifs : Vitest est resté silencieux; pnpm build a tenté de recréer node_modules puis le réseau sandbox a bloqué les paquets; dépendances restaurées exactement depuis le lockfile",
+    "fetch distant sûr puis commit 02584ba et push fast-forward 234f7ee..02584ba; tmp exclu",
+    "CI 33414636126 : audit, migrations, backup/restauration, RLS, lint, typecheck, 141 fichiers/646 tests, build production et 20 Playwright verts",
+    "continuité 33414636345 verte; PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 02584ba",
+    "heartbeat 2026-09-01T02:24Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 13-22, 26-38 et 64-68 relues directement; pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check 2026-09-01T02:26Z et 02:38Z : ready, zéro erreur et zéro avertissement",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 9551f60; CI 33460999183 et continuité 33460999408 entièrement vertes",
+    "durcissement local des lots statuses Meta : bornes entry/changes/statuses, prévalidation endpoint/livraison, replay et projection monotone",
+    "Vitest ciblé 2 fichiers/20 tests puis régression Meta 14 fichiers/96 tests verts; 1 test PostgreSQL ignoré sans DATABASE_URL",
+    "ESLint ciblé et complet, TypeScript, build Next.js production et git diff --check verts; build hors sandbox uniquement pour les polices Google",
+    "heartbeat 2026-09-01T05:46Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22, 26-38 et 64-68 relues directement; pages 48 et 69 inspectées en rendu",
+    "PR #11 OPEN DRAFT MERGEABLE/CLEAN sur 4e9f35d; CI 33473526862 et continuité 33473526866 entièrement vertes",
+    "dispatch local d'une enveloppe Meta mixte : HMAC unique, schémas stricts, borne globale 100, prévalidation complète et transaction unique",
+    "Vitest ciblé 6 fichiers/41 tests puis régression Meta/coffre 18 fichiers/120 tests verts; 2 fichiers/2 tests PostgreSQL ignorés sans DATABASE_URL",
+    "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check verts; build hors sandbox uniquement pour les polices Google",
+    "heartbeat 2026-09-02T20:24Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages candidates 11, 14, 22-23 et 64-65 relues directement; pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check tenté puis script versionné direct ready, zéro erreur et zéro avertissement; le lanceur pnpm local voulait réinstaller sans réseau ni TTY",
+    "réservation média Meta locale : migrations runtime 105/106 et miroirs 0099/0100, AES-256-GCM avec AAD tenant/provider/endpoint/message, RLS, idempotence, audit sûr et états pending/not_configured/failed",
+    "tests ciblés média : 4 fichiers réussis, 1 fichier PostgreSQL ignoré, 17 tests réussis et 1 ignoré; ingress complet 13/13 vert",
+    "régression Meta élargie : 19 fichiers réussis, 2 fichiers en timeout d'horloge locale et 135 tests réussis; les 2 scénarios expirés repassent isolément en 1/1 chacun",
+    "ESLint complet, TypeScript, build Next.js production hors sandbox pour les polices Google et git diff --check verts; CI du futur head requise pour PostgreSQL/RLS, suite exhaustive et Playwright",
+    "fetch final avant publication : HEAD et origin/codex/tradikom-one-os identiques sur 232f60a; PR #11 OPEN DRAFT MERGEABLE/CLEAN, CI 33674098147 et continuité 33674098123 vertes",
+    "commit fonctionnel et documentaire 28efa75; 22 fichiers contrôlés, tmp exclu",
+    "push concurrent résolu sans force : le ref distant contenait déjà exactement 28efa75; fetch final confirme HEAD égal origin",
+    "continuité 33826756891 verte sur 28efa75",
+    "CI 33826756939 tentatives 1 et 2 rouges avant migrations/tests : timeout réseau identique de l'API npm advisories pendant pnpm audit, aucun avis ni échec applicatif",
+    "reproduction locale de pnpm audit hors sandbox : même timeout de registry.npmjs.org, aucune modification de dépendance ou de workflow",
+    "heartbeat 2026-09-04T09:45Z : PDF SHA-256 exact, 71 pages, pages cœur et candidates relues directement, pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check retenté : wrapper bloqué sur réinstallation sans réseau/TTY; script versionné direct à relancer après docs",
+    "troisième relance CI non exécutée : contrôleur d'autorisation en erreur réseau, approbation utilisateur explicite désormais requise; aucun contournement",
+    "continuity-check direct final 2026-09-04T11:34Z : ready, zéro erreur et zéro avertissement; JSON et git diff --check verts",
+    "tranche applicative locale d'import média mock : exécution tenant/RLS avec bail, retry, policy, validation taille/type/checksum, stockage idempotent et pièce jointe canonique visible en français",
+    "tests ciblés média/migrations : 2 fichiers réussis, 24 tests réussis; 1 fichier PostgreSQL et 2 tests RLS ignorés faute de DATABASE_URL",
+    "régression exhaustive locale : 139 fichiers réussis, 8 ignorés, 672 tests réussis et 20 ignorés; ESLint complet, TypeScript et build production verts",
+    "Playwright média ajouté pour provenance WhatsApp, nom de fichier et badge Stockage mock; exécution locale non revendiquée faute de PostgreSQL partagé",
+    "GitHub relu sans mutation : PR #11 ouverte, brouillon, MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte et CI 33826756939 inchangée rouge avant tests sur timeout npm audit",
+    "pnpm agent:continuity-check tenté : wrapper local bloqué par réinstallation pnpm sans réseau/TTY; script versionné direct à exécuter après documentation",
+    "commit local contrôlé 279b061ec9609dbbf3e5d9aaf21ccd30c9c68052; 15 fichiers applicatifs/tests/docs, tmp exclu, aucun push ni CI déclenchée",
+    "heartbeat 2026-09-04T21:18Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages plans/workflows 10-12, 15-18, 22, 24, 28, 35-38, 43-44, 64 et 68 relues directement; pages 17, 32, 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check : ready, zéro erreur et zéro avertissement",
+    "GitHub relu sans mutation : PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte, CI 33826756939 rouge avant tests sur timeout npm audit",
+    "contrôles de fil sur create/get/list/decide/execute/retry, revalidation transactionnelle de reprise et filtrage des missions génériques; aucun IO externe",
+    "tests ciblés 3 fichiers/16 tests verts; régression élargie 14 fichiers réussis, 1 ignoré, 53 tests réussis et 1 ignoré sans DATABASE_URL",
+    "suite exhaustive 146 fichiers réussis, 10 ignorés, 724 tests réussis et 23 ignorés; ESLint complet, TypeScript, build production et git diff --check verts",
+    "commit fonctionnel local 754316a5466ca16b730ef0e521852dcce3459b7e; tmp exclu, aucun push ni CI déclenchée",
+    "heartbeat 2026-09-04T22:19Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages événements/workflows 10-12, 15-18, 22, 24, 28, 35-38, 43-44, 64 et 68 relues directement; pages 17, 32, 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check : ready, zéro erreur et zéro avertissement; changelog Supabase officiel relu, aucune rupture pertinente pour cette tranche de service",
+    "GitHub relu sans mutation : PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur 28efa75; continuité 33826756891 verte, CI 33826756939 rouge avant tests sur timeout npm audit",
+    "événements actifs et dead letters liés aux plans Conversation filtrés via planId/runId; annulation et relance revalidées transactionnellement; payload jamais exposé; agrégats non identifiants conservés",
+    "tests ciblés 3 fichiers/27 tests verts; régression 21 fichiers/96 tests verts avec 2 fichiers/2 tests PostgreSQL ignorés sans DATABASE_URL",
+    "suite exhaustive 146 fichiers/724 tests verts, 10 fichiers/23 tests PostgreSQL ignorés; ESLint complet, TypeScript, build production et git diff --check verts",
+    "commit fonctionnel local 517a8a73acf9f4f07afe254dd84c8489e2f6e37a; tmp exclu, aucun push ni CI déclenchée",
+    "run 2026-09-05T03:16Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22-24, 26-33, 35-38, 43-44 et 64-68 relues directement; pages 48 et 69 inspectées en rendu",
+    "checkpoint d'activation WhatsApp Meta visible dans Conversation : cinq états français, prochaine action, effet externe et absence de secrets ou bouton d'activation/envoi",
+    "tests ciblés 3 fichiers/33 tests puis régression exhaustive locale 160 fichiers/740 tests verts et 11 fichiers/24 tests PostgreSQL ignorés faute de DATABASE_URL",
+    "ESLint complet, TypeScript, build Next.js production, audit high, continuity-check et git diff --check verts; deux avis transitifs modérés qs documentés",
+    "commit fonctionnel local c038df459e8e883bb5c77c6932b7a577a8f56f85; tmp exclu; CI PostgreSQL et Playwright en attente de publication sûre",
+    "fetch final : origin/codex/tradikom-one-os toujours sur ed4aeea, ancêtre exact du head local; push fast-forward ed4aeea..d899d95 sans tmp",
+    "continuité 33942266310 verte sur d899d95",
+    "CI 33942266316 verte en 22 min 56 s : audit, migrations, db:verify, backup/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright",
+    "PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur d899d95; aucune fusion, déploiement, clé, Graph ou message externe"
   ],
-  "commandsNotRun": [
-    "pnpm db:verify (aucun PostgreSQL en ecoute dans ce conteneur ; couverture RLS attestee par la CI verte sur d002e07)"
+  "lastValidation": [
+    {
+      "command": "PR #10 - GitHub Actions 30483590061",
+      "status": "passed"
+    },
+    {
+      "command": "main - GitHub Actions 30127033174",
+      "status": "failed_before_os0_postcss_fix"
+    },
+    {
+      "command": "agent:continuity-check, JSON, YAML et git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high",
+      "status": "passed_with_documented_brace_expansion_exception"
+    },
+    {
+      "command": "lint, typecheck et tests locaux",
+      "status": "blocked_by_local_node_stall_without_diagnostic_ci_pending"
+    },
+    {
+      "command": "Next.js dev, navigateur et build locaux",
+      "status": "blocked_by_local_turbopack_stall_ci_pending"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30513556909 et continuité 30513556848",
+      "status": "passed_including_postgres_migrations_backup_lint_typecheck_tests_build_playwright"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30514520472 et continuité 30514520487",
+      "status": "passed_on_e2a092b"
+    },
+    {
+      "command": "tests/conversation-hub-schemas.test.ts",
+      "status": "passed_5_tests"
+    },
+    {
+      "command": "eslint ciblé Conversation Hub",
+      "status": "passed"
+    },
+    {
+      "command": "Next.js build local avec environnement CI factice",
+      "status": "passed_including_typescript"
+    },
+    {
+      "command": "lint, typecheck et tests complets locaux",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "parité migrations runtime 067/068 et miroirs SQL 0061/0062",
+      "status": "passed"
+    },
+    {
+      "command": "tests et ESLint ciblés après migration",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30546099003 et continuité 30546098944",
+      "status": "passed_including_postgres_rls_migrations_lint_typecheck_tests_build_playwright"
+    },
+    {
+      "command": "repository/service Conversation Hub - isolation, audit, idempotence et fournisseurs",
+      "status": "static_checks_passed_executable_ci_pending"
+    },
+    {
+      "command": "agent:continuity-check, Vitest, ESLint et TypeScript locaux après durcissement du service",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30548008916 sur aee85da",
+      "status": "failed_2_conversation_service_tests_due_to_thread_date_constraint_fix_prepared"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30549936954 sur e561f57",
+      "status": "passed_including_migrations_lint_typecheck_223_tests_build_playwright"
+    },
+    {
+      "command": "parité migrations runtime 069/070 et miroirs SQL 0063/0064",
+      "status": "passed"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30551054764 sur 8288791",
+      "status": "failed_typecheck_fixture_auth_property_fix_prepared_migrations_passed"
+    },
+    {
+      "command": "Vitest, ESLint et TypeScript ciblés du service de plan",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "pnpm agent:continuity-check sur le checkpoint local",
+      "status": "blocked_by_local_git_node_stall_workflow_30551055232_passed_on_published_head"
+    },
+    {
+      "command": "service de plan - tenant, RLS, audit, idempotence et fournisseurs",
+      "status": "static_checks_passed_executable_ci_pending"
+    },
+    {
+      "command": "prompt maître PDF - 71 pages, empreinte et pages de gouvernance",
+      "status": "passed_sha256_text_extraction_and_visual_sampling"
+    },
+    {
+      "command": "continuity-check natif Node 22 après renforcement prompt maître",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm agent:continuity-check avec runtime TypeScript natif Node 22",
+      "status": "passed_ready_zero_errors_zero_warnings_in_6_seconds"
+    },
+    {
+      "command": "tests/continuity-check.test.ts via Vitest local",
+      "status": "blocked_by_known_local_node_stall_without_diagnostic"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30552219390 sur 1dca742",
+      "status": "failed_only_stale_conversation_table_expectation_233_tests_passed"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30552994527 sur ffe258e",
+      "status": "migrations_lint_typecheck_passed_tests_running"
+    },
+    {
+      "command": "exécution Conversation mock durable, idempotence, audit et routage web/test",
+      "status": "integration_test_added_ci_pending"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30554174397 sur 84d064c",
+      "status": "migrations_backup_lint_typecheck_passed_tests_running"
+    },
+    {
+      "command": "Playwright Conversation desktop 1440x900 et mobile 390x844",
+      "status": "scenario_added_ci_pending"
+    },
+    {
+      "command": "PR #11 - GitHub Actions 30554462472 sur 95da35e",
+      "status": "passed_migrations_backup_lint_typecheck_234_tests_build_playwright_desktop_mobile"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 30554462620 sur 95da35e",
+      "status": "passed"
+    },
+    {
+      "command": "audit statique OS-2 des quatre canaux et contrat transversal",
+      "status": "prepared_local_validation_pending"
+    },
+    {
+      "command": "pnpm agent:continuity-check et git diff --check sur le checkpoint OS-2",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "Vitest et ESLint ciblés du registre OS-2",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 30556603427 sur d181a97",
+      "status": "passed"
+    },
+    {
+      "command": "CI 30556603463 sur d181a97",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright"
+    },
+    {
+      "command": "Vitest ciblé provider Email/Resend et sélection runtime",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "CI 30557617612 et continuité 30557617778 sur f716b16",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high après ajout Svix",
+      "status": "passed_one_preexisting_ignored_high_zero_active_advisories"
+    },
+    {
+      "command": "Vitest ciblé webhook Resend/Svix",
+      "status": "blocked_by_known_local_dependency_install_node_stall_ci_pending"
+    },
+    {
+      "command": "CI 30559230976 et continuité 30559230886 sur 860a14d",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "parité migrations runtime 071/072 et miroirs SQL 0065/0066",
+      "status": "passed"
+    },
+    {
+      "command": "CI 30560346248 sur 76cf327",
+      "status": "failed_two_test_fixtures_only_265_tests_passed_migrations_backup_lint_typecheck_and_postgres_rls_passed_fix_prepared"
+    },
+    {
+      "command": "Vitest et ESLint ciblés du service email provider",
+      "status": "blocked_by_known_local_node_stall_ci_pending"
+    },
+    {
+      "command": "service email provider - tenant, signature, audit, idempotence, immutabilité et ordre tardif",
+      "status": "static_checks_passed_executable_ci_pending"
+    },
+    {
+      "command": "CI 30561347444 et continuité 30561347436 sur 199482a",
+      "status": "continuity_passed_migrations_backup_lint_typecheck_and_268_tests_passed_six_fixture_failures_from_runtime_sql_drift_and_duplicate_token_fixed"
+    },
+    {
+      "command": "parité automatisée migration OS-2 runtime et miroirs SQL",
+      "status": "passed_guard_added"
+    },
+    {
+      "command": "CI 30562294162 et continuité 30562294361 sur 6dd61b5",
+      "status": "passed_migrations_backup_lint_typecheck_268_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "Vitest ciblé, ESLint ciblé et typecheck complet du vérificateur Twilio",
+      "status": "passed_6_tests"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high après ajout Twilio",
+      "status": "passed_one_preexisting_ignored_high_zero_active_advisories"
+    },
+    {
+      "command": "route et préparation entrante WhatsApp/Twilio - tests ciblés, ESLint et typecheck",
+      "status": "passed_34_tests_no_network_no_database"
+    },
+    {
+      "command": "CI 30563781762 et continuité 30563781851 sur 7609ad8",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "migrations et service des endpoints fournisseur - tests ciblés, ESLint et typecheck",
+      "status": "passed_8_tests_rls_mirror_hmac_tenant_audit"
+    },
+    {
+      "command": "CI 30564535609 et continuité 30564535551 sur f4e4816",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "ingestion WhatsApp/Twilio vers Conversation Hub - tests ciblés, ESLint et typecheck",
+      "status": "passed_signature_before_database_mapping_replay_pseudonymization_no_media_fetch"
+    },
+    {
+      "command": "CI 30565079771 et continuité 30565079790 sur 19ff401",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "vérificateur et route Microsoft Teams - Vitest, ESLint et typecheck",
+      "status": "passed_12_tests_official_sdk_fail_closed_no_raw_payload"
+    },
+    {
+      "command": "pnpm test et pnpm build après frontière Teams",
+      "status": "passed_328_tests_13_skipped_build_lists_teams_route"
+    },
+    {
+      "command": "mapping et ingestion Teams, continuité de fil externe - tests ciblés et typecheck",
+      "status": "passed_27_tests_hmac_tenant_replay_thread_continuity_no_attachment_fetch"
+    },
+    {
+      "command": "CI et continuité sur 4ecda6f",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "pnpm test et pnpm build après ingestion Teams",
+      "status": "passed_333_tests_13_skipped_build_lists_teams_route"
+    },
+    {
+      "command": "vérificateur v0 et route Slack - Vitest, ESLint et typecheck",
+      "status": "passed_14_tests_raw_body_hmac_replay_window_constant_compare_fail_closed"
+    },
+    {
+      "command": "pnpm lint, pnpm test et pnpm build après frontière Slack",
+      "status": "passed_346_tests_13_skipped_build_lists_slack_route"
+    },
+    {
+      "command": "CI 30568361952 et continuité 30568361182 sur 9a4c659",
+      "status": "passed_migrations_backup_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "mapping et ingestion Slack - tests ciblés, ESLint et typecheck",
+      "status": "passed_30_tests_hmac_tenant_replay_thread_continuity_no_file_fetch"
+    },
+    {
+      "command": "pnpm lint, pnpm test et pnpm build apres mapping/ingestion Slack",
+      "status": "passed_94_files_352_tests_13_skipped_production_build_lists_slack_route"
+    },
+    {
+      "command": "pnpm agent:continuity-check et git diff --check apres mapping/ingestion Slack",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 30570073983 et continuité 30570074023 sur 6c0c204",
+      "status": "passed_audit_migrations_backup_restore_lint_typecheck_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "rapport OS-2 contre Definition of Done page 32 et matrice page 69",
+      "status": "passed_truthful_delivery_real_prepared_sandbox_mock_human_blocked_out_of_scope_classification"
+    },
+    {
+      "command": "pnpm agent:continuity-check le 2026-08-02 avec PDF canonique",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "prompt maître le 2026-08-03",
+      "status": "passed_sha256_exact_71_pages_core_and_os3_pages_visually_reviewed"
+    },
+    {
+      "command": "tests ciblés runtime, catalogue et orchestrateur",
+      "status": "passed_12_tests_two_capabilities_no_fetch_retry_temporary_permanent_compensation_evidence"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed_95_files_357_tests_13_skipped_lint_typecheck_build"
+    },
+    {
+      "command": "Playwright conversation local PGlite",
+      "status": "blocked_by_separate_pglite_processes_before_login_ci_postgres_authoritative"
+    },
+    {
+      "command": "CI 30782705428 et continuité 30782705423 sur 232bbb4",
+      "status": "passed_audit_migrations_backup_restore_lint_typecheck_357_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître et continuity-check OS-4 le 2026-08-03",
+      "status": "passed_sha256_exact_71_pages_core_and_os4_pages_reviewed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "tests ciblés snapshots et reprise",
+      "status": "passed_7_tests_mirror_immutability_double_signal_worker_resume_first_step_not_replayed"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed"
+    },
+    {
+      "command": "parcours Conversation dans le navigateur local",
+      "status": "passed_web_test_channel_single_approval_mock_result_mobile_390_no_horizontal_overflow"
+    },
+    {
+      "command": "CI 30784805475 et continuité 30784805450 sur dea0eab",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_98_files_373_tests_build_20_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître et continuity-check OS-4 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os4_pages_reviewed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "tests ciblés finalisation conversationnelle et reprise worker",
+      "status": "passed_10_tests_double_signal_no_second_execute_first_step_not_replayed_single_result_two_routes_safe_audit_no_fetch"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed_96_files_361_tests_13_skipped_lint_typecheck_build"
+    },
+    {
+      "command": "parcours Chromium Conversation mobile 390x844",
+      "status": "passed_account_tenant_web_test_plan_approval_mock_result_two_reconciled_steps_zero_horizontal_overflow"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high après overrides transitifs",
+      "status": "passed_no_known_vulnerabilities"
+    },
+    {
+      "command": "CI 31240188121 et continuité 31240188120 sur d2f920e",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_13_skipped_build_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître, continuity-check et audit de sélection OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_zero_errors_zero_warnings_single_twilio_candidate_no_external_mutation"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm test et build production local",
+      "status": "passed_96_files_361_tests_13_skipped_lint_typecheck_build_with_ci_placeholders"
+    },
+    {
+      "command": "CI 31240778430 et continuité 31240778429 sur 3109221",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "CI 31242028098 et continuité 31242028100 sur d27e3cf",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_361_tests_build_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître et continuity-check du transport OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "tests ciblés outbound puis régression complète canaux WhatsApp",
+      "status": "passed_3_files_19_tests_then_10_files_66_tests_migrations_policy_tenant_idempotency_fail_closed_classification_safe_audit"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck et build production",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_with_ci_placeholders"
+    },
+    {
+      "command": "pnpm test et pnpm vitest run --maxWorkers=4",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_pending"
+    },
+    {
+      "command": "CI 31244919362 et continuité 31244919353 sur d5cad7e",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_101_files_393_tests_build_20_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant worker OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_pr11_clean_ci_31245459338_continuity_31245459354"
+    },
+    {
+      "command": "tests ciblés worker puis régression canaux/conversation",
+      "status": "passed_5_files_26_tests_then_15_files_83_tests_one_postgres_rls_test_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck et build production",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_with_ci_placeholders"
+    },
+    {
+      "command": "pnpm test et pnpm test:e2e locaux",
+      "status": "blocked_by_known_local_vitest_stall_and_playwright_process_isolation_without_shared_postgres_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31247035021 sur 9241b88",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31247035022 sur 9241b88",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_103_files_401_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant callbacks OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_pr11_clean_ci_31247502526_continuity_31247502516"
+    },
+    {
+      "command": "tests ciblés callbacks puis régressions WhatsApp/canaux/conversation",
+      "status": "passed_7_files_52_tests_then_8_files_40_tests_one_postgres_rls_test_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production et continuity-check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31248824055 sur 65176fb",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31248824059 sur 65176fb",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_104_files_408_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant frontière client OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_pr11_clean_ci_31249262463_continuity_31249262461"
+    },
+    {
+      "command": "tests ciblés transport puis régressions WhatsApp/canaux en lots",
+      "status": "passed_4_files_42_tests_then_13_files_99_tests_one_postgres_rls_test_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production et continuity-check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31250907674 sur 3b96716",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31250907675 sur 3b96716",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_105_files_427_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant coffre fournisseur OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean"
+    },
+    {
+      "command": "tests coffre ciblés et intégration transport mock",
+      "status": "passed_3_files_11_tests_aes_gcm_aad_rotation_revocation_idempotency_safe_audit_no_network"
+    },
+    {
+      "command": "régression canaux, WhatsApp et Conversation Hub",
+      "status": "passed_20_files_120_tests_2_postgres_rls_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local puis reprise ciblée",
+      "status": "blocked_by_known_local_pglite_timeouts_under_contention_email_target_passed_worker_passed_alone_with_15s_ci_postgres_authoritative"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31257937592 sur 9c7e4db",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31257937598 sur 9c7e4db",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_109_files_439_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant fabrique officielle OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean"
+    },
+    {
+      "command": "tests fabrique Twilio, bootstrap keyring et régressions provider",
+      "status": "passed_8_files_62_tests_official_sdk_no_network_server_guard_managed_references_fail_closed_safe_errors"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "pnpm test local",
+      "status": "blocked_by_known_local_vitest_stall_without_failed_assertion_targeted_suites_passed_ci_postgres_authoritative"
+    },
+    {
+      "command": "CI 31259897751 et continuité 31259897728 sur 423c9d1",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_111_files_454_tests_build_20_playwright_and_continuity"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant readiness OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean_ci_31260509720_continuity_31260509739"
+    },
+    {
+      "command": "tests readiness ciblés et régression canaux WhatsApp",
+      "status": "passed_5_files_45_tests_then_19_files_133_tests_2_postgres_tests_skipped_without_database_url_zero_secret_resolver_client_or_fetch_before_ready"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI=true pnpm vitest run --maxWorkers=1",
+      "status": "passed_108_files_447_tests_4_files_and_15_tests_skipped_without_database_url"
+    },
+    {
+      "command": "CI et continuité sur 1bdc5c4",
+      "status": "passed_ci_31279987333_audit_migrations_backup_restore_rls_lint_typecheck_112_files_463_tests_build_20_playwright_and_continuity_31279987339"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant autorisation durable OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean_ci_31280628366_continuity_31280628367"
+    },
+    {
+      "command": "tests migrations, service et readiness des autorisations d'activation",
+      "status": "passed_3_files_21_tests_empty_upgrade_mirror_tenant_idempotency_revocation_safe_audit_fail_closed"
+    },
+    {
+      "command": "régression canaux et WhatsApp",
+      "status": "passed_24_files_145_tests_3_postgres_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm vitest run --no-file-parallelism --maxWorkers=1",
+      "status": "passed_110_files_459_tests_5_files_and_16_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_and_diff"
+    },
+    {
+      "command": "pnpm test parallèle et Playwright local PGlite",
+      "status": "blocked_by_known_local_pglite_stall_and_runtime_abort_without_failed_business_assertion_ci_postgres_authoritative"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31285026232 sur 1597cc5",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI PostgreSQL 31285026228 sur 1597cc5",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_115_files_476_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant consommation atomique OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_key_pages_visually_reviewed_ready_pr11_mergeable_previous_ci_green"
+    },
+    {
+      "command": "tests migrations, service et régression canaux du budget d'activation",
+      "status": "passed_15_targeted_then_34_files_198_tests_4_postgres_skipped_without_database_url_budget_1_2_replay_expiry_revocation_endpoint_tenant_safe_audit"
+    },
+    {
+      "command": "pnpm vitest run --maxWorkers=1",
+      "status": "passed_112_files_467_tests_6_files_and_17_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 31286816855 sur b561ac0",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI PostgreSQL 31286816871 sur b561ac0",
+      "status": "passed_audit_migrations_backup_restore_rls_concurrency_lint_typecheck_118_files_484_tests_build_20_playwright"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant garde outbound OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean_previous_ci_green"
+    },
+    {
+      "command": "tests ciblés garde outbound et régression canaux",
+      "status": "passed_2_files_16_tests_then_41_files_192_tests_5_postgres_suites_skipped_without_database_url_policy_before_budget_before_transport_retry_replay_expiry_revocation"
+    },
+    {
+      "command": "suite exhaustive en six lots mono-worker",
+      "status": "passed_118_files_471_tests_6_files_and_17_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high, pnpm lint, pnpm typecheck, build production, continuity-check et diff check",
+      "status": "passed_no_known_vulnerabilities_lint_typecheck_build_route_inventory_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 31289096477 et continuité 31289096474 sur f0acdfb",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 le 2026-08-08",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_ready_pr11_clean"
+    },
+    {
+      "command": "CI 31289691502 et continuité 31289691498 sur f5a6c2b",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 le 2026-08-09",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_key_pages_visually_reviewed_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31290349598 et continuité 31290349595 sur cca7e2a",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 le 2026-08-11",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31354943080 et continuité 31354943077 sur 8463c25",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur aad9261 le 2026-08-11",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_all_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31525021392 et continuité 31525021312 sur aad9261",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur 76c98bc le 2026-08-11",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_all_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31534721022 et continuité 31534721086 sur 76c98bc",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur 65f5fa9 le 2026-08-11",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_key_core_and_technical_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31542280734 et continuité 31542280752 sur 65f5fa9",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur 6d291a8 le 2026-08-11",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_all_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31546106045 et continuité 31546106032 sur 6d291a8",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur d663aaf le 2026-08-12",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_reviewed_all_core_and_key_pages_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31577379203 et continuité 31577379206 sur d663aaf",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur 31f344e le 2026-08-12",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_textually_and_visually_reviewed_local_ready_pr11_clean_tracked_tree_clean"
+    },
+    {
+      "command": "CI 31595846330 et continuité 31595846550 sur 31f344e",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready_with_remote_pdf_absence_warning_expected"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub au checkpoint humain OS-5 sur a3b4348 le 2026-08-17",
+      "status": "passed_sha256_exact_71_pages_all_core_and_os5_pages_textually_and_visually_reviewed_local_ready_pr11_clean_tracked_tree_preserved"
+    },
+    {
+      "command": "CI 31670585503 et continuité 31670585549 sur a3b4348",
+      "status": "passed_ci_audit_migrations_backup_restore_rls_lint_typecheck_118_files_488_tests_build_20_playwright_and_continuity_ready"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 32075910485 sur f9494df",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 32075910534 sur f9494df",
+      "status": "failed_dependency_audit_high_GHSA_2v37_7h3g_55p8_nanoid_3_3_17_before_migrations_tests_build_playwright"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high le 2026-08-17",
+      "status": "failed_reproduced_one_high_nanoid_below_3_3_18_via_next_postcss"
+    },
+    {
+      "command": "pnpm audit --prod --audit-level high après override nanoid 3.3.18",
+      "status": "passed_no_known_vulnerabilities"
+    },
+    {
+      "command": "pnpm lint et pnpm typecheck après correction nanoid",
+      "status": "passed"
+    },
+    {
+      "command": "CI=true pnpm vitest run --maxWorkers=1 après correction nanoid",
+      "status": "passed_112_files_471_tests_6_files_17_postgres_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm build avec environnement CI factice après correction nanoid",
+      "status": "passed_production_build"
+    },
+    {
+      "command": "prompt maître et continuity-check le 2026-08-30",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_ready_with_stale_state_warning_then_documentation_refreshed"
+    },
+    {
+      "command": "réconciliation Git avec origin/codex/tradikom-one-os",
+      "status": "passed_fast_forward_only_787d54b_to_33777bf_dirty_meta_lot_preserved_no_path_overlap"
+    },
+    {
+      "command": "tests ciblés WhatsApp Cloud Meta sur 33777bf",
+      "status": "passed_12_files_65_tests_1_postgres_rls_test_skipped_without_database_url"
+    },
+    {
+      "command": "tests de régression sortante Twilio sur 33777bf",
+      "status": "passed_5_files_38_tests"
+    },
+    {
+      "command": "suite Vitest exhaustive sur 33777bf et lot Meta local",
+      "status": "passed_121_files_523_tests_7_files_18_postgres_tests_skipped_without_database_url"
+    },
+    {
+      "command": "ESLint complet, TypeScript sans cache, build Next.js production et git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "PR #11 et CI distante observées avant publication du lot Meta",
+      "status": "draft_open_conflicting_with_main_remote_head_33777bf_ci_failed_only_goal_watch_service_conversation_messages_check_continuity_passed"
+    },
+    {
+      "command": "commit eec609b75364a2ded1afa14ecdd71e47c75327b4",
+      "status": "passed_22_controlled_os5_meta_and_continuity_files_tmp_excluded"
+    },
+    {
+      "command": "push du lot Meta et du handoff vers origin/codex/tradikom-one-os",
+      "status": "passed_fast_forward_33777bf_to_545c402_no_force_tmp_remained_untracked"
+    },
+    {
+      "command": "PR #11 et workflows après push du head 545c402",
+      "status": "blocked_pr_draft_conflicting_dirty_no_status_check_rollup_no_run_created_for_new_head"
+    },
+    {
+      "command": "preuve PostgreSQL/RLS locale",
+      "status": "blocked_no_database_url_no_postgres_binary_no_container_runtime_no_installed_postgresql_formula"
+    },
+    {
+      "command": "heartbeat de continuité au head publié b3642e3 le 2026-08-31T03:18Z",
+      "status": "passed_repository_read_write_pdf_sha256_exact_71_pages_required_pages_reviewed_continuity_ready_zero_errors_zero_warnings_tmp_preserved"
+    },
+    {
+      "command": "PR #11 et GitHub Actions au heartbeat 2026-08-31T03:18Z",
+      "status": "unchanged_open_draft_conflicting_dirty_head_b3642e3_zero_checks_zero_runs_for_head_human_reconciliation_required"
+    },
+    {
+      "command": "heartbeat de continuité au head 39002dd le 2026-08-31T04:18Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_continuity_ready_zero_errors_zero_warnings_branch_synced_tmp_preserved"
+    },
+    {
+      "command": "PR #11 et GitHub Actions au heartbeat 2026-08-31T04:18Z",
+      "status": "unchanged_open_draft_conflicting_dirty_head_39002dd_zero_checks_zero_runs_for_head_last_ci_still_32374109077_on_33777bf"
+    },
+    {
+      "command": "git merge-tree aa46bb1 HEAD origin/main en lecture seule",
+      "status": "passed_16_conflicted_paths_inventory_recorded_no_merge_no_index_or_worktree_change"
+    },
+    {
+      "command": "fast-forward local vers le head réconcilié publié 7b9d4f3",
+      "status": "passed_origin_direct_descendant_tmp_preserved_no_local_merge_reset_clean_stash_or_branch_change"
+    },
+    {
+      "command": "tests Meta ciblés post-réconciliation",
+      "status": "passed_12_files_65_tests_2_postgres_rls_files_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm agent:continuity-check au heartbeat 2026-08-31T05:18Z",
+      "status": "passed_ready_zero_errors_zero_warnings_after_escalated_rerun_required_by_sandbox_tsx_socket_eperm"
+    },
+    {
+      "command": "CI 33359971937 et continuité 33359971941 sur 7b9d4f3",
+      "status": "passed_postgres_migrations_backup_restore_rls_lint_typecheck_tests_production_build_playwright_and_continuity_pr_open_draft_mergeable_clean"
+    },
+    {
+      "command": "pnpm agent:continuity-check final après mise à jour des quatre documents",
+      "status": "passed_ready_zero_errors_zero_warnings_at_2026_08_31T05_39_04Z"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 50e7cfa le 2026-08-31T06:21Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_continuity_ready_pr_open_draft_mergeable_clean_ci_33361459789_and_continuity_33361459787_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 19f2eca le 2026-08-31T07:17Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33365186452_and_continuity_33365186446_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 27c26f0 le 2026-08-31T08:18Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33368600491_and_continuity_33368600481_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 6c459a8 le 2026-08-31T09:18Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33372657873_and_continuity_33372657701_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 19e0f95 le 2026-08-31T10:17Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33377409508_and_continuity_33377409461_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 4e31386 le 2026-08-31T11:18Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33382142767_and_continuity_33382142732_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 70bdb47 le 2026-08-31T12:19Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33386730276_and_continuity_33386730332_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head e0a3dd2 le 2026-08-31T13:17Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33391760384_and_continuity_33391760538_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head 6c2d780 le 2026-08-31T14:18Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33396625266_and_continuity_33396625267_green_tmp_preserved"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head c08be1b le 2026-08-31T15:18Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_pages_reviewed_and_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33402359544_and_continuity_33402359545_green_tmp_preserved"
+    },
+    {
+      "command": "PR #11 avant la tranche Graph au head 234f7ee",
+      "status": "passed_open_draft_mergeable_clean_ci_33408166764_and_continuity_33408166738_green"
+    },
+    {
+      "command": "tests Graph Meta ciblés et régression durable",
+      "status": "passed_7_files_55_tests_1_postgres_rls_test_skipped_without_database_url_no_real_network"
+    },
+    {
+      "command": "pnpm lint et pnpm typecheck après la tranche Graph",
+      "status": "passed"
+    },
+    {
+      "command": "suite exhaustive et build local après la tranche Graph",
+      "status": "inconclusive_local_vitest_silent_and_build_dependency_recreation_blocked_by_sandbox_network_ci_required"
+    },
+    {
+      "command": "publication de la frontière Graph au head 02584ba",
+      "status": "passed_safe_fetch_exact_remote_parent_fast_forward_push_tmp_excluded"
+    },
+    {
+      "command": "CI 33414636126 et continuité 33414636345 sur 02584ba",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_141_files_646_tests_build_20_playwright_continuity_ready_pr_open_draft_mergeable_clean"
+    },
+    {
+      "command": "tranche locale du coffre chiffré WhatsApp Meta au head parent 9288aa7",
+      "status": "passed_runtime_migration_103_sql_0097_provider_scoped_repositories_services_rotation_revocation_resolvers_audit_without_sensitive_values"
+    },
+    {
+      "command": "régression Meta et coffre ciblée",
+      "status": "passed_14_files_91_tests_2_postgres_files_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "ESLint complet, TypeScript et build Next.js production avec environnement CI factice",
+      "status": "passed_build_rerun_outside_sandbox_only_for_google_fonts"
+    },
+    {
+      "command": "suite Vitest exhaustive et db:verify locaux",
+      "status": "inconclusive_full_suite_silent_interrupted_without_assertion_failure_db_verify_blocked_without_database_url_ci_required"
+    },
+    {
+      "command": "Meta for Developers dans Chrome",
+      "status": "blocked_human_sms_code_form_visible_continue_disabled_no_secret_read_or_created"
+    },
+    {
+      "command": "GitHub avant publication au head 9288aa7",
+      "status": "passed_local_remote_aligned_pr_11_open_draft_mergeable_clean_ci_33416889004_and_continuity_33416888927_green"
+    },
+    {
+      "command": "publication du coffre Meta au head f99b5f3 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33422211572_green_migrations_backup_restore_rls_lint_typecheck_142_files_651_tests_build_20_playwright_continuity_33422211485_green"
+    },
+    {
+      "command": "compatibilité locale de l'enveloppe webhook WhatsApp Cloud officielle au parent 54755de",
+      "status": "passed_anonymized_fixture_hmac_signature_16_digit_endpoint_padded_wamid_sha256_internal_keys_idempotent_replay_no_provider_identity_values_in_audit_or_bindings_17_files_108_tests_lint_typecheck_build_continuity_diffcheck_green_ci_pending"
+    },
+    {
+      "command": "publication 24622e9, CI 33425435804 et continuité 33425435724",
+      "status": "passed_fast_forward_tmp_excluded_migrations_backup_restore_rls_lint_typecheck_142_files_653_tests_build_20_playwright_continuity_green_pr_11_open_draft_mergeable"
+    },
+    {
+      "command": "heartbeat normatif et GitHub au head final cb3e50b le 2026-08-31T19:20Z",
+      "status": "passed_pdf_sha256_exact_71_pages_required_and_os5_pages_reviewed_pages_48_69_rendered_continuity_ready_pr_open_draft_mergeable_clean_ci_33427555175_and_continuity_33427555275_green_tmp_preserved_human_sms_checkpoint"
+    },
+    {
+      "command": "publication des statuts Meta au head 9551f60 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33460999183_green_migrations_backup_restore_rls_lint_typecheck_full_suite_build_playwright_continuity_33460999408_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "lots de statuts Meta ciblés et régression provider",
+      "status": "passed_2_files_20_tests_then_14_files_96_tests_1_postgres_test_skipped_without_database_url_batch_replay_bounds_atomic_prevalidation_monotonicity_no_sensitive_audit"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après lots Meta",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
+    },
+    {
+      "command": "publication des lots de statuts Meta au head 159dc13 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33463499865_green_migrations_backup_restore_rls_lint_typecheck_full_suite_build_playwright_continuity_33463499881_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "lots entrants Meta ciblés et régression provider",
+      "status": "passed_2_files_13_tests_then_13_files_96_tests_3_postgres_files_3_tests_skipped_without_database_url_multi_message_replay_bounds_atomic_prevalidation_multi_tenant_no_sensitive_audit"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après lots entrants Meta",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
+    },
+    {
+      "command": "suite Vitest exhaustive locale après lots entrants Meta",
+      "status": "inconclusive_silent_over_three_minutes_interrupted_without_assertion_failure_ci_required"
+    },
+    {
+      "command": "publication des lots entrants Meta au head 4e9f35d et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33473526862_green_migrations_backup_restore_rls_lint_typecheck_full_suite_build_playwright_continuity_33473526866_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "enveloppe webhook Meta mixte ciblée et régression provider",
+      "status": "passed_6_files_41_tests_then_18_files_120_tests_2_postgres_files_2_tests_skipped_without_database_url_hmac_once_mixed_dispatch_replay_global_bounds_atomic_prevalidation_no_sensitive_audit"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après enveloppe mixte",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
+    },
+    {
+      "command": "publication de l'enveloppe mixte Meta au head 0e92f38 et workflows distants",
+      "status": "passed_fast_forward_tmp_excluded_ci_33523760105_green_migrations_backup_restore_rls_lint_typecheck_144_files_670_tests_build_20_playwright_continuity_33523760887_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "médias entrants Meta ciblés et régression provider",
+      "status": "passed_new_media_tests_individually_5_official_types_no_fetch_no_attachment_metadata_not_persisted_mixed_text_media_status_atomic_replay_20_files_122_tests_passed_2_postgres_tests_skipped_2_local_clock_timeouts_rerun_individually_green"
+    },
+    {
+      "command": "ESLint complet, TypeScript, build Next.js production, continuity-check et git diff --check après médias entrants Meta",
+      "status": "passed_build_rerun_outside_sandbox_only_for_declared_google_fonts_ci_pending"
+    },
+    {
+      "command": "publication de la tranche médias Meta au head 41c2fc8 et workflows distants",
+      "status": "ci_33628923602_failed_before_tests_only_on_new_browserslist_security_advisories_continuity_33628923623_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "override transitif browserslist 4.28.7 et audit production",
+      "status": "passed_lockfile_only_no_known_vulnerabilities_no_source_or_runtime_behavior_change"
+    },
+    {
+      "command": "publication du correctif 44350ec, CI 33661150567 et continuité 33661150706",
+      "status": "passed_audit_migrations_backup_restore_rls_lint_typecheck_144_files_674_tests_build_20_playwright_continuity_ready_pr_11_open_draft_mergeable_clean_tmp_preserved"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant réservation d'import média Meta le 2026-09-02",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_48_69_rendered_direct_script_ready_parent_232f60a_ci_33674098147_continuity_33674098123_green_pr_11_open_draft_mergeable_clean"
+    },
+    {
+      "command": "réservation d'import média Meta, migrations, chiffrement, ingress et régression provider",
+      "status": "passed_targeted_4_files_17_tests_1_postgres_rls_test_skipped_ingress_13_tests_meta_regression_135_tests_2_clock_timeouts_rerun_individually_green_eslint_typecheck_build_diff_ci_pending"
+    },
+    {
+      "command": "publication de la réservation média au head 28efa75 et continuité 33826756891",
+      "status": "passed_fast_forward_exact_remote_head_tmp_excluded_continuity_ready"
+    },
+    {
+      "command": "CI 33826756939 tentatives 1 et 2",
+      "status": "blocked_before_migrations_and_tests_by_identical_registry_npm_audit_api_timeout_no_advisory_or_application_failure_local_reproduction_same"
+    },
+    {
+      "command": "troisième relance de CI 33826756939 au heartbeat 2026-09-04T09:45Z",
+      "status": "not_executed_approval_reviewer_network_error_requires_explicit_user_approval_no_workaround"
+    },
+    {
+      "command": "continuity-check direct, JSON et git diff --check finaux après handoff CI",
+      "status": "passed_ready_zero_errors_zero_warnings_json_valid_diff_clean"
+    },
+    {
+      "command": "worker d'import média Meta mock, migrations runtime 107/108 et miroirs 0101/0102",
+      "status": "passed_durable_lease_retry_policy_tenant_rls_mock_only_size_binary_type_checksum_idempotent_storage_single_canonical_attachment_safe_audit"
+    },
+    {
+      "command": "tests ciblés import média, migrations et RLS",
+      "status": "passed_2_files_24_tests_1_postgres_file_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "Vitest et ESLint complets, TypeScript et build Next.js production",
+      "status": "passed_139_files_672_tests_8_files_20_postgres_tests_skipped_lint_typecheck_build_google_fonts_network_only"
+    },
+    {
+      "command": "Playwright de la pièce jointe média dans Conversation",
+      "status": "scenario_added_whatsapp_provenance_french_ui_mock_storage_badge_checksum_hidden_local_execution_requires_shared_postgres_ci_pending"
+    },
+    {
+      "command": "PR #11 et workflows relus le 2026-09-04T12:11Z",
+      "status": "unchanged_open_draft_mergeable_unstable_head_28efa75_continuity_green_ci_failed_before_tests_on_npm_audit_timeout_no_rerun_or_push"
+    },
+    {
+      "command": "commit local 279b061ec9609dbbf3e5d9aaf21ccd30c9c68052",
+      "status": "passed_15_controlled_files_tmp_excluded_no_push_no_ci_trigger"
+    },
+    {
+      "command": "composition de la file média dans le worker générique au commit local 9af546df640a555c76da755bd3139ce541a1196f",
+      "status": "passed_default_not_configured_and_disabled_zero_io_mock_system_context_tenant_scoped_signed_webhook_to_single_attachment_replay_without_duplicate_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests ciblés worker générique, import média, migrations et RLS",
+      "status": "passed_3_files_43_tests_1_postgres_file_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "régression exhaustive, ESLint, TypeScript, build Next.js production et git diff --check après composition worker",
+      "status": "passed_139_files_675_tests_8_files_20_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only"
+    },
+    {
+      "command": "prompt maître et continuity-check le 2026-09-04T13:42Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_48_69_rendered_direct_script_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 et workflows relus le 2026-09-04T13:42Z",
+      "status": "unchanged_open_draft_mergeable_unstable_remote_head_28efa75_continuity_33826756891_green_ci_33826756939_failed_before_tests_on_npm_audit_timeout_no_rerun_or_push"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub le 2026-09-04T14:20Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_23_69_rendered_direct_script_ready_pr_open_draft_mergeable_unstable_remote_head_28efa75_continuity_green_ci_failed_before_tests_no_rerun_or_push"
+    },
+    {
+      "command": "scanner de sécurité média obligatoire au commit local ca08001929a438f94cf13c889a9f99a0425b67b8",
+      "status": "passed_additive_migration_109_sql_0103_persisted_immutable_mode_mock_only_clean_before_storage_unsafe_blocked_temporary_retry_safe_audit_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests finaux scanner, migrations et RLS puis régression exhaustive, ESLint, TypeScript, build et diff check",
+      "status": "passed_targeted_2_files_30_tests_1_postgres_file_2_tests_skipped_full_139_files_678_tests_8_files_20_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_ci_pending"
+    },
+    {
+      "command": "continuity-check direct et JSON après mise à jour des quatre documents le 2026-09-04T14:47Z",
+      "status": "passed_ready_zero_errors_zero_warnings_json_valid_tmp_preserved"
+    },
+    {
+      "command": "extraction média external_untrusted_data au commit local 4cb9f4220cdd6e0d0b17ad3a4239e37d40c512ed",
+      "status": "passed_additive_migration_110_sql_0104_extractor_mode_immutable_envelope_bounded_hashed_tenant_rls_mock_only_after_clean_scan_before_storage_safe_audit_french_ui_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests ciblés extraction, migrations et RLS puis régression exhaustive, ESLint, TypeScript, build et diff check",
+      "status": "passed_targeted_3_files_38_tests_1_postgres_file_3_tests_skipped_full_139_files_681_tests_8_files_21_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_ci_pending"
+    },
+    {
+      "command": "prompt maître pages cœur et média, continuity-check direct et GitHub le 2026-09-04T15:50Z",
+      "status": "passed_sha256_exact_71_pages_pages_23_38_69_rendered_direct_script_ready_remote_pr_and_runs_unchanged_no_rerun_push_or_external_io"
+    },
+    {
+      "command": "contrôle d'intégrité à la lecture et vue data-only aux commits locaux 3df4f7c5f642bfca473820a4efe1f42838c3a5c5 et 15b2af7949e937b2f59a5cdd6db9728489fb1478",
+      "status": "passed_sha256_recomputed_fail_closed_no_text_on_mismatch_filtered_bounded_capability_denied_french_ui_playwright_scenario_adapted_no_production_consumer_no_push"
+    },
+    {
+      "command": "tests ciblés, régression exhaustive, ESLint, TypeScript, build, continuity-check direct et diff check le 2026-09-04T16:43Z",
+      "status": "passed_targeted_4_files_40_tests_full_140_files_685_tests_8_files_21_postgres_tests_skipped_lint_typecheck_build_continuity_diff_google_fonts_network_only_ci_pending"
+    },
+    {
+      "command": "PR #11 et workflows relus le 2026-09-04T16:20Z",
+      "status": "unchanged_open_draft_mergeable_unstable_remote_head_28efa75_continuity_33826756891_green_ci_33826756939_failed_before_tests_on_npm_audit_timeout_no_rerun_or_push"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub le 2026-09-04T17:19Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_direct_script_ready_pr_11_open_draft_mergeable_unstable_remote_head_28efa75_continuity_green_ci_unchanged_no_push_rerun_or_external_io"
+    },
+    {
+      "command": "accès sécurisé aux pièces jointes au commit local 734c8402de5183b840901bd978777d3fb9d16a84",
+      "status": "passed_aes_256_gcm_opaque_ticket_30_300_seconds_tenant_user_attachment_bound_policy_before_issue_and_read_metadata_revalidation_size_checksum_stable_idempotency_safe_audit_default_not_configured_french_ui_mock_only_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests ciblés accès conversation, média et RLS",
+      "status": "passed_5_files_50_tests_1_postgres_rls_file_3_tests_skipped_without_database_url"
+    },
+    {
+      "command": "régression exhaustive, ESLint, TypeScript, build Next.js production, continuity-check direct et diff check le 2026-09-04T17:48Z",
+      "status": "passed_full_141_files_693_tests_8_files_21_postgres_tests_skipped_lint_typecheck_build_continuity_diff_google_fonts_network_only"
+    },
+    {
+      "command": "Playwright Conversation avec serveur et PGlite temporaires isolés",
+      "status": "blocked_before_conversation_on_login_error_because_test_process_and_next_server_do_not_share_local_pglite_ci_postgres_required_no_application_assertion_failed"
+    },
+    {
+      "command": "prompt maître, pnpm continuity-check et GitHub le 2026-09-04T18:19Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pnpm_ready_zero_errors_warnings_pr_open_draft_mergeable_unstable_remote_head_28efa75_continuity_green_ci_unchanged_no_push_or_rerun"
+    },
+    {
+      "command": "frontière HTTP pièces jointes aux commits locaux e24356f951a46abaf8cd5f95a37362463f778c0f et 422317e8452b3cecea9c0514b8306787e65c6bee",
+      "status": "passed_post_prepare_put_consume_same_origin_session_tenant_json_4k_ticket_not_in_url_french_safe_responses_no_store_no_referrer_nosniff_content_disposition_default_not_configured_mock_only_no_external_io"
+    },
+    {
+      "command": "tests HTTP adversariaux, intégration HTTP-service-stockage-audit et régression ciblée",
+      "status": "passed_http_17_tests_integration_1_test_final_3_files_26_tests_targeted_regression_5_files_61_tests_1_postgres_file_3_tests_skipped_without_database_url"
+    },
+    {
+      "command": "régression exhaustive source, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T18:37Z",
+      "status": "passed_full_142_files_710_tests_8_files_21_postgres_tests_skipped_lint_typecheck_build_route_inventoried_diff_google_fonts_network_only"
+    },
+    {
+      "command": "prompt maître, pnpm continuity-check et GitHub le 2026-09-04T19:19Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_11_23_48_69_rendered_pnpm_ready_pr_open_draft_mergeable_unstable_remote_head_28efa75_continuity_green_ci_unchanged_no_push_or_rerun"
+    },
+    {
+      "command": "classification d'accès des fils au commit local 8900ac5836c504c970d32ee88f8f87bdb515a591",
+      "status": "passed_migration_111_sql_0105_defaults_internal_tenant_bounded_levels_tenant_index_existing_rls_test_policy_prepare_read_inheritance_post_io_race_closed_french_ui_tmp_excluded_no_push"
+    },
+    {
+      "command": "tests ciblés et régression Conversation Meta média",
+      "status": "passed_targeted_5_files_21_tests_1_postgres_file_1_test_skipped_regression_19_files_151_tests_2_postgres_files_4_tests_skipped_without_database_url"
+    },
+    {
+      "command": "régression exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T19:40Z",
+      "status": "passed_full_144_files_715_tests_9_files_22_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_playwright_adapted_ci_pending"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub le 2026-09-04T20:24Z",
+      "status": "passed_sha256_exact_71_pages_core_and_candidate_pages_reviewed_pages_11_22_48_69_rendered_pnpm_ready_zero_errors_warnings_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_on_npm_audit_timeout_no_mutation"
+    },
+    {
+      "command": "autorisations durables des fils au commit local 8d6e329b363cac96b5cfb793f82abab7e9aee273",
+      "status": "passed_migrations_112_113_sql_0106_0107_composite_relations_memberships_rls_tenant_leading_indexes_owner_admin_configuration_idempotent_operations_access_filtered_lists_reads_human_ingestion_attachments_revocation_post_io_french_badge_no_external_io"
+    },
+    {
+      "command": "tests ciblés finaux des droits de fil après durcissement RLS",
+      "status": "passed_6_files_27_tests_1_postgres_file_1_test_skipped_without_database_url_targeted_eslint_and_typescript_green"
+    },
+    {
+      "command": "régressions et build avant le dernier durcissement SQL RLS",
+      "status": "passed_conversation_meta_media_21_files_158_tests_3_files_5_tests_skipped_full_146_files_722_tests_10_files_23_tests_skipped_lint_and_production_build_green"
+    },
+    {
+      "command": "audit de propagation des droits vers les plans OS-1 et missions OS-4",
+      "status": "gap_identified_create_get_list_decide_execute_and_retry_only_assert_tenant_membership_next_vertical_slice_no_os6"
+    },
+    {
+      "command": "prompt maître, continuity-check, Supabase changelog et GitHub le 2026-09-04T21:23Z",
+      "status": "passed_sha256_exact_71_pages_core_and_plan_workflow_pages_reviewed_pages_17_32_48_69_rendered_pnpm_ready_supabase_no_relevant_breaking_rls_change_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_npm_timeout_no_mutation"
+    },
+    {
+      "command": "propagation des droits de fil aux plans et missions au commit local 754316a5466ca16b730ef0e521852dcce3459b7e",
+      "status": "passed_create_pre_generation_and_pre_persistence_get_list_decide_execute_retry_and_generic_workflow_list_controls_fail_closed_non_enumerating_revocation_transaction_lock_system_finalization_unchanged_no_external_io"
+    },
+    {
+      "command": "tests ciblés puis régression orchestrateur workflows Conversation",
+      "status": "passed_targeted_3_files_16_tests_regression_14_files_53_tests_1_postgres_file_1_test_skipped_without_database_url"
+    },
+    {
+      "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T21:46Z",
+      "status": "passed_full_146_files_724_tests_10_files_23_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_playwright_ci_pending"
+    },
+    {
+      "command": "audit de la prochaine frontière workflow",
+      "status": "gap_identified_active_queue_events_and_dead_letters_may_still_expose_or_control_restricted_conversation_plan_next_slice_no_os6"
+    },
+    {
+      "command": "prompt maître, continuity-check, changelog Supabase et GitHub le 2026-09-04T22:22Z",
+      "status": "passed_sha256_exact_71_pages_core_and_event_workflow_pages_reviewed_pages_17_32_48_69_rendered_pnpm_ready_supabase_no_relevant_breaking_change_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_npm_timeout_no_mutation"
+    },
+    {
+      "command": "droits de fil appliqués aux événements actifs et dead letters au commit local 517a8a73acf9f4f07afe254dd84c8489e2f6e37a",
+      "status": "passed_plan_id_run_id_resolution_internal_payload_not_exposed_active_and_failed_lists_filtered_non_enumerating_cancel_retry_transaction_guards_no_state_attempt_or_audit_mutation_paged_visibility_generic_compatible_safe_status_aggregates_no_external_io"
+    },
+    {
+      "command": "tests ciblés puis régression Conversation workflows et vues consommatrices",
+      "status": "passed_targeted_3_files_27_tests_regression_21_files_96_tests_2_postgres_files_2_tests_skipped_without_database_url"
+    },
+    {
+      "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T22:47Z",
+      "status": "passed_full_146_files_724_tests_10_files_23_postgres_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_playwright_ci_pending"
+    },
+    {
+      "command": "audit de la prochaine frontière RLS intra-tenant",
+      "status": "gap_identified_existing_conversation_plan_workflow_and_domain_event_rls_is_tenant_scoped_only_add_actor_thread_grant_policies_and_restricted_role_tests_next_no_os6"
+    },
+    {
+      "command": "prompt maître, continuity-check, changelog et documentation RLS Supabase, puis GitHub le 2026-09-04T22:58Z",
+      "status": "passed_sha256_exact_71_pages_core_and_rls_pages_reviewed_direct_pnpm_ready_supabase_no_relevant_breaking_rls_change_official_operation_policies_reviewed_pr_open_draft_mergeable_unstable_remote_28efa75_continuity_green_ci_failed_before_tests_npm_timeout_no_mutation"
+    },
+    {
+      "command": "RLS intra-tenant des objets Conversation dérivés au commit local 8f156fb03b1b76406dea1c864b6e9f6435f81115",
+      "status": "passed_runtime_migration_114_sql_0108_six_security_invoker_helpers_eleven_tables_separate_select_insert_update_delete_policies_actor_membership_active_thread_grant_generic_workflows_events_compatible_safe_event_json_system_flag_forgery_denied_admin_configuration_context_bounded_no_external_io"
+    },
+    {
+      "command": "tests ciblés et régression Conversation workflows RLS",
+      "status": "passed_targeted_3_files_14_tests_1_postgres_test_skipped_regression_21_files_105_tests_3_postgres_tests_skipped_without_database_url_all_rls_migrations_syntax_green_in_embedded_engine"
+    },
+    {
+      "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T23:27Z",
+      "status": "passed_full_147_files_727_tests_11_files_24_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_database_verify_and_restricted_role_ci_pending"
+    },
+    {
+      "command": "publication fast-forward autorisée des vingt-sept commits applicatifs et documentaires jusqu'à 041459a",
+      "status": "passed_remote_28efa75_verified_ancestor_no_unrelated_change_tmp_untracked_preserved"
+    },
+    {
+      "command": "CI 33934389487 puis correctif du vérificateur de couverture RLS au commit 1ca6e83",
+      "status": "failed_verify_migrations_on_all_only_assumption_fixed_shared_all_or_select_insert_update_delete_with_partial_and_disabled_rejected"
+    },
+    {
+      "command": "CI 33934691922 et 33935855879 puis correctifs de fixtures PostgreSQL aux commits 8c9ddbc et 25cafcd",
+      "status": "failed_only_sparse_parameters_duplicate_fixtures_and_missing_actor_context_fixed_with_unique_tenant_scoped_data_and_membership"
+    },
+    {
+      "command": "CI 33936955678 sur 25cafcdaa9031cf7835068cc2487d921c0ff6d51",
+      "status": "passed_22m49s_audit_migrations_db_verify_backup_restore_lint_typecheck_159_files_757_tests_build_20_playwright_postgres_rls"
+    },
+    {
+      "command": "Tradikom One Continuity Check 33936955672 sur 25cafcdaa9031cf7835068cc2487d921c0ff6d51",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après preuve finale",
+      "status": "open_draft_mergeable_head_25cafcd_both_checks_success_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "checkpoint d'activation Meta dans Conversation au commit c038df459e8e883bb5c77c6932b7a577a8f56f85",
+      "status": "passed_five_states_french_next_action_external_effect_no_secret_names_or_values_no_activation_or_send_button_no_network"
+    },
+    {
+      "command": "tests ciblés puis pnpm test le 2026-09-05T03:31Z",
+      "status": "passed_targeted_3_files_33_tests_full_160_files_740_tests_11_files_24_postgres_tests_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, build Next.js production, audit high, continuity-check et diff check",
+      "status": "passed_build_route_conversation_inventoried_zero_high_critical_two_transitive_moderate_qs_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "Playwright Conversation desktop et mobile avec checkpoint Meta",
+      "status": "passed_in_ci_33942266316_default_disabled_external_effect_blocked_no_activation_or_send_button"
+    },
+    {
+      "command": "CI 33942266316 sur d899d95e7d3c590b5fe603d8269fdf1fe9203807",
+      "status": "passed_22m56s_audit_migrations_db_verify_backup_restore_lint_typecheck_160_files_764_tests_build_20_playwright_postgres_rls"
+    },
+    {
+      "command": "Tradikom One Continuity Check 33942266310 sur d899d95e7d3c590b5fe603d8269fdf1fe9203807",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après checkpoint Conversation/Meta",
+      "status": "open_draft_mergeable_head_d899d95_both_checks_success_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "prompt maître, continuity-check, changelog et documentation RLS Supabase, puis GitHub le 2026-09-05T04:25Z",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_pages_48_69_rendered_pnpm_ready_pr_open_draft_mergeable_clean_remote_b72a974_ci_33943417309_and_continuity_33943417278_green"
+    },
+    {
+      "command": "préparation WhatsApp Meta tenant-scoped dans Conversation au commit 461156ae3ad7f44920fe64dc182780957cd2aaa2",
+      "status": "passed_four_tenant_states_membership_guard_aggregate_boolean_only_server_and_tenant_combined_fail_closed_no_graph_secret_identifier_or_external_io"
+    },
+    {
+      "command": "tests ciblés, suite exhaustive, lint, TypeScript, build, audit high, continuity-check et diff check le 2026-09-05T04:47Z",
+      "status": "passed_targeted_4_files_21_tests_then_4_files_24_tests_1_postgres_skipped_full_161_files_749_tests_11_files_24_postgres_tests_skipped_lint_typecheck_build_zero_high_critical_two_moderate_ready_diff"
+    },
+    {
+      "command": "publication fast-forward du commit 461156ae3ad7f44920fe64dc182780957cd2aaa2",
+      "status": "passed_remote_b72a974_verified_exact_base_tmp_untracked_preserved_ci_pending"
+    },
+    {
+      "command": "CI 33945539636 sur 461156ae3ad7f44920fe64dc182780957cd2aaa2",
+      "status": "failed_only_playwright_strict_selector_duplicate_disabled_label_after_audit_migrations_db_verify_backup_restore_lint_typecheck_161_files_773_tests_postgres_included_build_and_19_of_20_playwright_passed"
+    },
+    {
+      "command": "correctif Playwright au commit 82586e89045538fddf61fdb56fc563eabd6ed688",
+      "status": "passed_selector_scoped_to_server_state_region_eslint_typecheck_diff_fast_forward_push"
+    },
+    {
+      "command": "CI 33946531702 et continuité 33946531695 sur 82586e89045538fddf61fdb56fc563eabd6ed688",
+      "status": "passed_ci_18m01s_audit_migrations_db_verify_backup_restore_lint_typecheck_161_files_773_tests_postgres_included_build_20_playwright_continuity_ready"
+    },
+    {
+      "command": "PR #11 après preuve tenant Meta",
+      "status": "open_draft_mergeable_clean_head_82586e8_no_merge_deploy_graph_secret_token_or_message"
+    }
   ],
-  "nextFileToTouch": "src/lib/db.ts",
-  "nextTask": "OS-1 : Conversation Hub canonique — tables conversation_threads et canonical_messages avec migration RLS dediee, identite omnicanale, idempotence, anti-boucle, adaptateur web reel + adaptateur test mock explicite.",
-  "openDecisions": [
-    "Fusionner la PR #10 telle quelle (recommande) ou detacher OS-0 dans une PR distincte.",
-    "Poser un testTimeout global dans vitest.config.ts avant les suites conversationnelles.",
-    "Etendre ou non la revision aux recommandations strategiques et a la veille concurrentielle (position actuelle : non, ce sont des analyses)."
-  ],
-  "knownRisks": [
-    "OpenAiProvider etiquette 'openai' une sortie 100% deterministe (src/modules/ai/provider.ts). Code mort aujourd hui, mensonge des qu il sera branche.",
-    "Zero connecteur production-ready ; le seul appel HTTP sortant de src/ est Resend.",
-    "Les 77 fichiers de test s appuient sur le delai vitest par defaut de 5 s et deviennent fragiles sous charge.",
-    "Le backlog CRM alimente une derive laterale : 20 lots livres, aucun ne sert le coeur conversationnel."
+  "humanBlockers": [
+    "Saisie par l'utilisateur du code SMS à six chiffres directement dans l'onglet Meta for Developers ouvert; le code ne doit pas être transmis dans le chat",
+    "Confirmation au moment exact avant toute création d'un token Meta persistant, puis stockage uniquement via références de gestionnaire de secrets sans exposition au modèle",
+    "Mise à disposition d'une application, d'un WABA, d'un Phone Number ID et d'un endpoint HTTPS contrôlé dans la console officielle",
+    "Autorisation explicite distincte avant toute requête Graph réelle, activation ou message de preuve Meta",
+    "Toute dépense, ressource payante ou dépassement de quota",
+    "Fusion, déploiement de production et changement DNS réel"
   ]
 }

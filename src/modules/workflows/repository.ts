@@ -28,6 +28,8 @@ export type WorkflowRunRow = {
   summary: string;
   error: string | null;
   retry_count: number;
+  definition_snapshot: string | null;
+  definition_version: number | null;
   created_at: string;
 };
 
@@ -37,6 +39,7 @@ export type WorkflowRunStepRow = {
   workflow_run_id: string;
   action_name: string;
   status: string;
+  safe_metadata: string;
   attempts: number;
   scheduled_at: string | null;
   started_at: string | null;
@@ -71,6 +74,7 @@ export type FailedDomainEventRow = {
   id: string;
   tenant_id: string;
   event_type: string;
+  payload: string;
   attempts: number;
   correlation_id: string;
   last_error: string | null;
@@ -93,6 +97,7 @@ export type DomainEventQueueRow = {
   id: string;
   tenant_id: string;
   event_type: string;
+  payload: string;
   status: string;
   attempts: number;
   next_run_at: string;
@@ -155,12 +160,15 @@ export async function insertWorkflowRun(
     summary: string;
     error?: string | null;
     retryCount?: number;
+    definition: WorkflowDefinition;
     createdAt: string;
   },
 ) {
   await db.query(
-    `insert into workflow_runs (id, tenant_id, workflow_key, trigger_name, status, summary, error, retry_count, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    `insert into workflow_runs (
+       id, tenant_id, workflow_key, trigger_name, status, summary, error,
+       retry_count, definition_snapshot, definition_version, created_at
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       input.id,
       input.tenantId,
@@ -170,8 +178,34 @@ export async function insertWorkflowRun(
       input.summary,
       input.error ?? null,
       input.retryCount ?? 0,
+      toJson(input.definition),
+      input.definition.version,
       input.createdAt,
     ],
+  );
+}
+
+export async function findActiveManualResumeEvent(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  const result = await db.query<{ id: string; payload: string }>(
+    `select id, payload
+     from domain_events
+     where tenant_id = $1
+       and event_type = $2
+       and status in ('pending', 'processing')
+     order by created_at desc
+     limit 20`,
+    [tenantId, "workflow.resume"],
+  );
+
+  return (
+    result.rows.find((row) => {
+      const payload = safeJson<Record<string, unknown>>(row.payload, {});
+      return payload.runId === runId && payload.reason === "manual_retry";
+    }) ?? null
   );
 }
 
@@ -209,6 +243,7 @@ export async function listWorkflowRunStepRows(
             workflow_run_id,
             action_name,
             status,
+            safe_metadata,
             attempts,
             scheduled_at,
             started_at,
@@ -234,6 +269,22 @@ export async function findWorkflowRunById(
     [tenantId, runId],
   );
 
+  return result.rows[0] ?? null;
+}
+
+export async function findWorkflowRunByKey(
+  db: DbClient,
+  tenantId: string,
+  workflowKey: string,
+) {
+  const result = await db.query<WorkflowRunRow>(
+    `select *
+     from workflow_runs
+     where tenant_id = $1 and workflow_key = $2
+     order by created_at desc, id desc
+     limit 1`,
+    [tenantId, workflowKey],
+  );
   return result.rows[0] ?? null;
 }
 
@@ -428,12 +479,15 @@ export async function listActiveDomainEventQueueRows(
   db: DbClient,
   tenantId: string,
   limit: number,
+  offset = 0,
 ) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const result = await db.query<DomainEventQueueRow>(
     `select id,
             tenant_id,
             event_type,
+            payload,
             status,
             attempts,
             next_run_at,
@@ -446,7 +500,7 @@ export async function listActiveDomainEventQueueRows(
      from domain_events
      where tenant_id = $1 and status in ($2, $3)
      order by next_run_at asc, updated_at desc
-     limit ${safeLimit}`,
+     limit ${safeLimit} offset ${safeOffset}`,
     [tenantId, "pending", "processing"],
   );
 
@@ -462,6 +516,7 @@ export async function findActiveDomainEventQueueRow(
     `select id,
             tenant_id,
             event_type,
+            payload,
             status,
             attempts,
             next_run_at,
@@ -521,12 +576,15 @@ export async function listFailedDomainEventRows(
   db: DbClient,
   tenantId: string,
   limit: number,
+  offset = 0,
 ) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const result = await db.query<FailedDomainEventRow>(
     `select id,
             tenant_id,
             event_type,
+            payload,
             attempts,
             correlation_id,
             last_error,
@@ -539,7 +597,7 @@ export async function listFailedDomainEventRows(
      from domain_events
      where tenant_id = $1 and status = $2
      order by updated_at desc, created_at desc
-     limit ${safeLimit}`,
+     limit ${safeLimit} offset ${safeOffset}`,
     [tenantId, "failed"],
   );
 
@@ -555,6 +613,7 @@ export async function findFailedDomainEventRow(
     `select id,
             tenant_id,
             event_type,
+            payload,
             attempts,
             correlation_id,
             last_error,
