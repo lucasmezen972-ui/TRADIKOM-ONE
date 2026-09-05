@@ -44,11 +44,16 @@ export default async function ConversationPage({
 }: ConversationPageProps) {
   const params = await searchParams;
   const { user, tenant, membership } = await requireTenantContext();
-  const metaActivation = describeMetaWhatsAppActivation(
-    getPreparedChannelProvider("whatsapp_meta"),
-  );
+  const metaManifest = getPreparedChannelProvider("whatsapp_meta");
   const services = await getConversationChannelServices();
-  const threads = await services.listThreads(user.id, tenant.id);
+  const [threads, metaTenantReadiness] = await Promise.all([
+    services.listThreads(user.id, tenant.id),
+    services.getMetaWhatsAppTenantReadiness(user.id, tenant.id),
+  ]);
+  const metaActivation = describeMetaWhatsAppActivation(
+    metaManifest,
+    metaTenantReadiness,
+  );
   const requestedThread = threads.find((thread) => thread.id === params.fil);
   const selectedThread = requestedThread ?? threads[0];
   const thread = selectedThread
@@ -332,6 +337,7 @@ function ProviderActivationCheckpoint({
       aria-labelledby="meta-activation-title"
       data-provider="whatsapp_meta"
       data-provider-state={checkpoint.state}
+      data-tenant-state={checkpoint.tenantState}
       className={`rounded-xl border p-4 shadow-sm ${tone.container}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -348,6 +354,27 @@ function ProviderActivationCheckpoint({
         </span>
       </div>
       <p className="mt-3 text-sm text-slate-700">{checkpoint.summary}</p>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+        <div className="rounded-md border border-current/10 bg-white/70 px-3 py-2">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            État du serveur
+          </dt>
+          <dd className="mt-1 font-bold text-slate-950">
+            {checkpoint.serverStatusLabel}
+          </dd>
+        </div>
+        <div className="rounded-md border border-current/10 bg-white/70 px-3 py-2">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Cette organisation
+          </dt>
+          <dd className="mt-1 font-bold text-slate-950">
+            {checkpoint.tenantStatusLabel}
+          </dd>
+          <dd className="mt-1 text-xs leading-5 text-slate-600">
+            {checkpoint.tenantSummary}
+          </dd>
+        </div>
+      </dl>
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <p className="rounded-md bg-white/80 px-3 py-2 text-slate-700">
           <span className="font-bold text-slate-950">Prochaine étape :</span>{" "}

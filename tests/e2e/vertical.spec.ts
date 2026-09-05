@@ -4,9 +4,11 @@ import { getDb } from "../../src/lib/db";
 import { createServices } from "../../src/lib/services";
 import {
   createChannelProviderMediaReferenceCipher,
+  createChannelProviderSecretKeyring,
   processMetaWhatsAppMediaImport,
   receivePreparedMetaWhatsAppWebhook,
   registerAuthorizedMetaWhatsAppEndpoint,
+  rotateMetaWhatsAppEndpointSecret,
 } from "../../src/modules/channels";
 import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
 
@@ -1067,6 +1069,43 @@ async function runConversationJourney(
     name: `Organisation Conversation ${viewport.label}`,
     category: "Services",
   });
+  const metaTenantState = viewport.label === "desktop" ? "ready" : "not_registered";
+  if (metaTenantState === "ready") {
+    const numericSuffix = `${Date.now()}${viewport.width}`;
+    const wabaId = `7${numericSuffix}`;
+    const phoneNumberId = `8${numericSuffix}`;
+    const endpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+      db,
+      {
+        tenantId: tenant.id,
+        actorId: user.id,
+        externalAccountId: wabaId,
+        phoneNumberId,
+      },
+      "conversation-e2e-meta-fingerprint-secret",
+    );
+    await rotateMetaWhatsAppEndpointSecret(
+      db,
+      {
+        tenantId: tenant.id,
+        actorId: user.id,
+        endpointId: endpoint.endpointId,
+        rotationKey: `conversation-meta-${numericSuffix}`,
+        secret: {
+          wabaId,
+          accessToken: "conversation-e2e-meta-token-never-real",
+          phoneNumberId,
+          graphApiVersion: "v23.0",
+          appSecret: "conversation-e2e-meta-app-secret-never-real",
+          webhookVerifyToken: "conversation-e2e-meta-webhook-token-never-real",
+        },
+      },
+      createChannelProviderSecretKeyring({
+        activeKeyVersion: "test-v1",
+        keys: { "test-v1": Buffer.alloc(32, 51) },
+      }),
+    );
+  }
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
   });
@@ -1093,7 +1132,17 @@ async function runConversationJourney(
       "data-provider-state",
       "disabled",
     );
+    await expect(metaCheckpoint).toHaveAttribute(
+      "data-tenant-state",
+      metaTenantState,
+    );
     await expect(metaCheckpoint.getByText("Désactivé", { exact: true })).toBeVisible();
+    await expect(
+      metaCheckpoint.getByText(
+        metaTenantState === "ready" ? "Organisation prête" : "Canal non relié",
+        { exact: true },
+      ),
+    ).toBeVisible();
     await expect(metaCheckpoint.getByText("Effet externe bloqué", { exact: true })).toBeVisible();
     await expect(metaCheckpoint).toContainText(
       "Aucun message externe ne peut partir.",

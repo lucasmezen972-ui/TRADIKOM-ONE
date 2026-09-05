@@ -10,6 +10,7 @@ import {
 } from "@/modules/conversation-hub";
 import { createTestChannelAdapter } from "@/modules/channels/test-channel";
 import { createWebChannelAdapter } from "@/modules/channels/web-channel";
+import { inspectMetaWhatsAppTenantReadiness } from "@/modules/channels/provider-endpoints-service";
 import {
   createConversationActionPlan,
   decideConversationActionPlan,
@@ -32,6 +33,8 @@ export function createConversationChannelServices(
   return {
     web: createWebChannelAdapter(db),
     test: createTestChannelAdapter(db),
+    getMetaWhatsAppTenantReadiness: (userId: string, tenantId: string) =>
+      inspectMetaWhatsAppTenantReadiness(db, userId, tenantId),
     listThreads: (userId: string, tenantId: string, limit?: number) =>
       listConversationThreads(db, userId, tenantId, limit),
     getThread: (

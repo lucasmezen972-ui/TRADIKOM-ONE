@@ -11,6 +11,7 @@ import { ChannelProviderEndpointError } from "@/modules/channels/provider-endpoi
 import {
   findActiveChannelProviderEndpointByFingerprint,
   findChannelProviderEndpointById,
+  inspectMetaWhatsAppTenantConfiguration,
   reserveChannelProviderEndpoint,
   updateChannelProviderEndpointStatus,
 } from "@/modules/channels/provider-endpoints-repository";
@@ -104,6 +105,66 @@ const registerSlackEndpointSchema = z
     occurredAt: z.string().datetime({ offset: true }).optional(),
   })
   .strict();
+
+const inspectMetaWhatsAppTenantReadinessSchema = z
+  .object({
+    tenantId: boundedIdentifierSchema,
+    actorId: boundedIdentifierSchema,
+  })
+  .strict();
+
+export type MetaWhatsAppTenantReadiness = {
+  provider: "whatsapp_meta";
+  state: "not_registered" | "disabled" | "credentials_missing" | "ready";
+  checks: {
+    endpoint: "missing" | "disabled" | "active";
+    credentials: "not_checked" | "missing" | "active";
+  };
+};
+
+export async function inspectMetaWhatsAppTenantReadiness(
+  db: DbClient,
+  actorId: string,
+  tenantId: string,
+): Promise<MetaWhatsAppTenantReadiness> {
+  const parsed = inspectMetaWhatsAppTenantReadinessSchema.parse({
+    tenantId,
+    actorId,
+  });
+  return withTenantDbTransaction(
+    db,
+    parsed.tenantId,
+    parsed.actorId,
+    async (transaction) => {
+      const role = await findMembershipRole(
+        transaction,
+        parsed.actorId,
+        parsed.tenantId,
+      );
+      if (!role) {
+        throw new ChannelProviderEndpointError(
+          "channel_provider_endpoint_access_denied",
+          "Accès refusé à l'état du canal.",
+        );
+      }
+
+      const configuration = await inspectMetaWhatsAppTenantConfiguration(
+        transaction,
+        parsed.tenantId,
+      );
+      if (configuration.has_configured_endpoint) {
+        return readiness("ready", "active", "active");
+      }
+      if (configuration.has_active_endpoint) {
+        return readiness("credentials_missing", "active", "missing");
+      }
+      if (configuration.has_endpoint) {
+        return readiness("disabled", "disabled", "not_checked");
+      }
+      return readiness("not_registered", "missing", "not_checked");
+    },
+  );
+}
 
 const resolveSlackEndpointSchema = z
   .object({
@@ -440,6 +501,18 @@ async function requireEndpointAdministrator(
       "Accès refusé à la configuration du canal.",
     );
   }
+}
+
+function readiness(
+  state: MetaWhatsAppTenantReadiness["state"],
+  endpoint: MetaWhatsAppTenantReadiness["checks"]["endpoint"],
+  credentials: MetaWhatsAppTenantReadiness["checks"]["credentials"],
+): MetaWhatsAppTenantReadiness {
+  return {
+    provider: "whatsapp_meta",
+    state,
+    checks: { endpoint, credentials },
+  };
 }
 
 function endpointFingerprint(

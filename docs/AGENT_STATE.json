@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T03:58:42.000Z",
+  "updatedAt": "2026-09-05T04:28:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "c038df459e8e883bb5c77c6932b7a577a8f56f85",
-  "publishedHeadObserved": "d899d95e7d3c590b5fe603d8269fdf1fe9203807",
-  "status": "os5_meta_activation_checkpoint_published_ci_proven_human_meta_otp_pending",
+  "publishedHeadObserved": "b72a97428e4e512ba79b6857c650db9affcd69b8",
+  "status": "os5_meta_tenant_readiness_in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "Le checkpoint d'activation WhatsApp Meta est livré dans Conversation au commit c038df4 et publié avec son handoff au head d899d95. Il affiche l'état serveur réel en français, la prochaine action et l'effet externe, sans nom ou valeur de secret ni bouton d'activation/envoi. La CI 33942266316 est entièrement verte : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright dont Conversation desktop/mobile. La continuité 33942266310 est verte. Le prochain checkpoint OS-5 reste humain dans Meta; aucun OS-6, Graph, secret, message, fusion, déploiement ou dépense.",
+  "currentObjective": "Poursuivre OS-5 dans Conversation avec une lecture tenant-scoped de la préparation WhatsApp Meta déjà durable : distinguer canal absent, suspendu, accès sécurisé manquant et organisation prête, puis combiner cette vérité avec l'état serveur. L'effet externe doit rester bloqué tant que le serveur et l'organisation ne sont pas tous deux prêts. Aucun identifiant fournisseur, secret, Graph, message, endpoint public, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,12 +30,12 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Poursuivre OS-5 dans l'ordre de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 14, 24 et 29-31, exposer directement dans Conversation l'état réel du connecteur WhatsApp Meta (disabled, not_configured, awaiting_human_auth, mock ou ready), une prochaine action en français et la nature de l'effet externe. Ne jamais afficher les noms ou valeurs de secrets, ne jamais déduire une validation humaine non prouvée et maintenir le transport fermé hors mock/ready. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban ou dashboard secondaire.",
-      "evidenceExpected": "Preuve obtenue au head d899d95 : modèle déterministe couvrant les cinq états; aucune fuite des configurations manquantes ou valeurs sensibles; carte accessible dans Conversation, issue du registre serveur sans appel réseau. La CI 33942266316 a validé audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 160 fichiers/764 tests sur PostgreSQL 17, build production et 20 Playwright, dont le checkpoint sur Conversation desktop/mobile. La continuité 33942266310 est verte. L'état reste fail-closed et aucune authentification humaine Meta n'est déduite."
+      "requirement": "Poursuivre OS-5 dans l'ordre de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 10-14, 22, 24, 29, 31-32 et 64-69, faire de Conversation la surface de vérité du canal : combiner l'état technique du registre Meta avec la préparation durable de l'organisation, lue sous contexte tenant et acteur. Distinguer en français canal non relié, suspendu, accès sécurisé manquant et organisation prête; maintenir l'effet externe bloqué jusqu'à une combinaison réellement prête; ne retourner aucun identifiant fournisseur, secret ou contenu chiffré. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Une lecture agrégée tenant-scoped, sous transaction RLS et contrôle de membership, ne retourne que des booléens de préparation; des tests prouvent les quatre états, l'isolation entre organisations et l'absence de données sensibles. Conversation affiche séparément l'état serveur et celui de l'organisation sur mobile et desktop; un état serveur mock/ready sans configuration tenant reste bloqué. Tests unitaires, intégration, PostgreSQL/RLS, Playwright, lint, TypeScript, build, continuity-check et diff check doivent être verts avant de déclarer la tranche terminée."
     }
   },
-  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS à six chiffres dans Meta for Developers et indique seulement que l'étape est terminée; inventorier ensuite en lecture seule l'application, le WABA et le Phone Number ID, puis demander une confirmation au moment exact avant toute création de token persistant. Ne déclencher ni Graph, message, endpoint public, stockage réel, activation, fusion, déploiement ou dépense sans autorisation distincte.",
-  "nextFile": "docs/NEXT_STEPS.md",
+  "nextAction": "Implémenter la lecture tenant-scoped de la préparation Meta, la composer dans le checkpoint Conversation et prouver l'isolation et les états fail-closed sans appel externe.",
+  "nextFile": "src/modules/channels/provider-endpoints-repository.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",

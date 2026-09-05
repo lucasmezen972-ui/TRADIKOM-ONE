@@ -7,6 +7,7 @@ import { createServices } from "../src/lib/services";
 import { id } from "../src/lib/security";
 import {
   createChannelProviderSecretKeyring,
+  inspectMetaWhatsAppTenantReadiness,
   registerAuthorizedMetaWhatsAppEndpoint,
   registerAuthorizedWhatsAppEndpoint,
   rotateMetaWhatsAppEndpointSecret,
@@ -35,13 +36,35 @@ describeIfPostgres("RLS PostgreSQL du coffre fournisseur OS-5", () => {
     ownerPools.push(ownerPool);
     const ownerDb = pgPoolAsSqlClient(ownerPool);
     await migrate(ownerDb, { enableRls: true });
-    const fixtureA = await seedVaultTenant(ownerDb, "a");
-    const fixtureB = await seedVaultTenant(ownerDb, "b", "whatsapp_meta");
+    const fixtureA = await seedVaultTenant(ownerDb, "a", "whatsapp_meta");
+    const fixtureB = await seedVaultTenant(ownerDb, "b");
 
     const restricted = await createRestrictedRole(ownerPool);
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
     const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
     restrictedPools.push(restrictedPool);
+    const restrictedDb = pgPoolAsSqlClient(restrictedPool);
+
+    await expect(
+      inspectMetaWhatsAppTenantReadiness(
+        restrictedDb,
+        fixtureA.ownerId,
+        fixtureA.tenantId,
+      ),
+    ).resolves.toEqual({
+      provider: "whatsapp_meta",
+      state: "ready",
+      checks: { endpoint: "active", credentials: "active" },
+    });
+    await expect(
+      inspectMetaWhatsAppTenantReadiness(
+        restrictedDb,
+        fixtureA.ownerId,
+        fixtureB.tenantId,
+      ),
+    ).rejects.toMatchObject({
+      code: "channel_provider_endpoint_access_denied",
+    });
 
     expect(
       (await restrictedPool.query("select id from channel_provider_secret_versions"))
