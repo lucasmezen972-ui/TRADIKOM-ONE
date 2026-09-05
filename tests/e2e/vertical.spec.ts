@@ -1136,7 +1136,12 @@ async function runConversationJourney(
       "data-tenant-state",
       metaTenantState,
     );
-    await expect(metaCheckpoint.getByText("Désactivé", { exact: true })).toBeVisible();
+    const metaServerState = metaCheckpoint
+      .locator("dl > div")
+      .filter({ hasText: "État du serveur" });
+    await expect(
+      metaServerState.getByText("Désactivé", { exact: true }),
+    ).toBeVisible();
     await expect(
       metaCheckpoint.getByText(
         metaTenantState === "ready" ? "Organisation prête" : "Canal non relié",
