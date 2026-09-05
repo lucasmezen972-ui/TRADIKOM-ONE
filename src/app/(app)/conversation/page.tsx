@@ -13,7 +13,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { requireTenantContext } from "@/lib/session";
-import { getConversationChannelServices } from "@/modules/channels";
+import {
+  describeMetaWhatsAppActivation,
+  getConversationChannelServices,
+  getPreparedChannelProvider,
+  type ChannelActivationCheckpoint,
+} from "@/modules/channels";
 import {
   createConversationPlanAction,
   decideConversationPlanAction,
@@ -39,6 +44,9 @@ export default async function ConversationPage({
 }: ConversationPageProps) {
   const params = await searchParams;
   const { user, tenant, membership } = await requireTenantContext();
+  const metaActivation = describeMetaWhatsAppActivation(
+    getPreparedChannelProvider("whatsapp_meta"),
+  );
   const services = await getConversationChannelServices();
   const threads = await services.listThreads(user.id, tenant.id);
   const requestedThread = threads.find((thread) => thread.id === params.fil);
@@ -115,6 +123,8 @@ export default async function ConversationPage({
           rejouer une étape déjà réussie.
         </div>
       ) : null}
+
+      <ProviderActivationCheckpoint checkpoint={metaActivation} />
 
       <div className="grid min-h-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[250px_1fr]">
         <aside className="border-b border-slate-200 bg-slate-50 p-4 lg:border-r lg:border-b-0">
@@ -309,6 +319,73 @@ export default async function ConversationPage({
       </div>
     </div>
   );
+}
+
+function ProviderActivationCheckpoint({
+  checkpoint,
+}: {
+  checkpoint: ChannelActivationCheckpoint;
+}) {
+  const tone = activationCheckpointTone(checkpoint.externalEffect);
+  return (
+    <section
+      aria-labelledby="meta-activation-title"
+      data-provider="whatsapp_meta"
+      data-provider-state={checkpoint.state}
+      className={`rounded-xl border p-4 shadow-sm ${tone.container}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className={`text-xs font-bold uppercase tracking-[0.12em] ${tone.eyebrow}`}>
+            Point de contrôle du canal externe
+          </p>
+          <h2 id="meta-activation-title" className="mt-1 text-lg font-bold text-slate-950">
+            {checkpoint.displayName}
+          </h2>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone.badge}`}>
+          {checkpoint.statusLabel}
+        </span>
+      </div>
+      <p className="mt-3 text-sm text-slate-700">{checkpoint.summary}</p>
+      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <p className="rounded-md bg-white/80 px-3 py-2 text-slate-700">
+          <span className="font-bold text-slate-950">Prochaine étape :</span>{" "}
+          {checkpoint.nextAction}
+        </p>
+        <span className={`rounded-full px-3 py-2 text-xs font-bold ${tone.effect}`}>
+          {checkpoint.externalEffectLabel}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function activationCheckpointTone(
+  effect: ChannelActivationCheckpoint["externalEffect"],
+) {
+  if (effect === "possible") {
+    return {
+      container: "border-emerald-200 bg-emerald-50",
+      eyebrow: "text-emerald-800",
+      badge: "bg-emerald-200 text-emerald-950",
+      effect: "bg-emerald-900 text-white",
+    };
+  }
+  if (effect === "mock") {
+    return {
+      container: "border-violet-200 bg-violet-50",
+      eyebrow: "text-violet-800",
+      badge: "bg-violet-200 text-violet-950",
+      effect: "bg-violet-900 text-white",
+    };
+  }
+  return {
+    container: "border-amber-200 bg-amber-50",
+    eyebrow: "text-amber-800",
+    badge: "bg-amber-200 text-amber-950",
+    effect: "bg-amber-900 text-white",
+  };
 }
 
 type ConversationServices = Awaited<

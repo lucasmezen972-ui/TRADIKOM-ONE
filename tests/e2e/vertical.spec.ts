@@ -1085,6 +1085,22 @@ async function runConversationJourney(
     await expect(
       page.getByRole("heading", { name: "Conversation", exact: true }),
     ).toBeVisible();
+    const metaCheckpoint = page.getByRole("region", {
+      name: "WhatsApp Cloud API (Meta)",
+    });
+    await expect(metaCheckpoint).toBeVisible();
+    await expect(metaCheckpoint).toHaveAttribute(
+      "data-provider-state",
+      "disabled",
+    );
+    await expect(metaCheckpoint.getByText("Désactivé", { exact: true })).toBeVisible();
+    await expect(metaCheckpoint.getByText("Effet externe bloqué", { exact: true })).toBeVisible();
+    await expect(metaCheckpoint).toContainText(
+      "Aucun message externe ne peut partir.",
+    );
+    await expect(
+      metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
+    ).toHaveCount(0);
     const webMessage = `Préparer un suivi client ${suffix}`;
     const webForm = page.locator("form").filter({ hasText: "Écrire depuis le web" });
     await webForm.getByLabel("Écrire depuis le web").fill(webMessage);
