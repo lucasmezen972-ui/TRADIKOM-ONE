@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T00:55:20.000Z",
+  "updatedAt": "2026-09-05T02:06:39.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "8f156fb03b1b76406dea1c864b6e9f6435f81115",
-  "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_conversation_intra_tenant_rls_published_ci_migration_verifier_fix_in_progress_human_otp_pending",
+  "lastCommit": "25cafcdaa9031cf7835068cc2487d921c0ff6d51",
+  "publishedHeadObserved": "25cafcdaa9031cf7835068cc2487d921c0ff6d51",
+  "status": "os5_conversation_intra_tenant_rls_published_ci_proven_human_meta_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La frontière RLS Conversation a été publiée au head 041459a après réconciliation fast-forward. La continuité 33934389549 est verte et l'audit npm de la CI 33934389487 passe, mais Verify migrations échoue avant tests parce que scripts/verify-migrations.ts exige encore une policy ALL unique et ne reconnaît pas les quatre policies complètes SELECT/INSERT/UPDATE/DELETE déjà acceptées par le test global PostgreSQL. Corriger ce vérificateur sans affaiblir la couverture, tester puis republier et suivre la CI complète. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
+  "currentObjective": "La frontière RLS intra-tenant du Conversation Hub et ses objets dérivés est publiée au head 25cafcd et prouvée sur PostgreSQL réel par la CI 33936955678 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 159 fichiers/757 tests, build et 20 Playwright verts. Le vérificateur partagé accepte une policy ALL ou les quatre opérations complètes et refuse RLS désactivée ou une opération manquante. La prochaine étape de l'ordre OS-5 est le checkpoint humain Meta; aucun OS-6, Graph, secret, message, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -34,11 +34,11 @@
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
       "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 imposent qu'un fil soit la source canonique et que ses droits suivent messages, pièces jointes et preuves. Les pages 16-18 imposent permissions, plans et missions durables. Les pages 22, 28, 32, 37-38 et 69 exigent isolation tenant/RLS, refus de permission, entrées non fiables et tests de sécurité. Le vérificateur de migrations doit reconnaître une couverture RLS complète exprimée soit par une policy ALL, soit par les quatre policies SELECT/INSERT/UPDATE/DELETE, mais refuser RLS désactivée ou toute opération manquante. Aucun OS-6, CRM, Kanban, dashboard secondaire, provider réel, Graph, activation externe, LLM ou outil.",
-      "evidenceExpected": "Ajouter un test unitaire du garde-fou de couverture RLS avec cas ALL, quatre opérations, opération manquante et RLS désactivée; mutualiser ou exposer une fonction pure afin que le script et le test PostgreSQL ne divergent plus; conserver la requête tenant-scoped. Rejouer les tests ciblés, lint et TypeScript, republier seulement le correctif et le checkpoint, puis exiger une CI verte couvrant audit, migrations PostgreSQL et db:verify, backup/restauration, RLS restricted-role, suite exhaustive, build et Playwright. Zéro secret, provider ou IO externe hors GitHub autorisé."
+      "evidenceExpected": "Preuve obtenue au head 25cafcd : garde-fou mutualisé et testé avec cas ALL, quatre opérations, opération manquante et RLS désactivée; requête tenant-scoped commune au script et au test PostgreSQL; audit, migrations, db:verify, sauvegarde/restauration, RLS restricted-role, 159 fichiers/757 tests, build et 20 Playwright verts dans la CI 33936955678; continuité 33936955672 verte. Écart suivant : checkpoint humain Meta et inventaire officiel en lecture seule, sans token persistant, Graph ni effet externe avant autorisation distincte."
     }
   },
-  "nextAction": "Corriger scripts/verify-migrations.ts pour accepter une policy ALL ou les quatre opérations RLS complètes sans accepter de couverture partielle; ajouter une preuve unitaire, valider, commiter, pousser en fast-forward et suivre la nouvelle CI complète.",
-  "nextFile": "scripts/verify-migrations.ts",
+  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS à six chiffres dans Meta for Developers et indique seulement que l'étape est terminée; inventorier ensuite en lecture seule l'application, le WABA et le Phone Number ID, puis demander une confirmation au moment exact avant toute création de token persistant. Ne déclencher ni Graph, message, endpoint public, stockage réel, activation, fusion, déploiement ou dépense sans autorisation distincte.",
+  "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1717,10 +1717,33 @@
     {
       "command": "suite exhaustive, ESLint, TypeScript, build Next.js production et diff check le 2026-09-04T23:27Z",
       "status": "passed_full_147_files_727_tests_11_files_24_tests_skipped_lint_typecheck_build_diff_google_fonts_network_only_database_verify_and_restricted_role_ci_pending"
+    },
+    {
+      "command": "publication fast-forward autorisée des vingt-sept commits applicatifs et documentaires jusqu'à 041459a",
+      "status": "passed_remote_28efa75_verified_ancestor_no_unrelated_change_tmp_untracked_preserved"
+    },
+    {
+      "command": "CI 33934389487 puis correctif du vérificateur de couverture RLS au commit 1ca6e83",
+      "status": "failed_verify_migrations_on_all_only_assumption_fixed_shared_all_or_select_insert_update_delete_with_partial_and_disabled_rejected"
+    },
+    {
+      "command": "CI 33934691922 et 33935855879 puis correctifs de fixtures PostgreSQL aux commits 8c9ddbc et 25cafcd",
+      "status": "failed_only_sparse_parameters_duplicate_fixtures_and_missing_actor_context_fixed_with_unique_tenant_scoped_data_and_membership"
+    },
+    {
+      "command": "CI 33936955678 sur 25cafcdaa9031cf7835068cc2487d921c0ff6d51",
+      "status": "passed_22m49s_audit_migrations_db_verify_backup_restore_lint_typecheck_159_files_757_tests_build_20_playwright_postgres_rls"
+    },
+    {
+      "command": "Tradikom One Continuity Check 33936955672 sur 25cafcdaa9031cf7835068cc2487d921c0ff6d51",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après preuve finale",
+      "status": "open_draft_mergeable_head_25cafcd_both_checks_success_no_merge_deploy_graph_secret_or_message"
     }
   ],
   "humanBlockers": [
-    "Approbation explicite de l'utilisateur pour relancer la CI 33826756939 après l'échec réseau du contrôleur d'autorisation; ne pas contourner par une autre commande",
     "Saisie par l'utilisateur du code SMS à six chiffres directement dans l'onglet Meta for Developers ouvert; le code ne doit pas être transmis dans le chat",
     "Confirmation au moment exact avant toute création d'un token Meta persistant, puis stockage uniquement via références de gestionnaire de secrets sans exposition au modèle",
     "Mise à disposition d'une application, d'un WABA, d'un Phone Number ID et d'un endpoint HTTPS contrôlé dans la console officielle",

@@ -1,30 +1,31 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint applicatif — 4 septembre 2026, 23:27 UTC
+## Checkpoint applicatif — 5 septembre 2026, 02:06 UTC
 
-- Branche : `codex/tradikom-one-os`; head distant publié `28efa750935b2766de3410b8d9c0d5e3c4e2dbe8`; RLS intra-tenant des objets Conversation dérivés conservée localement dans `8f156fb03b1b76406dea1c864b6e9f6435f81115`. Après le handoff documentaire, la branche sera en avance de vingt-sept commits, sans push; `tmp/` reste non suivi et hors index.
+- Branche : `codex/tradikom-one-os`; head applicatif publié et prouvé `25cafcdaa9031cf7835068cc2487d921c0ff6d51`; `tmp/` reste non suivi et hors index. Les publications ont été précédées de comparaisons d'ancêtre et sont restées strictement fast-forward.
 - Travail effectué : migration runtime `114` et miroir SQL `0108`, six helpers `SECURITY INVOKER` et politiques séparées par opération sur onze tables. Les objets liés à un plan, une mission ou un événement héritent du droit du fil; les objets génériques restent tenant-scoped.
+- Correctif de preuve : le contrôle de couverture RLS partage désormais une requête unique entre le vérificateur des migrations et les tests PostgreSQL. Il accepte une policy `ALL` ou les quatre opérations complètes et refuse RLS désactivée ou une opération manquante. Les fixtures PostgreSQL ont aussi été rendues uniques, sans paramètres clairsemés, avec membership et contexte acteur explicites.
 - Impact north star : la base PostgreSQL applique désormais la même confidentialité que le service Conversation aux fils, messages, pièces jointes, plans, validations, missions et événements, y compris contre une lecture directe par rôle restreint.
 - Risques contenus : membership et `app.actor_id` sont obligatoires, les mises à jour contrôlent ancienne et nouvelle ligne, les payloads invalides échouent fermé et un acteur restreint ne peut pas forger le bypass système. Le contexte serveur privilégié est limité à la configuration propriétaire/administrateur déjà contrôlée.
-- GitHub inchangé : PR #11 ouverte, brouillon et `MERGEABLE/UNSTABLE`; continuité `33826756891` verte, CI `33826756939` rouge avant tests uniquement sur timeout npm audit. Aucun rerun, push, Graph, stockage réel, secret, message ou autre effet externe.
+- GitHub : PR #11 ouverte, brouillon et `MERGEABLE`; continuité `33936955672` verte et CI `33936955678` entièrement verte en 22 min 49 s, incluant PostgreSQL/RLS, 159 fichiers/757 tests, build et 20 Playwright. Aucun Graph, stockage réel, secret, message, fusion, déploiement ou dépense.
 
 ## Alignement prompt maître
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre strict et reprise exacte | Frontière RLS du Conversation Hub livrée sans CRM, Kanban, dashboard ni OS-6 | Publication et CI complète soumises à l'ordre explicite « publie et lance la CI » |
-| 10-12, 16-18, 22, 28, 35-38, 43-44 | Les droits du fil doivent se propager aux objets dérivés avec isolation tenant, RLS et actions durables | Six helpers invoker, politiques par opération sur onze tables, héritage plan/run/event, objets génériques compatibles et payload invalide fermé | Exécution du test restricted-role sur PostgreSQL partagé |
-| 32, 69 | DoD et matrice unit/intégration/RLS/provider/workflow/Playwright/sécurité | Ciblés : 14 tests verts et 1 PostgreSQL ignoré; régression : 105 verts et 3 ignorés; exhaustive : 147 fichiers/727 tests verts, 11 fichiers/24 tests ignorés; migrations chargées sous PGlite, ESLint, TypeScript, build et diff check verts | `db:verify`, 24 tests PostgreSQL/Playwright ignorés sans `DATABASE_URL`, puis CI du head |
+| 3-7, 31-33, 46, 48, 70-71 | Conversation-first, tranche verticale utile, ordre strict et reprise exacte | Frontière RLS du Conversation Hub livrée, publiée et prouvée sans CRM, Kanban, dashboard ni OS-6 | Checkpoint humain/fournisseur OS-5 avant tout fournisseur réel |
+| 10-12, 16-18, 22, 28, 35-38, 43-44 | Les droits du fil doivent se propager aux objets dérivés avec isolation tenant, RLS et actions durables | Six helpers invoker, politiques par opération sur onze tables, héritage plan/run/event, objets génériques compatibles; restricted-role exécuté sur PostgreSQL 17 | Aucun écart RLS identifié dans cette tranche |
+| 32, 69 | DoD et matrice unit/intégration/RLS/provider/workflow/Playwright/sécurité | CI `33936955678` : audit, migrations, `db:verify`, backup/restauration, lint, TypeScript, 159 fichiers/757 tests, build et 20 Playwright verts; continuité `33936955672` verte | Stockage/ACL réel, antivirus, OCR/transcription et Graph restent non implémentés/réels |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
 ## Classification actuelle
 
-- Livré localement : worker média, migrations, rendu Conversation, composition générique, scan, extraction `external_untrusted_data`, contrôle d'intégrité, vue `data-only` non raccordée, accès court, frontière HTTP/session, classification confidentialité/visibilité et autorisations durables personal/team/case appliquées dans le service et la RLS PostgreSQL aux fils, messages, pièces jointes, plans, validations, missions et événements; doubles mock uniquement pour les fournisseurs.
+- Livré, publié et prouvé CI : worker média, migrations, rendu Conversation, composition générique, scan mock, extraction `external_untrusted_data`, contrôle d'intégrité, vue `data-only` non raccordée, accès court, frontière HTTP/session, classification confidentialité/visibilité et autorisations durables personal/team/case appliquées dans le service et la RLS PostgreSQL aux fils, messages, pièces jointes, plans, validations, missions et événements.
 - Réel connecté : aucun nouveau fournisseur; Graph et stockage réel non composés.
 - Sandbox : aucune appelée.
 - Mock : fetch, scanner propre/dangereux/temporaire, extracteur, stockage média, codec et lecture HTTP uniquement via doubles injectés; classification et autorisations du fil sont réelles en base locale mais aucun fournisseur n'en dépend.
-- Bloqué humain : ordre explicite avant publication/CI; code SMS Meta; confirmation distincte avant token persistant.
+- Bloqué humain : code SMS Meta saisi directement par l'utilisateur; confirmation distincte au moment exact avant token persistant.
 - Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
 
 ## Checkpoint — 4 septembre 2026, 09:45 UTC
@@ -56,13 +57,14 @@ Les pages 3-7, 11, 14, 22-23, 31-33, 46, 48, 64-65 et 69-71 du prompt maître on
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
-## Travail livré et publié, CI externe bloquée
+## Historique : travail alors publié avant sa preuve CI finale
 
 - Migrations runtime 105/106 et miroirs SQL 0099/0100 pour `channel_provider_media_imports`, avec relations composées tenant/endpoint/provider et tenant/message, index tenant-leading, contraintes d'état et politique RLS.
 - Référence fournisseur conservée de manière éphémère jusqu'au service d'ingestion, puis chiffrée en AES-256-GCM avec AAD tenant/provider/endpoint/message et version de clé.
 - Aucun Media ID, MIME, checksum, nom de fichier, URL, contenu ou payload en clair dans la réservation ou l'audit.
 - États durables `pending`, `not_configured` et `failed`; rejeu identique sans doublon et collision de référence refusée.
 - Réservation et audit dans la même transaction que le message canonique; aucun `fetch`, Graph, stockage, binaire ou pièce jointe canonique.
+- Cette limite historique est levée par la CI `33936955678` du head `25cafcd`; elle ne décrit plus l'état courant.
 
 ## Travail livré, publié et prouvé CI
 
@@ -147,14 +149,13 @@ Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539e
 - Livré et prouvé CI : lots de messages entrants Meta bornés, prévalidés, atomiques, idempotents et multi-tenant.
 - Livré et prouvé CI : enveloppe mixte messages/statuts authentifiée une fois, bornée, prévalidée et atomique.
 - Livré et prouvé CI : représentation conversationnelle française de cinq types média signés, sans téléchargement Graph ni stockage fictif.
-- Livré et publié, CI externe bloquée : réservation d'import média tenant/RLS, référence fournisseur chiffrée, états explicites, idempotence/collision et audit sans contenu.
-- Livré localement, CI non déclenchée : worker média durable et composition générique, validation binaire/hachage, scanner puis extraction `external_untrusted_data` obligatoires, vérification SHA-256 à la lecture, vue `data-only` non raccordée, stockage/pièce jointe mock idempotents, accès court et frontière HTTP/session, classification durable et autorisations utilisateur personal/team/case appliquées dans le service et la RLS PostgreSQL aux fils, messages, pièces jointes, plans, validations, missions, événements actifs et incidents, avec interface visible en français.
+- Livré, publié et prouvé CI : réservation et worker média durables, composition générique, validation binaire/hachage, scanner puis extraction `external_untrusted_data` obligatoires, vérification SHA-256 à la lecture, vue `data-only` non raccordée, stockage/pièce jointe mock idempotents, accès court et frontière HTTP/session, classification durable et autorisations utilisateur personal/team/case appliquées dans le service et la RLS PostgreSQL aux fils, messages, pièces jointes, plans, validations, missions, événements actifs et incidents, avec interface visible en français.
 - Réel : aucun compte développeur finalisé, app, WABA, numéro, token, endpoint public, requête Graph ou message.
 - Sandbox : aucune configurée ou appelée.
 - Mock : fetch, scanner, extracteur et stockage injectés uniquement en test, sans réseau fournisseur, antivirus, OCR, LLM ni outil réel.
-- Bloqué humain : ordre explicite « publie et lance la CI »; code SMS Meta saisi directement dans Chrome; confirmation au moment exact avant création d'un token persistant et injection via gestionnaire de secrets.
+- Bloqué humain : code SMS Meta saisi directement dans Meta for Developers; confirmation au moment exact avant création d'un token persistant et injection via gestionnaire de secrets.
 - Hors périmètre : fusion, production, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
 ## Écarts restants et reprise
 
-Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les lots entrants, l'enveloppe mixte et la représentation média sont publiés et prouvés avec PostgreSQL/RLS. La réservation durable est publiée mais sa CI reste bloquée avant tests par l'API d'audit npm. Le worker durable, sa composition générique, le stockage mock, le scanner obligatoire, l'extraction `external_untrusted_data`, le contrôle d'intégrité, la vue `data-only`, l'accès court, sa frontière HTTP/session, la classification confidentialité/visibilité, les autorisations durables personal/team/case et leur héritage RLS jusqu'aux validations, missions et événements sont livrés localement seulement : ils ne deviennent prouvés PostgreSQL/RLS et Playwright qu'après l'ordre explicite « publie et lance la CI » et une CI complète, sans contourner l'audit. La migration RLS et son test restricted-role sont prêts; `db:verify`, PostgreSQL partagé et Playwright restent la preuve manquante. En cas d'échec CI, corriger cette tranche avant d'ouvrir l'étape suivante; `goal-watch`/OS-6, CRM, Kanban et dashboard secondaire restent hors périmètre. Les écarts réels restent stockage Supabase/ACL, antivirus, OCR/transcription et Graph. Le premier écart fournisseur demeure Meta for Developers : l'utilisateur saisit le code SMS directement sans le transmettre au chat. Une fois l'inscription validée, inventorier app/WABA/Phone Number ID, puis demander une confirmation immédiatement avant toute création de token persistant. Aucune requête Graph, stockage réel, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
+Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les messages entrants, l'enveloppe mixte, la représentation et la réservation média, le worker mock, le scan/extraction, l'accès court, la classification des fils, les droits durables et leur héritage RLS jusqu'aux validations, missions et événements sont publiés et prouvés par la CI `33936955678` sur PostgreSQL 17. Le vérificateur accepte sans dérive une policy `ALL` ou les quatre opérations complètes; la suite compte 159 fichiers/757 tests et 20 Playwright verts. Les écarts réels restent stockage Supabase/ACL, antivirus, OCR/transcription et Graph. Le prochain checkpoint demeure Meta for Developers : l'utilisateur saisit le code SMS directement sans le transmettre au chat, puis indique seulement que l'étape est terminée. Après validation, inventorier l'app/WABA/Phone Number ID en lecture seule et demander une confirmation immédiatement avant toute création de token persistant. `goal-watch`/OS-6, CRM, Kanban et dashboard secondaire restent hors périmètre. Aucune requête Graph, stockage réel, message, activation, fusion, déploiement ou dépense n'est autorisée par ce checkpoint.
