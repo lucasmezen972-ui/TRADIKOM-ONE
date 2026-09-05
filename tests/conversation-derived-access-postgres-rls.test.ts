@@ -255,10 +255,10 @@ async function seedFixture(
        id, tenant_id, status, subject, confidentiality_level, visibility_scope,
        created_at, updated_at
      ) values
-       ($1, $2, 'open', null, 'restricted', 'team', $7, $7),
-       ($3, $2, 'open', null, 'internal', 'tenant', $7, $7),
-       ($4, $5, 'open', null, 'secret', 'personal', $7, $7)`,
-    [protectedThread, tenantA, tenantThread, otherThread, tenantB, ownerB, timestamp],
+       ($1, $2, 'open', null, 'restricted', 'team', $6, $6),
+       ($3, $2, 'open', null, 'internal', 'tenant', $6, $6),
+       ($4, $5, 'open', null, 'secret', 'personal', $6, $6)`,
+    [protectedThread, tenantA, tenantThread, otherThread, tenantB, timestamp],
   );
   await db.query(
     `insert into conversation_thread_access_grants (

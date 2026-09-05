@@ -284,8 +284,8 @@ async function seedReservation(db: OwnerDb, suffix: "a" | "b") {
     [
       endpointId,
       tenantId,
-      suffix === "a" ? "123456789" : "987654321",
-      suffix.repeat(64),
+      `meta_${unique}_${suffix}`,
+      `${unique}${unique}`,
       userId,
       timestamp,
     ],
