@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T04:28:00.000Z",
+  "updatedAt": "2026-09-05T05:30:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "c038df459e8e883bb5c77c6932b7a577a8f56f85",
-  "publishedHeadObserved": "b72a97428e4e512ba79b6857c650db9affcd69b8",
-  "status": "os5_meta_tenant_readiness_in_progress",
+  "lastCommit": "82586e89045538fddf61fdb56fc563eabd6ed688",
+  "publishedHeadObserved": "82586e89045538fddf61fdb56fc563eabd6ed688",
+  "status": "os5_meta_tenant_readiness_published_ci_proven_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Poursuivre OS-5 dans Conversation avec une lecture tenant-scoped de la préparation WhatsApp Meta déjà durable : distinguer canal absent, suspendu, accès sécurisé manquant et organisation prête, puis combiner cette vérité avec l'état serveur. L'effet externe doit rester bloqué tant que le serveur et l'organisation ne sont pas tous deux prêts. Aucun identifiant fournisseur, secret, Graph, message, endpoint public, fusion, déploiement ou dépense.",
+  "currentObjective": "La lecture tenant-scoped de la préparation WhatsApp Meta est livrée au commit 461156a, corrigée sans changement fonctionnel au commit 82586e8, publiée et prouvée par la CI 33946531702 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build et 20 Playwright verts. Conversation distingue désormais l'état serveur de celui de l'organisation et bloque tout effet externe tant que les deux ne sont pas prêts. Le prochain checkpoint reste humain : validation SMS Meta directement dans la console officielle, sans transmettre le code.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,11 +31,11 @@
         "69-71 Matrice de tests et auto-contrôle final"
       ],
       "requirement": "Poursuivre OS-5 dans l'ordre de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 10-14, 22, 24, 29, 31-32 et 64-69, faire de Conversation la surface de vérité du canal : combiner l'état technique du registre Meta avec la préparation durable de l'organisation, lue sous contexte tenant et acteur. Distinguer en français canal non relié, suspendu, accès sécurisé manquant et organisation prête; maintenir l'effet externe bloqué jusqu'à une combinaison réellement prête; ne retourner aucun identifiant fournisseur, secret ou contenu chiffré. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
-      "evidenceExpected": "Une lecture agrégée tenant-scoped, sous transaction RLS et contrôle de membership, ne retourne que des booléens de préparation; des tests prouvent les quatre états, l'isolation entre organisations et l'absence de données sensibles. Conversation affiche séparément l'état serveur et celui de l'organisation sur mobile et desktop; un état serveur mock/ready sans configuration tenant reste bloqué. Tests unitaires, intégration, PostgreSQL/RLS, Playwright, lint, TypeScript, build, continuity-check et diff check doivent être verts avant de déclarer la tranche terminée."
+      "evidenceExpected": "Preuve obtenue : lecture agrégée tenant-scoped sous transaction RLS et contrôle de membership, quatre états, révocation, isolation et sortie sans identifiant ou secret; localement 161 fichiers/749 tests hors PostgreSQL, lint, TypeScript, build, audit high, continuity-check et diff check verts. La CI autoritative 33946531702 a validé en 18 min 1 s audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build production et 20/20 Playwright. La continuité 33946531695 est verte et la PR #11 est ouverte, brouillon, fusionnable et CLEAN au head 82586e8."
     }
   },
-  "nextAction": "Implémenter la lecture tenant-scoped de la préparation Meta, la composer dans le checkpoint Conversation et prouver l'isolation et les états fail-closed sans appel externe.",
-  "nextFile": "src/modules/channels/provider-endpoints-repository.ts",
+  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers puis indique seulement que l'étape est terminée. Ensuite inventorier en lecture seule l'application, le WABA et le Phone Number ID; ne créer aucun token persistant et n'effectuer aucun Graph, message, webhook public, fusion, déploiement ou dépense sans l'autorisation distincte requise au moment exact.",
+  "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1776,6 +1776,38 @@
     {
       "command": "PR #11 après checkpoint Conversation/Meta",
       "status": "open_draft_mergeable_head_d899d95_both_checks_success_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "prompt maître, continuity-check, changelog et documentation RLS Supabase, puis GitHub le 2026-09-05T04:25Z",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_pages_48_69_rendered_pnpm_ready_pr_open_draft_mergeable_clean_remote_b72a974_ci_33943417309_and_continuity_33943417278_green"
+    },
+    {
+      "command": "préparation WhatsApp Meta tenant-scoped dans Conversation au commit 461156ae3ad7f44920fe64dc182780957cd2aaa2",
+      "status": "passed_four_tenant_states_membership_guard_aggregate_boolean_only_server_and_tenant_combined_fail_closed_no_graph_secret_identifier_or_external_io"
+    },
+    {
+      "command": "tests ciblés, suite exhaustive, lint, TypeScript, build, audit high, continuity-check et diff check le 2026-09-05T04:47Z",
+      "status": "passed_targeted_4_files_21_tests_then_4_files_24_tests_1_postgres_skipped_full_161_files_749_tests_11_files_24_postgres_tests_skipped_lint_typecheck_build_zero_high_critical_two_moderate_ready_diff"
+    },
+    {
+      "command": "publication fast-forward du commit 461156ae3ad7f44920fe64dc182780957cd2aaa2",
+      "status": "passed_remote_b72a974_verified_exact_base_tmp_untracked_preserved_ci_pending"
+    },
+    {
+      "command": "CI 33945539636 sur 461156ae3ad7f44920fe64dc182780957cd2aaa2",
+      "status": "failed_only_playwright_strict_selector_duplicate_disabled_label_after_audit_migrations_db_verify_backup_restore_lint_typecheck_161_files_773_tests_postgres_included_build_and_19_of_20_playwright_passed"
+    },
+    {
+      "command": "correctif Playwright au commit 82586e89045538fddf61fdb56fc563eabd6ed688",
+      "status": "passed_selector_scoped_to_server_state_region_eslint_typecheck_diff_fast_forward_push"
+    },
+    {
+      "command": "CI 33946531702 et continuité 33946531695 sur 82586e89045538fddf61fdb56fc563eabd6ed688",
+      "status": "passed_ci_18m01s_audit_migrations_db_verify_backup_restore_lint_typecheck_161_files_773_tests_postgres_included_build_20_playwright_continuity_ready"
+    },
+    {
+      "command": "PR #11 après preuve tenant Meta",
+      "status": "open_draft_mergeable_clean_head_82586e8_no_merge_deploy_graph_secret_token_or_message"
     }
   ],
   "humanBlockers": [

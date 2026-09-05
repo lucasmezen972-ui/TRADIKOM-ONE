@@ -5,9 +5,26 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates OS-5 10-18, 22-24, 26-33, 35-38, 43-44 et 64-68 ont été relues directement le 5 septembre 2026; les pages 48 et 69 ont aussi été contrôlées en rendu.
-- Le commit applicatif `c038df459e8e883bb5c77c6932b7a577a8f56f85` et son handoff `d899d95e7d3c590b5fe603d8269fdf1fe9203807` sont publiés. La PR #11 est ouverte, en brouillon et fusionnable. La continuité `33942266310` et la CI complète `33942266316` sont vertes sur ce head; `tmp/` reste non suivi et hors index.
+- La tranche tenant Meta est publiée au commit `461156ae3ad7f44920fe64dc182780957cd2aaa2`; le correctif Playwright ciblé `82586e89045538fddf61fdb56fc563eabd6ed688` est également publié en fast-forward. La CI `33946531702` et la continuité `33946531695` sont vertes sur ce head. La PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`; `tmp/` reste non suivi et hors index.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. La boîte d'inscription Meta ouverte dans Chrome n'a fourni aucun signal fiable de validation SMS pendant ce run; l'étape reste donc bloquée humainement, sans déduire qu'elle est terminée.
 - Les mentions « preuves locales » et « attente CI » conservées dans le détail des tranches décrivent leur checkpoint de création; elles sont toutes levées pour le code publié jusqu'à `25cafcd` par la preuve finale `33936955678`.
+
+## Prochaine action exacte
+
+1. L'utilisateur saisit lui-même le code SMS à six chiffres dans Meta for Developers puis indique seulement que l'étape est terminée; ne jamais demander, copier ni afficher ce code.
+2. Inventorier ensuite en lecture seule dans la console officielle l'application, le WABA et le Phone Number ID, sans copier de secret dans le chat, les logs, Git ou le modèle.
+3. Demander l'autorisation distincte requise au moment exact avant tout token persistant ou tout effet externe. L'autorisation générale de configurer les clés est enregistrée, mais aucune clé réelle n'est disponible ou manipulée dans cette tranche.
+
+## Tranche applicative publiée et prouvée CI : préparation Meta propre au tenant
+
+- La lecture serveur de Conversation utilise maintenant le contexte tenant et acteur, vérifie le membership puis interroge uniquement l'existence d'une configuration Meta, d'une configuration active et d'accès chiffrés non révoqués. Aucun identifiant fournisseur, ciphertext ou secret n'est retourné.
+- Quatre états sûrs sont distingués : `not_registered`, `disabled`, `credentials_missing` et `ready`. La révocation d'un accès repasse immédiatement l'organisation en configuration incomplète.
+- La carte Conversation sépare « État du serveur » et « Cette organisation ». Un serveur `mock` ou `ready` sans organisation prête reste bloqué; aucun bouton d'activation ou d'envoi et aucun appel externe ne sont ajoutés.
+- Preuves locales : ciblés 4 fichiers/21 tests, puis ciblés élargis 4 fichiers/24 tests avec 1 test PostgreSQL ignoré; suite exhaustive 161 fichiers/749 tests verts et 11 fichiers/24 tests PostgreSQL ignorés sans `DATABASE_URL`. ESLint, TypeScript, build Next.js production, audit high, continuity-check et diff check sont verts. Deux avis transitifs `qs` modérés, aucun high/critical.
+- Le Playwright prouve une organisation prête sur desktop et un canal non relié sur mobile, toujours avec serveur désactivé et effet externe bloqué. Le scénario restricted-role PostgreSQL prouve la lecture du bon tenant et le refus cross-tenant.
+- La première CI `33945539636` avait déjà prouvé audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus et build. Son unique échec était un sélecteur strict ambigu parce que « Désactivé » apparaît légitimement dans le badge et le détail serveur; aucun défaut fonctionnel n'était présent.
+- Le commit `82586e8` cible uniquement la zone « État du serveur ». La CI autoritative `33946531702` est entièrement verte en 18 min 1 s : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests sur PostgreSQL 17, build production et 20/20 Playwright. La continuité `33946531695` est verte.
+- État honnête : livré, publié et prouvé CI aux commits `461156a` et `82586e8`; réel connecté = aucun; sandbox = aucune; mock = données factices de test uniquement; bloqué humain = validation SMS Meta; hors périmètre = Graph, message, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
 ## Tranche applicative publiée et prouvée CI : checkpoint d'activation Meta dans Conversation
 

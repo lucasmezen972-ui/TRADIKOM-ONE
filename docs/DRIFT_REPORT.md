@@ -1,5 +1,35 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 5 septembre 2026, 04:49 UTC
+
+- Branche : `codex/tradikom-one-os`; tranche applicative `461156ae3ad7f44920fe64dc182780957cd2aaa2` puis correctif Playwright `82586e89045538fddf61fdb56fc563eabd6ed688` publiés strictement en fast-forward; `tmp/` reste non suivi et hors index.
+- Travail effectué : Conversation lit maintenant sous contexte tenant+acteur si l'organisation possède une configuration WhatsApp Meta, si elle est active et si ses accès chiffrés ne sont pas révoqués. Seuls des indicateurs booléens quittent le repository.
+- Impact north star : l'écran conversationnel dit désormais si le serveur et l'organisation sont réellement prêts, sans obliger l'utilisateur à comprendre une console fournisseur ni ouvrir un module secondaire.
+- Risques contenus : membership vérifié, filtre tenant explicite et RLS, aucune valeur ou référence fournisseur rendue, révocation reflétée, effet externe bloqué tant que serveur et organisation ne sont pas prêts. Aucun Graph, message, bouton d'activation, stockage réel, fusion, déploiement ou dépense.
+- Preuves locales : 161 fichiers/749 tests verts et 11 fichiers/24 tests PostgreSQL ignorés sans `DATABASE_URL`; tests ciblés, ESLint, TypeScript, build production, audit high, continuity-check et diff check verts.
+- Première CI `33945539636` : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus et build verts; 19 Playwright sur 20 verts. Le seul échec était un sélecteur strict ambigu sur deux libellés « Désactivé », corrigé sans changement fonctionnel dans `82586e8`.
+- Preuve autoritative : continuité `33946531695` verte; CI `33946531702` entièrement verte en 18 min 1 s avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build et 20/20 Playwright. PR #11 ouverte, brouillon, fusionnable et `CLEAN` au head `82586e8`.
+
+## Alignement prompt maître — préparation Meta tenant-scoped
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Continuer le produit par tranche Conversation utile, conserver la reprise exacte et les états honnêtes | Tranche visible livrée, publiée et prouvée CI sans CRM, Kanban, dashboard ni OS-6; documents de continuité actualisés | Validation SMS Meta toujours humaine |
+| 10-14, 24, 29-30, 64-68 | Conversation Hub comme vérité, adaptateur sans logique métier, fournisseur explicite et interface française simple | État serveur et état organisation séparés; quatre états tenant lisibles; serveur `mock`/`ready` sans tenant prêt bloqué; aucun appel fournisseur | Aucun provider réel, sandbox, Graph ou endpoint public |
+| 16-18, 22, 35-38 | Tenant, RLS, secrets protégés, action durable et refus fermé | Transaction tenant+acteur, membership, filtre tenant, RLS existante, agrégat booléen seulement, révocation reflétée et refus cross-tenant; restricted-role vert sur PostgreSQL 17 | Aucun écart identifié dans la frontière tenant de cette tranche |
+| 32, 69 | DoD unit/intégration/RLS/provider/sécurité/Playwright/a11y | Local : 161 fichiers/749 tests, lint, TypeScript, build, audit high, continuity-check et diff check verts; CI `33946531702` : 161 fichiers/773 tests PostgreSQL inclus, build et 20/20 Playwright verts | Aucun écart de preuve identifié pour cette tranche; deux avis transitifs `qs` modérés restent à suivre |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification du checkpoint tenant Meta
+
+- Livré, publié et prouvé CI : lecture tenant-scoped, classification sûre et rendu Conversation.
+- Réel connecté : aucun; aucun appel Graph ni transport activé.
+- Sandbox : aucune appelée.
+- Mock : secrets factices et états construits uniquement dans les tests; aucun réseau.
+- Bloqué humain : validation SMS Meta et confirmation distincte avant token persistant ou effet externe.
+- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
+
 ## Checkpoint applicatif — 5 septembre 2026, 03:32 UTC
 
 - Branche : `codex/tradikom-one-os`; checkpoint applicatif `c038df459e8e883bb5c77c6932b7a577a8f56f85` publié avec son handoff au head `d899d95e7d3c590b5fe603d8269fdf1fe9203807`; `tmp/` reste non suivi et hors index. Le push `ed4aeea..d899d95` a été strictement fast-forward après fetch et contrôle d'ancêtre.
