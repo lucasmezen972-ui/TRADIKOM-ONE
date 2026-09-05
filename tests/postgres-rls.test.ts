@@ -8,6 +8,7 @@ import { createServices } from "../src/lib/services";
 import { hashToken, id, nowIso, secureToken, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
 import { recordAuthorizedResendDelivery } from "../src/modules/email";
+import { tenantRlsCoverageGapsSql } from "../scripts/tenant-rls-coverage";
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeIfPostgres = databaseUrl ? describe : describe.skip;
@@ -133,35 +134,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ownerA.id,
     );
 
-    const policyGaps = await ownerPool.query<{ table_name: string }>(`
-      select columns.table_name
-      from information_schema.columns as columns
-      join pg_class as tables on tables.relname = columns.table_name
-      join pg_namespace as namespaces on namespaces.oid = tables.relnamespace
-      where columns.table_schema = 'public'
-        and columns.column_name = 'tenant_id'
-        and namespaces.nspname = 'public'
-        and (
-          not tables.relrowsecurity
-          or (
-            not exists (
-              select 1
-              from pg_policies as policies
-              where policies.schemaname = 'public'
-                and policies.tablename = columns.table_name
-                and policies.cmd = 'ALL'
-            )
-            and (
-              select count(distinct policies.cmd)
-              from pg_policies as policies
-              where policies.schemaname = 'public'
-                and policies.tablename = columns.table_name
-                and policies.cmd in ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
-            ) < 4
-          )
-        )
-      order by columns.table_name
-    `);
+    const policyGaps = await ownerPool.query<{ table_name: string }>(
+      tenantRlsCoverageGapsSql,
+    );
     expect(policyGaps.rows).toEqual([]);
 
     const tenantIndexGaps = await ownerPool.query<{ table_name: string }>(`

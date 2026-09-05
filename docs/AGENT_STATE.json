@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-04T23:27:26.000Z",
+  "updatedAt": "2026-09-05T00:55:20.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "8f156fb03b1b76406dea1c864b6e9f6435f81115",
   "publishedHeadObserved": "28efa750935b2766de3410b8d9c0d5e3c4e2dbe8",
-  "status": "os5_conversation_intra_tenant_rls_complete_local_only_postgres_ci_pending_publish_approval_required_human_otp_pending",
+  "status": "os5_conversation_intra_tenant_rls_published_ci_migration_verifier_fix_in_progress_human_otp_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La frontière d'accès des fils personal/team/case est désormais portée dans PostgreSQL RLS pour empêcher un rôle applicatif restreint de contourner le service par select ou écriture directe. Fils, participants de fil, messages, pièces jointes, hops, plans, étapes, validations, missions et événements dérivés héritent du droit actif; les objets workflow/domain_event génériques restent tenant-scoped; le bypass système est borné à app_is_system() et la configuration administrateur conserve un contexte serveur explicite. La preuve PostgreSQL réelle attend la CI faute de DATABASE_URL locale. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
+  "currentObjective": "La frontière RLS Conversation a été publiée au head 041459a après réconciliation fast-forward. La continuité 33934389549 est verte et l'audit npm de la CI 33934389487 passe, mais Verify migrations échoue avant tests parce que scripts/verify-migrations.ts exige encore une policy ALL unique et ne reconnaît pas les quatre policies complètes SELECT/INSERT/UPDATE/DELETE déjà acceptées par le test global PostgreSQL. Corriger ce vérificateur sans affaiblir la couverture, tester puis republier et suivre la CI complète. Aucun OS-6, fournisseur réel, Graph, secret ou effet externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,14 +30,15 @@
         "43 Ordre exact de la prochaine exécution",
         "Accès Conversation dérivé : fils, messages, pièces jointes, plans, missions et événements",
         "RLS PostgreSQL : app.actor_id, membership actif, droits du fil et bypass système borné",
+        "Vérification des migrations : policy ALL ou ensemble complet SELECT/INSERT/UPDATE/DELETE",
         "63-65 Matrice de tests, handoff et gouvernance"
       ],
-      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 imposent qu'un fil soit la source canonique et que ses droits suivent messages, pièces jointes et preuves. Les pages 16-18 imposent permissions, plans et missions durables. Les pages 22, 28, 32, 37-38 et 69 exigent isolation tenant/RLS, refus de permission, entrées non fiables et tests de sécurité. Remplacer les politiques tenant-only des objets Conversation et dérivés par une autorisation liée à app.actor_id et au droit actif du fil; conserver les objets workflow/domain_event génériques accessibles au tenant; refuser les select et écritures directes sur les objets protégés; garder app_is_system() comme unique bypass borné. Aucun OS-6, CRM, Kanban, dashboard secondaire, provider réel, Graph, activation externe, LLM ou outil.",
-      "evidenceExpected": "Preuve locale obtenue : migration RLS runtime 114 et miroir SQL 0108 identiques; six helpers SECURITY INVOKER et politiques séparées SELECT/INSERT/UPDATE/DELETE sur onze tables; droit de fil propagé aux relations, messages, pièces jointes, hops, plans, étapes, validations, workflow_runs, workflow_run_steps et domain_events; workflow/domain_event génériques compatibles; parsing événement fail-closed; drapeau système forgé couvert dans le test restricted-role. Le contexte serveur tenant+acteur+systemAccess est réservé à la configuration propriétaire/administrateur et testé. Toutes les migrations RLS passent le moteur embarqué. Ciblés : 14 tests verts et 1 PostgreSQL ignoré; régression Conversation/workflows : 105 verts et 3 ignorés; suite exhaustive : 147 fichiers/727 tests verts, 11 fichiers/24 tests ignorés; ESLint, TypeScript, build production et diff check verts. `db:verify` et le test restricted-role complet restent à exécuter en CI car DATABASE_URL est absente. Zéro secret, provider ou IO externe."
+      "requirement": "Respecter l'ordre page 48, la Definition of Done page 32 et la matrice page 69. Les pages 10-12 imposent qu'un fil soit la source canonique et que ses droits suivent messages, pièces jointes et preuves. Les pages 16-18 imposent permissions, plans et missions durables. Les pages 22, 28, 32, 37-38 et 69 exigent isolation tenant/RLS, refus de permission, entrées non fiables et tests de sécurité. Le vérificateur de migrations doit reconnaître une couverture RLS complète exprimée soit par une policy ALL, soit par les quatre policies SELECT/INSERT/UPDATE/DELETE, mais refuser RLS désactivée ou toute opération manquante. Aucun OS-6, CRM, Kanban, dashboard secondaire, provider réel, Graph, activation externe, LLM ou outil.",
+      "evidenceExpected": "Ajouter un test unitaire du garde-fou de couverture RLS avec cas ALL, quatre opérations, opération manquante et RLS désactivée; mutualiser ou exposer une fonction pure afin que le script et le test PostgreSQL ne divergent plus; conserver la requête tenant-scoped. Rejouer les tests ciblés, lint et TypeScript, republier seulement le correctif et le checkpoint, puis exiger une CI verte couvrant audit, migrations PostgreSQL et db:verify, backup/restauration, RLS restricted-role, suite exhaustive, build et Playwright. Zéro secret, provider ou IO externe hors GitHub autorisé."
     }
   },
-  "nextAction": "Attendre l'ordre explicite « publie et lance la CI », puis revérifier le head distant 28efa750935b2766de3410b8d9c0d5e3c4e2dbe8, publier uniquement en fast-forward sûr et exécuter la preuve PostgreSQL/RLS, migrations, Playwright et build sans contourner l'audit npm. Si la CI révèle un écart, corriger cette tranche avant toute nouvelle étape; goal-watch/OS-6 reste hors périmètre.",
-  "nextFile": "tests/conversation-derived-access-postgres-rls.test.ts",
+  "nextAction": "Corriger scripts/verify-migrations.ts pour accepter une policy ALL ou les quatre opérations RLS complètes sans accepter de couverture partielle; ajouter une preuve unitaire, valider, commiter, pousser en fast-forward et suivre la nouvelle CI complète.",
+  "nextFile": "scripts/verify-migrations.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",

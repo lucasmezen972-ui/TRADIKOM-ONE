@@ -5,6 +5,7 @@ import {
   migrate,
   type DbClient,
 } from "../src/lib/db";
+import { tenantRlsCoverageGapsSql } from "./tenant-rls-coverage";
 
 const phase2Target = "016_tenant_integrity";
 
@@ -106,23 +107,7 @@ async function expectMigrationHistory(db: DbClient, expected: string[]) {
 
 async function expectTenantRlsCoverage(db: DbClient) {
   const gaps = await db.query<{ table_name: string }>(
-    `select columns.table_name
-     from information_schema.columns as columns
-     join pg_class as tables on tables.relname = columns.table_name
-     join pg_namespace as namespaces on namespaces.oid = tables.relnamespace
-     where columns.table_schema = 'public'
-       and columns.column_name = 'tenant_id'
-       and namespaces.nspname = 'public'
-       and (
-         not tables.relrowsecurity
-         or not exists (
-           select 1 from pg_policies as policies
-           where policies.schemaname = 'public'
-             and policies.tablename = columns.table_name
-             and policies.cmd = 'ALL'
-         )
-       )
-     order by columns.table_name`,
+    tenantRlsCoverageGapsSql,
   );
   assert(
     gaps.rows.length === 0,
