@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-05T05:30:00.000Z",
+  "updatedAt": "2026-09-09T21:31:13.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "82586e89045538fddf61fdb56fc563eabd6ed688",
-  "publishedHeadObserved": "82586e89045538fddf61fdb56fc563eabd6ed688",
-  "status": "os5_meta_tenant_readiness_published_ci_proven_human_meta_sms_pending",
+  "lastCommit": "19c5c10cbabd82c14ed08e401f627e932b28172a",
+  "publishedHeadObserved": "19c5c10cbabd82c14ed08e401f627e932b28172a",
+  "status": "os5_meta_trial_authorization_at_most_once_ready_for_ci_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La lecture tenant-scoped de la préparation WhatsApp Meta est livrée au commit 461156a, corrigée sans changement fonctionnel au commit 82586e8, publiée et prouvée par la CI 33946531702 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build et 20 Playwright verts. Conversation distingue désormais l'état serveur de celui de l'organisation et bloque tout effet externe tant que les deux ne sont pas prêts. Le prochain checkpoint reste humain : validation SMS Meta directement dans la console officielle, sans transmettre le code.",
+  "currentObjective": "Publier et faire valider en CI la tranche verticale OS-5 durcie : une autorisation d'essai WhatsApp Meta durable, tenant-scoped, révocable, expirante et strictement limitée à un message, consommée avant tout transport, jamais réémise après consommation et rendue visible en français dans Conversation. La garde RLS doit refuser toute policy permissive non bornée. Le SMS Meta demeure un checkpoint humain distinct; aucun appel Graph, message externe, token persistant, fusion, déploiement ou dépense n'est autorisé par cette tranche.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,12 +30,12 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Poursuivre OS-5 dans l'ordre de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 10-14, 22, 24, 29, 31-32 et 64-69, faire de Conversation la surface de vérité du canal : combiner l'état technique du registre Meta avec la préparation durable de l'organisation, lue sous contexte tenant et acteur. Distinguer en français canal non relié, suspendu, accès sécurisé manquant et organisation prête; maintenir l'effet externe bloqué jusqu'à une combinaison réellement prête; ne retourner aucun identifiant fournisseur, secret ou contenu chiffré. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
-      "evidenceExpected": "Preuve obtenue : lecture agrégée tenant-scoped sous transaction RLS et contrôle de membership, quatre états, révocation, isolation et sortie sans identifiant ou secret; localement 161 fichiers/749 tests hors PostgreSQL, lint, TypeScript, build, audit high, continuity-check et diff check verts. La CI autoritative 33946531702 a validé en 18 min 1 s audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 161 fichiers/773 tests PostgreSQL inclus, build production et 20/20 Playwright. La continuité 33946531695 est verte et la PR #11 est ouverte, brouillon, fusionnable et CLEAN au head 82586e8."
+      "requirement": "Poursuivre OS-5 dans l'ordre exact de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 14, 18, 22, 24, 29-32, 46, 48 et 64-69, compléter la couche non bloquée malgré l'authentification humaine Meta : ajouter une autorisation d'essai durable, tenant-scoped et endpoint-scoped, révocable, expirante et limitée à exactement un message; la consommer atomiquement avant tout résolveur ou transport; interdire toute seconde émission après consommation, y compris après crash, expiration ou révocation; rendre son état compréhensible en français dans Conversation; refuser toute policy RLS permissive non bornée; préserver membership, idempotence, audit sans contenu sensible et états fournisseur explicites. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Preuve attendue : migration additive et miroir runtime compatibles fresh/upgrade étendant les contraintes uniquement à whatsapp_meta/meta_whatsapp_trial avec plafond SQL strict de 1; autorisation émise de façon idempotente par un administrateur, révocable, expirante, isolée par tenant et endpoint, sans identifiant fournisseur, secret ni contenu dans l'audit; absence, expiration, révocation, cross-tenant ou épuisement avant consommation produisant zéro résolveur et zéro fetch; autorisation valide autorisant un seul franchissement du transport, crash après consommation fermé en résultat incertain permanent sans second HTTP, replay sans double consommation et seconde livraison refusée; garde RLS inspectant chaque policy permissive avec helpers approuvés en allowlist; Conversation affichant autorisation d'essai requise, valide ou épuisée sans prétendre à une activation réelle; audit dépendances sans high/critical; tests unitaires, intégration, PostgreSQL/RLS, migrations, build et Playwright verts."
     }
   },
-  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers puis indique seulement que l'étape est terminée. Ensuite inventorier en lecture seule l'application, le WABA et le Phone Number ID; ne créer aucun token persistant et n'effectuer aucun Graph, message, webhook public, fusion, déploiement ou dépense sans l'autorisation distincte requise au moment exact.",
-  "nextFile": "docs/NEXT_STEPS.md",
+  "nextAction": "Publier la tranche Meta durcie par fast-forward après une dernière réconciliation du head distant, puis exiger la CI PostgreSQL/RLS, migrations, build, audit et Playwright avant de la déclarer prouvée.",
+  "nextFile": "tests/e2e/vertical.spec.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1808,6 +1808,54 @@
     {
       "command": "PR #11 après preuve tenant Meta",
       "status": "open_draft_mergeable_clean_head_82586e8_no_merge_deploy_graph_secret_token_or_message"
+    },
+    {
+      "command": "prompt maître, continuity-check et GitHub avant autorisation d'essai Meta le 2026-09-08T13:14Z",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_pnpm_ready_pr_open_draft_mergeable_clean_local_remote_19c5c10"
+    },
+    {
+      "command": "autorisation d'essai WhatsApp Meta durable limitée à un message",
+      "status": "passed_local_additive_migration_runtime_mirror_tenant_endpoint_scope_admin_idempotence_expiry_revocation_budget_before_transport_durable_retry_safe_audit_french_readiness_no_graph"
+    },
+    {
+      "command": "tests ciblés Meta, migrations, RLS et checkpoint Conversation",
+      "status": "passed_migrations_7_plus_3_plus_4_tests_ui_transport_worker_57_tests_rls_checkpoint_60_tests_and_all_random_timeout_cases_replayed_individually_without_failure_postgres_files_skipped_without_database_url"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, pnpm audit --prod --audit-level high et git diff --check le 2026-09-08",
+      "status": "passed_zero_lint_type_errors_zero_high_critical_two_moderate_transitive_advisories_diff_clean"
+    },
+    {
+      "command": "pnpm test local et build production local le 2026-09-08",
+      "status": "inconclusive_local_test_runner_clock_suspensions_random_historical_timeouts_build_correctly_requires_missing_database_url_ci_postgres_authoritative"
+    },
+    {
+      "command": "prompt maître et continuité documentaire relus le 2026-09-09T21:31Z",
+      "status": "passed_sha256_exact_71_pages_core_and_os5_pages_reviewed_directly_stable_worktree_only_tmp_preserved"
+    },
+    {
+      "command": "barrière Meta au plus une fois après consommation et revue adversariale",
+      "status": "passed_consumption_replay_finalized_permanent_transport_outcome_uncertain_before_credentials_destination_or_http_expired_revoked_replay_same_no_second_transport"
+    },
+    {
+      "command": "garde globale RLS permissive toutes roles avec allowlist fermée",
+      "status": "passed_rejects_public_or_role_specific_open_policy_tautology_and_unapproved_actor_access_helper_full_pglite_rls_history_zero_gaps"
+    },
+    {
+      "command": "matrice Meta RLS migrations post-correctifs",
+      "status": "passed_12_files_109_tests_zero_failures_test_timeout_60000"
+    },
+    {
+      "command": "pnpm test exhaustif le 2026-09-09",
+      "status": "passed_152_files_784_tests_11_files_25_postgres_tests_skipped_without_database_url_zero_failures"
+    },
+    {
+      "command": "mise à jour sécurité Next.js 16.3.4 eslint-config-next 16.3.4 et sharp 0.35.4",
+      "status": "passed_pnpm_install_lock_coherent_audit_high_zero_high_critical_three_moderate"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck et git diff --check le 2026-09-09",
+      "status": "passed_zero_lint_type_or_diff_errors_ci_postgres_build_playwright_pending"
     }
   ],
   "humanBlockers": [

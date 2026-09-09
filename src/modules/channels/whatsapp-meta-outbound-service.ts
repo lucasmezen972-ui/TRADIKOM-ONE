@@ -9,6 +9,9 @@ import type {
   ChannelProviderFailureClassification,
 } from "@/modules/channels/contracts";
 import type { WhatsAppMetaOutboundAdapter } from "@/modules/channels/whatsapp-meta-outbound";
+import { WhatsAppMetaActivationBudgetError } from "@/modules/channels/whatsapp-meta-activation-budget-errors";
+import { reserveWhatsAppMetaTrialBudget } from "@/modules/channels/whatsapp-meta-activation-budget-service";
+import { findMetaWhatsAppAuthorizationByReference } from "@/modules/channels/whatsapp-meta-activation-authorization-repository";
 import {
   claimWhatsAppOutboundDeliveryAttempt,
   finalizeClaimedWhatsAppOutboundDelivery,
@@ -72,6 +75,8 @@ const outboundRoles: Role[] = [
 const defaultMaxAttempts = 3;
 const defaultLeaseMs = 60_000;
 const defaultBaseBackoffMs = 1_000;
+const consumedTrialReplaySafeErrorCode =
+  "channel_provider_activation_transport_outcome_uncertain";
 
 export type WhatsAppMetaOutboundPolicyContext = {
   tenantId: string;
@@ -95,12 +100,17 @@ export type WhatsAppMetaOutboundDependencies = {
   evaluatePolicy: WhatsAppMetaOutboundPolicyEvaluator;
 };
 
-export type WhatsAppMetaOutboundAttemptOptions = {
+export type WhatsAppMetaOutboundExecutionOptions = {
   now?: Date;
   leaseMs?: number;
   baseBackoffMs?: number;
   maxAttempts?: number;
 };
+
+export type WhatsAppMetaOutboundAttemptOptions =
+  WhatsAppMetaOutboundExecutionOptions & {
+  activationAuthorizationId?: string;
+  };
 
 export class WhatsAppMetaOutboundError extends Error {
   constructor(
@@ -128,6 +138,10 @@ export async function sendPreparedMetaWhatsAppOutbound(
   options: WhatsAppMetaOutboundAttemptOptions = {},
 ) {
   const parsed = metaOutboundRequestSchema.parse(input);
+  const activationAuthorizationId =
+    options.activationAuthorizationId === undefined
+      ? undefined
+      : boundedIdentifierSchema.parse(options.activationAuthorizationId);
   const occurredAt = (options.now ?? new Date(nowIso())).toISOString();
   const maxAttempts = boundedPositiveInteger(
     options.maxAttempts,
@@ -140,13 +154,30 @@ export async function sendPreparedMetaWhatsAppOutbound(
     actorId,
     async (transaction) => {
       await assertOutboundAccess(transaction, actorId, parsed.tenantId);
+      const activationAuthorization =
+        dependencies.adapter.manifest.state === "ready" &&
+        activationAuthorizationId
+          ? await findMetaWhatsAppAuthorizationByReference(transaction, {
+              tenantId: parsed.tenantId,
+              endpointId: parsed.endpointId,
+              authorizationId: activationAuthorizationId,
+            })
+          : null;
+      const legacyFingerprintSource = [
+        provider,
+        parsed.endpointId,
+        parsed.messageId,
+        parsed.channelIdentityId,
+      ];
+      const legacyRequestFingerprint = hashToken(
+        JSON.stringify(legacyFingerprintSource),
+      );
       const requestFingerprint = hashToken(
-        JSON.stringify([
-          provider,
-          parsed.endpointId,
-          parsed.messageId,
-          parsed.channelIdentityId,
-        ]),
+        JSON.stringify(
+          activationAuthorizationId
+            ? [...legacyFingerprintSource, activationAuthorizationId]
+            : legacyFingerprintSource,
+        ),
       );
       const existing = await findWhatsAppOutboundDeliveryByIdempotency(
         transaction,
@@ -157,7 +188,25 @@ export async function sendPreparedMetaWhatsAppOutbound(
         },
       );
       if (existing) {
-        assertMatchingFingerprint(existing, requestFingerprint);
+        if (existing.activation_authorization_id) {
+          if (
+            activationAuthorizationId !== undefined &&
+            activationAuthorizationId !== existing.activation_authorization_id
+          ) {
+            assertMatchingFingerprint(existing, requestFingerprint);
+          }
+          assertMatchingFingerprint(
+            existing,
+            hashToken(
+              JSON.stringify([
+                ...legacyFingerprintSource,
+                existing.activation_authorization_id,
+              ]),
+            ),
+          );
+        } else if (existing.request_fingerprint !== legacyRequestFingerprint) {
+          assertMatchingFingerprint(existing, requestFingerprint);
+        }
         return existing;
       }
 
@@ -178,6 +227,7 @@ export async function sendPreparedMetaWhatsAppOutbound(
         actorId,
         occurredAt,
         maxAttempts,
+        activationAuthorizationId: activationAuthorization?.id,
         provider,
       });
       if (!reservation.row) throw deliveryNotFound();
@@ -215,7 +265,7 @@ export async function attemptPreparedMetaWhatsAppOutboundDelivery(
   actorId: string,
   input: z.input<typeof metaOutboundAttemptSchema>,
   dependencies: WhatsAppMetaOutboundDependencies,
-  options: WhatsAppMetaOutboundAttemptOptions = {},
+  options: WhatsAppMetaOutboundExecutionOptions = {},
 ) {
   const parsed = metaOutboundAttemptSchema.parse(input);
   const attemptedAt = options.now ?? new Date(nowIso());
@@ -318,6 +368,40 @@ export async function attemptPreparedMetaWhatsAppOutboundDelivery(
 
   if (prepared.replayed || !prepared.request) {
     return mapDelivery(prepared.row, prepared.replayed);
+  }
+
+  if (dependencies.adapter.manifest.state === "ready") {
+    try {
+      const activationBudget = await reserveWhatsAppMetaTrialBudget(db, actorId, {
+        tenantId: parsed.tenantId,
+        endpointId: prepared.row.endpoint_id,
+        authorizationId: prepared.row.activation_authorization_id ?? undefined,
+        deliveryId: prepared.row.id,
+        occurredAt: attemptedAtIso,
+      });
+      if (activationBudget.replayed) {
+        return finalizeActivationBudgetFailure(
+          db,
+          actorId,
+          prepared.row,
+          leaseId,
+          attemptedAtIso,
+          consumedTrialReplaySafeErrorCode,
+          "permanent",
+        );
+      }
+    } catch (error) {
+      if (!(error instanceof WhatsAppMetaActivationBudgetError)) throw error;
+      return finalizeActivationBudgetFailure(
+        db,
+        actorId,
+        prepared.row,
+        leaseId,
+        attemptedAtIso,
+        error.code,
+        "policy",
+      );
+    }
   }
 
   const outcome = normalizeDeliveryOutcome(
@@ -483,7 +567,7 @@ function terminalOutcome(
   delivery: ChannelProviderDeliveryRow,
   leaseId: string,
   updatedAt: string,
-  classification: "policy" | "validation",
+  classification: "policy" | "validation" | "permanent",
   safeErrorCode?: string,
 ) {
   return {
@@ -501,6 +585,47 @@ function terminalOutcome(
     updatedAt,
     provider,
   };
+}
+
+async function finalizeActivationBudgetFailure(
+  db: DbClient,
+  actorId: string,
+  delivery: ChannelProviderDeliveryRow,
+  leaseId: string,
+  updatedAt: string,
+  safeErrorCode: WhatsAppMetaActivationBudgetError["code"] | typeof consumedTrialReplaySafeErrorCode,
+  classification: "policy" | "permanent",
+) {
+  return withTenantDbTransaction(
+    db,
+    delivery.tenant_id,
+    actorId,
+    async (transaction) => {
+      await assertOutboundAccess(transaction, actorId, delivery.tenant_id);
+      const denied = await finalizeClaimedWhatsAppOutboundDelivery(
+        transaction,
+        terminalOutcome(
+          delivery,
+          leaseId,
+          updatedAt,
+          classification,
+          safeErrorCode,
+        ),
+      );
+      if (!denied) {
+        const replay = await findWhatsAppOutboundDeliveryById(transaction, {
+          tenantId: delivery.tenant_id,
+          deliveryId: delivery.id,
+          provider,
+        });
+        if (!replay) throw deliveryNotFound();
+        return mapDelivery(replay, true);
+      }
+      await requireMessageStateUpdate(transaction, denied, "failed");
+      await recordCompletionAudit(transaction, actorId, denied, safeErrorCode);
+      return mapDelivery(denied, false);
+    },
+  );
 }
 
 async function recordAttemptAudit(

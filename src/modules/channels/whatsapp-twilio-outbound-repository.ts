@@ -30,6 +30,7 @@ export type ChannelProviderDeliveryRow = {
   tenant_id: string;
   provider: WhatsAppOutboundProvider;
   endpoint_id: string;
+  activation_authorization_id: string | null;
   message_id: string;
   channel_identity_id: string;
   idempotency_key: string;
@@ -141,6 +142,7 @@ export async function reserveWhatsAppOutboundDelivery(
     actorId: string;
     occurredAt: string;
     maxAttempts: number;
+    activationAuthorizationId?: string;
     provider?: WhatsAppOutboundProvider;
   },
 ) {
@@ -151,10 +153,11 @@ export async function reserveWhatsAppOutboundDelivery(
        idempotency_key, request_fingerprint, status, external_message_id,
        failure_classification, safe_error_code, retryable, attempts,
        max_attempts, next_attempt_at, last_attempted_at, lease_id,
-       lease_expires_at, created_by, created_at, updated_at
+       lease_expires_at, activation_authorization_id, created_by, created_at,
+       updated_at
      ) values (
        $1, $2, $3, $4, $5, $6, $7, $8, 'reserved', null,
-       null, null, null, 0, $9, $10, null, null, null, $11, $10, $10
+       null, null, null, 0, $9, $10, null, null, null, $11, $12, $10, $10
      )
      on conflict (tenant_id, provider, idempotency_key) do nothing
      returning *`,
@@ -169,6 +172,7 @@ export async function reserveWhatsAppOutboundDelivery(
       input.requestFingerprint,
       input.maxAttempts,
       input.occurredAt,
+      input.activationAuthorizationId ?? null,
       input.actorId,
     ],
   );

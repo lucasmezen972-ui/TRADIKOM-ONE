@@ -4,7 +4,7 @@ import {
   withTenantDbTransaction,
   withTenantSystemDbTransaction,
 } from "../src/db/tenant-context";
-import { createMemoryDb, type DbClient } from "../src/lib/db";
+import { createMemoryDb, migrate, type DbClient } from "../src/lib/db";
 import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import {
@@ -20,6 +20,53 @@ afterEach(async () => {
 });
 
 describe("critical transaction boundaries", () => {
+  it("enferme le verrou, le DDL et le journal PostgreSQL dans une transaction", async () => {
+    const queries: Array<{ sql: string; params?: unknown[] }> = [];
+    let capturedContext: unknown;
+    const transaction: DbClient = {
+      async query<T>(sql: string, params?: unknown[]) {
+        queries.push({ sql, params });
+        return { rows: [] as T[] };
+      },
+    };
+    const db: DbClient & {
+      __runtime: "postgres";
+      __withTransaction: (
+        context: unknown,
+        callback: (client: DbClient) => Promise<unknown>,
+      ) => Promise<unknown>;
+    } = {
+      __runtime: "postgres",
+      async __withTransaction(context, callback) {
+        capturedContext = context;
+        return callback(transaction);
+      },
+      async query() {
+        throw new Error("Une migration ne doit pas utiliser le pool hors transaction.");
+      },
+    };
+
+    await migrate(db, { targetMigrationId: "001_initial" });
+
+    expect(capturedContext).toEqual({});
+    expect(queries[0]).toEqual({
+      sql: "select pg_advisory_xact_lock($1, $2)",
+      params: [1414676811, 1],
+    });
+    expect(queries[1]?.sql).toContain("create table if not exists schema_migrations");
+    expect(queries[2]).toMatchObject({
+      sql: "select id from schema_migrations where id = $1",
+      params: ["001_initial"],
+    });
+    expect(
+      queries.some(({ sql }) => sql.includes("create table users")),
+    ).toBe(true);
+    expect(queries.at(-1)).toMatchObject({
+      sql: "insert into schema_migrations (id, applied_at) values ($1, $2)",
+      params: ["001_initial", expect.any(String)],
+    });
+  });
+
   it("borne le bypass système de configuration au tenant et à l'acteur", async () => {
     let capturedContext: unknown;
     const db: DbClient & {

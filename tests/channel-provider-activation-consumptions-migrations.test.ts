@@ -67,6 +67,7 @@ describe("migrations de consommation d'activation OS-5", () => {
     expect(triggers.rows.map((row) => row.trigger_name)).toEqual([
       "channel_provider_activation_consumptions_budget",
       "channel_provider_activation_consumptions_immutable",
+      "channel_provider_activation_consumptions_meta_delivery_auth",
     ]);
   });
 });

@@ -13,6 +13,7 @@ import {
 } from "@/modules/channels/contracts";
 
 export type WhatsAppMetaOutboundTransport = {
+  kind: "mock" | "http";
   sendMessage(
     input: SendCanonicalMessageRequest,
   ): Promise<ChannelDeliveryResult>;
@@ -60,6 +61,11 @@ export function createWhatsAppMetaOutboundAdapter(input: {
       const unavailable = unavailableResult(manifest.state);
       if (unavailable) return unavailable;
       if (!manifest.transportEnabled || !input.transport) {
+        return unavailableResult("not_configured")!;
+      }
+      const expectedTransportKind =
+        manifest.state === "mock" ? "mock" : "http";
+      if (input.transport.kind !== expectedTransportKind) {
         return unavailableResult("not_configured")!;
       }
 

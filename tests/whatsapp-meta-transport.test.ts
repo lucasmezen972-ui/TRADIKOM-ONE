@@ -47,6 +47,28 @@ describe("transport WhatsApp Meta Cloud API éphémère", () => {
     },
   );
 
+  it("rend le mode mock structurellement incapable d’atteindre Graph", async () => {
+    const resolveCredentials = vi.fn();
+    const resolveDestination = vi.fn();
+    const fetch = vi.fn();
+    const transport = createWhatsAppMetaTransport({
+      state: "mock",
+      resolveCredentials,
+      resolveDestination,
+      fetch,
+    });
+
+    await expect(transport.sendMessage(request)).resolves.toMatchObject({
+      status: "not_configured",
+      provider: "whatsapp_meta",
+      classification: "not_configured",
+      retryable: false,
+    });
+    expect(resolveCredentials).not.toHaveBeenCalled();
+    expect(resolveDestination).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("résout les références sûres et transmet uniquement le contrat Graph attendu", async () => {
     const calls: string[] = [];
     const resolveCredentials = vi.fn(async () => {
@@ -62,7 +84,7 @@ describe("transport WhatsApp Meta Cloud API éphémère", () => {
       return response(200, { messages: [{ id: externalMessageId }] });
     });
     const transport = createWhatsAppMetaTransport({
-      state: "mock",
+      state: "ready",
       resolveCredentials,
       resolveDestination,
       fetch,
@@ -274,7 +296,7 @@ function baseDependencies(
   overrides: Partial<WhatsAppMetaTransportDependencies> = {},
 ): WhatsAppMetaTransportDependencies {
   return {
-    state: "mock",
+    state: "ready",
     resolveCredentials: vi.fn().mockResolvedValue({
       accessToken,
       phoneNumberId,
@@ -292,7 +314,7 @@ function baseDependencies(
   };
 }
 
-function mockManifest(state: ChannelAdapterState = "mock") {
+function mockManifest(state: ChannelAdapterState = "ready") {
   const base = getPreparedChannelProvider("whatsapp_meta", {});
   return channelAdapterManifestSchema.parse({
     ...base,

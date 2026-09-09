@@ -1,5 +1,53 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 9 septembre 2026, 21:31 UTC
+
+- Branche : `codex/tradikom-one-os`; base locale et distante revalidée sur `19c5c10cbabd82c14ed08e401f627e932b28172a`; PR #11 ouverte, brouillon, fusionnable et `CLEAN` avant publication. `tmp/` demeure intact, non suivi et hors index.
+- Travail applicatif poursuivi : la consommation d'essai Meta est désormais une barrière stricte d'émission au plus une fois. Après consommation, un worker ferme toute reprise en résultat de transport incertain, permanent et non rejouable avant même credentials, destination ou HTTP, y compris après expiration ou révocation. Avant consommation, les autorisations invalides restent refusées sans I/O.
+- Renforcement RLS : le contrôle global audite toutes les policies permissives, y compris celles affectées à un rôle spécifique; les formes ouvertes et les fonctions génériques sont refusées. Seuls les cinq helpers `app_actor_can_access_*` réellement définis et approuvés sont admis, avec un premier argument tenant explicite.
+- Renforcement chaîne logicielle : Next.js et `eslint-config-next` passent à 16.3.4; la résolution `sharp` est bornée à `>=0.35.4`. L'audit production au seuil high ne contient plus de vulnérabilité high/critical et conserve trois avis modérés.
+- Preuves locales : matrice Meta/RLS/migrations 12 fichiers/109 tests verts; suite exhaustive 152 fichiers/784 tests verts et 11 fichiers/25 tests PostgreSQL ignorés faute de base locale; sous-matrice des derniers changements 3 fichiers/33 tests verts; historique PGlite chargé avec toutes les migrations RLS et zéro écart de couverture; ESLint, TypeScript et `git diff --check` verts. Le PDF canonique a été relu directement et reste à 71 pages avec le SHA-256 exact.
+- Preuves restantes : la copie locale n'a pas de `DATABASE_URL`; migration concurrente réelle, restricted-role PostgreSQL, `db:verify`, build production et Playwright doivent être validés par la CI de la PR après publication. Aucun Graph, secret, token, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître — émission Meta au plus une fois et garde RLS fermé
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Continuer OS-5 par une tranche conversation-first durable, vérifiable et reprenable | Reprise worker fermée sans deuxième émission; documents de continuité actualisés; aucun CRM, Kanban, dashboard ou OS-6 | Publication fast-forward et CI autoritative encore requises |
+| 10-18, 22-24, 29-30, 64-68 | Fournisseur fail-closed, effet externe idempotent, secrets protégés, interface française et blocage humain explicite | Budget consommé avant transport; relecture terminale incertaine avant toute I/O; mock/HTTP incompatibles; états français sans ID/date/secret | Validation SMS, inventaire officiel, token coffre, Graph et endpoint public restent bloqués humainement |
+| 16-18, 22, 32, 69 | Isolation tenant/RLS, contraintes fresh/upgrade, sécurité adversariale et preuves unit/intégration/PostgreSQL/Playwright | Toutes les policies permissives sont vérifiées contre une allowlist fermée; 109 tests ciblés, lint, TypeScript, audit high et diff verts | PostgreSQL restricted-role, migrations concurrentes, build et Playwright attendent la CI avec `DATABASE_URL` |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Checkpoint applicatif — 8 septembre 2026, 13:14 UTC
+
+- Branche : `codex/tradikom-one-os`; base locale et distante réconciliée sur `19c5c10cbabd82c14ed08e401f627e932b28172a`; PR #11 ouverte, brouillon, fusionnable et `CLEAN`. Le nouveau lot reste local avant publication; `tmp/` est intact, non suivi et hors index.
+- Travail effectué : autorisation d'essai WhatsApp Meta durable, tenant/endpoint-scoped, révocable, expirante et plafonnée en SQL à exactement un message; consommation atomique avant tout résolveur ou transport; lien immuable sur la livraison pour la reprise worker; séparation structurelle des transports mock et HTTP; état agrégé visible en français dans Conversation.
+- Renforcement transversal : migrations PostgreSQL sérialisées dans une transaction sous verrou advisory; upgrades 0097/0109 incapables de supprimer une ancienne FK avant de valider la relation composite; contrôle global RLS refusant une policy permissive publique non bornée même si une policy sûre coexiste.
+- Impact north star : l'autorisation, sa consommation et son état sont pilotables depuis le parcours conversationnel durable. Aucun module CRM, Kanban ou dashboard secondaire n'a été ajouté.
+- Risques contenus : membership et rôles vérifiés, filtres tenant/provider/endpoint, RLS conservée, audit sans contenu/secret/identifiant fournisseur, idempotence et concurrence testées, anciennes livraisons sans lien durable terminalisées avec message canonique cohérent, mock incapable d'atteindre HTTP.
+- Preuves locales fiables : TypeScript, ESLint, `git diff --check` et audit high verts; migrations ciblées 7 + 3 + 4 tests verts; checkpoint/RLS/transport 60 tests verts; worker/readiness/transport 57 tests verts; scénarios Meta expirés pendant suspension tous rejoués isolément avec succès. La suite exhaustive locale est non concluante car l'horloge suspendue fait expirer aléatoirement des tests historiques inchangés; le build refuse correctement l'absence de `DATABASE_URL` en production. PostgreSQL/RLS, `db:verify`, build et Playwright restent à prouver en CI.
+- Aucun Graph, client Meta réel, token, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître — autorisation d'essai WhatsApp Meta
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Continuer par tranche verticale conversation-first, durable et reprise exacte | Autorisation et consommation intégrées au flux Conversation/worker; documents de continuité actualisés; aucun CRM, Kanban, dashboard ou OS-6 | Publication et CI autoritative encore requises |
+| 10-18, 22-24, 29-30, 64-68 | Adaptateur sans logique métier, provider fail-closed, secret protégé, interface française simple et authentification humaine explicite | Budget avant transport, mock/HTTP incompatibles, états `required`/`valid`/`exhausted` sans ID/date/secret ni bouton d'envoi; aucun Graph | Validation SMS, inventaire officiel, token coffre et endpoint public toujours bloqués humainement |
+| 16-18, 22, 32, 69 | Isolation tenant/RLS, action sensible auditée et idempotente; fresh/upgrade, restricted-role, retry et Playwright obligatoires | Tests locaux migrations, idempotence, concurrence, révocation, expiration, cross-tenant, zéro résolveur/fetch, reprise worker et UI; lint/typecheck/audit/diff verts | PostgreSQL restricted-role, migrations concurrentes réelles, build et Playwright attendent la CI avec `DATABASE_URL` |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification de la tranche d'autorisation Meta
+
+- Livré localement : schéma, services, budget, reprise worker, readiness et carte Conversation.
+- Réel connecté : aucun; aucune requête Graph et aucun transport externe.
+- Sandbox : aucune appelée.
+- Mock : doubles inject/zéro réseau uniquement; le mode mock ne peut pas atteindre la frontière HTTP.
+- Bloqué humain : validation SMS Meta, inventaire officiel puis confirmation immédiate avant tout token persistant.
+- Hors périmètre : Graph, message réel, endpoint public, fusion, production, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
 ## Checkpoint applicatif — 5 septembre 2026, 04:49 UTC
 
 - Branche : `codex/tradikom-one-os`; tranche applicative `461156ae3ad7f44920fe64dc182780957cd2aaa2` puis correctif Playwright `82586e89045538fddf61fdb56fc563eabd6ed688` publiés strictement en fast-forward; `tmp/` reste non suivi et hors index.

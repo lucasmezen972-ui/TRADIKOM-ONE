@@ -2,12 +2,16 @@ import { createHash, createHmac } from "node:crypto";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { getDb } from "../../src/lib/db";
 import { createServices } from "../../src/lib/services";
+import { hashToken, id } from "../../src/lib/security";
 import {
   createChannelProviderMediaReferenceCipher,
   createChannelProviderSecretKeyring,
+  issueWhatsAppMetaTrialAuthorization,
   processMetaWhatsAppMediaImport,
   receivePreparedMetaWhatsAppWebhook,
   registerAuthorizedMetaWhatsAppEndpoint,
+  reserveWhatsAppMetaTrialBudget,
+  reserveWhatsAppOutboundDelivery,
   rotateMetaWhatsAppEndpointSecret,
 } from "../../src/modules/channels";
 import { processPendingDomainEvents } from "../../src/modules/workflows/worker";
@@ -1070,6 +1074,7 @@ async function runConversationJourney(
     category: "Services",
   });
   const metaTenantState = viewport.label === "desktop" ? "ready" : "not_registered";
+  let metaEndpointId: string | null = null;
   if (metaTenantState === "ready") {
     const numericSuffix = `${Date.now()}${viewport.width}`;
     const wabaId = `7${numericSuffix}`;
@@ -1084,6 +1089,7 @@ async function runConversationJourney(
       },
       "conversation-e2e-meta-fingerprint-secret",
     );
+    metaEndpointId = endpoint.endpointId;
     await rotateMetaWhatsAppEndpointSecret(
       db,
       {
@@ -1136,6 +1142,10 @@ async function runConversationJourney(
       "data-tenant-state",
       metaTenantState,
     );
+    await expect(metaCheckpoint).toHaveAttribute(
+      "data-trial-authorization-state",
+      metaTenantState === "ready" ? "required" : "not_checked",
+    );
     const metaServerState = metaCheckpoint
       .locator("dl > div")
       .filter({ hasText: "État du serveur" });
@@ -1144,7 +1154,15 @@ async function runConversationJourney(
     ).toBeVisible();
     await expect(
       metaCheckpoint.getByText(
-        metaTenantState === "ready" ? "Organisation prête" : "Canal non relié",
+        metaTenantState === "ready" ? "Canal configuré" : "Canal non relié",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      metaCheckpoint.getByText(
+        metaTenantState === "ready"
+          ? "Autorisation d’essai requise"
+          : "Non vérifiée",
         { exact: true },
       ),
     ).toBeVisible();
@@ -1155,6 +1173,31 @@ async function runConversationJourney(
     await expect(
       metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
     ).toHaveCount(0);
+    let metaAuthorizationId: string | null = null;
+    if (metaEndpointId) {
+      const authorizedAt = new Date();
+      const authorization = await issueWhatsAppMetaTrialAuthorization(db, {
+        tenantId: tenant.id,
+        actorId: user.id,
+        endpointId: metaEndpointId,
+        idempotencyKey: `conversation-meta-trial-${suffix}`,
+        freeUnitsConfirmed: true,
+        expiresAt: new Date(authorizedAt.getTime() + 60 * 60 * 1000).toISOString(),
+        occurredAt: authorizedAt.toISOString(),
+      });
+      metaAuthorizationId = authorization.authorizationId;
+      await page.reload();
+      await expect(metaCheckpoint).toHaveAttribute(
+        "data-trial-authorization-state",
+        "valid",
+      );
+      await expect(
+        metaCheckpoint.getByText("Autorisation d’essai valide", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
+      ).toHaveCount(0);
+    }
     const webMessage = `Préparer un suivi client ${suffix}`;
     const webForm = page.locator("form").filter({ hasText: "Écrire depuis le web" });
     await webForm.getByLabel("Écrire depuis le web").fill(webMessage);
@@ -1171,6 +1214,59 @@ async function runConversationJourney(
     await expect(page).toHaveURL(/envoye=test/);
     await expect(page.getByText(webMessage)).toBeVisible();
     await expect(page.getByText(testMessage)).toBeVisible();
+
+    if (metaEndpointId && metaAuthorizationId) {
+      const message = await db.query<{
+        id: string;
+        channel_identity_id: string;
+      }>(
+        `select id, channel_identity_id
+           from conversation_messages
+          where tenant_id = $1
+          order by created_at desc
+          limit 1`,
+        [tenant.id],
+      );
+      const messageId = message.rows[0]?.id;
+      const channelIdentityId = message.rows[0]?.channel_identity_id;
+      if (!messageId || !channelIdentityId) {
+        throw new Error("Le message de preuve Conversation est introuvable.");
+      }
+      const deliveryId = id("channel_delivery");
+      const consumedAt = new Date().toISOString();
+      await reserveWhatsAppOutboundDelivery(db, {
+        id: deliveryId,
+        tenantId: tenant.id,
+        endpointId: metaEndpointId,
+        messageId,
+        channelIdentityId,
+        idempotencyKey: `conversation-meta-trial-delivery-${suffix}`,
+        requestFingerprint: hashToken(`conversation-meta-trial-delivery-${suffix}`),
+        actorId: user.id,
+        occurredAt: consumedAt,
+        maxAttempts: 1,
+        activationAuthorizationId: metaAuthorizationId,
+        provider: "whatsapp_meta",
+      });
+      await reserveWhatsAppMetaTrialBudget(db, user.id, {
+        tenantId: tenant.id,
+        endpointId: metaEndpointId,
+        authorizationId: metaAuthorizationId,
+        deliveryId,
+        occurredAt: consumedAt,
+      });
+      await page.reload();
+      await expect(metaCheckpoint).toHaveAttribute(
+        "data-trial-authorization-state",
+        "exhausted",
+      );
+      await expect(
+        metaCheckpoint.getByText("Autorisation d’essai épuisée", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
+      ).toHaveCount(0);
+    }
 
     const prepare = page.getByRole("button", { name: "Préparer le plan" });
     await prepare.focus();

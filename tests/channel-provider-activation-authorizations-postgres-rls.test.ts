@@ -5,8 +5,11 @@ import { pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import {
+  issueWhatsAppMetaTrialAuthorization,
   issueWhatsAppTwilioActivationAuthorization,
+  registerAuthorizedMetaWhatsAppEndpoint,
   registerAuthorizedWhatsAppEndpoint,
+  revokeWhatsAppMetaTrialAuthorization,
 } from "../src/modules/channels";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -39,6 +42,28 @@ describeIfPostgres("RLS PostgreSQL des autorisations d'activation OS-5", () => {
     restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
     const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
     restrictedPools.push(restrictedPool);
+    const restrictedDb = pgPoolAsSqlClient(restrictedPool);
+
+    const restrictedMetaAuthorization = await issueWhatsAppMetaTrialAuthorization(
+      restrictedDb,
+      {
+        tenantId: fixtureA.tenantId,
+        actorId: fixtureA.ownerId,
+        endpointId: fixtureA.metaEndpointId,
+        idempotencyKey: `activation-meta-restricted-${randomUUID()}`,
+        freeUnitsConfirmed: true,
+        expiresAt,
+        occurredAt: authorizedAt,
+      },
+    );
+    await expect(
+      revokeWhatsAppMetaTrialAuthorization(restrictedDb, {
+        tenantId: fixtureA.tenantId,
+        actorId: fixtureA.ownerId,
+        authorizationId: restrictedMetaAuthorization.authorizationId,
+        occurredAt: "2026-08-08T16:15:00.000Z",
+      }),
+    ).resolves.toMatchObject({ revoked: true });
 
     expect(
       (
@@ -52,10 +77,37 @@ describeIfPostgres("RLS PostgreSQL des autorisations d'activation OS-5", () => {
       fixtureA.tenantId,
       (client) =>
         client.query<{ id: string }>(
-          "select id from channel_provider_activation_authorizations order by id",
+          `select id from channel_provider_activation_authorizations
+           where provider = 'whatsapp_twilio'`,
         ),
     );
     expect(visibleA.rows).toEqual([{ id: fixtureA.authorizationId }]);
+    const visibleMetaA = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) =>
+        client.query<{ id: string }>(
+          `select id from channel_provider_activation_authorizations
+           where provider = 'whatsapp_meta'`,
+        ),
+    );
+    expect(visibleMetaA.rows.map((row) => row.id).sort()).toEqual(
+      [
+        fixtureA.metaAuthorizationId,
+        restrictedMetaAuthorization.authorizationId,
+      ].sort(),
+    );
+    const hiddenMetaB = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      (client) =>
+        client.query<{ id: string }>(
+          `select id from channel_provider_activation_authorizations
+           where id = $1`,
+          [fixtureB.metaAuthorizationId],
+        ),
+    );
+    expect(hiddenMetaB.rows).toEqual([]);
 
     await expect(
       withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
@@ -145,11 +197,33 @@ async function seedAuthorizationTenant(db: OwnerDb, suffix: "a" | "b") {
     expiresAt,
     occurredAt: authorizedAt,
   });
+  const metaEndpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+    db,
+    {
+      tenantId: tenant.id,
+      actorId: owner.id,
+      externalAccountId: suffix === "a" ? "315589313241560883" : "415589313241560883",
+      phoneNumberId: suffix === "a" ? "8794189252778687" : "9794189252778687",
+      occurredAt: authorizedAt,
+    },
+    "activation-postgres-meta-fingerprint-secret",
+  );
+  const metaAuthorization = await issueWhatsAppMetaTrialAuthorization(db, {
+    tenantId: tenant.id,
+    actorId: owner.id,
+    endpointId: metaEndpoint.endpointId,
+    idempotencyKey: `activation-meta-rls-${suffix}`,
+    freeUnitsConfirmed: true,
+    expiresAt,
+    occurredAt: authorizedAt,
+  });
   return {
     ownerId: owner.id,
     tenantId: tenant.id,
     endpointId: endpoint.endpointId,
     authorizationId: authorization.authorizationId,
+    metaAuthorizationId: metaAuthorization.authorizationId,
+    metaEndpointId: metaEndpoint.endpointId,
   };
 }
 

@@ -34,7 +34,7 @@ describe("adaptateur sortant WhatsApp Meta préparé", () => {
       const sendMessage = vi.fn();
       const adapter = createWhatsAppMetaOutboundAdapter({
         manifest: getPreparedChannelProvider("whatsapp_meta", environment),
-        transport: { sendMessage },
+        transport: { kind: "http", sendMessage },
       });
 
       await expect(adapter.sendMessage(request)).resolves.toMatchObject({
@@ -79,7 +79,7 @@ describe("adaptateur sortant WhatsApp Meta préparé", () => {
         missingEnvironment: [],
         transportEnabled: true,
       }),
-      transport: { sendMessage },
+      transport: { kind: "http", sendMessage },
     });
 
     await expect(adapter.sendMessage(request)).resolves.toMatchObject({
@@ -89,6 +89,33 @@ describe("adaptateur sortant WhatsApp Meta préparé", () => {
     });
     expect(sendMessage).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    ["mock", "http"],
+    ["ready", "mock"],
+  ] as const)(
+    "refuse une composition %s avec un transport %s avant toute I/O",
+    async (state, kind) => {
+      const sendMessage = vi.fn();
+      const base = getPreparedChannelProvider("whatsapp_meta", {});
+      const adapter = createWhatsAppMetaOutboundAdapter({
+        manifest: channelAdapterManifestSchema.parse({
+          ...base,
+          state,
+          missingEnvironment: [],
+          transportEnabled: true,
+        }),
+        transport: { kind, sendMessage },
+      });
+
+      await expect(adapter.sendMessage(request)).resolves.toMatchObject({
+        status: "not_configured",
+        classification: "not_configured",
+        retryable: false,
+      });
+      expect(sendMessage).not.toHaveBeenCalled();
+    },
+  );
 
   it("refuse ready lorsqu'aucun transport explicite n'est composé", async () => {
     const base = getPreparedChannelProvider("whatsapp_meta", {});
@@ -178,6 +205,7 @@ function createMockAdapter(sendMessage: ReturnType<typeof vi.fn>) {
   return createWhatsAppMetaOutboundAdapter({
     manifest,
     transport: {
+      kind: "mock",
       sendMessage:
         sendMessage as WhatsAppMetaOutboundTransport["sendMessage"],
     },

@@ -4,11 +4,14 @@ import { hashToken, id } from "../src/lib/security";
 import { createServices } from "../src/lib/services";
 import {
   channelAdapterManifestSchema,
+  claimWhatsAppOutboundDeliveryAttempt,
   createWhatsAppMetaOutboundAdapter,
   getPreparedChannelProvider,
+  issueWhatsAppMetaTrialAuthorization,
   processMetaWhatsAppOutboundDeliveryWorker,
   registerAuthorizedMetaWhatsAppEndpoint,
   reserveMetaWhatsAppIdentityBinding,
+  reserveWhatsAppMetaTrialBudget,
   reserveWhatsAppOutboundDelivery,
   sendPreparedMetaWhatsAppOutbound,
   setAuthorizedMetaWhatsAppEndpointStatus,
@@ -35,9 +38,26 @@ describe("worker durable WhatsApp Meta", () => {
     "reprend une réservation interrompue et ne rejoue jamais le succès",
     async () => {
       const setup = await createSetup();
-      const deliveryId = await seedReservedDelivery(setup, "meta-worker-reserved");
+      const authorization = await issueWhatsAppMetaTrialAuthorization(setup.db, {
+        tenantId: setup.tenant.id,
+        actorId: setup.owner.id,
+        endpointId: setup.endpointId,
+        idempotencyKey: "meta-worker-interrupted-authorization",
+        freeUnitsConfirmed: true,
+        expiresAt: new Date(start.getTime() + 60_000).toISOString(),
+        occurredAt: start.toISOString(),
+      });
+      const deliveryId = await seedReservedDelivery(
+        setup,
+        "meta-worker-reserved",
+        authorization.authorizationId,
+      );
       const sendMessage = vi.fn().mockResolvedValue(acceptedResult());
-      const dependencies = dependenciesFor(sendMessage);
+      const dependencies = dependenciesFor(
+        sendMessage,
+        () => ({ allowed: true }),
+        "ready",
+      );
 
       const first = await processMetaWhatsAppOutboundDeliveryWorker(
         setup.db,
@@ -79,7 +99,105 @@ describe("worker durable WhatsApp Meta", () => {
         max_attempts: 3,
         lease_id: null,
         lease_expires_at: null,
+        activation_authorization_id: authorization.authorizationId,
       });
+      expect(await countActivationConsumptions(setup.db)).toBe(1);
+    },
+    25_000,
+  );
+
+  it(
+    "ferme une reprise après consommation sans jamais réémettre le transport ready",
+    async () => {
+      const setup = await createSetup();
+      const authorization = await issueWhatsAppMetaTrialAuthorization(setup.db, {
+        tenantId: setup.tenant.id,
+        actorId: setup.owner.id,
+        endpointId: setup.endpointId,
+        idempotencyKey: "meta-worker-consumed-before-crash-authorization",
+        freeUnitsConfirmed: true,
+        expiresAt: new Date(start.getTime() + 60_000).toISOString(),
+        occurredAt: start.toISOString(),
+      });
+      const deliveryId = await seedReservedDelivery(
+        setup,
+        "meta-worker-consumed-before-crash",
+        authorization.authorizationId,
+      );
+      const leaseExpiresAt = new Date(start.getTime() + 500);
+      const claimed = await claimWhatsAppOutboundDeliveryAttempt(setup.db, {
+        tenantId: setup.tenant.id,
+        deliveryId,
+        leaseId: "meta-worker-crashed-lease",
+        attemptedAt: start.toISOString(),
+        leaseExpiresAt: leaseExpiresAt.toISOString(),
+        provider: "whatsapp_meta",
+      });
+      expect(claimed).not.toBeNull();
+      const consumed = await reserveWhatsAppMetaTrialBudget(
+        setup.db,
+        setup.owner.id,
+        {
+          tenantId: setup.tenant.id,
+          endpointId: setup.endpointId,
+          authorizationId: authorization.authorizationId,
+          deliveryId,
+          occurredAt: start.toISOString(),
+        },
+      );
+      expect(consumed.replayed).toBe(false);
+
+      const transport = vi.fn().mockResolvedValue(acceptedResult());
+      const evaluatePolicy = vi.fn().mockReturnValue({ allowed: true });
+      const dependencies = dependenciesFor(
+        transport,
+        evaluatePolicy,
+        "ready",
+      );
+      // Simule l'acceptation externe suivie d'un crash avant la finalisation DB.
+      const externalResult = await dependencies.adapter.sendMessage({
+        tenantId: setup.tenant.id,
+        endpointId: setup.endpointId,
+        channelIdentityId: setup.customerIdentityId,
+        messageId: setup.messageId,
+        idempotencyKey: "meta-worker-consumed-before-crash",
+        text: messageText,
+      });
+      expect(externalResult.status).toBe("accepted");
+      const summary = await processMetaWhatsAppOutboundDeliveryWorker(
+        setup.db,
+        setup.owner.id,
+        setup.tenant.id,
+        dependencies,
+        { now: leaseExpiresAt },
+      );
+
+      expect(summary).toEqual({
+        selected: 1,
+        processed: 1,
+        succeeded: 0,
+        retried: 0,
+        failed: 1,
+        skipped: 0,
+      });
+      expect(evaluatePolicy).toHaveBeenCalledOnce();
+      expect(transport).toHaveBeenCalledOnce();
+      expect(await readDelivery(setup.db, deliveryId)).toMatchObject({
+        status: "failed",
+        failure_classification: "permanent",
+        safe_error_code:
+          "channel_provider_activation_transport_outcome_uncertain",
+        retryable: false,
+        attempts: 2,
+        lease_id: null,
+        lease_expires_at: null,
+      });
+      expect(await readMessageStatus(setup)).toEqual({
+        status: "failed",
+        safe_error_code:
+          "channel_provider_activation_transport_outcome_uncertain",
+      });
+      expect(await countActivationConsumptions(setup.db)).toBe(1);
     },
     25_000,
   );
@@ -288,6 +406,7 @@ async function createSetup() {
 async function seedReservedDelivery(
   setup: Awaited<ReturnType<typeof createSetup>>,
   idempotencyKey: string,
+  activationAuthorizationId?: string,
 ) {
   const deliveryId = id("channel_delivery");
   const requestFingerprint = hashToken(
@@ -296,6 +415,7 @@ async function seedReservedDelivery(
       setup.endpointId,
       setup.messageId,
       setup.customerIdentityId,
+      activationAuthorizationId ?? null,
     ]),
   );
   const reservation = await reserveWhatsAppOutboundDelivery(setup.db, {
@@ -309,6 +429,7 @@ async function seedReservedDelivery(
     actorId: setup.owner.id,
     occurredAt: start.toISOString(),
     maxAttempts: 3,
+    activationAuthorizationId,
     provider: "whatsapp_meta",
   });
   expect(reservation.replayed).toBe(false);
@@ -331,11 +452,12 @@ function deliveryInput(
 function dependenciesFor(
   sendMessage: ReturnType<typeof vi.fn>,
   evaluatePolicy: WhatsAppMetaOutboundPolicyEvaluator = () => ({ allowed: true }),
+  state: "mock" | "ready" = "mock",
 ) {
   const base = getPreparedChannelProvider("whatsapp_meta", {});
   const manifest = channelAdapterManifestSchema.parse({
     ...base,
-    state: "mock",
+    state,
     missingEnvironment: [],
     transportEnabled: true,
   });
@@ -343,12 +465,22 @@ function dependenciesFor(
     adapter: createWhatsAppMetaOutboundAdapter({
       manifest,
       transport: {
+        kind: state === "mock" ? "mock" : "http",
         sendMessage:
           sendMessage as WhatsAppMetaOutboundTransport["sendMessage"],
       },
     }),
     evaluatePolicy,
   };
+}
+
+async function countActivationConsumptions(db: TestDb) {
+  const result = await db.query<{ count: number }>(
+    `select count(*)::integer as count
+     from channel_provider_activation_consumptions
+     where provider = 'whatsapp_meta'`,
+  );
+  return result.rows[0]?.count ?? 0;
 }
 
 function acceptedResult() {

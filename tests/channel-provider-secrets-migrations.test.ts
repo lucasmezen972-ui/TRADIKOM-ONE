@@ -195,6 +195,43 @@ describe("migrations du coffre fournisseur OS-5", () => {
       }),
     ).rejects.toThrow(/check constraint|violates/i);
 
+    await insertSecret(db, {
+      id: "secret_twilio_on_meta_legacy",
+      tenantId: "tenant_a",
+      provider: "whatsapp_twilio",
+      endpointId: "endpoint_meta_a",
+      identityId: null,
+      scope: "endpoint",
+      version: 1,
+      rotationHash: "f".repeat(64),
+    });
+    await expect(migrate(db)).rejects.toThrow(/foreign key|violates/i);
+    const constraintsAfterFailure = await db.query<{ conname: string }>(
+      `select conname from pg_constraint
+       where conrelid = 'channel_provider_secret_versions'::regclass`,
+    );
+    expect(constraintsAfterFailure.rows.map((row) => row.conname)).toContain(
+      "channel_provider_secret_versions_tenant_id_endpoint_id_fkey",
+    );
+    expect(constraintsAfterFailure.rows.map((row) => row.conname)).not.toContain(
+      "channel_provider_secret_versions_endpoint_provider_fkey",
+    );
+    await expect(
+      insertSecret(db, {
+        id: "secret_meta_during_failed_upgrade",
+        tenantId: "tenant_a",
+        provider: "whatsapp_meta",
+        endpointId: "endpoint_meta_a",
+        identityId: null,
+        scope: "endpoint",
+        version: 1,
+        rotationHash: "e".repeat(64),
+      }),
+    ).rejects.toThrow(/check constraint|violates/i);
+    await db.query(
+      `delete from channel_provider_secret_versions
+       where id = 'secret_twilio_on_meta_legacy'`,
+    );
     await migrate(db);
     await insertSecret(db, {
       id: "secret_meta_after",

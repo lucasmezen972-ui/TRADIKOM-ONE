@@ -1,4 +1,4 @@
-import { getDb, migrate, type DbClient } from "@/lib/db";
+import { getDb, type DbClient } from "@/lib/db";
 import {
   createUnavailableAttachmentAccessDependencies,
   getConversationThread,
@@ -105,6 +105,5 @@ export function createConversationChannelServices(
 
 export async function getConversationChannelServices() {
   const db = await getDb();
-  await migrate(db);
   return createConversationChannelServices(db);
 }

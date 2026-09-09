@@ -116,7 +116,8 @@ export type WhatsAppMetaTransportDependencies = {
 /**
  * Frontière HTTP éphémère pour WhatsApp Cloud API.
  * La composition réelle doit fournir les résolveurs tenant-aware et `fetch`
- * uniquement après autorisation; ce module ne lit aucun secret global.
+ * uniquement après autorisation; ce module ne lit aucun secret global. Le
+ * mode mock est volontairement incapable d'atteindre cette frontière HTTP.
  */
 export function createWhatsAppMetaTransport(
   dependencies: WhatsAppMetaTransportDependencies,
@@ -127,6 +128,7 @@ export function createWhatsAppMetaTransport(
   if (!options.success) throw new WhatsAppMetaTransportError("validation");
 
   return {
+    kind: "http",
     async sendMessage(input) {
       const unavailable = unavailableResult(dependencies.state);
       if (unavailable) return unavailable;
@@ -246,14 +248,15 @@ export function classifyWhatsAppMetaHttpStatus(
 function unavailableResult(
   state: ChannelAdapterState,
 ): ChannelDeliveryResult | null {
-  if (state === "mock" || state === "ready") return null;
+  if (state === "ready") return null;
+  const unavailableState = state === "mock" ? "not_configured" : state;
   return channelDeliveryResultSchema.parse({
-    status: state,
+    status: unavailableState,
     provider: "whatsapp_meta",
     errorCode:
-      state === "disabled"
+      unavailableState === "disabled"
         ? "channel_disabled"
-        : state === "awaiting_human_auth"
+        : unavailableState === "awaiting_human_auth"
           ? "awaiting_human_auth"
           : "channel_not_configured",
     classification: "not_configured",

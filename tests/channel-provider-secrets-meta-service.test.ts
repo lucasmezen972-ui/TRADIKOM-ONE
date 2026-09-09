@@ -63,7 +63,7 @@ describe("coffre fournisseur WhatsApp Meta tenant-aware", () => {
       text: async () => JSON.stringify({ messages: [{ id: "wamid.test" }] }),
     });
     const transport = createWhatsAppMetaTransport({
-      state: "mock",
+      state: "ready",
       ...resolvers,
       fetch,
     });

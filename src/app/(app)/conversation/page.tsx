@@ -338,6 +338,7 @@ function ProviderActivationCheckpoint({
       data-provider="whatsapp_meta"
       data-provider-state={checkpoint.state}
       data-tenant-state={checkpoint.tenantState}
+      data-trial-authorization-state={checkpoint.trialAuthorizationState}
       className={`rounded-xl border p-4 shadow-sm ${tone.container}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -354,7 +355,7 @@ function ProviderActivationCheckpoint({
         </span>
       </div>
       <p className="mt-3 text-sm text-slate-700">{checkpoint.summary}</p>
-      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
         <div className="rounded-md border border-current/10 bg-white/70 px-3 py-2">
           <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             État du serveur
@@ -372,6 +373,17 @@ function ProviderActivationCheckpoint({
           </dd>
           <dd className="mt-1 text-xs leading-5 text-slate-600">
             {checkpoint.tenantSummary}
+          </dd>
+        </div>
+        <div className="rounded-md border border-current/10 bg-white/70 px-3 py-2">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Autorisation d’essai
+          </dt>
+          <dd className="mt-1 font-bold text-slate-950">
+            {checkpoint.trialAuthorizationStatusLabel}
+          </dd>
+          <dd className="mt-1 text-xs leading-5 text-slate-600">
+            {checkpoint.trialAuthorizationSummary}
           </dd>
         </div>
       </dl>

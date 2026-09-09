@@ -17,11 +17,14 @@ export type MetaWhatsAppTenantConfigurationSummary = {
   has_endpoint: boolean;
   has_active_endpoint: boolean;
   has_configured_endpoint: boolean;
+  has_valid_trial_authorization: boolean;
+  has_exhausted_trial_authorization: boolean;
 };
 
 export async function inspectMetaWhatsAppTenantConfiguration(
   db: DbClient,
   tenantId: string,
+  observedAt: string,
 ) {
   const result = await db.query<MetaWhatsAppTenantConfigurationSummary>(
     `select
@@ -49,14 +52,78 @@ export async function inspectMetaWhatsAppTenantConfiguration(
          where endpoint.tenant_id = $1
            and endpoint.provider = 'whatsapp_meta'
            and endpoint.status = 'active'
-       ) as has_configured_endpoint`,
-    [tenantId],
+       ) as has_configured_endpoint,
+       exists (
+         select 1
+         from channel_provider_endpoints endpoint
+         join channel_provider_secret_versions secret
+           on secret.tenant_id = endpoint.tenant_id
+          and secret.provider = endpoint.provider
+          and secret.endpoint_id = endpoint.id
+          and secret.secret_scope = 'endpoint'
+          and secret.channel_identity_id is null
+          and secret.revoked_at is null
+         join channel_provider_activation_authorizations authz
+           on authz.tenant_id = endpoint.tenant_id
+          and authz.provider = endpoint.provider
+          and authz.endpoint_id = endpoint.id
+          and authz.authorization_scope = 'meta_whatsapp_trial'
+          and authz.max_messages = 1
+          and authz.free_units_confirmed = true
+          and authz.revoked_at is null
+          and authz.authorized_at::timestamptz <= $2::timestamptz
+          and authz.expires_at::timestamptz > $2::timestamptz
+         where endpoint.tenant_id = $1
+           and endpoint.provider = 'whatsapp_meta'
+           and endpoint.status = 'active'
+           and not exists (
+             select 1
+             from channel_provider_activation_consumptions consumption
+             where consumption.tenant_id = authz.tenant_id
+               and consumption.provider = authz.provider
+               and consumption.authorization_id = authz.id
+           )
+       ) as has_valid_trial_authorization,
+       exists (
+         select 1
+         from channel_provider_endpoints endpoint
+         join channel_provider_secret_versions secret
+           on secret.tenant_id = endpoint.tenant_id
+          and secret.provider = endpoint.provider
+          and secret.endpoint_id = endpoint.id
+          and secret.secret_scope = 'endpoint'
+          and secret.channel_identity_id is null
+          and secret.revoked_at is null
+         join channel_provider_activation_authorizations authz
+           on authz.tenant_id = endpoint.tenant_id
+          and authz.provider = endpoint.provider
+          and authz.endpoint_id = endpoint.id
+          and authz.authorization_scope = 'meta_whatsapp_trial'
+          and authz.max_messages = 1
+          and authz.free_units_confirmed = true
+          and authz.revoked_at is null
+          and authz.authorized_at::timestamptz <= $2::timestamptz
+          and authz.expires_at::timestamptz > $2::timestamptz
+         where endpoint.tenant_id = $1
+           and endpoint.provider = 'whatsapp_meta'
+           and endpoint.status = 'active'
+           and exists (
+             select 1
+             from channel_provider_activation_consumptions consumption
+             where consumption.tenant_id = authz.tenant_id
+               and consumption.provider = authz.provider
+               and consumption.authorization_id = authz.id
+           )
+       ) as has_exhausted_trial_authorization`,
+    [tenantId, observedAt],
   );
   return (
     result.rows[0] ?? {
       has_endpoint: false,
       has_active_endpoint: false,
       has_configured_endpoint: false,
+      has_valid_trial_authorization: false,
+      has_exhausted_trial_authorization: false,
     }
   );
 }

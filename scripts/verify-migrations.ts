@@ -1,10 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { Client } from "pg";
-import {
-  getMigrationIds,
-  migrate,
-  type DbClient,
-} from "../src/lib/db";
+import { Client, Pool } from "pg";
+import { pgPoolAsSqlClient } from "../src/db/client";
+import { getMigrationIds, migrate, type DbClient } from "../src/lib/db";
 import { tenantRlsCoverageGapsSql } from "./tenant-rls-coverage";
 
 const phase2Target = "016_tenant_integrity";
@@ -33,8 +30,10 @@ async function verifyEmptyDatabase(adminClient: Client, databaseUrl: string) {
     databaseUrl,
     "empty",
     async (db) => {
-      await migrate(db, { enableRls: true });
-      await migrate(db, { enableRls: true });
+      await Promise.all([
+        migrate(db, { enableRls: true }),
+        migrate(db, { enableRls: true }),
+      ]);
       await expectMigrationHistory(db, getMigrationIds(true));
       await expectTenantRlsCoverage(db);
       await expectTenantIndexes(db);
@@ -152,29 +151,13 @@ async function withTemporaryDatabase(
   await adminClient.query(`create database ${identifier}`);
   const targetUrl = new URL(databaseUrl);
   targetUrl.pathname = `/${databaseName}`;
-  const client = new Client({ connectionString: targetUrl.toString() });
+  const pool = new Pool({ connectionString: targetUrl.toString(), max: 2 });
   try {
-    await client.connect();
-    await run(asDbClient(client));
+    await run(pgPoolAsSqlClient(pool));
   } finally {
-    await client.end();
+    await pool.end();
     await adminClient.query(`drop database if exists ${identifier} with (force)`);
   }
-}
-
-function asDbClient(client: Client): DbClient {
-  return {
-    query: async <T = Record<string, unknown>>(
-      sql: string,
-      params?: unknown[],
-    ) => {
-      const result = await client.query(sql, params);
-      return {
-        rows: result.rows as T[],
-        affectedRows: result.rowCount ?? undefined,
-      };
-    },
-  };
 }
 
 function quoteIdentifier(value: string) {

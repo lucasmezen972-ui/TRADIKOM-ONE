@@ -4,8 +4,8 @@ import type { Role } from "@/lib/types";
 import { listDueWhatsAppOutboundDeliveries } from "@/modules/channels/whatsapp-twilio-outbound-repository";
 import {
   attemptPreparedMetaWhatsAppOutboundDelivery,
-  type WhatsAppMetaOutboundAttemptOptions,
   type WhatsAppMetaOutboundDependencies,
+  type WhatsAppMetaOutboundExecutionOptions,
 } from "@/modules/channels/whatsapp-meta-outbound-service";
 import { assertTenantAccess } from "@/modules/tenants";
 
@@ -18,7 +18,7 @@ const workerRoles: Role[] = [
 const defaultLimit = 25;
 
 export type WhatsAppMetaOutboundWorkerOptions =
-  WhatsAppMetaOutboundAttemptOptions & { limit?: number };
+  WhatsAppMetaOutboundExecutionOptions & { limit?: number };
 
 export type WhatsAppMetaOutboundWorkerSummary = {
   selected: number;

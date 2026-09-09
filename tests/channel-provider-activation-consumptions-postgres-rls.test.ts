@@ -6,8 +6,11 @@ import { migrate } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import { hashToken, id } from "../src/lib/security";
 import {
+  issueWhatsAppMetaTrialAuthorization,
   issueWhatsAppTwilioActivationAuthorization,
+  registerAuthorizedMetaWhatsAppEndpoint,
   registerAuthorizedWhatsAppEndpoint,
+  reserveWhatsAppMetaTrialBudget,
   reserveWhatsAppOutboundDelivery,
   reserveWhatsAppTwilioActivationBudget,
 } from "../src/modules/channels";
@@ -37,6 +40,25 @@ describeIfPostgres(
       ownerPools.push(ownerPool);
       const ownerDb = pgPoolAsSqlClient(ownerPool);
       await migrate(ownerDb, { enableRls: true });
+      const policies = await ownerPool.query<{
+        policyname: string;
+        qual: string | null;
+        with_check: string | null;
+      }>(
+        `select policyname, qual, with_check
+         from pg_policies
+         where schemaname = 'public'
+           and tablename = 'channel_provider_activation_consumptions'`,
+      );
+      expect(policies.rows).toEqual([
+        expect.objectContaining({
+          policyname: "tenant_isolation",
+          qual: expect.stringMatching(/app_is_system.*app_current_tenant_id/i),
+          with_check: expect.stringMatching(
+            /app_is_system.*app_current_tenant_id/i,
+          ),
+        }),
+      ]);
       const fixtureA = await seedBudgetTenant(ownerDb, "a");
       const fixtureB = await seedBudgetTenant(ownerDb, "b");
 
@@ -135,12 +157,125 @@ describeIfPostgres(
       );
       expect(crossDelete.rows).toEqual([]);
     });
+
+    it("ne dépasse jamais le plafond Meta d’un message sous concurrence", async () => {
+      if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+      const ownerPool = new Pool({ connectionString: databaseUrl });
+      ownerPools.push(ownerPool);
+      const ownerDb = pgPoolAsSqlClient(ownerPool);
+      await migrate(ownerDb, { enableRls: true });
+      const fixture = await seedBudgetTenant(ownerDb, "a", "meta");
+
+      const attempts = await Promise.allSettled(
+        fixture.deliveryIds.map((deliveryId) =>
+          reserveWhatsAppMetaTrialBudget(ownerDb, fixture.ownerId, {
+            tenantId: fixture.tenantId,
+            endpointId: fixture.endpointId,
+            authorizationId: fixture.authorizationId,
+            deliveryId,
+            occurredAt: timestamp,
+          }),
+        ),
+      );
+      expect(
+        attempts.filter((attempt) => attempt.status === "fulfilled"),
+      ).toHaveLength(1);
+      expect(
+        attempts.filter((attempt) => attempt.status === "rejected"),
+      ).toHaveLength(1);
+      expect(
+        attempts.find((attempt) => attempt.status === "rejected"),
+      ).toMatchObject({
+        reason: { code: "channel_provider_activation_budget_exhausted" },
+      });
+      const count = await ownerDb.query<{ count: number }>(
+        `select count(*)::integer as count
+         from channel_provider_activation_consumptions
+         where tenant_id = $1 and provider = 'whatsapp_meta'`,
+        [fixture.tenantId],
+      );
+      expect(count.rows[0]?.count).toBe(1);
+
+      const sameDeliveryFixture = await seedBudgetTenant(ownerDb, "b", "meta");
+      const restricted = await createRestrictedRole(ownerPool);
+      restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+      const restrictedPool = new Pool({
+        connectionString: restricted.databaseUrl,
+      });
+      restrictedPools.push(restrictedPool);
+      const restrictedDb = pgPoolAsSqlClient(restrictedPool);
+      const sameDeliveryAttempts = await Promise.allSettled(
+        [1, 2].map(() =>
+          reserveWhatsAppMetaTrialBudget(
+            restrictedDb,
+            sameDeliveryFixture.ownerId,
+            {
+              tenantId: sameDeliveryFixture.tenantId,
+              endpointId: sameDeliveryFixture.endpointId,
+              authorizationId: sameDeliveryFixture.authorizationId,
+              deliveryId: sameDeliveryFixture.deliveryIds[0]!,
+              occurredAt: timestamp,
+            },
+          ),
+        ),
+      );
+      expect(
+        sameDeliveryAttempts.filter(
+          (attempt) => attempt.status === "fulfilled",
+        ),
+      ).toHaveLength(2);
+      const sameDeliveryResults = sameDeliveryAttempts
+        .filter(
+          (
+            attempt,
+          ): attempt is PromiseFulfilledResult<
+            Awaited<ReturnType<typeof reserveWhatsAppMetaTrialBudget>>
+          > => attempt.status === "fulfilled",
+        )
+        .map((attempt) => attempt.value.replayed)
+        .sort();
+      expect(sameDeliveryResults).toEqual([false, true]);
+      const sameDeliveryCount = await ownerDb.query<{ count: number }>(
+        `select count(*)::integer as count
+         from channel_provider_activation_consumptions
+         where tenant_id = $1 and provider = 'whatsapp_meta'`,
+        [sameDeliveryFixture.tenantId],
+      );
+      expect(sameDeliveryCount.rows[0]?.count).toBe(1);
+      const visibleSameTenant = await withTenantContext(
+        restrictedPool,
+        sameDeliveryFixture.tenantId,
+        (client) =>
+          client.query<{ tenant_id: string }>(
+            `select tenant_id from channel_provider_activation_consumptions
+             where provider = 'whatsapp_meta'`,
+          ),
+      );
+      expect(visibleSameTenant.rows).toEqual([
+        { tenant_id: sameDeliveryFixture.tenantId },
+      ]);
+      const hiddenOtherTenant = await withTenantContext(
+        restrictedPool,
+        fixture.tenantId,
+        (client) =>
+          client.query<{ tenant_id: string }>(
+            `select tenant_id from channel_provider_activation_consumptions
+             where tenant_id = $1 and provider = 'whatsapp_meta'`,
+            [sameDeliveryFixture.tenantId],
+          ),
+      );
+      expect(hiddenOtherTenant.rows).toEqual([]);
+    });
   },
 );
 
 type OwnerDb = ReturnType<typeof pgPoolAsSqlClient>;
 
-async function seedBudgetTenant(db: OwnerDb, label: "a" | "b") {
+async function seedBudgetTenant(
+  db: OwnerDb,
+  label: "a" | "b",
+  provider: "twilio" | "meta" = "twilio",
+) {
   const unique = randomUUID().replaceAll("-", "");
   const services = createServices(db);
   const owner = await services.registerUser({
@@ -152,28 +287,54 @@ async function seedBudgetTenant(db: OwnerDb, label: "a" | "b") {
     name: `Budget RLS ${label} ${unique}`,
     category: "Services",
   });
-  const endpoint = await registerAuthorizedWhatsAppEndpoint(
-    db,
-    {
-      tenantId: tenant.id,
-      actorId: owner.id,
-      externalAccountId: `AC${unique.slice(0, 32)}`,
-      destinationAddress:
-        label === "a" ? "whatsapp:+15005550121" : "whatsapp:+15005550122",
-      occurredAt: timestamp,
-    },
-    `budget-rls-fingerprint-${unique}`,
-  );
-  const authorization = await issueWhatsAppTwilioActivationAuthorization(db, {
-    tenantId: tenant.id,
-    actorId: owner.id,
-    endpointId: endpoint.endpointId,
-    idempotencyKey: `budget-rls-authorization-${unique}`,
-    maxMessages: 1,
-    freeUnitsConfirmed: true,
-    expiresAt,
-    occurredAt: timestamp,
-  });
+  const endpoint =
+    provider === "meta"
+      ? await registerAuthorizedMetaWhatsAppEndpoint(
+          db,
+          {
+            tenantId: tenant.id,
+            actorId: owner.id,
+            externalAccountId: `3${unique.replace(/[^0-9]/g, "").padEnd(18, "1").slice(0, 18)}`,
+            phoneNumberId: `8${unique.replace(/[^0-9]/g, "").padEnd(15, "2").slice(0, 15)}`,
+            occurredAt: timestamp,
+          },
+          `budget-rls-fingerprint-${unique}`,
+        )
+      : await registerAuthorizedWhatsAppEndpoint(
+          db,
+          {
+            tenantId: tenant.id,
+            actorId: owner.id,
+            externalAccountId: `AC${unique.slice(0, 32)}`,
+            destinationAddress:
+              label === "a"
+                ? "whatsapp:+15005550121"
+                : "whatsapp:+15005550122",
+            occurredAt: timestamp,
+          },
+          `budget-rls-fingerprint-${unique}`,
+        );
+  const authorization =
+    provider === "meta"
+      ? await issueWhatsAppMetaTrialAuthorization(db, {
+          tenantId: tenant.id,
+          actorId: owner.id,
+          endpointId: endpoint.endpointId,
+          idempotencyKey: `budget-meta-rls-authorization-${unique}`,
+          freeUnitsConfirmed: true,
+          expiresAt,
+          occurredAt: timestamp,
+        })
+      : await issueWhatsAppTwilioActivationAuthorization(db, {
+          tenantId: tenant.id,
+          actorId: owner.id,
+          endpointId: endpoint.endpointId,
+          idempotencyKey: `budget-rls-authorization-${unique}`,
+          maxMessages: 1,
+          freeUnitsConfirmed: true,
+          expiresAt,
+          occurredAt: timestamp,
+        });
   const threadId = `thread_budget_rls_${unique}`;
   const customerParticipantId = `participant_budget_customer_${unique}`;
   const systemParticipantId = `participant_budget_system_${unique}`;
@@ -193,7 +354,7 @@ async function seedBudgetTenant(db: OwnerDb, label: "a" | "b") {
        id, tenant_id, participant_id, channel_kind, adapter_key,
        external_subject_id, display_name, role, state, created_at, updated_at
      ) values
-       ($1, $2, $3, 'messaging', 'whatsapp-twilio', $4, null,
+       ($1, $2, $3, 'messaging', $9, $4, null,
         'customer', 'active', $5, $5),
        ($6, $2, $7, 'web', 'web-chat', $8, null,
         'system', 'active', $5, $5)`,
@@ -206,6 +367,7 @@ async function seedBudgetTenant(db: OwnerDb, label: "a" | "b") {
       systemIdentityId,
       systemParticipantId,
       `budget_system_${unique}`,
+      provider === "meta" ? "whatsapp-meta" : "whatsapp-twilio",
     ],
   );
   await db.query(
@@ -253,6 +415,8 @@ async function seedBudgetTenant(db: OwnerDb, label: "a" | "b") {
       actorId: owner.id,
       occurredAt: timestamp,
       maxAttempts: 3,
+      activationAuthorizationId: authorization.authorizationId,
+      provider: provider === "meta" ? "whatsapp_meta" : "whatsapp_twilio",
     });
     deliveryIds.push(deliveryId);
   }

@@ -10,6 +10,7 @@ import {
   inspectMetaWhatsAppTenantReadiness,
   registerAuthorizedMetaWhatsAppEndpoint,
   registerAuthorizedWhatsAppEndpoint,
+  revokeMetaWhatsAppEndpointSecret,
   rotateMetaWhatsAppEndpointSecret,
   rotateWhatsAppEndpointSecret,
 } from "../src/modules/channels";
@@ -54,7 +55,11 @@ describeIfPostgres("RLS PostgreSQL du coffre fournisseur OS-5", () => {
     ).resolves.toEqual({
       provider: "whatsapp_meta",
       state: "ready",
-      checks: { endpoint: "active", credentials: "active" },
+      checks: {
+        endpoint: "active",
+        credentials: "active",
+        trialAuthorization: "required",
+      },
     });
     await expect(
       inspectMetaWhatsAppTenantReadiness(
@@ -127,6 +132,37 @@ describeIfPostgres("RLS PostgreSQL du coffre fournisseur OS-5", () => {
         ),
     );
     expect(crossDelete.rows).toEqual([]);
+
+    await rotateMetaWhatsAppEndpointSecret(
+      restrictedDb,
+      {
+        tenantId: fixtureA.tenantId,
+        actorId: fixtureA.ownerId,
+        endpointId: fixtureA.endpointId,
+        rotationKey: `vault-meta-restricted-${randomUUID()}`,
+        secret: {
+          wabaId: "345678901234567",
+          accessToken: "meta-restricted-test-token-never-real",
+          phoneNumberId: "456789012345678",
+          graphApiVersion: "v23.0",
+          appSecret: "meta-restricted-app-secret-never-real",
+          webhookVerifyToken: "meta-restricted-webhook-token",
+        },
+        occurredAt: "2026-08-08T12:15:00.000Z",
+      },
+      createChannelProviderSecretKeyring({
+        activeKeyVersion: "test-v1",
+        keys: { "test-v1": Buffer.alloc(32, 31) },
+      }),
+    );
+    await expect(
+      revokeMetaWhatsAppEndpointSecret(restrictedDb, {
+        tenantId: fixtureA.tenantId,
+        actorId: fixtureA.ownerId,
+        endpointId: fixtureA.endpointId,
+        occurredAt: "2026-08-08T12:30:00.000Z",
+      }),
+    ).resolves.toMatchObject({ revoked: true });
   });
 });
 

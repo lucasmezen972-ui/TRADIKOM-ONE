@@ -119,6 +119,7 @@ export type MetaWhatsAppTenantReadiness = {
   checks: {
     endpoint: "missing" | "disabled" | "active";
     credentials: "not_checked" | "missing" | "active";
+    trialAuthorization: "not_checked" | "required" | "valid" | "exhausted";
   };
 };
 
@@ -126,6 +127,7 @@ export async function inspectMetaWhatsAppTenantReadiness(
   db: DbClient,
   actorId: string,
   tenantId: string,
+  observedAt: Date = new Date(nowIso()),
 ): Promise<MetaWhatsAppTenantReadiness> {
   const parsed = inspectMetaWhatsAppTenantReadinessSchema.parse({
     tenantId,
@@ -151,17 +153,33 @@ export async function inspectMetaWhatsAppTenantReadiness(
       const configuration = await inspectMetaWhatsAppTenantConfiguration(
         transaction,
         parsed.tenantId,
+        observedAt.toISOString(),
       );
       if (configuration.has_configured_endpoint) {
-        return readiness("ready", "active", "active");
+        const trialAuthorization = configuration.has_valid_trial_authorization
+          ? "valid"
+          : configuration.has_exhausted_trial_authorization
+            ? "exhausted"
+            : "required";
+        return readiness("ready", "active", "active", trialAuthorization);
       }
       if (configuration.has_active_endpoint) {
-        return readiness("credentials_missing", "active", "missing");
+        return readiness(
+          "credentials_missing",
+          "active",
+          "missing",
+          "not_checked",
+        );
       }
       if (configuration.has_endpoint) {
-        return readiness("disabled", "disabled", "not_checked");
+        return readiness("disabled", "disabled", "not_checked", "not_checked");
       }
-      return readiness("not_registered", "missing", "not_checked");
+      return readiness(
+        "not_registered",
+        "missing",
+        "not_checked",
+        "not_checked",
+      );
     },
   );
 }
@@ -507,11 +525,12 @@ function readiness(
   state: MetaWhatsAppTenantReadiness["state"],
   endpoint: MetaWhatsAppTenantReadiness["checks"]["endpoint"],
   credentials: MetaWhatsAppTenantReadiness["checks"]["credentials"],
+  trialAuthorization: MetaWhatsAppTenantReadiness["checks"]["trialAuthorization"],
 ): MetaWhatsAppTenantReadiness {
   return {
     provider: "whatsapp_meta",
     state,
-    checks: { endpoint, credentials },
+    checks: { endpoint, credentials, trialAuthorization },
   };
 }
 

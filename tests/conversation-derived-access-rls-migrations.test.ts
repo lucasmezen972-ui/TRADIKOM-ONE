@@ -24,8 +24,11 @@ describe("migration RLS des objets dérivés de Conversation", () => {
     expect(getMigrationIds()).not.toContain(
       "114_os5_conversation_derived_access_rls",
     );
+    expect(getMigrationIds()).toContain(
+      "115_os5_whatsapp_meta_trial_authorization",
+    );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "114_os5_conversation_derived_access_rls",
+      "115_os5_whatsapp_meta_trial_authorization",
     );
   });
 
