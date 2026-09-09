@@ -11,23 +11,24 @@
 - Le runner PostgreSQL sérialise désormais les migrations concurrentes dans une transaction et un verrou advisory; les migrations 0097 et 0109 évitent de supprimer une contrainte avant d'avoir prouvé la relation composite de remplacement. Le contrôle global RLS audite chaque policy permissive, quel que soit son rôle, refuse les prédicats ouverts et n'accepte que les cinq helpers d'accès acteur explicitement approuvés.
 - Next.js et `eslint-config-next` sont corrigés en 16.3.4 et la résolution `sharp` impose au minimum 0.35.4. L'audit au seuil high repasse avec seulement trois avis modérés.
 - Preuves locales fiables après ces durcissements : matrice Meta/RLS/migrations de 12 fichiers et 109 tests verts; suite exhaustive 152 fichiers/784 tests verts, avec 11 fichiers/25 tests PostgreSQL ignorés faute de `DATABASE_URL`; historique PGlite avec RLS complet et zéro écart de couverture; ESLint, TypeScript, diff check et audit high verts. Build production, `db:verify`, tests restricted-role et Playwright doivent encore être arbitrés par la CI PostgreSQL.
-- Local et distant ont été réconciliés sur `19c5c10cbabd82c14ed08e401f627e932b28172a`; la PR #11 est ouverte, brouillon, fusionnable et `CLEAN`. Le lot n'est pas encore publié; `tmp/` demeure hors index.
+- Le commit applicatif `dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f` est publié strictement en fast-forward; la PR #11 est ouverte, brouillon, fusionnable et `CLEAN`. La CI `34409452423` et la continuité `34409452521` sont vertes; `tmp/` demeure hors index.
 - L'utilisateur autorise la configuration des clés Meta, mais pas leur passage dans le chat, les logs, Git ou le modèle. La boîte d'inscription Meta ouverte dans Chrome n'a fourni aucun signal fiable de validation SMS pendant ce run; l'étape reste donc bloquée humainement, sans déduire qu'elle est terminée.
 - Les mentions « preuves locales » et « attente CI » conservées dans le détail des tranches décrivent leur checkpoint de création; elles sont toutes levées pour le code publié jusqu'à `25cafcd` par la preuve finale `33936955678`.
 
 ## Prochaine action exacte
 
-1. Revalider le head distant, committer explicitement la tranche sans `tmp/`, pousser uniquement en fast-forward puis attendre les deux workflows de la PR #11.
-2. Exiger audit, migrations concurrentes/fresh/upgrade, `db:verify`, sauvegarde/restauration, lint, TypeScript, suite PostgreSQL/RLS, build et Playwright. Corriger tout échec réel avant de déclarer la tranche prouvée.
-3. Ensuite seulement, revenir au checkpoint humain : l'utilisateur saisit lui-même le code SMS dans Meta for Developers, sans jamais le transmettre dans le chat. Inventorier en lecture seule app/WABA/Phone Number ID et demander une confirmation au moment exact avant tout token persistant, Graph ou message d'essai.
+1. L'utilisateur saisit lui-même le code SMS dans Meta for Developers, sans jamais le transmettre dans le chat, puis indique seulement que cette étape est terminée.
+2. Inventorier en lecture seule l'application, le WABA et le Phone Number ID dans la console officielle, sans copier de secret dans le chat, les logs ou Git.
+3. Demander une confirmation au moment exact avant tout token persistant; exiger ensuite une autorisation distincte avant Graph, message d'essai, webhook public, fusion, déploiement ou dépense. Continuer les travaux OS-5 non bloqués seulement s'ils respectent l'ordre page 48.
 
-## Tranche applicative locale en attente de CI : autorisation d'essai WhatsApp Meta
+## Tranche applicative publiée et prouvée CI : autorisation d'essai WhatsApp Meta
 
 - Migration `115_os5_whatsapp_meta_trial_authorization` et miroir SQL `0109` : portée Meta stricte, plafond d'un message, relation fournisseur/tenant/endpoint composée, lien immutable autorisation→livraison et fermeture explicite des anciens retries Meta non rattachables.
 - Émission réservée aux administrateurs, idempotente, expirante et révocable; consommation par les rôles autorisés du tenant avant tout transport; budget sérialisé et rejeu de la même livraison sans double ligne.
 - Le worker retrouve l'autorisation depuis la livraison durable et ne dépend plus de l'utilisateur créateur. Avant consommation, révocation/expiration refuse le transport; après consommation, toute reprise se ferme en issue incertaine permanente sans second transport. Une composition mock→HTTP est impossible.
 - Conversation n'affiche que l'état agrégé `requise`, `valide` ou `épuisée`, en français et sans identifiant/date/secret. Le scénario Playwright prépare puis consomme la preuve en base sans appeler Meta.
-- État honnête : livré localement, non encore publié/prouvé CI; réel connecté = aucun; sandbox = aucune; mock = doubles injectés uniquement; bloqué humain = validation SMS et token; hors périmètre = Graph, message externe, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+- Preuve autoritative : CI `34409452423` verte en 23 min 30 s avec audit, migrations concurrentes/fresh/upgrade, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/809 tests PostgreSQL inclus, build Next.js 16.3.4 et 20/20 Playwright. Continuité `34409452521` verte.
+- État honnête : livré, publié et prouvé CI au commit `dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f`; réel connecté = aucun; sandbox = aucune; mock = doubles injectés uniquement; bloqué humain = validation SMS et token; hors périmètre = Graph, message externe, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
 ## Tranche applicative publiée et prouvée CI : préparation Meta propre au tenant
 

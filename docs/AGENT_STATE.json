@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-09T21:31:13.000Z",
+  "updatedAt": "2026-09-09T22:19:52.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "19c5c10cbabd82c14ed08e401f627e932b28172a",
-  "publishedHeadObserved": "19c5c10cbabd82c14ed08e401f627e932b28172a",
-  "status": "os5_meta_trial_authorization_at_most_once_ready_for_ci_human_meta_sms_pending",
+  "lastCommit": "dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
+  "publishedHeadObserved": "dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
+  "status": "os5_meta_trial_authorization_at_most_once_proven_ci_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Publier et faire valider en CI la tranche verticale OS-5 durcie : une autorisation d'essai WhatsApp Meta durable, tenant-scoped, révocable, expirante et strictement limitée à un message, consommée avant tout transport, jamais réémise après consommation et rendue visible en français dans Conversation. La garde RLS doit refuser toute policy permissive non bornée. Le SMS Meta demeure un checkpoint humain distinct; aucun appel Graph, message externe, token persistant, fusion, déploiement ou dépense n'est autorisé par cette tranche.",
+  "currentObjective": "La tranche verticale OS-5 d'autorisation d'essai WhatsApp Meta est publiée et prouvée en CI : durable, tenant-scoped, révocable, expirante, limitée à un message, consommée avant transport et jamais réémise après consommation. Reprendre au checkpoint humain SMS Meta puis inventorier en lecture seule l'application, le WABA et le Phone Number ID; demander une confirmation au moment exact avant tout token persistant, Graph, message externe, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -34,8 +34,8 @@
       "evidenceExpected": "Preuve attendue : migration additive et miroir runtime compatibles fresh/upgrade étendant les contraintes uniquement à whatsapp_meta/meta_whatsapp_trial avec plafond SQL strict de 1; autorisation émise de façon idempotente par un administrateur, révocable, expirante, isolée par tenant et endpoint, sans identifiant fournisseur, secret ni contenu dans l'audit; absence, expiration, révocation, cross-tenant ou épuisement avant consommation produisant zéro résolveur et zéro fetch; autorisation valide autorisant un seul franchissement du transport, crash après consommation fermé en résultat incertain permanent sans second HTTP, replay sans double consommation et seconde livraison refusée; garde RLS inspectant chaque policy permissive avec helpers approuvés en allowlist; Conversation affichant autorisation d'essai requise, valide ou épuisée sans prétendre à une activation réelle; audit dépendances sans high/critical; tests unitaires, intégration, PostgreSQL/RLS, migrations, build et Playwright verts."
     }
   },
-  "nextAction": "Publier la tranche Meta durcie par fast-forward après une dernière réconciliation du head distant, puis exiger la CI PostgreSQL/RLS, migrations, build, audit et Playwright avant de la déclarer prouvée.",
-  "nextFile": "tests/e2e/vertical.spec.ts",
+  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers, puis inventorier l'application, le WABA et le Phone Number ID en lecture seule; demander une confirmation immédiatement avant tout token persistant ou effet Graph.",
+  "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -1856,6 +1856,22 @@
     {
       "command": "pnpm lint, pnpm typecheck et git diff --check le 2026-09-09",
       "status": "passed_zero_lint_type_or_diff_errors_ci_postgres_build_playwright_pending"
+    },
+    {
+      "command": "publication fast-forward du commit dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
+      "status": "passed_remote_19c5c10_verified_exact_parent_tmp_untracked_preserved_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "CI 34409452423 sur dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
+      "status": "passed_23m30s_audit_migrations_db_verify_backup_restore_lint_typecheck_163_files_809_tests_postgres_included_build_next_16_3_4_and_20_playwright"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34409452521 sur dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après preuve autorisation Meta au plus une fois",
+      "status": "open_draft_mergeable_clean_head_dde51f5_no_merge_deploy_graph_secret_token_or_message"
     }
   ],
   "humanBlockers": [

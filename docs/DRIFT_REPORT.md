@@ -1,21 +1,21 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint applicatif — 9 septembre 2026, 21:31 UTC
+## Checkpoint applicatif — 9 septembre 2026, 22:19 UTC
 
-- Branche : `codex/tradikom-one-os`; base locale et distante revalidée sur `19c5c10cbabd82c14ed08e401f627e932b28172a`; PR #11 ouverte, brouillon, fusionnable et `CLEAN` avant publication. `tmp/` demeure intact, non suivi et hors index.
+- Branche : `codex/tradikom-one-os`; commit applicatif `dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f` publié strictement en fast-forward; PR #11 ouverte, brouillon, fusionnable et `CLEAN`. `tmp/` demeure intact, non suivi et hors index.
 - Travail applicatif poursuivi : la consommation d'essai Meta est désormais une barrière stricte d'émission au plus une fois. Après consommation, un worker ferme toute reprise en résultat de transport incertain, permanent et non rejouable avant même credentials, destination ou HTTP, y compris après expiration ou révocation. Avant consommation, les autorisations invalides restent refusées sans I/O.
 - Renforcement RLS : le contrôle global audite toutes les policies permissives, y compris celles affectées à un rôle spécifique; les formes ouvertes et les fonctions génériques sont refusées. Seuls les cinq helpers `app_actor_can_access_*` réellement définis et approuvés sont admis, avec un premier argument tenant explicite.
 - Renforcement chaîne logicielle : Next.js et `eslint-config-next` passent à 16.3.4; la résolution `sharp` est bornée à `>=0.35.4`. L'audit production au seuil high ne contient plus de vulnérabilité high/critical et conserve trois avis modérés.
 - Preuves locales : matrice Meta/RLS/migrations 12 fichiers/109 tests verts; suite exhaustive 152 fichiers/784 tests verts et 11 fichiers/25 tests PostgreSQL ignorés faute de base locale; sous-matrice des derniers changements 3 fichiers/33 tests verts; historique PGlite chargé avec toutes les migrations RLS et zéro écart de couverture; ESLint, TypeScript et `git diff --check` verts. Le PDF canonique a été relu directement et reste à 71 pages avec le SHA-256 exact.
-- Preuves restantes : la copie locale n'a pas de `DATABASE_URL`; migration concurrente réelle, restricted-role PostgreSQL, `db:verify`, build production et Playwright doivent être validés par la CI de la PR après publication. Aucun Graph, secret, token, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+- Preuve autoritative : CI `34409452423` verte en 23 min 30 s avec audit, migrations concurrentes/fresh/upgrade, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/809 tests PostgreSQL inclus, build Next.js 16.3.4 et 20/20 Playwright. Continuité `34409452521` verte. Aucun Graph, secret, token, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
 
 ## Alignement prompt maître — émission Meta au plus une fois et garde RLS fermé
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 31-33, 46, 48, 70-71 | Continuer OS-5 par une tranche conversation-first durable, vérifiable et reprenable | Reprise worker fermée sans deuxième émission; documents de continuité actualisés; aucun CRM, Kanban, dashboard ou OS-6 | Publication fast-forward et CI autoritative encore requises |
+| 3-7, 31-33, 46, 48, 70-71 | Continuer OS-5 par une tranche conversation-first durable, vérifiable et reprenable | Reprise worker fermée sans deuxième émission; commit `dde51f5` publié et prouvé CI; aucun CRM, Kanban, dashboard ou OS-6 | Checkpoint humain Meta avant la prochaine frontière réelle |
 | 10-18, 22-24, 29-30, 64-68 | Fournisseur fail-closed, effet externe idempotent, secrets protégés, interface française et blocage humain explicite | Budget consommé avant transport; relecture terminale incertaine avant toute I/O; mock/HTTP incompatibles; états français sans ID/date/secret | Validation SMS, inventaire officiel, token coffre, Graph et endpoint public restent bloqués humainement |
-| 16-18, 22, 32, 69 | Isolation tenant/RLS, contraintes fresh/upgrade, sécurité adversariale et preuves unit/intégration/PostgreSQL/Playwright | Toutes les policies permissives sont vérifiées contre une allowlist fermée; 109 tests ciblés, lint, TypeScript, audit high et diff verts | PostgreSQL restricted-role, migrations concurrentes, build et Playwright attendent la CI avec `DATABASE_URL` |
+| 16-18, 22, 32, 69 | Isolation tenant/RLS, contraintes fresh/upgrade, sécurité adversariale et preuves unit/intégration/PostgreSQL/Playwright | Toutes les policies permissives sont vérifiées contre une allowlist fermée; CI `34409452423` valide 163 fichiers/809 tests PostgreSQL, build et 20 Playwright | Aucun écart de preuve identifié pour cette tranche; trois avis transitifs modérés restent à suivre |
 
 Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 
