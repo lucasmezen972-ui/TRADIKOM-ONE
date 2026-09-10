@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { Pool, type PoolClient } from "pg";
-import { pgPoolAsSqlClient } from "../src/db/client";
+import { pgClientAsSqlClient, pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import { hashToken, id } from "../src/lib/security";
 import {
+  createChannelProviderSecretKeyring,
+  issueCurrentWhatsAppMetaTrialAuthorization,
   issueWhatsAppMetaTrialAuthorization,
   issueWhatsAppTwilioActivationAuthorization,
   registerAuthorizedMetaWhatsAppEndpoint,
@@ -13,6 +15,8 @@ import {
   reserveWhatsAppMetaTrialBudget,
   reserveWhatsAppOutboundDelivery,
   reserveWhatsAppTwilioActivationBudget,
+  revokeCurrentWhatsAppMetaTrialAuthorization,
+  rotateMetaWhatsAppEndpointSecret,
 } from "../src/modules/channels";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -22,6 +26,10 @@ const restrictedPools: Pool[] = [];
 const restrictedRoles: Array<{ ownerPool: Pool; roleName: string }> = [];
 const timestamp = "2026-08-08T18:00:00.000Z";
 const expiresAt = "2026-08-08T19:00:00.000Z";
+const metaSecretKeyring = createChannelProviderSecretKeyring({
+  activeKeyVersion: "test-v1",
+  keys: { "test-v1": Buffer.alloc(32, 41) },
+});
 
 afterEach(async () => {
   await Promise.all(restrictedPools.splice(0).map((pool) => pool.end()));
@@ -266,6 +274,141 @@ describeIfPostgres(
       );
       expect(hiddenOtherTenant.rows).toEqual([]);
     });
+
+    it("sérialise la consommation Meta avant issueCurrent via la RLS", async () => {
+      if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+      const ownerPool = new Pool({ connectionString: databaseUrl });
+      ownerPools.push(ownerPool);
+      const ownerDb = pgPoolAsSqlClient(ownerPool);
+      await migrate(ownerDb, { enableRls: true });
+      const fixture = await seedBudgetTenant(ownerDb, "a", "meta");
+      await configureMetaBudgetEndpoint(ownerDb, fixture);
+
+      const restricted = await createRestrictedRole(ownerPool);
+      restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+      const restrictedPool = new Pool({
+        connectionString: restricted.databaseUrl,
+        max: 1,
+        idleTimeoutMillis: 0,
+      });
+      restrictedPools.push(restrictedPool);
+      const restrictedDb = pgPoolAsSqlClient(restrictedPool);
+      const commandBackendPid = await readBackendPid(restrictedPool);
+      const held = await holdMetaConsumption(ownerPool, fixture);
+      let transactionOpen = true;
+      const commandOutcome = issueCurrentWhatsAppMetaTrialAuthorization(
+        restrictedDb,
+        {
+          tenantId: fixture.tenantId,
+          actorId: fixture.ownerId,
+          idempotencyKey: `budget-meta-current-after-consumption-${randomUUID()}`,
+          freeUnitsConfirmed: true,
+          validForSeconds: 3_600,
+          occurredAt: "2026-08-08T18:05:00.000Z",
+        },
+      ).then(
+        (value) => ({ status: "fulfilled" as const, value }),
+        (reason: unknown) => ({ status: "rejected" as const, reason }),
+      );
+
+      try {
+        await waitForBackendBlockedBy(
+          ownerPool,
+          commandBackendPid,
+          held.backendPid,
+        );
+        await held.client.query("commit");
+        transactionOpen = false;
+
+        await expect(commandOutcome).resolves.toMatchObject({
+          status: "rejected",
+          reason: {
+            code: "channel_provider_activation_authorization_invalid",
+          },
+        });
+        await expect(readMetaAuthorizationState(ownerDb, fixture)).resolves.toEqual(
+          [
+            {
+              id: fixture.authorizationId,
+              revoked_at: null,
+              revoked_by: null,
+              consumption_count: 1,
+            },
+          ],
+        );
+      } finally {
+        if (transactionOpen) await held.client.query("rollback");
+        held.client.release();
+        await commandOutcome;
+      }
+    });
+
+    it("sérialise la consommation Meta avant revokeCurrent via la RLS", async () => {
+      if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+      const ownerPool = new Pool({ connectionString: databaseUrl });
+      ownerPools.push(ownerPool);
+      const ownerDb = pgPoolAsSqlClient(ownerPool);
+      await migrate(ownerDb, { enableRls: true });
+      const fixture = await seedBudgetTenant(ownerDb, "b", "meta");
+      await configureMetaBudgetEndpoint(ownerDb, fixture);
+
+      const restricted = await createRestrictedRole(ownerPool);
+      restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+      const restrictedPool = new Pool({
+        connectionString: restricted.databaseUrl,
+        max: 1,
+        idleTimeoutMillis: 0,
+      });
+      restrictedPools.push(restrictedPool);
+      const restrictedDb = pgPoolAsSqlClient(restrictedPool);
+      const commandBackendPid = await readBackendPid(restrictedPool);
+      const held = await holdMetaConsumption(ownerPool, fixture);
+      let transactionOpen = true;
+      const commandOutcome = revokeCurrentWhatsAppMetaTrialAuthorization(
+        restrictedDb,
+        {
+          tenantId: fixture.tenantId,
+          actorId: fixture.ownerId,
+          occurredAt: "2026-08-08T18:05:00.000Z",
+        },
+      ).then(
+        (value) => ({ status: "fulfilled" as const, value }),
+        (reason: unknown) => ({ status: "rejected" as const, reason }),
+      );
+
+      try {
+        await waitForBackendBlockedBy(
+          ownerPool,
+          commandBackendPid,
+          held.backendPid,
+        );
+        await held.client.query("commit");
+        transactionOpen = false;
+
+        await expect(commandOutcome).resolves.toEqual({
+          status: "fulfilled",
+          value: {
+            endpointId: fixture.endpointId,
+            revokedCount: 0,
+            replayed: true,
+          },
+        });
+        await expect(readMetaAuthorizationState(ownerDb, fixture)).resolves.toEqual(
+          [
+            {
+              id: fixture.authorizationId,
+              revoked_at: null,
+              revoked_by: null,
+              consumption_count: 1,
+            },
+          ],
+        );
+      } finally {
+        if (transactionOpen) await held.client.query("rollback");
+        held.client.release();
+        await commandOutcome;
+      }
+    });
   },
 );
 
@@ -277,6 +420,10 @@ async function seedBudgetTenant(
   provider: "twilio" | "meta" = "twilio",
 ) {
   const unique = randomUUID().replaceAll("-", "");
+  const numericUnique = unique.replace(/[^0-9]/g, "");
+  const metaExternalAccountId = `3${numericUnique.padEnd(18, "1").slice(0, 18)}`;
+  const metaPhoneNumberId = `8${numericUnique.padEnd(15, "2").slice(0, 15)}`;
+  const fingerprintSecret = `budget-rls-fingerprint-${unique}`;
   const services = createServices(db);
   const owner = await services.registerUser({
     name: `Budget RLS ${label}`,
@@ -294,11 +441,11 @@ async function seedBudgetTenant(
           {
             tenantId: tenant.id,
             actorId: owner.id,
-            externalAccountId: `3${unique.replace(/[^0-9]/g, "").padEnd(18, "1").slice(0, 18)}`,
-            phoneNumberId: `8${unique.replace(/[^0-9]/g, "").padEnd(15, "2").slice(0, 15)}`,
+            externalAccountId: metaExternalAccountId,
+            phoneNumberId: metaPhoneNumberId,
             occurredAt: timestamp,
           },
-          `budget-rls-fingerprint-${unique}`,
+          fingerprintSecret,
         )
       : await registerAuthorizedWhatsAppEndpoint(
           db,
@@ -312,7 +459,7 @@ async function seedBudgetTenant(
                 : "whatsapp:+15005550122",
             occurredAt: timestamp,
           },
-          `budget-rls-fingerprint-${unique}`,
+          fingerprintSecret,
         );
   const authorization =
     provider === "meta"
@@ -426,7 +573,128 @@ async function seedBudgetTenant(
     endpointId: endpoint.endpointId,
     authorizationId: authorization.authorizationId,
     deliveryIds,
+    metaExternalAccountId,
+    metaPhoneNumberId,
+    fingerprintSecret,
   };
+}
+
+type BudgetFixture = Awaited<ReturnType<typeof seedBudgetTenant>>;
+
+async function configureMetaBudgetEndpoint(
+  db: OwnerDb,
+  fixture: BudgetFixture,
+) {
+  return rotateMetaWhatsAppEndpointSecret(
+    db,
+    {
+      tenantId: fixture.tenantId,
+      actorId: fixture.ownerId,
+      endpointId: fixture.endpointId,
+      rotationKey: `budget-meta-configured-${randomUUID()}`,
+      secret: {
+        wabaId: fixture.metaExternalAccountId,
+        accessToken: "meta-budget-postgres-test-token-never-real",
+        phoneNumberId: fixture.metaPhoneNumberId,
+        graphApiVersion: "v23.0",
+        appSecret: "meta-budget-postgres-app-secret-never-real",
+        webhookVerifyToken: "meta-budget-postgres-webhook-token-never-real",
+      },
+      occurredAt: timestamp,
+    },
+    metaSecretKeyring,
+    fixture.fingerprintSecret,
+  );
+}
+
+async function holdMetaConsumption(pool: Pool, fixture: BudgetFixture) {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query("select set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    await client.query("select set_config('app.actor_id', $1, true)", [
+      fixture.ownerId,
+    ]);
+    const backendPid = (
+      await client.query<{ backend_pid: number }>(
+        "select pg_backend_pid() as backend_pid",
+      )
+    ).rows[0]?.backend_pid;
+    if (!backendPid) throw new Error("PID PostgreSQL de consommation absent.");
+    await reserveWhatsAppMetaTrialBudget(
+      pgClientAsSqlClient(client),
+      fixture.ownerId,
+      {
+        tenantId: fixture.tenantId,
+        endpointId: fixture.endpointId,
+        authorizationId: fixture.authorizationId,
+        deliveryId: fixture.deliveryIds[0]!,
+        occurredAt: timestamp,
+      },
+    );
+    return { client, backendPid };
+  } catch (error) {
+    await client.query("rollback");
+    client.release();
+    throw error;
+  }
+}
+
+async function readBackendPid(pool: Pool) {
+  const result = await pool.query<{ backend_pid: number }>(
+    "select pg_backend_pid() as backend_pid",
+  );
+  const backendPid = result.rows[0]?.backend_pid;
+  if (!backendPid) throw new Error("PID PostgreSQL de commande absent.");
+  return backendPid;
+}
+
+async function waitForBackendBlockedBy(
+  observerPool: Pool,
+  blockedPid: number,
+  blockerPid: number,
+) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const result = await observerPool.query<{ blocked_by_holder: boolean }>(
+      `select $2::integer = any(pg_blocking_pids($1::integer))
+         as blocked_by_holder`,
+      [blockedPid, blockerPid],
+    );
+    if (result.rows[0]?.blocked_by_holder) return;
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(
+    `La commande PostgreSQL ${blockedPid} n'a pas attendu la consommation ${blockerPid}.`,
+  );
+}
+
+async function readMetaAuthorizationState(
+  db: OwnerDb,
+  fixture: BudgetFixture,
+) {
+  const result = await db.query<{
+    id: string;
+    revoked_at: string | null;
+    revoked_by: string | null;
+    consumption_count: number;
+  }>(
+    `select authz.id, authz.revoked_at, authz.revoked_by,
+            count(consumption.id)::integer as consumption_count
+       from channel_provider_activation_authorizations authz
+       left join channel_provider_activation_consumptions consumption
+         on consumption.tenant_id = authz.tenant_id
+        and consumption.provider = authz.provider
+        and consumption.authorization_id = authz.id
+      where authz.tenant_id = $1
+        and authz.provider = 'whatsapp_meta'
+      group by authz.id, authz.revoked_at, authz.revoked_by
+      order by authz.id`,
+    [fixture.tenantId],
+  );
+  return result.rows;
 }
 
 async function createRestrictedRole(ownerPool: Pool) {

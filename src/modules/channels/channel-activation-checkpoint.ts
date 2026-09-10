@@ -1,3 +1,4 @@
+import type { Role } from "@/lib/types";
 import {
   channelAdapterManifestSchema,
   type ChannelAdapterManifest,
@@ -22,6 +23,8 @@ export type ChannelActivationCheckpoint = {
   externalEffectLabel: string;
   externalEffect: "blocked" | "mock" | "possible";
 };
+
+export type MetaWhatsAppTrialManagementAction = "authorize" | "revoke" | null;
 
 type ServerPresentation = Pick<
   ChannelActivationCheckpoint,
@@ -90,6 +93,23 @@ export function describeMetaWhatsAppActivation(
     trialAuthorizationSummary: trialAuthorizationPresentation.summary,
     ...presentation,
   };
+}
+
+export function resolveMetaWhatsAppTrialManagementAction(
+  checkpoint: ChannelActivationCheckpoint,
+  role: Role,
+): MetaWhatsAppTrialManagementAction {
+  if (!(["owner", "administrator"] as Role[]).includes(role)) {
+    return null;
+  }
+  if (checkpoint.trialAuthorizationState === "valid") return "revoke";
+  if (
+    checkpoint.tenantState === "ready" &&
+    checkpoint.trialAuthorizationState === "required"
+  ) {
+    return "authorize";
+  }
+  return null;
 }
 
 const serverPresentations: Record<ChannelAdapterState, ServerPresentation> = {
@@ -164,6 +184,13 @@ const tenantPresentations: Record<
       "Le canal est enregistré pour cette organisation, mais ses accès sécurisés ne sont pas disponibles.",
     nextAction:
       "Finaliser les accès dans le coffre serveur, sans saisir de secret dans cette interface.",
+  },
+  ambiguous: {
+    statusLabel: "Configuration à clarifier",
+    summary:
+      "Plusieurs canaux WhatsApp Meta actifs sont configurés pour cette organisation.",
+    nextAction:
+      "Conserver un seul canal Meta actif et configuré avant de gérer l’autorisation d’essai.",
   },
   ready: {
     statusLabel: "Canal configuré",

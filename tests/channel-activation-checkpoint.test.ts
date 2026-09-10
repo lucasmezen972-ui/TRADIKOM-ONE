@@ -3,9 +3,11 @@ import {
   channelAdapterManifestSchema,
   describeMetaWhatsAppActivation,
   getPreparedChannelProvider,
+  resolveMetaWhatsAppTrialManagementAction,
   type ChannelAdapterState,
   type MetaWhatsAppTenantReadiness,
 } from "../src/modules/channels";
+import type { Role } from "../src/lib/types";
 
 describe("point de contrôle d’activation Meta dans Conversation", () => {
   afterEach(() => {
@@ -177,6 +179,72 @@ describe("point de contrôle d’activation Meta dans Conversation", () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ["owner", "required", "authorize"],
+    ["administrator", "required", "authorize"],
+    ["owner", "valid", "revoke"],
+    ["administrator", "valid", "revoke"],
+    ["manager", "required", null],
+    ["collaborator", "required", null],
+    ["read-only", "required", null],
+    ["manager", "valid", null],
+    ["owner", "exhausted", null],
+    ["owner", "not_checked", null],
+  ] as const)(
+    "résout l’action administrative du rôle %s pour l’autorisation %s",
+    (role, trialAuthorization, expectedAction) => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      const checkpoint = describeMetaWhatsAppActivation(
+        metaManifestWithState("ready"),
+        metaTenantReadiness("ready", trialAuthorization),
+      );
+
+      expect(
+        resolveMetaWhatsAppTrialManagementAction(checkpoint, role as Role),
+      ).toBe(expectedAction);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["not_registered", "disabled", "credentials_missing"] as const)(
+    "n’expose aucune action quand l’organisation est %s",
+    (tenantState) => {
+      const checkpoint = describeMetaWhatsAppActivation(
+        metaManifestWithState("ready"),
+        metaTenantReadiness(tenantState),
+      );
+
+      expect(
+        resolveMetaWhatsAppTrialManagementAction(checkpoint, "owner"),
+      ).toBeNull();
+    },
+  );
+
+  it.each([
+    ["owner", "required", null],
+    ["administrator", "required", null],
+    ["owner", "valid", "revoke"],
+    ["administrator", "valid", "revoke"],
+  ] as const)(
+    "résout l’action %s pour %s quand plusieurs endpoints Meta sont configurés",
+    (role, trialAuthorization, expectedAction) => {
+      const checkpoint = describeMetaWhatsAppActivation(
+        metaManifestWithState("ready"),
+        metaTenantReadiness("ambiguous", trialAuthorization),
+      );
+
+      expect(checkpoint).toMatchObject({
+        tenantState: "ambiguous",
+        externalEffect: "blocked",
+        externalEffectLabel: "Effet externe bloqué",
+      });
+      expect(checkpoint.summary).toMatch(/aucun message externe/i);
+      expect(
+        resolveMetaWhatsAppTrialManagementAction(checkpoint, role),
+      ).toBe(expectedAction);
+    },
+  );
 });
 
 function metaManifestWithState(state: ChannelAdapterState) {
@@ -198,9 +266,20 @@ function metaManifestWithState(state: ChannelAdapterState) {
 function metaTenantReadiness(
   state: MetaWhatsAppTenantReadiness["state"],
   trialAuthorization: MetaWhatsAppTenantReadiness["checks"]["trialAuthorization"] =
-    state === "ready" ? "valid" : "not_checked",
+    state === "ready"
+      ? "valid"
+      : state === "ambiguous"
+        ? "required"
+        : "not_checked",
 ): MetaWhatsAppTenantReadiness {
   if (state === "ready") {
+    return {
+      provider: "whatsapp_meta",
+      state,
+      checks: { endpoint: "active", credentials: "active", trialAuthorization },
+    };
+  }
+  if (state === "ambiguous") {
     return {
       provider: "whatsapp_meta",
       state,

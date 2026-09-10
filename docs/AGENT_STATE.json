@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-09T22:19:52.000Z",
+  "updatedAt": "2026-09-10T00:35:07.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
-  "publishedHeadObserved": "dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
-  "status": "os5_meta_trial_authorization_at_most_once_proven_ci_human_meta_sms_pending",
+  "publishedHeadObserved": "ed5a571d258542df8980095fb5326376c26a8072",
+  "status": "os5_meta_trial_admin_flow_local_proven_ci_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche verticale OS-5 d'autorisation d'essai WhatsApp Meta est publiée et prouvée en CI : durable, tenant-scoped, révocable, expirante, limitée à un message, consommée avant transport et jamais réémise après consommation. Reprendre au checkpoint humain SMS Meta puis inventorier en lecture seule l'application, le WABA et le Phone Number ID; demander une confirmation au moment exact avant tout token persistant, Graph, message externe, fusion, déploiement ou dépense.",
+  "currentObjective": "La tranche OS-5 locale ferme la cohérence endpoint-secret Meta et rend l'autorisation/révocation d'un unique essai réellement pilotable depuis Conversation. Publier en fast-forward puis obtenir la preuve CI PostgreSQL/RLS, build et Playwright avant de revenir au checkpoint humain SMS Meta; aucun fournisseur réel, secret, Graph ou message externe.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,11 +30,11 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Poursuivre OS-5 dans l'ordre exact de la page 48, selon la Definition of Done page 32 et la matrice page 69. Conformément aux pages 14, 18, 22, 24, 29-32, 46, 48 et 64-69, compléter la couche non bloquée malgré l'authentification humaine Meta : ajouter une autorisation d'essai durable, tenant-scoped et endpoint-scoped, révocable, expirante et limitée à exactement un message; la consommer atomiquement avant tout résolveur ou transport; interdire toute seconde émission après consommation, y compris après crash, expiration ou révocation; rendre son état compréhensible en français dans Conversation; refuser toute policy RLS permissive non bornée; préserver membership, idempotence, audit sans contenu sensible et états fournisseur explicites. Aucun Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
-      "evidenceExpected": "Preuve attendue : migration additive et miroir runtime compatibles fresh/upgrade étendant les contraintes uniquement à whatsapp_meta/meta_whatsapp_trial avec plafond SQL strict de 1; autorisation émise de façon idempotente par un administrateur, révocable, expirante, isolée par tenant et endpoint, sans identifiant fournisseur, secret ni contenu dans l'audit; absence, expiration, révocation, cross-tenant ou épuisement avant consommation produisant zéro résolveur et zéro fetch; autorisation valide autorisant un seul franchissement du transport, crash après consommation fermé en résultat incertain permanent sans second HTTP, replay sans double consommation et seconde livraison refusée; garde RLS inspectant chaque policy permissive avec helpers approuvés en allowlist; Conversation affichant autorisation d'essai requise, valide ou épuisée sans prétendre à une activation réelle; audit dépendances sans high/critical; tests unitaires, intégration, PostgreSQL/RLS, migrations, build et Playwright verts."
+      "requirement": "Poursuivre OS-5 selon les pages 14, 18, 22, 24, 29-32, 46, 48 et 64-69 en appliquant une frontière fournisseur fail-closed puis un contrôle humain conversation-first. Avant toute rotation de secret endpoint WhatsApp Meta, vérifier avec la même clé HMAC que le WABA et le Phone Number ID correspondent exactement à l'endpoint tenant immuable. Ensuite, permettre aux seuls propriétaire et administrateur d'autoriser ou révoquer depuis Conversation un essai limité à un message, en résolvant côté serveur exactement un endpoint actif/configuré, avec confirmation explicite du quota gratuit, expiration courte et idempotence. Aucun secret, identifiant fournisseur, valeur d'empreinte, bouton Envoyer/Activer, Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Preuve attendue : calcul d'empreinte partagé entre enregistrement et rotation; comparaison en temps constant du compte et de la destination avec l'endpoint verrouillé; mauvais Phone Number ID ou clé HMAC invalide refusés avant mutation/audit; bon couple et rejeu inchangés. Une commande tenant-aware sélectionne exactement un endpoint Meta configuré, refuse zéro/plusieurs/rôle faible, émet une autorisation courte idempotente à plafond 1 et révoque monotoniquement; la carte Conversation française expose Autoriser/Révoquer seulement au rôle et à l'état pertinents, sans ID ni réseau; readiness requise→valide→requise; Playwright utilise le vrai flux UI au lieu de l'insertion directe. Tests ciblés, PostgreSQL/RLS, lint, TypeScript, suite, build et Playwright verts."
     }
   },
-  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers, puis inventorier l'application, le WABA et le Phone Number ID en lecture seule; demander une confirmation immédiatement avant tout token persistant ou effet Graph.",
+  "nextAction": "Publier la tranche endpoint-secret et autorisation/révocation Conversation, suivre la CI jusqu'à une preuve verte, corriger tout échec réel, puis reprendre au checkpoint humain SMS Meta.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1872,6 +1872,18 @@
     {
       "command": "PR #11 après preuve autorisation Meta au plus une fois",
       "status": "open_draft_mergeable_clean_head_dde51f5_no_merge_deploy_graph_secret_token_or_message"
+    },
+    {
+      "command": "invariant endpoint-secret Meta et commandes administratives Conversation le 2026-09-10",
+      "status": "passed_local_shared_hmac_constant_time_match_before_mutation_owner_admin_one_configured_endpoint_idempotent_issue_tenant_wide_revoke_ambiguous_fail_closed_safe_audit_no_graph"
+    },
+    {
+      "command": "tests ciblés, pnpm test, lint, typecheck, audit high et diff check le 2026-09-10",
+      "status": "passed_targeted_62_tests_full_152_files_809_tests_11_files_27_postgres_tests_skipped_zero_failures_lint_typecheck_zero_high_critical_three_moderate_diff_clean"
+    },
+    {
+      "command": "build et Playwright locaux de la tranche Conversation Meta",
+      "status": "blocked_only_by_missing_production_environment_and_separate_pglite_processes_ci_postgres_authoritative_no_application_assertion_presented_as_green"
     }
   ],
   "humanBlockers": [

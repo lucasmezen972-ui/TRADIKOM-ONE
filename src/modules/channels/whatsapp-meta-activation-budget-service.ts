@@ -9,6 +9,7 @@ import {
   countMetaWhatsAppActivationConsumptions,
   findMetaWhatsAppConsumptionByDelivery,
   insertMetaWhatsAppActivationConsumption,
+  lockActiveMetaWhatsAppEndpointForActivationBudget,
   lockMetaWhatsAppActivationBudgetContext,
   lockMetaWhatsAppDeliveryForActivationBudget,
   type WhatsAppMetaActivationConsumptionRow,
@@ -51,6 +52,14 @@ export async function reserveWhatsAppMetaTrialBudget(
     actorId,
     async (transaction) => {
       await assertConsumptionAccess(transaction, actorId, parsed.tenantId);
+      if (
+        !(await lockActiveMetaWhatsAppEndpointForActivationBudget(transaction, {
+          tenantId: parsed.tenantId,
+          endpointId: parsed.endpointId,
+        }))
+      ) {
+        throw invalidBudget();
+      }
       const delivery = await lockMetaWhatsAppDeliveryForActivationBudget(
         transaction,
         {

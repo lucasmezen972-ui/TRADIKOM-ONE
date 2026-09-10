@@ -10,6 +10,10 @@ import { recordAuditLog } from "@/modules/audit";
 import type { ChannelProviderSecretKeyring } from "@/modules/channels/channel-provider-secrets-crypto";
 import { ChannelProviderSecretError } from "@/modules/channels/channel-provider-secrets-errors";
 import {
+  channelProviderFingerprintSecretSchema,
+  createChannelProviderEndpointFingerprint,
+} from "@/modules/channels/provider-endpoint-fingerprint";
+import {
   findActiveEndpointSecretVersion,
   findActiveIdentitySecretVersion,
   findActiveChannelProviderIdentity,
@@ -207,8 +211,11 @@ export async function rotateMetaWhatsAppEndpointSecret(
   db: DbClient,
   input: z.input<typeof metaEndpointRotationSchema>,
   keyring: ChannelProviderSecretKeyring,
+  fingerprintSecret: string | undefined,
 ) {
   const parsed = metaEndpointRotationSchema.parse(input);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return rotateSecret(
     db,
     {
@@ -218,6 +225,12 @@ export async function rotateMetaWhatsAppEndpointSecret(
       scope: "endpoint",
       plaintext: JSON.stringify(parsed.secret),
       expectedExternalAccountId: parsed.secret.wabaId,
+      expectedDestinationFingerprint: createChannelProviderEndpointFingerprint(
+        "whatsapp_meta",
+        parsed.secret.wabaId,
+        parsed.secret.phoneNumberId,
+        secret,
+      ),
     },
     keyring,
   );
@@ -440,6 +453,7 @@ async function rotateSecret(
     occurredAt?: string;
     plaintext: string;
     expectedExternalAccountId?: string;
+    expectedDestinationFingerprint?: string;
   },
   keyring: ChannelProviderSecretKeyring,
 ) {
@@ -460,6 +474,17 @@ async function rotateSecret(
       );
       if (replay) {
         assertReplayReference(replay, input);
+        if (input.expectedDestinationFingerprint !== undefined) {
+          assertExpectedEndpointReference(
+            await lockChannelProviderEndpoint(
+              transaction,
+              input.tenantId,
+              input.endpointId,
+              input.provider,
+            ),
+            input,
+          );
+        }
         assertReplayPayload(replay, input.plaintext, keyring);
         return rotationResult(replay, true);
       }
@@ -470,13 +495,7 @@ async function rotateSecret(
         input.endpointId,
         input.provider,
       );
-      if (!endpoint) throw referenceError();
-      if (
-        input.expectedExternalAccountId &&
-        endpoint.external_account_id !== input.expectedExternalAccountId
-      ) {
-        throw referenceError();
-      }
+      assertExpectedEndpointReference(endpoint, input);
       if (
         input.scope === "identity" &&
         (!input.channelIdentityId ||
@@ -667,6 +686,42 @@ function assertReplayReference(
   ) {
     throw referenceError();
   }
+}
+
+function assertExpectedEndpointReference(
+  endpoint: {
+    external_account_id: string;
+    destination_fingerprint: string;
+  } | null,
+  input: {
+    expectedExternalAccountId?: string;
+    expectedDestinationFingerprint?: string;
+  },
+) {
+  if (
+    !endpoint ||
+    (input.expectedExternalAccountId !== undefined &&
+      !constantTimeEqual(
+        endpoint.external_account_id,
+        input.expectedExternalAccountId,
+      )) ||
+    (input.expectedDestinationFingerprint !== undefined &&
+      !constantTimeEqual(
+        endpoint.destination_fingerprint,
+        input.expectedDestinationFingerprint,
+      ))
+  ) {
+    throw referenceError();
+  }
+}
+
+function constantTimeEqual(value: string, expected: string) {
+  const valueBuffer = Buffer.from(value, "utf8");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  return (
+    valueBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(valueBuffer, expectedBuffer)
+  );
 }
 
 function assertReplayPayload(

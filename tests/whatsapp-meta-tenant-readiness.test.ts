@@ -124,6 +124,7 @@ describe("préparation tenant WhatsApp Meta", () => {
         activeKeyVersion: "test-v1",
         keys: { "test-v1": Buffer.alloc(32, 41) },
       }),
+      fingerprintSecret,
     );
     const ready = await inspectMetaWhatsAppTenantReadiness(
       setup.db,
@@ -175,6 +176,7 @@ describe("préparation tenant WhatsApp Meta", () => {
         activeKeyVersion: "test-v1",
         keys: { "test-v1": Buffer.alloc(32, 41) },
       }),
+      fingerprintSecret,
     );
     await expect(
       inspectMetaWhatsAppTenantReadiness(
@@ -329,6 +331,151 @@ describe("préparation tenant WhatsApp Meta", () => {
         setup.tenantA.id,
       ),
     ).resolves.toMatchObject({ state: "credentials_missing" });
+  });
+
+  it("conserve l’état épuisé après l’expiration d’une autorisation consommée", async () => {
+    const setup = await createSetup();
+    const endpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+      setup.db,
+      {
+        tenantId: setup.tenantA.id,
+        actorId: setup.ownerA.id,
+        externalAccountId: wabaId,
+        phoneNumberId,
+        occurredAt: timestamp,
+      },
+      fingerprintSecret,
+    );
+    await rotateMetaWhatsAppEndpointSecret(
+      setup.db,
+      {
+        tenantId: setup.tenantA.id,
+        actorId: setup.ownerA.id,
+        endpointId: endpoint.endpointId,
+        rotationKey: "meta-readiness-expired-consumption-v1",
+        secret: {
+          wabaId,
+          accessToken: "meta-readiness-expired-consumption-token-never-real",
+          phoneNumberId,
+          graphApiVersion: "v23.0",
+          appSecret: "meta-readiness-expired-consumption-secret-never-real",
+          webhookVerifyToken:
+            "meta-readiness-expired-consumption-webhook-never-real",
+        },
+        occurredAt: later,
+      },
+      createChannelProviderSecretKeyring({
+        activeKeyVersion: "test-v1",
+        keys: { "test-v1": Buffer.alloc(32, 41) },
+      }),
+      fingerprintSecret,
+    );
+    const authorization = await issueWhatsAppMetaTrialAuthorization(setup.db, {
+      tenantId: setup.tenantA.id,
+      actorId: setup.ownerA.id,
+      endpointId: endpoint.endpointId,
+      idempotencyKey: "meta-readiness-expired-consumption",
+      freeUnitsConfirmed: true,
+      expiresAt: "2026-09-05T04:33:00.000Z",
+      occurredAt: later,
+    });
+    const deliveryId = await seedTrialDelivery(
+      setup,
+      endpoint.endpointId,
+      authorization.authorizationId,
+    );
+    await reserveWhatsAppMetaTrialBudget(setup.db, setup.ownerA.id, {
+      tenantId: setup.tenantA.id,
+      endpointId: endpoint.endpointId,
+      authorizationId: authorization.authorizationId,
+      deliveryId,
+      occurredAt: "2026-09-05T04:32:00.000Z",
+    });
+
+    await expect(
+      inspectMetaWhatsAppTenantReadiness(
+        setup.db,
+        setup.ownerA.id,
+        setup.tenantA.id,
+        new Date("2026-09-05T04:34:00.000Z"),
+      ),
+    ).resolves.toMatchObject({
+      state: "ready",
+      checks: { trialAuthorization: "exhausted" },
+    });
+  });
+
+  it("signale plusieurs endpoints Meta configurés comme ambigus", async () => {
+    const setup = await createSetup();
+    const keyring = createChannelProviderSecretKeyring({
+      activeKeyVersion: "test-v1",
+      keys: { "test-v1": Buffer.alloc(32, 41) },
+    });
+    const endpoints = [
+      {
+        externalAccountId: wabaId,
+        phoneNumberId,
+        rotationKey: "meta-readiness-ambiguous-endpoint-a-v1",
+        suffix: "a",
+      },
+      {
+        externalAccountId: "515589313241560885",
+        phoneNumberId: "6794189252778689",
+        rotationKey: "meta-readiness-ambiguous-endpoint-b-v1",
+        suffix: "b",
+      },
+    ];
+
+    for (const candidate of endpoints) {
+      const endpoint = await registerAuthorizedMetaWhatsAppEndpoint(
+        setup.db,
+        {
+          tenantId: setup.tenantA.id,
+          actorId: setup.ownerA.id,
+          externalAccountId: candidate.externalAccountId,
+          phoneNumberId: candidate.phoneNumberId,
+          occurredAt: timestamp,
+        },
+        fingerprintSecret,
+      );
+      await rotateMetaWhatsAppEndpointSecret(
+        setup.db,
+        {
+          tenantId: setup.tenantA.id,
+          actorId: setup.ownerA.id,
+          endpointId: endpoint.endpointId,
+          rotationKey: candidate.rotationKey,
+          secret: {
+            wabaId: candidate.externalAccountId,
+            accessToken: `meta-readiness-ambiguous-${candidate.suffix}-token-never-real`,
+            phoneNumberId: candidate.phoneNumberId,
+            graphApiVersion: "v23.0",
+            appSecret: `meta-readiness-ambiguous-${candidate.suffix}-app-secret-never-real`,
+            webhookVerifyToken: `meta-readiness-ambiguous-${candidate.suffix}-webhook-token-never-real`,
+          },
+          occurredAt: later,
+        },
+        keyring,
+        fingerprintSecret,
+      );
+    }
+
+    await expect(
+      inspectMetaWhatsAppTenantReadiness(
+        setup.db,
+        setup.ownerA.id,
+        setup.tenantA.id,
+        new Date("2026-09-05T04:32:00.000Z"),
+      ),
+    ).resolves.toEqual({
+      provider: "whatsapp_meta",
+      state: "ambiguous",
+      checks: {
+        endpoint: "active",
+        credentials: "active",
+        trialAuthorization: "required",
+      },
+    });
   });
 
   it("refuse un acteur qui n’est pas membre de l’organisation", async () => {

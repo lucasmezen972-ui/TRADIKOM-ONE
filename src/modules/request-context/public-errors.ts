@@ -13,6 +13,7 @@ import { BusinessBrainError } from "@/modules/business-brain";
 import { StrategicAdvisorError } from "@/modules/strategic-advisor";
 import { AutonomousMarketingError } from "@/modules/autonomous-marketing";
 import { WebsiteAiError } from "@/modules/website-ai";
+import { WhatsAppMetaActivationAuthorizationError } from "@/modules/channels/whatsapp-meta-activation-authorization-errors";
 
 export type PublicError = {
   code: string;
@@ -54,6 +55,9 @@ export function toPublicError(error: unknown): PublicError {
     return mapAutonomousMarketingError(error);
   }
   if (error instanceof WebsiteAiError) return mapWebsiteAiError(error);
+  if (error instanceof WhatsAppMetaActivationAuthorizationError) {
+    return mapWhatsAppMetaActivationAuthorizationError(error);
+  }
 
   if (error instanceof ZodError) {
     return {
@@ -70,6 +74,35 @@ export function toPublicError(error: unknown): PublicError {
     message: "Une erreur est survenue. Réessayez plus tard.",
     status: 500,
   };
+}
+
+function mapWhatsAppMetaActivationAuthorizationError(
+  error: WhatsAppMetaActivationAuthorizationError,
+): PublicError {
+  if (
+    error.code === "channel_provider_activation_authorization_access_denied"
+  ) {
+    return publicError(
+      error.code,
+      "authorization",
+      "Vous n’avez pas le droit de gérer l’autorisation d’essai Meta.",
+      403,
+    );
+  }
+  if (error.code === "channel_provider_activation_authorization_not_found") {
+    return publicError(
+      error.code,
+      "channel_activation",
+      "Cette autorisation d’essai Meta est introuvable.",
+      404,
+    );
+  }
+  return publicError(
+    error.code,
+    "channel_activation",
+    "L’autorisation d’essai Meta ne peut pas être modifiée dans cet état.",
+    409,
+  );
 }
 
 function mapAuthError(error: AuthError): PublicError {

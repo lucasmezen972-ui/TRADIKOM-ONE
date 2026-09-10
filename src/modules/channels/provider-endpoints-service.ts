@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import { z } from "zod";
 import {
   withSystemDbTransaction,
@@ -8,6 +7,10 @@ import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
 import { ChannelProviderEndpointError } from "@/modules/channels/provider-endpoints-errors";
+import {
+  channelProviderFingerprintSecretSchema,
+  createChannelProviderEndpointFingerprint,
+} from "@/modules/channels/provider-endpoint-fingerprint";
 import {
   findActiveChannelProviderEndpointByFingerprint,
   findChannelProviderEndpointById,
@@ -33,8 +36,6 @@ const whatsappAddressSchema = z
   .string()
   .trim()
   .regex(/^whatsapp:\+[1-9][0-9]{7,14}$/);
-const fingerprintSecretSchema = z.string().min(32).max(512);
-
 const registerWhatsAppEndpointSchema = z
   .object({
     tenantId: boundedIdentifierSchema,
@@ -115,7 +116,12 @@ const inspectMetaWhatsAppTenantReadinessSchema = z
 
 export type MetaWhatsAppTenantReadiness = {
   provider: "whatsapp_meta";
-  state: "not_registered" | "disabled" | "credentials_missing" | "ready";
+  state:
+    | "not_registered"
+    | "disabled"
+    | "credentials_missing"
+    | "ambiguous"
+    | "ready";
   checks: {
     endpoint: "missing" | "disabled" | "active";
     credentials: "not_checked" | "missing" | "active";
@@ -155,12 +161,20 @@ export async function inspectMetaWhatsAppTenantReadiness(
         parsed.tenantId,
         observedAt.toISOString(),
       );
-      if (configuration.has_configured_endpoint) {
-        const trialAuthorization = configuration.has_valid_trial_authorization
-          ? "valid"
-          : configuration.has_exhausted_trial_authorization
-            ? "exhausted"
-            : "required";
+      const trialAuthorization = configuration.has_valid_trial_authorization
+        ? "valid"
+        : configuration.has_exhausted_trial_authorization
+          ? "exhausted"
+          : "required";
+      if (configuration.configured_endpoint_count > 1) {
+        return readiness(
+          "ambiguous",
+          "active",
+          "active",
+          trialAuthorization,
+        );
+      }
+      if (configuration.configured_endpoint_count === 1) {
         return readiness("ready", "active", "active", trialAuthorization);
       }
       if (configuration.has_active_endpoint) {
@@ -197,7 +211,8 @@ export async function registerAuthorizedWhatsAppEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = registerWhatsAppEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return registerAuthorizedEndpoint(db, {
     ...parsed,
     provider: "whatsapp_twilio",
@@ -211,7 +226,8 @@ export async function registerAuthorizedMetaWhatsAppEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = registerMetaWhatsAppEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return registerAuthorizedEndpoint(
     db,
     {
@@ -229,7 +245,8 @@ export async function registerAuthorizedTeamsEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = registerTeamsEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return registerAuthorizedEndpoint(db, {
     ...parsed,
     provider: "teams_microsoft",
@@ -243,7 +260,8 @@ export async function registerAuthorizedSlackEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = registerSlackEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return registerAuthorizedEndpoint(
     db,
     {
@@ -282,7 +300,7 @@ async function registerAuthorizedEndpoint(
         tenantId: parsed.tenantId,
         provider: parsed.provider,
         externalAccountId: parsed.externalAccountId,
-        destinationFingerprint: endpointFingerprint(
+        destinationFingerprint: createChannelProviderEndpointFingerprint(
           parsed.provider,
           parsed.externalAccountId,
           parsed.destinationValue,
@@ -424,7 +442,8 @@ export async function resolveActiveWhatsAppEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = resolveWhatsAppEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return resolveActiveEndpoint(db, {
     provider: "whatsapp_twilio",
     externalAccountId: parsed.externalAccountId,
@@ -438,7 +457,8 @@ export async function resolveActiveMetaWhatsAppEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = resolveMetaWhatsAppEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return resolveActiveEndpoint(
     db,
     {
@@ -456,7 +476,8 @@ export async function resolveActiveTeamsEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = resolveTeamsEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return resolveActiveEndpoint(db, {
     provider: "teams_microsoft",
     externalAccountId: parsed.externalAccountId,
@@ -470,7 +491,8 @@ export async function resolveActiveSlackEndpoint(
   fingerprintSecret: string | undefined,
 ) {
   const parsed = resolveSlackEndpointSchema.parse(input);
-  const secret = fingerprintSecretSchema.parse(fingerprintSecret);
+  const secret =
+    channelProviderFingerprintSecretSchema.parse(fingerprintSecret);
   return resolveActiveEndpoint(
     db,
     {
@@ -495,7 +517,7 @@ async function resolveActiveEndpoint(
     const endpoint = await findActiveChannelProviderEndpointByFingerprint(transaction, {
       provider: parsed.provider,
       externalAccountId: parsed.externalAccountId,
-      destinationFingerprint: endpointFingerprint(
+      destinationFingerprint: createChannelProviderEndpointFingerprint(
         parsed.provider,
         parsed.externalAccountId,
         parsed.destinationValue,
@@ -532,15 +554,4 @@ function readiness(
     state,
     checks: { endpoint, credentials, trialAuthorization },
   };
-}
-
-function endpointFingerprint(
-  provider: ExternalChannelProvider,
-  externalAccountId: string,
-  destinationValue: string,
-  secret: string,
-) {
-  return createHmac("sha256", secret)
-    .update(`v1:${provider}:${externalAccountId}:${destinationValue}`)
-    .digest("hex");
 }

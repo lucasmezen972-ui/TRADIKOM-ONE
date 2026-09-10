@@ -17,12 +17,16 @@ import {
   describeMetaWhatsAppActivation,
   getConversationChannelServices,
   getPreparedChannelProvider,
+  resolveMetaWhatsAppTrialManagementAction,
   type ChannelActivationCheckpoint,
+  type MetaWhatsAppTrialManagementAction,
 } from "@/modules/channels";
 import {
+  authorizeMetaWhatsAppTrialAction,
   createConversationPlanAction,
   decideConversationPlanAction,
   executeConversationPlanAction,
+  revokeMetaWhatsAppTrialAction,
   retryConversationPlanAction,
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
@@ -36,6 +40,7 @@ type ConversationPageProps = {
     envoye?: "web" | "test";
     plan?: "cree" | "approved" | "rejected" | "executed";
     reprise?: "demandee";
+    meta_essai?: "autorise" | "revoque";
   }>;
 };
 
@@ -83,6 +88,18 @@ export default async function ConversationPage({
   const canDecide = ["owner", "administrator", "manager"].includes(
     membership.role,
   );
+  const metaTrialManagementAction = resolveMetaWhatsAppTrialManagementAction(
+    metaActivation,
+    membership.role,
+  );
+  const metaTrialNotice =
+    params.meta_essai === "autorise" &&
+    metaActivation.trialAuthorizationState === "valid"
+      ? "Une autorisation d’essai Meta est actuellement valide pour un seul message. Aucun message n’a été envoyé."
+      : params.meta_essai === "revoque" &&
+          metaActivation.trialAuthorizationState === "required"
+        ? "Aucune autorisation d’essai Meta valide n’est active. Aucun message ne peut partir sans nouvelle autorisation."
+        : null;
 
   return (
     <div className="grid gap-6">
@@ -129,7 +146,22 @@ export default async function ConversationPage({
         </div>
       ) : null}
 
-      <ProviderActivationCheckpoint checkpoint={metaActivation} />
+      {metaTrialNotice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-950"
+        >
+          {metaTrialNotice}
+        </div>
+      ) : null}
+
+      <ProviderActivationCheckpoint
+        checkpoint={metaActivation}
+        trialManagementAction={metaTrialManagementAction}
+        threadId={selectedThread?.id}
+        issueIdempotencyKey={`conversation-meta-trial:${randomUUID()}`}
+      />
 
       <div className="grid min-h-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[250px_1fr]">
         <aside className="border-b border-slate-200 bg-slate-50 p-4 lg:border-r lg:border-b-0">
@@ -328,8 +360,14 @@ export default async function ConversationPage({
 
 function ProviderActivationCheckpoint({
   checkpoint,
+  trialManagementAction,
+  threadId,
+  issueIdempotencyKey,
 }: {
   checkpoint: ChannelActivationCheckpoint;
+  trialManagementAction: MetaWhatsAppTrialManagementAction;
+  threadId?: string;
+  issueIdempotencyKey: string;
 }) {
   const tone = activationCheckpointTone(checkpoint.externalEffect);
   return (
@@ -396,6 +434,63 @@ function ProviderActivationCheckpoint({
           {checkpoint.externalEffectLabel}
         </span>
       </div>
+      {trialManagementAction === "authorize" ? (
+        <form
+          action={authorizeMetaWhatsAppTrialAction}
+          className="mt-4 grid gap-3 rounded-lg border border-amber-300 bg-white/80 p-4"
+        >
+          <input
+            type="hidden"
+            name="idempotencyKey"
+            value={issueIdempotencyKey}
+          />
+          {threadId ? (
+            <input type="hidden" name="threadId" value={threadId} />
+          ) : null}
+          <label className="flex items-start gap-3 text-sm text-slate-800">
+            <input
+              className="mt-1 h-4 w-4 shrink-0"
+              type="checkbox"
+              name="freeUnitsConfirmed"
+              value="true"
+              required
+            />
+            <span>
+              Je confirme que cet essai est limité à un message et reste dans
+              le quota gratuit prévu.
+            </span>
+          </label>
+          <p className="text-xs leading-5 text-slate-600">
+            Cette confirmation prépare uniquement une autorisation courte. Elle
+            n’active pas Meta et n’envoie aucun message.
+          </p>
+          <button
+            type="submit"
+            className="w-fit rounded-md bg-amber-950 px-4 py-2 text-sm font-bold text-white hover:bg-amber-900"
+          >
+            Autoriser un essai d’un message
+          </button>
+        </form>
+      ) : null}
+      {trialManagementAction === "revoke" ? (
+        <form
+          action={revokeMetaWhatsAppTrialAction}
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white/80 p-4"
+        >
+          {threadId ? (
+            <input type="hidden" name="threadId" value={threadId} />
+          ) : null}
+          <p className="text-xs leading-5 text-slate-600">
+            La révocation bloque immédiatement tout essai non encore consommé.
+          </p>
+          <button
+            type="submit"
+            className="rounded-md border border-slate-400 bg-white px-4 py-2 text-sm font-bold text-slate-900 hover:bg-slate-100"
+          >
+            Révoquer l’autorisation d’essai
+          </button>
+        </form>
+      ) : null}
     </section>
   );
 }

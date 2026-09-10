@@ -12,6 +12,10 @@ import { createTestChannelAdapter } from "@/modules/channels/test-channel";
 import { createWebChannelAdapter } from "@/modules/channels/web-channel";
 import { inspectMetaWhatsAppTenantReadiness } from "@/modules/channels/provider-endpoints-service";
 import {
+  issueCurrentWhatsAppMetaTrialAuthorization,
+  revokeCurrentWhatsAppMetaTrialAuthorization,
+} from "@/modules/channels/whatsapp-meta-activation-authorization-service";
+import {
   createConversationActionPlan,
   decideConversationActionPlan,
   executeConversationActionPlan,
@@ -35,6 +39,21 @@ export function createConversationChannelServices(
     test: createTestChannelAdapter(db),
     getMetaWhatsAppTenantReadiness: (userId: string, tenantId: string) =>
       inspectMetaWhatsAppTenantReadiness(db, userId, tenantId),
+    authorizeMetaWhatsAppTrial: (
+      userId: string,
+      tenantId: string,
+      input: { idempotencyKey: string; freeUnitsConfirmed: true },
+    ) =>
+      issueCurrentWhatsAppMetaTrialAuthorization(db, {
+        tenantId,
+        actorId: userId,
+        ...input,
+      }),
+    revokeMetaWhatsAppTrial: (userId: string, tenantId: string) =>
+      revokeCurrentWhatsAppMetaTrialAuthorization(db, {
+        tenantId,
+        actorId: userId,
+      }),
     listThreads: (userId: string, tenantId: string, limit?: number) =>
       listConversationThreads(db, userId, tenantId, limit),
     getThread: (

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { safeServerAction } from "@/lib/public-action";
 import { requireTenantContext } from "@/lib/session";
 import { getConversationChannelServices } from "@/modules/channels";
@@ -115,6 +116,41 @@ export async function retryConversationPlanAction(formData: FormData) {
   );
 }
 
+export async function authorizeMetaWhatsAppTrialAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction(
+    "conversation.meta_trial_authorize",
+    () =>
+      services.authorizeMetaWhatsAppTrial(user.id, tenant.id, {
+        idempotencyKey: text(formData, "idempotencyKey"),
+        freeUnitsConfirmed: requiredConfirmation(
+          formData,
+          "freeUnitsConfirmed",
+        ),
+      }),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    conversationRedirect(formData, result.revoked ? undefined : "autorise"),
+  );
+}
+
+export async function revokeMetaWhatsAppTrialAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction("conversation.meta_trial_revoke", () =>
+    services.revokeMetaWhatsAppTrial(user.id, tenant.id),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    conversationRedirect(
+      formData,
+      result.revokedCount > 0 ? "revoque" : undefined,
+    ),
+  );
+}
+
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -122,4 +158,21 @@ function text(formData: FormData, key: string) {
 
 function optionalText(formData: FormData, key: string) {
   return text(formData, key) || undefined;
+}
+
+function requiredConfirmation(formData: FormData, key: string): true {
+  z.literal("true").parse(text(formData, key));
+  return true;
+}
+
+function conversationRedirect(
+  formData: FormData,
+  metaTrial?: "autorise" | "revoque",
+) {
+  const params = new URLSearchParams();
+  if (metaTrial) params.set("meta_essai", metaTrial);
+  const threadId = optionalText(formData, "threadId");
+  if (threadId) params.set("fil", threadId);
+  const query = params.toString();
+  return query ? `/conversation?${query}` : "/conversation";
 }

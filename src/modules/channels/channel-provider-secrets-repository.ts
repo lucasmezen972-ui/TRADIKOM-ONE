@@ -28,8 +28,13 @@ export async function lockActiveChannelProviderEndpoint(
   endpointId: string,
   provider: ChannelProviderSecretProvider,
 ) {
-  const result = await db.query<{ id: string; external_account_id: string }>(
-    `select id, external_account_id from channel_provider_endpoints
+  const result = await db.query<{
+    id: string;
+    external_account_id: string;
+    destination_fingerprint: string;
+  }>(
+    `select id, external_account_id, destination_fingerprint
+     from channel_provider_endpoints
      where tenant_id = $1 and id = $2 and provider = $3 and status = 'active'
      for update`,
     [tenantId, endpointId, provider],
@@ -43,8 +48,14 @@ export async function lockChannelProviderEndpoint(
   endpointId: string,
   provider: ChannelProviderSecretProvider,
 ) {
-  const result = await db.query<{ id: string; status: "active" | "disabled" }>(
-    `select id, status from channel_provider_endpoints
+  const result = await db.query<{
+    id: string;
+    external_account_id: string;
+    destination_fingerprint: string;
+    status: "active" | "disabled";
+  }>(
+    `select id, external_account_id, destination_fingerprint, status
+     from channel_provider_endpoints
      where tenant_id = $1 and id = $2 and provider = $3
      for update`,
     [tenantId, endpointId, provider],

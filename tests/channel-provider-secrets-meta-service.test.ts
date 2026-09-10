@@ -118,6 +118,7 @@ describe("coffre fournisseur WhatsApp Meta tenant-aware", () => {
           accessToken: `${accessToken}-conflict`,
         }),
         v1,
+        fingerprintSecret,
       ),
     ).rejects.toMatchObject({
       code: "channel_provider_secret_idempotency_conflict",
@@ -137,6 +138,7 @@ describe("coffre fournisseur WhatsApp Meta tenant-aware", () => {
         occurredAt: later,
       }),
       v2,
+      fingerprintSecret,
     );
     expect(second).toMatchObject({ secretVersion: 2, keyVersion: "test-v2" });
     await expect(
@@ -168,6 +170,7 @@ describe("coffre fournisseur WhatsApp Meta tenant-aware", () => {
           endpointId: setup.endpointB.endpointId,
         },
         keyring,
+        fingerprintSecret,
       ),
     ).rejects.toMatchObject({
       code: "channel_provider_secret_reference_invalid",
@@ -179,6 +182,7 @@ describe("coffre fournisseur WhatsApp Meta tenant-aware", () => {
           wabaId: "999999999999999",
         }),
         keyring,
+        fingerprintSecret,
       ),
     ).rejects.toMatchObject({
       code: "channel_provider_secret_reference_invalid",
@@ -206,6 +210,102 @@ describe("coffre fournisseur WhatsApp Meta tenant-aware", () => {
     ).rejects.toMatchObject({
       code: "channel_provider_secret_reference_invalid",
     } satisfies Partial<ChannelProviderSecretError>);
+  });
+
+  it("refuse un Phone Number ID incohérent sans mutation ni audit, même au rejeu", async () => {
+    const setup = await createSetup();
+    const keyring = keyringV1();
+    await rotateEndpoint(setup, keyring, "meta-endpoint-rotation-1");
+    const versionsBefore = await setup.db.query<{
+      id: string;
+      secret_version: number;
+      revoked_at: string | null;
+    }>(
+      `select id, secret_version, revoked_at
+       from channel_provider_secret_versions
+       where tenant_id = $1 and endpoint_id = $2
+       order by secret_version`,
+      [setup.tenantA.id, setup.endpointA.endpointId],
+    );
+    const auditsBefore = await setup.db.query<{ id: string }>(
+      `select id from audit_logs
+       where tenant_id = $1 and action = 'channel.provider_secret_rotated'
+       order by id`,
+      [setup.tenantA.id],
+    );
+
+    for (const rotationKey of [
+      "meta-wrong-phone-new-rotation",
+      "meta-endpoint-rotation-1",
+    ]) {
+      await expect(
+        rotateMetaWhatsAppEndpointSecret(
+          setup.db,
+          endpointRotationInput(setup, rotationKey, {
+            phoneNumberId: "999999999999998",
+          }),
+          keyring,
+          fingerprintSecret,
+        ),
+      ).rejects.toMatchObject({
+        code: "channel_provider_secret_reference_invalid",
+      } satisfies Partial<ChannelProviderSecretError>);
+    }
+
+    const versionsAfter = await setup.db.query<{
+      id: string;
+      secret_version: number;
+      revoked_at: string | null;
+    }>(
+      `select id, secret_version, revoked_at
+       from channel_provider_secret_versions
+       where tenant_id = $1 and endpoint_id = $2
+       order by secret_version`,
+      [setup.tenantA.id, setup.endpointA.endpointId],
+    );
+    const auditsAfter = await setup.db.query<{ id: string }>(
+      `select id from audit_logs
+       where tenant_id = $1 and action = 'channel.provider_secret_rotated'
+       order by id`,
+      [setup.tenantA.id],
+    );
+    expect(versionsAfter.rows).toEqual(versionsBefore.rows);
+    expect(auditsAfter.rows).toEqual(auditsBefore.rows);
+    await expect(
+      createWhatsAppMetaSecretResolvers(setup.db, keyring).resolveCredentials({
+        tenantId: setup.tenantA.id,
+        endpointId: setup.endpointA.endpointId,
+      }),
+    ).resolves.toMatchObject({ phoneNumberId });
+  });
+
+  it("exige une clé d'empreinte valide avant toute mutation ou audit", async () => {
+    const setup = await createSetup();
+    const keyring = keyringV1();
+
+    for (const invalidFingerprintSecret of [undefined, "trop-courte"]) {
+      await expect(
+        rotateMetaWhatsAppEndpointSecret(
+          setup.db,
+          endpointRotationInput(setup, "meta-invalid-fingerprint-secret"),
+          keyring,
+          invalidFingerprintSecret,
+        ),
+      ).rejects.toMatchObject({ name: "ZodError" });
+    }
+
+    const versions = await setup.db.query<{ id: string }>(
+      `select id from channel_provider_secret_versions
+       where tenant_id = $1 and endpoint_id = $2`,
+      [setup.tenantA.id, setup.endpointA.endpointId],
+    );
+    const audits = await setup.db.query<{ id: string }>(
+      `select id from audit_logs
+       where tenant_id = $1 and action = 'channel.provider_secret_rotated'`,
+      [setup.tenantA.id],
+    );
+    expect(versions.rows).toEqual([]);
+    expect(audits.rows).toEqual([]);
   });
 
   it("révoque une destination sans exposer sa valeur", async () => {
@@ -324,6 +424,7 @@ function endpointRotationInput(
   overrides: Partial<{
     wabaId: string;
     accessToken: string;
+    phoneNumberId: string;
     occurredAt: string;
   }> = {},
 ) {
@@ -335,7 +436,7 @@ function endpointRotationInput(
     secret: {
       wabaId: overrides.wabaId ?? wabaId,
       accessToken: overrides.accessToken ?? accessToken,
-      phoneNumberId,
+      phoneNumberId: overrides.phoneNumberId ?? phoneNumberId,
       graphApiVersion: "v23.0",
       appSecret,
       webhookVerifyToken,
@@ -353,6 +454,7 @@ function rotateEndpoint(
     setup.db,
     endpointRotationInput(setup, rotationKey),
     keyring,
+    fingerprintSecret,
   );
 }
 

@@ -154,6 +154,7 @@ describeIfPostgres("RLS PostgreSQL du coffre fournisseur OS-5", () => {
         activeKeyVersion: "test-v1",
         keys: { "test-v1": Buffer.alloc(32, 31) },
       }),
+      "vault-postgres-fingerprint-secret-32-bytes",
     );
     await expect(
       revokeMetaWhatsAppEndpointSecret(restrictedDb, {
@@ -252,6 +253,7 @@ async function seedVaultTenant(
           occurredAt: timestamp,
         },
         keyring,
+        "vault-postgres-fingerprint-secret-32-bytes",
       )
     : await rotateWhatsAppEndpointSecret(
         db,

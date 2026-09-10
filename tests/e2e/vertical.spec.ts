@@ -6,7 +6,6 @@ import { hashToken, id } from "../../src/lib/security";
 import {
   createChannelProviderMediaReferenceCipher,
   createChannelProviderSecretKeyring,
-  issueWhatsAppMetaTrialAuthorization,
   processMetaWhatsAppMediaImport,
   receivePreparedMetaWhatsAppWebhook,
   registerAuthorizedMetaWhatsAppEndpoint,
@@ -1110,12 +1109,19 @@ async function runConversationJourney(
         activeKeyVersion: "test-v1",
         keys: { "test-v1": Buffer.alloc(32, 51) },
       }),
+      "conversation-e2e-meta-fingerprint-secret",
     );
   }
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
   });
   const page = await context.newPage();
+  const metaNetworkRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("graph.facebook.com")) {
+      metaNetworkRequests.push(request.url());
+    }
+  });
   try {
     await page.goto("/");
     const loginForm = page.locator("form").filter({
@@ -1175,18 +1181,21 @@ async function runConversationJourney(
     ).toHaveCount(0);
     let metaAuthorizationId: string | null = null;
     if (metaEndpointId) {
-      const authorizedAt = new Date();
-      const authorization = await issueWhatsAppMetaTrialAuthorization(db, {
-        tenantId: tenant.id,
-        actorId: user.id,
-        endpointId: metaEndpointId,
-        idempotencyKey: `conversation-meta-trial-${suffix}`,
-        freeUnitsConfirmed: true,
-        expiresAt: new Date(authorizedAt.getTime() + 60 * 60 * 1000).toISOString(),
-        occurredAt: authorizedAt.toISOString(),
+      const confirmation = metaCheckpoint.getByRole("checkbox", {
+        name: /Je confirme que cet essai est limité à un message/i,
       });
-      metaAuthorizationId = authorization.authorizationId;
-      await page.reload();
+      await expect(confirmation).toBeVisible();
+      await confirmation.check();
+      await metaCheckpoint
+        .getByRole("button", { name: "Autoriser un essai d’un message" })
+        .click();
+      await expect(page).toHaveURL(/meta_essai=autorise/);
+      await expect(
+        page.getByText(
+          "Une autorisation d’essai Meta est actuellement valide pour un seul message. Aucun message n’a été envoyé.",
+          { exact: true },
+        ),
+      ).toBeVisible();
       await expect(metaCheckpoint).toHaveAttribute(
         "data-trial-authorization-state",
         "valid",
@@ -1197,6 +1206,62 @@ async function runConversationJourney(
       await expect(
         metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
       ).toHaveCount(0);
+      await metaCheckpoint
+        .getByRole("button", { name: "Révoquer l’autorisation d’essai" })
+        .click();
+      await expect(page).toHaveURL(/meta_essai=revoque/);
+      await expect(metaCheckpoint).toHaveAttribute(
+        "data-trial-authorization-state",
+        "required",
+      );
+      await expect(
+        page.getByText(
+          "Aucune autorisation d’essai Meta valide n’est active. Aucun message ne peut partir sans nouvelle autorisation.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await metaCheckpoint
+        .getByRole("checkbox", {
+          name: /Je confirme que cet essai est limité à un message/i,
+        })
+        .check();
+      await metaCheckpoint
+        .getByRole("button", { name: "Autoriser un essai d’un message" })
+        .click();
+      await expect(page).toHaveURL(/meta_essai=autorise/);
+      await expect(metaCheckpoint).toHaveAttribute(
+        "data-trial-authorization-state",
+        "valid",
+      );
+      const activeAuthorization = await db.query<{ id: string }>(
+        `select authz.id
+           from channel_provider_activation_authorizations authz
+          where authz.tenant_id = $1
+            and authz.endpoint_id = $2
+            and authz.provider = 'whatsapp_meta'
+            and authz.authorization_scope = 'meta_whatsapp_trial'
+            and authz.revoked_at is null
+            and authz.expires_at::timestamptz > now()
+            and not exists (
+              select 1
+                from channel_provider_activation_consumptions consumption
+               where consumption.tenant_id = authz.tenant_id
+                 and consumption.provider = authz.provider
+                 and consumption.authorization_id = authz.id
+            )
+          order by authz.authorized_at desc, authz.id desc
+          limit 1`,
+        [tenant.id, metaEndpointId],
+      );
+      metaAuthorizationId = activeAuthorization.rows[0]?.id ?? null;
+      expect(metaAuthorizationId).not.toBeNull();
+    } else {
+      await expect(
+        metaCheckpoint.getByRole("button", {
+          name: /Autoriser un essai|Révoquer l’autorisation/i,
+        }),
+      ).toHaveCount(0);
+      await expect(metaCheckpoint.getByRole("checkbox")).toHaveCount(0);
     }
     const webMessage = `Préparer un suivi client ${suffix}`;
     const webForm = page.locator("form").filter({ hasText: "Écrire depuis le web" });
@@ -1266,6 +1331,11 @@ async function runConversationJourney(
       await expect(
         metaCheckpoint.getByRole("button", { name: /Activer|Envoyer/i }),
       ).toHaveCount(0);
+      await expect(
+        metaCheckpoint.getByRole("button", {
+          name: /Autoriser un essai|Révoquer l’autorisation/i,
+        }),
+      ).toHaveCount(0);
     }
 
     const prepare = page.getByRole("button", { name: "Préparer le plan" });
@@ -1301,6 +1371,7 @@ async function runConversationJourney(
     ).toBeVisible();
     await expect(page.getByText("Exécuté", { exact: true })).toBeVisible();
     await expect(page.getByText("Réussie", { exact: false })).toHaveCount(2);
+    expect(metaNetworkRequests).toEqual([]);
 
     const mediaBytes = new TextEncoder().encode("%PDF-1.7\npreuve Playwright mock");
     const mediaChecksum = createHash("sha256").update(mediaBytes).digest("hex");

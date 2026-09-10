@@ -17,6 +17,7 @@ export type MetaWhatsAppTenantConfigurationSummary = {
   has_endpoint: boolean;
   has_active_endpoint: boolean;
   has_configured_endpoint: boolean;
+  configured_endpoint_count: number;
   has_valid_trial_authorization: boolean;
   has_exhausted_trial_authorization: boolean;
 };
@@ -53,6 +54,20 @@ export async function inspectMetaWhatsAppTenantConfiguration(
            and endpoint.provider = 'whatsapp_meta'
            and endpoint.status = 'active'
        ) as has_configured_endpoint,
+       (
+         select count(distinct endpoint.id)::integer
+         from channel_provider_endpoints endpoint
+         join channel_provider_secret_versions secret
+           on secret.tenant_id = endpoint.tenant_id
+          and secret.provider = endpoint.provider
+          and secret.endpoint_id = endpoint.id
+          and secret.secret_scope = 'endpoint'
+          and secret.channel_identity_id is null
+          and secret.revoked_at is null
+         where endpoint.tenant_id = $1
+           and endpoint.provider = 'whatsapp_meta'
+           and endpoint.status = 'active'
+       ) as configured_endpoint_count,
        exists (
          select 1
          from channel_provider_endpoints endpoint
@@ -101,9 +116,6 @@ export async function inspectMetaWhatsAppTenantConfiguration(
           and authz.authorization_scope = 'meta_whatsapp_trial'
           and authz.max_messages = 1
           and authz.free_units_confirmed = true
-          and authz.revoked_at is null
-          and authz.authorized_at::timestamptz <= $2::timestamptz
-          and authz.expires_at::timestamptz > $2::timestamptz
          where endpoint.tenant_id = $1
            and endpoint.provider = 'whatsapp_meta'
            and endpoint.status = 'active'
@@ -122,6 +134,7 @@ export async function inspectMetaWhatsAppTenantConfiguration(
       has_endpoint: false,
       has_active_endpoint: false,
       has_configured_endpoint: false,
+      configured_endpoint_count: 0,
       has_valid_trial_authorization: false,
       has_exhausted_trial_authorization: false,
     }

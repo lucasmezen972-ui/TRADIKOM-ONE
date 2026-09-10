@@ -27,6 +27,23 @@ export type WhatsAppMetaActivationConsumptionRow = {
   consumed_at: string;
 };
 
+export async function lockActiveMetaWhatsAppEndpointForActivationBudget(
+  db: DbClient,
+  input: { tenantId: string; endpointId: string },
+) {
+  const result = await db.query<{ id: string }>(
+    `select endpoint.id
+     from channel_provider_endpoints endpoint
+     where endpoint.tenant_id = $1
+       and endpoint.id = $2
+       and endpoint.provider = 'whatsapp_meta'
+       and endpoint.status = 'active'
+     for update of endpoint`,
+    [input.tenantId, input.endpointId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function lockMetaWhatsAppActivationBudgetContext(
   db: DbClient,
   input: {

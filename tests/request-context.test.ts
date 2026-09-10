@@ -8,6 +8,7 @@ import {
   toPublicActionError,
   toPublicError,
 } from "../src/modules/request-context";
+import { WhatsAppMetaActivationAuthorizationError } from "../src/modules/channels/whatsapp-meta-activation-authorization-errors";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -39,6 +40,31 @@ describe("request context and public errors", () => {
         new ConnectorError("webhook_oversized", "internal payload detail"),
       ),
     ).toMatchObject({ status: 413, message: "Requête trop volumineuse." });
+    expect(
+      toPublicError(
+        new WhatsAppMetaActivationAuthorizationError(
+          "channel_provider_activation_authorization_access_denied",
+          "internal authorization detail",
+        ),
+      ),
+    ).toMatchObject({
+      classification: "authorization",
+      status: 403,
+      message: "Vous n’avez pas le droit de gérer l’autorisation d’essai Meta.",
+    });
+    expect(
+      toPublicError(
+        new WhatsAppMetaActivationAuthorizationError(
+          "channel_provider_activation_authorization_invalid",
+          "internal endpoint detail",
+        ),
+      ),
+    ).toMatchObject({
+      classification: "channel_activation",
+      status: 409,
+      message:
+        "L’autorisation d’essai Meta ne peut pas être modifiée dans cet état.",
+    });
   });
 
   it("never exposes unknown database messages or stack traces", () => {

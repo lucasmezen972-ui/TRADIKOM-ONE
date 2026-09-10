@@ -1,5 +1,35 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 10 septembre 2026, 00:35 UTC
+
+- Branche : `codex/tradikom-one-os`; base locale et distante synchronisée sur `ed5a571d258542df8980095fb5326376c26a8072` avant le lot. La nouvelle tranche reste locale avant publication; `tmp/` demeure intact, non suivi et hors index.
+- Travail applicatif : la rotation d'un secret WhatsApp Meta doit désormais prouver que le WABA et le Phone Number ID correspondent à l'endpoint tenant verrouillé. L'empreinte HMAC est mutualisée entre enregistrement et rotation et comparée en temps constant avant toute mutation ou ligne d'audit.
+- Parcours Conversation : propriétaire et administrateur peuvent autoriser ou révoquer un unique essai d'un message depuis l'interface française, avec confirmation explicite. Tenant, acteur et endpoint viennent exclusivement de la session et de la résolution serveur; zéro ou plusieurs endpoints configurés échouent fermé.
+- Cohérence durable : l'émission rejoue la même opération sans doublon, refuse une seconde clé tant que la preuve est valide et interdit toute nouvelle autorisation après consommation historique. La révocation verrouille tous les endpoints Meta et annule toutes les preuves valides du tenant, même après retrait du secret ou désactivation de l'endpoint.
+- Concurrence : l'émission et la révocation verrouillent les endpoints avant de relire les secrets et autorisations; le budget respecte l'ordre endpoint → livraison → autorisation. Deux tests PostgreSQL synchronisent une consommation non validée, prouvent le blocage réel via `pg_blocking_pids`, puis vérifient l'absence de nouvelle autorisation et de révocation incohérente.
+- Vérité visible : les bannières sont calculées depuis l'état durable et non depuis des paramètres d'action. Les états requis, valide, épuisé et configuration ambiguë sont français, annoncés aux technologies d'assistance et sans identifiant, empreinte, secret ou promesse d'envoi.
+- Preuves locales : 62 tests ciblés verts; suite exhaustive 152 fichiers/809 tests verts et 11 fichiers/27 tests PostgreSQL ignorés sans `DATABASE_URL`; ESLint, TypeScript, audit production high et diff check verts. Le build refuse correctement l'environnement de production absent et Playwright local ne partage pas PGlite; PostgreSQL/RLS, build et parcours navigateur restent donc à prouver en CI.
+- Aucun Graph, secret, token, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître — cohérence endpoint-secret et autorisation d'essai pilotable
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 46, 48, 70-71 | Continuer OS-5 par une tranche verticale conversation-first, durable, honnête et reprenable | Formulaires réels Autoriser/Révoquer dans Conversation, état relu en base, aucune interface CRM/Kanban/dashboard/OS-6 et reprise documentée | Publication puis CI autoritative encore requises |
+| 10-18, 22-24, 29-30, 64-68 | Fournisseur fail-closed, secrets protégés, authentification humaine explicite, actions sensibles idempotentes et auditées | Invariant WABA+destination HMAC avant mutation; session serveur; un seul endpoint; émission/révocation verrouillées; audits sans secret/contenu; aucun Graph | Validation SMS, inventaire officiel, token de coffre, endpoint HTTPS et toute requête Graph restent bloqués humainement |
+| 16-18, 22, 32, 69 | Isolation tenant/RLS, sécurité adversariale, concurrence réelle et preuves unitaires/intégration/PostgreSQL/Playwright | Cross-tenant/rôles/rejeux/collisions couverts; suite locale 809 tests; tests restricted-role avec verrou concurrent ajoutés; Playwright suit le vrai formulaire et exige zéro Graph | Les 27 tests PostgreSQL ignorés, le build et Playwright doivent passer dans la CI partagée avant fermeture de la tranche |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification de la tranche courante
+
+- Livré localement : invariant endpoint-secret, émission/révocation administrative, états readiness et interface Conversation.
+- Réel connecté : aucun; aucun secret réel ni appel Graph.
+- Sandbox : aucune appelée.
+- Mock : uniquement fixtures, base locale et doubles injectés; aucun réseau fournisseur.
+- Bloqué humain : validation SMS Meta, inventaire officiel puis confirmation immédiate avant token persistant ou effet Graph.
+- Hors périmètre : message réel, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
 ## Checkpoint applicatif — 9 septembre 2026, 22:19 UTC
 
 - Branche : `codex/tradikom-one-os`; commit applicatif `dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f` publié strictement en fast-forward; PR #11 ouverte, brouillon, fusionnable et `CLEAN`. `tmp/` demeure intact, non suivi et hors index.
