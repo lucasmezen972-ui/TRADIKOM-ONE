@@ -6,6 +6,7 @@ import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
 import { EmailSuppressionError } from "@/modules/email-suppression";
+import { OrchestratorError } from "@/modules/orchestrator/errors";
 import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
@@ -48,6 +49,7 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof EmailSuppressionError) {
     return mapEmailSuppressionError(error);
   }
+  if (error instanceof OrchestratorError) return mapOrchestratorError(error);
   if (error instanceof WorkflowError) return mapWorkflowError(error);
   if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
   if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
@@ -74,6 +76,50 @@ export function toPublicError(error: unknown): PublicError {
     message: "Une erreur est survenue. Réessayez plus tard.",
     status: 500,
   };
+}
+
+function mapOrchestratorError(error: OrchestratorError): PublicError {
+  if (
+    error.code === "orchestrator_source_message_not_found" ||
+    error.code === "orchestrator_plan_not_found" ||
+    error.code === "orchestrator_approval_not_found"
+  ) {
+    return publicError(
+      error.code,
+      "conversation_plan",
+      "Le plan ou son message source est introuvable.",
+      404,
+    );
+  }
+  if (
+    error.code === "orchestrator_permission_denied" ||
+    error.code === "orchestrator_scope_missing" ||
+    error.code === "orchestrator_external_cost_forbidden"
+  ) {
+    return publicError(
+      error.code,
+      "authorization",
+      "Cette action n’est pas autorisée.",
+      403,
+    );
+  }
+  if (
+    error.code === "orchestrator_source_message_invalid" ||
+    error.code === "orchestrator_source_context_invalid"
+  ) {
+    return publicError(
+      error.code,
+      "validation",
+      "Le contexte de ce message ne peut pas être utilisé.",
+      400,
+    );
+  }
+  return publicError(
+    error.code,
+    "conversation_plan",
+    "Le plan a changé ou ne peut pas être poursuivi dans cet état.",
+    409,
+  );
 }
 
 function mapWhatsAppMetaActivationAuthorizationError(

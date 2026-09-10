@@ -1,8 +1,13 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { Pool, type PoolClient } from "pg";
-import { pgPoolAsSqlClient } from "../src/db/client";
+import { pgClientAsSqlClient, pgPoolAsSqlClient } from "../src/db/client";
 import { migrate } from "../src/lib/db";
+import {
+  findConversationMessageRow,
+  listConversationAttachmentRows,
+} from "../src/modules/conversation-hub/repository";
+import { createConversationActionPlan } from "../src/modules/orchestrator";
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeIfPostgres = databaseUrl ? describe : describe.skip;
@@ -212,6 +217,143 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
     );
     expect(crossRows.rows).toEqual([]);
   });
+
+  it("borne le contexte du plan à l’extraction autorisée par RLS", async () => {
+    if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const fixtureA = await seedReservation(ownerDb, "a");
+    const fixtureB = await seedReservation(ownerDb, "b");
+    await seedExternalExtraction(ownerDb, fixtureA, "a");
+    await seedExternalExtraction(ownerDb, fixtureB, "b");
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    const restrictedDb = pgPoolAsSqlClient(restrictedPool);
+
+    const plan = await createConversationActionPlan(
+      restrictedDb,
+      fixtureA.userId,
+      {
+        tenantId: fixtureA.tenantId,
+        threadId: fixtureA.threadId,
+        sourceMessageId: fixtureA.messageId,
+      },
+    );
+
+    expect(plan.plan.contextSources).toEqual([
+      expect.objectContaining({
+        sourceId: `attachment_media_rls_a_${fixtureA.unique}`,
+        sourceIntegrity: "verified",
+        instructionsAllowed: false,
+        toolAccess: "forbidden",
+        policyMutation: "forbidden",
+      }),
+    ]);
+    await expect(
+      createConversationActionPlan(restrictedDb, fixtureA.userId, {
+        tenantId: fixtureB.tenantId,
+        threadId: fixtureB.threadId,
+        sourceMessageId: fixtureB.messageId,
+      }),
+    ).rejects.toMatchObject({ code: "tenant_access_denied" });
+
+    const stored = await ownerDb.query<{ plan_json: string; safe_metadata: string }>(
+      `select plan.plan_json, audit.safe_metadata
+       from conversation_action_plans plan
+       join audit_logs audit
+         on audit.tenant_id = plan.tenant_id
+        and audit.target_id = plan.id
+        and audit.action = 'conversation.plan_created'
+       where plan.tenant_id = $1 and plan.id = $2`,
+      [fixtureA.tenantId, plan.id],
+    );
+    const persisted = JSON.stringify(stored.rows[0]);
+    expect(persisted).not.toContain("Donnée externe tenant a");
+    expect(stored.rows[0]?.plan_json).not.toContain('"content"');
+  });
+
+  it("verrouille la source contre suppression et ajout concurrents", async () => {
+    if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+    const ownerPool = new Pool({ connectionString: databaseUrl });
+    ownerPools.push(ownerPool);
+    const ownerDb = pgPoolAsSqlClient(ownerPool);
+    await migrate(ownerDb, { enableRls: true });
+    const fixture = await seedReservation(ownerDb, "a");
+    await seedExternalExtraction(ownerDb, fixture, "a");
+
+    const restricted = await createRestrictedRole(ownerPool);
+    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
+    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
+    restrictedPools.push(restrictedPool);
+    const locker = await restrictedPool.connect();
+    const contender = await restrictedPool.connect();
+    try {
+      await beginTenantContext(locker, fixture.tenantId, fixture.userId);
+      const lockedMessage = await findConversationMessageRow(
+        pgClientAsSqlClient(locker),
+        fixture.tenantId,
+        fixture.threadId,
+        fixture.messageId,
+        { lockForUpdate: true },
+      );
+      const lockedAttachments = await listConversationAttachmentRows(
+        pgClientAsSqlClient(locker),
+        fixture.tenantId,
+        [fixture.messageId],
+        { lockForShare: true },
+      );
+      expect(lockedMessage?.id).toBe(fixture.messageId);
+      expect(lockedAttachments).toHaveLength(1);
+
+      await beginTenantContext(contender, fixture.tenantId, fixture.userId);
+      await contender.query("set local lock_timeout = '250ms'");
+      await expect(
+        contender.query(
+          `delete from conversation_message_attachments
+           where tenant_id = $1 and id = $2`,
+          [
+            fixture.tenantId,
+            `attachment_media_rls_a_${fixture.unique}`,
+          ],
+        ),
+      ).rejects.toMatchObject({ code: "55P03" });
+      await contender.query("rollback");
+
+      await beginTenantContext(contender, fixture.tenantId, fixture.userId);
+      await contender.query("set local lock_timeout = '250ms'");
+      await expect(
+        contender.query(
+          `insert into conversation_message_attachments (
+             id, tenant_id, message_id, kind, file_name, media_type,
+             size_bytes, storage_reference, checksum_sha256, created_at
+           ) values (
+             $1, $2, $3, 'document', 'concurrent.pdf', 'application/pdf',
+             32, $4, $5, $6
+           )`,
+          [
+            `attachment_media_rls_concurrent_${fixture.unique}`,
+            fixture.tenantId,
+            fixture.messageId,
+            `mock:media/concurrent/${fixture.unique}`,
+            "c".repeat(64),
+            timestamp,
+          ],
+        ),
+      ).rejects.toMatchObject({ code: "55P03" });
+      await contender.query("rollback");
+      await locker.query("commit");
+    } finally {
+      await contender.query("rollback").catch(() => undefined);
+      await locker.query("rollback").catch(() => undefined);
+      contender.release();
+      locker.release();
+    }
+  });
 });
 
 type OwnerDb = ReturnType<typeof pgPoolAsSqlClient>;
@@ -316,7 +458,15 @@ async function seedReservation(db: OwnerDb, suffix: "a" | "b") {
       timestamp,
     ],
   );
-  return { endpointId, messageId, reservationId, tenantId, unique, userId };
+  return {
+    endpointId,
+    messageId,
+    reservationId,
+    tenantId,
+    threadId,
+    unique,
+    userId,
+  };
 }
 
 async function seedExecution(
@@ -369,7 +519,9 @@ async function seedExternalExtraction(
       `mock:media/${fixture.unique}`,
       "a".repeat(64),
       `Donnée externe tenant ${suffix}`,
-      "b".repeat(64),
+      createHash("sha256")
+        .update(`Donnée externe tenant ${suffix}`, "utf8")
+        .digest("hex"),
       timestamp,
     ],
   );
@@ -421,6 +573,16 @@ async function withTenantContext<T>(
   } finally {
     client.release();
   }
+}
+
+async function beginTenantContext(
+  client: PoolClient,
+  tenantId: string,
+  actorId: string,
+) {
+  await client.query("begin");
+  await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+  await client.query("select set_config('app.actor_id', $1, true)", [actorId]);
 }
 
 function quoteIdentifier(value: string) {

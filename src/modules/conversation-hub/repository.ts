@@ -572,11 +572,13 @@ export async function findConversationMessageRow(
   tenantId: string,
   threadId: string,
   messageId: string,
+  options: { lockForUpdate?: boolean } = {},
 ) {
+  const lockClause = options.lockForUpdate ? "\n     for update" : "";
   const result = await db.query<ConversationMessageRow>(
     `select *
      from conversation_messages
-     where tenant_id = $1 and thread_id = $2 and id = $3`,
+     where tenant_id = $1 and thread_id = $2 and id = $3${lockClause}`,
     [tenantId, threadId, messageId],
   );
   return result.rows[0] ?? null;
@@ -794,16 +796,18 @@ export async function listConversationAttachmentRows(
   db: DbClient,
   tenantId: string,
   messageIds: string[],
+  options: { lockForShare?: boolean } = {},
 ) {
   if (messageIds.length === 0) return [];
   const placeholders = messageIds
     .map((_, index) => `$${index + 2}`)
     .join(", ");
+  const lockClause = options.lockForShare ? "\n     for share" : "";
   const result = await db.query<ConversationAttachmentRow>(
     `select *
      from conversation_message_attachments
      where tenant_id = $1 and message_id in (${placeholders})
-     order by created_at asc, id asc`,
+     order by created_at asc, id asc${lockClause}`,
     [tenantId, ...messageIds],
   );
   return result.rows;

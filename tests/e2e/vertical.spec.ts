@@ -1487,6 +1487,91 @@ async function runConversationJourney(
     );
     expect(imported.status).toBe("succeeded");
     const alteredText = "password=contenu-e2e-altéré-à-masquer";
+    await page.goto(`/conversation?fil=${encodeURIComponent(inbound.threadId)}`);
+    await expect(
+      page.getByText("Confidentialité : Interne", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Visibilité : Organisation", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Accès : Membres de l’organisation", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
+    await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("Stockage mock", { exact: true })).toHaveCount(1);
+    await expect(
+      page.getByText("Téléchargement non configuré", { exact: true }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByText("Contenu externe non fiable", { exact: true }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByText("Extraction mock · intégrité vérifiée", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Contenu de preuve extrait sans modèle ni outil.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(mediaChecksum, { exact: false })).toHaveCount(0);
+
+    const mediaPlanPanel = page.getByRole("region", { name: "Plan d’action" });
+    await mediaPlanPanel
+      .getByRole("button", { name: "Préparer le plan" })
+      .click();
+    await expect(page).toHaveURL(/plan=cree/);
+    await expect(
+      mediaPlanPanel.getByText("Source externe à intégrité vérifiée", {
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    const storedMediaPlan = await db.query<{ plan_json: string }>(
+      `select plan_json
+         from conversation_action_plans
+        where tenant_id = $1 and thread_id = $2
+        order by created_at desc, id desc
+        limit 1`,
+      [tenant.id, inbound.threadId],
+    );
+    const mediaPlan = JSON.parse(storedMediaPlan.rows[0]?.plan_json ?? "{}") as {
+      contextSources?: Array<{
+        type?: unknown;
+        sourceId?: unknown;
+        sourceIntegrity?: unknown;
+      }>;
+    };
+    const externalContextSource = mediaPlan.contextSources?.find(
+      (source) => source.type === "external_untrusted_data",
+    );
+    expect(externalContextSource?.sourceIntegrity).toBe("verified");
+    const externalSourceId = externalContextSource?.sourceId;
+    expect(typeof externalSourceId).toBe("string");
+    await expect(mediaPlanPanel).not.toContainText(
+      "Contenu de preuve extrait sans modèle ni outil.",
+    );
+    await expect(mediaPlanPanel).not.toContainText(alteredText);
+    await expect(mediaPlanPanel).not.toContainText(String(externalSourceId));
+
+    await mediaPlanPanel
+      .getByLabel("Motif de validation")
+      .fill("Plan média vérifié avant exécution mock.");
+    await mediaPlanPanel
+      .getByRole("button", { name: "Approuver une fois" })
+      .click();
+    await expect(page).toHaveURL(/plan=approved/);
+    await mediaPlanPanel
+      .getByRole("button", { name: "Exécuter les deux étapes en mock" })
+      .click();
+    await expect(page).toHaveURL(/plan=executed/);
+    await expect(
+      mediaPlanPanel.getByText("Source externe à intégrité vérifiée", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    expect(metaNetworkRequests).toEqual([]);
+
     await db.query(
       `insert into conversation_message_attachments (
          id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
@@ -1509,17 +1594,7 @@ async function runConversationJourney(
         "2026-09-04T12:02:00.000Z",
       ],
     );
-    await page.goto(`/conversation?fil=${encodeURIComponent(inbound.threadId)}`);
-    await expect(
-      page.getByText("Confidentialité : Interne", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Visibilité : Organisation", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Accès : Membres de l’organisation", { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText("WhatsApp", { exact: true })).toBeVisible();
+    await page.reload();
     await expect(page.getByText("preuve-conversation.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("preuve-altérée.pdf", { exact: true })).toBeVisible();
     await expect(page.getByText("Stockage mock", { exact: true })).toHaveCount(2);
@@ -1530,20 +1605,13 @@ async function runConversationJourney(
       page.getByText("Contenu externe non fiable", { exact: true }),
     ).toHaveCount(2);
     await expect(
-      page.getByText("Extraction mock · intégrité vérifiée", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Contenu de preuve extrait sans modèle ni outil.", {
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
       page.getByText("Extraction masquée — intégrité non vérifiée.", {
         exact: true,
       }),
     ).toBeVisible();
     await expect(page.getByText(alteredText, { exact: false })).toHaveCount(0);
     await expect(page.getByText(mediaChecksum, { exact: false })).toHaveCount(0);
+    expect(metaNetworkRequests).toEqual([]);
 
     const evidence = await db.query<{
       runs: number;
@@ -1576,12 +1644,12 @@ async function runConversationJourney(
       [tenant.id],
     );
     expect(evidence.rows[0]).toEqual({
-      runs: 1,
-      steps: 2,
-      runtime_evidence: 2,
+      runs: 2,
+      steps: 4,
+      runtime_evidence: 4,
       leaked_inputs: 0,
-      routes: 2,
-      audits: 1,
+      routes: 4,
+      audits: 2,
       tasks: 0,
     });
   } finally {

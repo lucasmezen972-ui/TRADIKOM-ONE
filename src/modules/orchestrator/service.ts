@@ -7,6 +7,10 @@ import { hashToken, id, nowIso, safeJson, toJson } from "@/lib/security";
 import type { Role } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import {
+  prepareExternalUntrustedDataView,
+  readExternalUntrustedDataExtraction,
+} from "@/modules/conversation-hub/external-untrusted-data";
+import {
   findAccessibleConversationThreadRow,
   findConversationIdentityByExternalSubject,
   findConversationMessageRow,
@@ -15,9 +19,11 @@ import {
   insertConversationParticipantIfAbsent,
   insertConversationRouteHop,
   insertThreadParticipantIfAbsent,
+  listConversationAttachmentRows,
   listConversationIdentityRows,
   updateConversationThreadLastMessage,
   updateConversationThreadStatus,
+  type ConversationMessageRow,
 } from "@/modules/conversation-hub/repository";
 import {
   os1MockCapabilityCatalog,
@@ -25,7 +31,10 @@ import {
 } from "@/modules/orchestrator/capabilities";
 import { OrchestratorError } from "@/modules/orchestrator/errors";
 import {
+  boundActionPlanGenerationContextSources,
   createDeterministicActionPlanGenerator,
+  toActionPlanContextSourceMetadata,
+  type ActionPlanGenerationContextSource,
   type ActionPlanGenerator,
 } from "@/modules/orchestrator/generator";
 import {
@@ -53,6 +62,7 @@ import {
   actionPlanSchema,
   type ActionPlanCreation,
   type ActionPlanDecision,
+  type ValidatedActionPlan,
 } from "@/modules/orchestrator/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
 import {
@@ -92,27 +102,13 @@ export async function createConversationActionPlan(
         parsed.tenantId,
         creationRoles,
       );
-      await assertConversationPlanThreadAccess(
+      return readConversationPlanGenerationSource(
         transaction,
         userId,
         parsed.tenantId,
         parsed.threadId,
-        "source",
-      );
-      const message = await findConversationMessageRow(
-        transaction,
-        parsed.tenantId,
-        parsed.threadId,
         parsed.sourceMessageId,
       );
-      if (!message) {
-        throw new OrchestratorError(
-          "orchestrator_source_message_not_found",
-          "Le message source du plan est introuvable.",
-        );
-      }
-      assertValidSourceMessage(message.direction, message.kind);
-      return message;
     },
   );
   const generator =
@@ -121,7 +117,8 @@ export async function createConversationActionPlan(
     tenantId: parsed.tenantId,
     threadId: parsed.threadId,
     sourceMessageId: parsed.sourceMessageId,
-    sourceText: source.text_content,
+    sourceText: source.message.text_content,
+    contextSources: source.contextSources,
   });
   if (
     (generated.generationSource === "model" && !generated.modelReference) ||
@@ -145,31 +142,31 @@ export async function createConversationActionPlan(
         parsed.tenantId,
         creationRoles,
       );
-      await assertConversationPlanThreadAccess(
+      const currentSource = await readConversationPlanGenerationSource(
         transaction,
         userId,
         parsed.tenantId,
         parsed.threadId,
-        "source",
-      );
-      const currentSource = await findConversationMessageRow(
-        transaction,
-        parsed.tenantId,
-        parsed.threadId,
         parsed.sourceMessageId,
+        { lockForUpdate: true },
       );
-      if (!currentSource) {
+      if (currentSource.fingerprint !== source.fingerprint) {
         throw new OrchestratorError(
-          "orchestrator_source_message_not_found",
-          "Le message source du plan est introuvable.",
+          "orchestrator_source_context_changed",
+          "Le contexte du message a changé pendant la préparation du plan.",
         );
       }
-      assertValidSourceMessage(currentSource.direction, currentSource.kind);
-      const validated = validateActionPlan(generated.plan, {
+      const generatedPlan = {
+        ...generated.plan,
+        contextSources: currentSource.contextSources.map(
+          toActionPlanContextSourceMetadata,
+        ),
+      };
+      const validated = validateActionPlan(generatedPlan, {
         role,
         grantedScopes: mockScopes,
       });
-      const planJson = toJson(validated.plan);
+      const planJson = serializeActionPlanForPersistence(validated.plan);
       const planFingerprint = hashToken(planJson);
       const existing = await findActionPlanByFingerprint(
         transaction,
@@ -275,7 +272,7 @@ export async function createConversationActionPlan(
         planId: plan.id,
         kind: "plan",
         text: validated.plan.finalUserMessageDraft,
-        correlationId: currentSource.correlation_id,
+        correlationId: currentSource.message.correlation_id,
         createdAt,
       });
       await updateConversationThreadStatus(transaction, {
@@ -299,6 +296,10 @@ export async function createConversationActionPlan(
           schemaVersion: 1,
           approvalMode: validated.approval.mode,
           capabilityCount: validated.plan.steps.length,
+          contextSourceCount: validated.plan.contextSources.length,
+          contextWasTruncated: validated.plan.contextSources.some(
+            (source) => source.truncated,
+          ),
           executionEnvironment: "mock",
           estimatedExternalCost: 0,
         },
@@ -696,6 +697,99 @@ export async function requestConversationActionPlanRetry(
     }
     throw error;
   }
+}
+
+type ConversationPlanGenerationSource = {
+  message: ConversationMessageRow;
+  contextSources: ActionPlanGenerationContextSource[];
+  fingerprint: string;
+};
+
+function serializeActionPlanForPersistence(plan: ValidatedActionPlan) {
+  if (plan.contextSources.length > 0) {
+    return toJson(plan);
+  }
+
+  const legacyCompatiblePlan: Partial<ValidatedActionPlan> = { ...plan };
+  delete legacyCompatiblePlan.contextSources;
+  return toJson(legacyCompatiblePlan);
+}
+
+async function readConversationPlanGenerationSource(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  threadId: string,
+  sourceMessageId: string,
+  options: { lockForUpdate?: boolean } = {},
+): Promise<ConversationPlanGenerationSource> {
+  await assertConversationPlanThreadAccess(
+    db,
+    userId,
+    tenantId,
+    threadId,
+    "source",
+  );
+  const message = await findConversationMessageRow(
+    db,
+    tenantId,
+    threadId,
+    sourceMessageId,
+    { lockForUpdate: options.lockForUpdate },
+  );
+  if (!message) {
+    throw new OrchestratorError(
+      "orchestrator_source_message_not_found",
+      "Le message source du plan est introuvable.",
+    );
+  }
+  assertValidSourceMessage(message.direction, message.kind);
+
+  const attachments = await listConversationAttachmentRows(
+    db,
+    tenantId,
+    [message.id],
+    { lockForShare: options.lockForUpdate },
+  );
+  const unboundedContextSources: ActionPlanGenerationContextSource[] = [];
+  for (const attachment of attachments) {
+    const extraction = readExternalUntrustedDataExtraction(attachment);
+    if (!extraction) continue;
+    if (extraction.integrity !== "verified") {
+      throw new OrchestratorError(
+        "orchestrator_source_context_invalid",
+        "Une source de contexte n'a pas une intégrité vérifiable.",
+      );
+    }
+    const view = prepareExternalUntrustedDataView(extraction);
+    unboundedContextSources.push({
+      type: "external_untrusted_data",
+      sourceId: attachment.id,
+      sourceIntegrity: "verified",
+      truncated: view.truncated,
+      instructionsAllowed: false,
+      toolAccess: "forbidden",
+      policyMutation: "forbidden",
+      content: view.content,
+    });
+  }
+  const contextSources = boundActionPlanGenerationContextSources(
+    unboundedContextSources,
+  );
+  const fingerprint = hashToken(
+    toJson({
+      message: {
+        id: message.id,
+        tenantId: message.tenant_id,
+        threadId: message.thread_id,
+        direction: message.direction,
+        kind: message.kind,
+        text: message.text_content,
+      },
+      contextSources,
+    }),
+  );
+  return { message, contextSources, fingerprint };
 }
 
 async function assertConversationPlanThreadAccess(

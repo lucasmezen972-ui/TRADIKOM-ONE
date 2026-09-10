@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../src/modules/auth";
 import { ConnectorError } from "../src/modules/connectors";
+import { OrchestratorError } from "../src/modules/orchestrator/errors";
 import { RateLimitError } from "../src/modules/rate-limit";
 import {
   logServerError,
@@ -64,6 +65,32 @@ describe("request context and public errors", () => {
       status: 409,
       message:
         "L’autorisation d’essai Meta ne peut pas être modifiée dans cet état.",
+    });
+    expect(
+      toPublicError(
+        new OrchestratorError(
+          "orchestrator_source_context_invalid",
+          "Le hash interne contient valeur-secrete.",
+        ),
+      ),
+    ).toEqual({
+      code: "orchestrator_source_context_invalid",
+      classification: "validation",
+      message: "Le contexte de ce message ne peut pas être utilisé.",
+      status: 400,
+    });
+    expect(
+      toPublicError(
+        new OrchestratorError(
+          "orchestrator_source_context_changed",
+          "La pièce interne a changé avec valeur-secrete.",
+        ),
+      ),
+    ).toEqual({
+      code: "orchestrator_source_context_changed",
+      classification: "conversation_plan",
+      message: "Le plan a changé ou ne peut pas être poursuivi dans cet état.",
+      status: 409,
     });
   });
 

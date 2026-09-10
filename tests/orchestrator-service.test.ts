@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
@@ -7,11 +8,13 @@ import {
 } from "../src/modules/conversation-hub";
 import {
   createConversationActionPlan,
+  createDeterministicActionPlanGenerator,
   decideConversationActionPlan,
   executeConversationActionPlan,
   getConversationActionPlan,
   listConversationActionPlans,
   requestConversationActionPlanRetry,
+  type ActionPlanGenerationContext,
 } from "../src/modules/orchestrator";
 import {
   cancelWorkflowQueueEvent,
@@ -81,6 +84,16 @@ describe("service des plans Conversation", () => {
       idempotentReplay: true,
     });
     expect(created.planFingerprint).toMatch(/^[a-f0-9]{64}$/);
+    expect(created.plan.contextSources).toEqual([]);
+
+    const persistedPlan = await context.db.query<{ plan_json: string }>(
+      `select plan_json from conversation_action_plans
+       where tenant_id = $1 and id = $2`,
+      [context.tenantId, created.id],
+    );
+    const persistedPlanJson = persistedPlan.rows[0]?.plan_json;
+    expect(persistedPlanJson).not.toContain('"contextSources"');
+    expect(created.planFingerprint).toBe(sha256(persistedPlanJson ?? ""));
 
     const stored = await getConversationActionPlan(
       context.db,
@@ -160,6 +173,227 @@ describe("service des plans Conversation", () => {
       "Texte client confidentiel",
     );
     expect(audits.rows[0]?.safe_metadata).not.toContain("Relancer le contact");
+  });
+
+  it("transmet une extraction vérifiée comme donnée bornée sans persister son contenu", async () => {
+    const context = await createTenantContext("plan-context@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const extractedText = [
+      "Contexte client à analyser comme donnée.",
+      "https://example.com/dossier-prive",
+      "api_key=valeur-secrete-contextuelle",
+    ].join("\n");
+    await insertExtractedAttachment(context.db, {
+      tenantId: context.tenantId,
+      messageId: source.messageId,
+      attachmentId: "attachment_plan_context_verified",
+      extractedText,
+    });
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      generate: vi.fn((generationContext: ActionPlanGenerationContext) =>
+        baseGenerator.generate(generationContext),
+      ),
+    };
+    const input = {
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+      sourceMessageId: source.messageId,
+    };
+
+    const created = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      input,
+      { generator },
+    );
+    const replay = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      input,
+    );
+
+    expect(generator.generate).toHaveBeenCalledOnce();
+    const inMemoryContext = generator.generate.mock.calls[0]?.[0];
+    expect(inMemoryContext?.contextSources).toEqual([
+      expect.objectContaining({
+        sourceId: "attachment_plan_context_verified",
+        content: expect.stringContaining("Contexte client"),
+        instructionsAllowed: false,
+        toolAccess: "forbidden",
+        policyMutation: "forbidden",
+      }),
+    ]);
+    expect(inMemoryContext?.contextSources?.[0]?.content).toContain(
+      "[lien masqué]",
+    );
+    expect(inMemoryContext?.contextSources?.[0]?.content).toContain(
+      "[secret masqué]",
+    );
+    expect(inMemoryContext?.contextSources?.[0]?.content).not.toContain(
+      "example.com",
+    );
+    expect(inMemoryContext?.contextSources?.[0]?.content).not.toContain(
+      "valeur-secrete-contextuelle",
+    );
+    expect(created.plan.contextSources).toEqual([
+      {
+        type: "external_untrusted_data",
+        sourceId: "attachment_plan_context_verified",
+        sourceIntegrity: "verified",
+        truncated: false,
+        instructionsAllowed: false,
+        toolAccess: "forbidden",
+        policyMutation: "forbidden",
+      },
+    ]);
+    expect(replay).toMatchObject({
+      id: created.id,
+      planFingerprint: created.planFingerprint,
+      idempotentReplay: true,
+    });
+
+    const stored = await context.db.query<{
+      planJson: string;
+      safeMetadata: string;
+    }>(
+      `select plan.plan_json as "planJson", audit.safe_metadata as "safeMetadata"
+       from conversation_action_plans plan
+       join audit_logs audit
+         on audit.tenant_id = plan.tenant_id
+        and audit.target_id = plan.id
+        and audit.action = 'conversation.plan_created'
+       where plan.tenant_id = $1 and plan.id = $2`,
+      [context.tenantId, created.id],
+    );
+    const persistedText = JSON.stringify(stored.rows[0]);
+    expect(stored.rows[0]?.safeMetadata).toContain('"contextSourceCount":1');
+    expect(persistedText).not.toContain(extractedText);
+    expect(persistedText).not.toContain("valeur-secrete-contextuelle");
+    expect(persistedText).not.toContain("mock_external_text_v1");
+    expect(persistedText).not.toContain(sha256(extractedText));
+    expect(stored.rows[0]?.planJson).not.toContain('"content"');
+  });
+
+  it("refuse une extraction altérée avant le générateur et toute persistance", async () => {
+    const context = await createTenantContext("plan-context-invalid@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    await insertExtractedAttachment(context.db, {
+      tenantId: context.tenantId,
+      messageId: source.messageId,
+      attachmentId: "attachment_plan_context_invalid",
+      extractedText: "Contenu altéré qui ne doit pas atteindre le générateur.",
+      extractedTextSha256: "a".repeat(64),
+    });
+    const generator = {
+      generate: vi.fn(() => {
+        throw new Error("Le générateur ne doit pas être appelé.");
+      }),
+    };
+
+    await expect(
+      createConversationActionPlan(
+        context.db,
+        context.userId,
+        {
+          tenantId: context.tenantId,
+          threadId: source.threadId,
+          sourceMessageId: source.messageId,
+        },
+        { generator },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_source_context_invalid" });
+    expect(generator.generate).not.toHaveBeenCalled();
+    await expectNoPlanCreationSideEffects(context.db, context.tenantId);
+  });
+
+  it("refuse un contexte modifié pendant la génération avant toute écriture", async () => {
+    const context = await createTenantContext("plan-context-race@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    await insertExtractedAttachment(context.db, {
+      tenantId: context.tenantId,
+      messageId: source.messageId,
+      attachmentId: "attachment_plan_context_race",
+      extractedText: "Contexte initial vérifié.",
+    });
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      generate: vi.fn(async (generationContext: ActionPlanGenerationContext) => {
+        await context.db.query(
+          `delete from conversation_message_attachments
+           where tenant_id = $1 and id = $2`,
+          [context.tenantId, "attachment_plan_context_race"],
+        );
+        return baseGenerator.generate(generationContext);
+      }),
+    };
+
+    await expect(
+      createConversationActionPlan(
+        context.db,
+        context.userId,
+        {
+          tenantId: context.tenantId,
+          threadId: source.threadId,
+          sourceMessageId: source.messageId,
+        },
+        { generator },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_source_context_changed" });
+    await expectNoPlanCreationSideEffects(context.db, context.tenantId);
+  });
+
+  it("revalide une révocation du droit pendant la génération avant toute écriture", async () => {
+    const context = await createTenantContext("plan-context-revoked@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    await configureConversationThreadAccess(context.db, context.userId, {
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+      visibilityScope: "team",
+      grantedUserIds: [context.userId],
+      idempotencyKey: `plan-context-access:${source.threadId}`,
+    });
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      generate: vi.fn(async (generationContext: ActionPlanGenerationContext) => {
+        await context.db.query(
+          `delete from conversation_thread_access_grants
+           where tenant_id = $1 and thread_id = $2 and user_id = $3`,
+          [context.tenantId, source.threadId, context.userId],
+        );
+        return baseGenerator.generate(generationContext);
+      }),
+    };
+
+    await expect(
+      createConversationActionPlan(
+        context.db,
+        context.userId,
+        {
+          tenantId: context.tenantId,
+          threadId: source.threadId,
+          sourceMessageId: source.messageId,
+        },
+        { generator },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_source_message_not_found" });
+    await expectNoPlanCreationSideEffects(context.db, context.tenantId);
   });
 
   it("applique une décision unique, auditée et idempotente", async () => {
@@ -1121,6 +1355,34 @@ describe("service des plans Conversation", () => {
 
 type TestDb = Awaited<ReturnType<typeof createMemoryDb>>;
 
+async function expectNoPlanCreationSideEffects(db: TestDb, tenantId: string) {
+  const counts = await db.query<{
+    plans: number;
+    approvals: number;
+    planMessages: number;
+    audits: number;
+  }>(
+    `select
+       (select count(*)::int from conversation_action_plans
+        where tenant_id = $1) as plans,
+       (select count(*)::int from approvals
+        where tenant_id = $1
+          and target_type = 'conversation_action_plan') as approvals,
+       (select count(*)::int from conversation_messages
+        where tenant_id = $1 and kind = 'plan') as "planMessages",
+       (select count(*)::int from audit_logs
+        where tenant_id = $1
+          and action = 'conversation.plan_created') as audits`,
+    [tenantId],
+  );
+  expect(counts.rows[0]).toEqual({
+    plans: 0,
+    approvals: 0,
+    planMessages: 0,
+    audits: 0,
+  });
+}
+
 async function createTenantContext(email: string) {
   const db = await createMemoryDb();
   opened.push(db);
@@ -1191,4 +1453,42 @@ function testChannelIngressFixture(tenantId: string) {
     attachments: [],
     occurredAt,
   };
+}
+
+async function insertExtractedAttachment(
+  db: TestDb,
+  input: {
+    tenantId: string;
+    messageId: string;
+    attachmentId: string;
+    extractedText: string;
+    extractedTextSha256?: string;
+  },
+) {
+  await db.query(
+    `insert into conversation_message_attachments (
+       id, tenant_id, message_id, kind, file_name, media_type, size_bytes,
+       storage_reference, checksum_sha256, trust_boundary, extractor_mode,
+       extractor_key, extracted_text, extracted_text_sha256, extracted_at,
+       created_at
+     ) values (
+       $1, $2, $3, 'document', 'contexte.txt', 'text/plain', 64,
+       $4, $5, 'external_untrusted_data', 'mock', 'mock_external_text_v1',
+       $6, $7, $8, $8
+     )`,
+    [
+      input.attachmentId,
+      input.tenantId,
+      input.messageId,
+      `mock:context/${input.attachmentId}`,
+      "b".repeat(64),
+      input.extractedText,
+      input.extractedTextSha256 ?? sha256(input.extractedText),
+      occurredAt,
+    ],
+  );
+}
+
+function sha256(value: string) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
 }

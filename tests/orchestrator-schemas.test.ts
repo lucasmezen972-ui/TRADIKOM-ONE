@@ -10,6 +10,7 @@ describe("schémas de l'orchestrateur", () => {
     const plan = planFixture();
     expect(actionPlanSchema.parse(plan)).toMatchObject({
       intent: "Préparer une relance commerciale",
+      contextSources: [],
       steps: [
         { capability: "crm.contacts.search", risk: "low" },
         {
@@ -19,6 +20,69 @@ describe("schémas de l'orchestrateur", () => {
         },
       ],
     });
+  });
+
+  it("borne les sources de contexte à des métadonnées sûres", () => {
+    const source = {
+      type: "external_untrusted_data" as const,
+      sourceId: "attachment_context_1",
+      sourceIntegrity: "verified" as const,
+      truncated: false,
+      instructionsAllowed: false as const,
+      toolAccess: "forbidden" as const,
+      policyMutation: "forbidden" as const,
+    };
+    const parsed = actionPlanSchema.parse({
+      ...planFixture(),
+      contextSources: [source],
+    });
+
+    expect(parsed.contextSources).toEqual([source]);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: [{ ...source, content: "contenu interdit" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: [source, source],
+      }).success,
+    ).toBe(false);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: Array.from({ length: 11 }, (_, index) => ({
+          ...source,
+          sourceId: `attachment_context_${index}`,
+        })),
+      }).success,
+    ).toBe(false);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: [{ ...source, sourceIntegrity: "failed" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: [{ ...source, instructionsAllowed: true }],
+      }).success,
+    ).toBe(false);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: [{ ...source, toolAccess: "allowed" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      actionPlanSchema.safeParse({
+        ...planFixture(),
+        contextSources: [{ ...source, policyMutation: "allowed" }],
+      }).success,
+    ).toBe(false);
   });
 
   it("refuse les doublons, les secrets et les noms de fournisseur", () => {

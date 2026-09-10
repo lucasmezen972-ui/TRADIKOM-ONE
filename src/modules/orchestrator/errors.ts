@@ -7,6 +7,8 @@ export type OrchestratorErrorCode =
   | "orchestrator_external_cost_forbidden"
   | "orchestrator_source_message_not_found"
   | "orchestrator_source_message_invalid"
+  | "orchestrator_source_context_invalid"
+  | "orchestrator_source_context_changed"
   | "orchestrator_plan_not_found"
   | "orchestrator_approval_not_found"
   | "orchestrator_decision_conflict"

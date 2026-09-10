@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T01:18:28.000Z",
+  "updatedAt": "2026-09-10T01:53:47.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
   "publishedHeadObserved": "cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
-  "status": "os5_meta_trial_admin_flow_proven_ci_human_meta_sms_pending",
+  "status": "os5_external_untrusted_plan_context_in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche OS-5 de cohérence endpoint-secret Meta et d'autorisation/révocation d'un essai Meta depuis Conversation est publiée et prouvée en CI. Reprendre au checkpoint humain SMS Meta, puis inventorier en lecture seule l'application, le WABA et le Phone Number ID; demander une confirmation au moment exact avant tout token persistant, Graph, message externe, fusion, déploiement ou dépense.",
+  "currentObjective": "Raccorder au plan Conversation la vue data-only déjà vérifiée des extractions de pièces jointes external_untrusted_data, sans jamais leur accorder valeur d'instruction, accès outil ou mutation de policy. Le checkpoint SMS Meta reste humainement bloqué et aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans cette tranche.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,11 +30,11 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Poursuivre OS-5 selon les pages 14, 18, 22, 24, 29-32, 46, 48 et 64-69 en appliquant une frontière fournisseur fail-closed puis un contrôle humain conversation-first. Avant toute rotation de secret endpoint WhatsApp Meta, vérifier avec la même clé HMAC que le WABA et le Phone Number ID correspondent exactement à l'endpoint tenant immuable. Ensuite, permettre aux seuls propriétaire et administrateur d'autoriser ou révoquer depuis Conversation un essai limité à un message, en résolvant côté serveur exactement un endpoint actif/configuré, avec confirmation explicite du quota gratuit, expiration courte et idempotence. Aucun secret, identifiant fournisseur, valeur d'empreinte, bouton Envoyer/Activer, Graph, message externe, token persistant, endpoint public, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire ou OS-6.",
-      "evidenceExpected": "Preuve attendue : calcul d'empreinte partagé entre enregistrement et rotation; comparaison en temps constant du compte et de la destination avec l'endpoint verrouillé; mauvais Phone Number ID ou clé HMAC invalide refusés avant mutation/audit; bon couple et rejeu inchangés. Une commande tenant-aware sélectionne exactement un endpoint Meta configuré, refuse zéro/plusieurs/rôle faible, émet une autorisation courte idempotente à plafond 1 et révoque monotoniquement; la carte Conversation française expose Autoriser/Révoquer seulement au rôle et à l'état pertinents, sans ID ni réseau; readiness requise→valide→requise; Playwright utilise le vrai flux UI au lieu de l'insertion directe. Tests ciblés, PostgreSQL/RLS, lint, TypeScript, suite, build et Playwright verts."
+      "requirement": "Poursuivre l'ordre page 48 au niveau du plan Conversation, conformément aux pages 16-18, 22-24, 31-33, 46 et 69-71 : seule une extraction external_untrusted_data dont l'intégrité est vérifiée, liée au même tenant, fil et message source, encore accessible à l'acteur, peut entrer dans un contexte de génération strictement data-only. Son contenu reste borné et filtré; instructionsAllowed demeure false, toolAccess et policyMutation restent forbidden. Revalider droits et intégrité après la génération et avant toute persistance. Ne déclencher aucun fournisseur, secret Meta, Graph, message externe, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Preuve attendue : le générateur reçoit le texte filtré et borné avec les marqueurs de confiance immuables, tandis que le plan persiste seulement une provenance sûre sans contenu externe; absence d'extraction reste compatible. Extraction altérée, enregistrement partiel, changement concurrent, droit de fil révoqué ou donnée cross-tenant échoue avant plan, validation, message et audit. Conversation affiche en français qu'une donnée externe non fiable vérifiée a été prise en compte. Rejeu du même plan, validation unique et exécution mock durable restent idempotents et sans réseau. Tests unitaires, intégration, PostgreSQL/RLS, Playwright desktop/mobile, lint, TypeScript, suite et build verts."
     }
   },
-  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers, puis inventorier l'application, le WABA et le Phone Number ID en lecture seule; demander une confirmation immédiatement avant tout token persistant ou effet Graph.",
+  "nextAction": "Livrer puis prouver le passage tenant-aware des extractions externes vérifiées vers le contexte de génération du plan, leur revalidation avant persistance, une provenance française visible et le refus fermé des extractions altérées ou devenues inaccessibles.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",

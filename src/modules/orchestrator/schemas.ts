@@ -24,6 +24,18 @@ export const capabilityRiskSchema = z.enum([
   "critical",
 ]);
 
+export const actionPlanContextSourceSchema = z
+  .object({
+    type: z.literal("external_untrusted_data"),
+    sourceId: identifierSchema,
+    sourceIntegrity: z.literal("verified"),
+    truncated: z.boolean(),
+    instructionsAllowed: z.literal(false),
+    toolAccess: z.literal("forbidden"),
+    policyMutation: z.literal("forbidden"),
+  })
+  .strict();
+
 export const actionPlanStepSchema = z
   .object({
     stepId: identifierSchema,
@@ -70,6 +82,23 @@ export const actionPlanSchema = z
     businessGoal: businessTextSchema,
     confidence: z.number().min(0).max(1),
     missingContextQuestions: z.array(businessTextSchema).max(3),
+    contextSources: z
+      .array(actionPlanContextSourceSchema)
+      .max(10)
+      .superRefine((sources, context) => {
+        const sourceIds = new Set<string>();
+        for (const [index, source] of sources.entries()) {
+          if (sourceIds.has(source.sourceId)) {
+            context.addIssue({
+              code: "custom",
+              message: "Chaque source de contexte doit être unique.",
+              path: [index, "sourceId"],
+            });
+          }
+          sourceIds.add(source.sourceId);
+        }
+      })
+      .default([]),
     riskSummary: businessTextSchema,
     estimatedCost: z
       .object({
@@ -184,7 +213,13 @@ export const actionPlanExecutionSchema = z
 
 export type CapabilityRisk = z.infer<typeof capabilityRiskSchema>;
 export type ActionPlanStep = z.infer<typeof actionPlanStepSchema>;
-export type ActionPlan = z.infer<typeof actionPlanSchema>;
+export type ActionPlanContextSource = z.infer<
+  typeof actionPlanContextSourceSchema
+>;
+// Le type d'entrée conserve la compatibilité des générateurs et fixtures
+// historiques; `actionPlanSchema.parse` matérialise toujours `contextSources`.
+export type ActionPlan = z.input<typeof actionPlanSchema>;
+export type ValidatedActionPlan = z.output<typeof actionPlanSchema>;
 export type ActionPlanProposal = z.infer<typeof actionPlanProposalSchema>;
 export type ActionPlanCreation = z.infer<typeof actionPlanCreationSchema>;
 export type ActionPlanDecision = z.infer<typeof actionPlanDecisionSchema>;

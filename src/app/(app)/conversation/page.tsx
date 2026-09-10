@@ -542,6 +542,12 @@ function PlanPanel({
   canCreate: boolean;
   canDecide: boolean;
 }) {
+  const hasVerifiedExternalContext = plan?.plan.contextSources.some(
+    (source) =>
+      source.type === "external_untrusted_data" &&
+      source.sourceIntegrity === "verified",
+  );
+
   return (
     <section className="border-t border-slate-200 bg-violet-50/50 p-4 lg:p-5" aria-label="Plan d’action">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -584,6 +590,15 @@ function PlanPanel({
               {planStatusLabel(plan.approvalStatus)}
             </span>
           </div>
+          {hasVerifiedExternalContext ? (
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              <p className="font-bold">Source externe à intégrité vérifiée</p>
+              <p className="mt-1 text-xs leading-5">
+                Prise en compte comme donnée non fiable, sans instruction ni
+                accès à un outil.
+              </p>
+            </div>
+          ) : null}
           <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
             <div>
               <dt className="text-slate-500">Confiance</dt>
