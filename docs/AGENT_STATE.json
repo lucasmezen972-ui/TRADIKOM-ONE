@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T00:35:07.000Z",
+  "updatedAt": "2026-09-10T01:18:28.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "dde51f5b338e099d5d9f5ffab2f76b0f5e9e1a8f",
-  "publishedHeadObserved": "ed5a571d258542df8980095fb5326376c26a8072",
-  "status": "os5_meta_trial_admin_flow_local_proven_ci_pending",
+  "lastCommit": "cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
+  "publishedHeadObserved": "cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
+  "status": "os5_meta_trial_admin_flow_proven_ci_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche OS-5 locale ferme la cohérence endpoint-secret Meta et rend l'autorisation/révocation d'un unique essai réellement pilotable depuis Conversation. Publier en fast-forward puis obtenir la preuve CI PostgreSQL/RLS, build et Playwright avant de revenir au checkpoint humain SMS Meta; aucun fournisseur réel, secret, Graph ou message externe.",
+  "currentObjective": "La tranche OS-5 de cohérence endpoint-secret Meta et d'autorisation/révocation d'un essai Meta depuis Conversation est publiée et prouvée en CI. Reprendre au checkpoint humain SMS Meta, puis inventorier en lecture seule l'application, le WABA et le Phone Number ID; demander une confirmation au moment exact avant tout token persistant, Graph, message externe, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -34,7 +34,7 @@
       "evidenceExpected": "Preuve attendue : calcul d'empreinte partagé entre enregistrement et rotation; comparaison en temps constant du compte et de la destination avec l'endpoint verrouillé; mauvais Phone Number ID ou clé HMAC invalide refusés avant mutation/audit; bon couple et rejeu inchangés. Une commande tenant-aware sélectionne exactement un endpoint Meta configuré, refuse zéro/plusieurs/rôle faible, émet une autorisation courte idempotente à plafond 1 et révoque monotoniquement; la carte Conversation française expose Autoriser/Révoquer seulement au rôle et à l'état pertinents, sans ID ni réseau; readiness requise→valide→requise; Playwright utilise le vrai flux UI au lieu de l'insertion directe. Tests ciblés, PostgreSQL/RLS, lint, TypeScript, suite, build et Playwright verts."
     }
   },
-  "nextAction": "Publier la tranche endpoint-secret et autorisation/révocation Conversation, suivre la CI jusqu'à une preuve verte, corriger tout échec réel, puis reprendre au checkpoint humain SMS Meta.",
+  "nextAction": "Attendre que l'utilisateur saisisse lui-même le code SMS dans Meta for Developers, puis inventorier l'application, le WABA et le Phone Number ID en lecture seule; demander une confirmation immédiatement avant tout token persistant ou effet Graph.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1884,6 +1884,22 @@
     {
       "command": "build et Playwright locaux de la tranche Conversation Meta",
       "status": "blocked_only_by_missing_production_environment_and_separate_pglite_processes_ci_postgres_authoritative_no_application_assertion_presented_as_green"
+    },
+    {
+      "command": "publication fast-forward du commit cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
+      "status": "passed_remote_ed5a571_verified_exact_parent_tmp_untracked_preserved_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "CI 34422242316 sur cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
+      "status": "passed_22m42s_audit_migrations_db_verify_backup_restore_lint_typecheck_163_files_836_tests_postgres_included_build_next_16_3_4_and_20_playwright"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34422242320 sur cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après preuve du contrôle administrateur Meta",
+      "status": "open_draft_mergeable_clean_head_cc0bb2b_no_merge_deploy_graph_secret_token_or_message"
     }
   ],
   "humanBlockers": [
