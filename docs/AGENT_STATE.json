@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T08:32:38.000Z",
+  "updatedAt": "2026-09-10T18:08:48.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "f692057e284870527d7b162bae6cfa5312d9893c",
-  "publishedHeadObserved": "f692057e284870527d7b162bae6cfa5312d9893c",
-  "status": "os5_external_untrusted_plan_context_ci_proven",
+  "lastCommit": "2e6fbb28a585dd4ee62efc3d209c3bbab9ecb1dd",
+  "publishedHeadObserved": "2e6fbb28a585dd4ee62efc3d209c3bbab9ecb1dd",
+  "status": "os5_external_untrusted_plan_output_guard_in_progress",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche Conversation qui raccorde les extractions de pièces jointes external_untrusted_data vérifiées au contexte du plan est livrée, publiée et prouvée par la CI PostgreSQL/RLS, le build et 20/20 Playwright. Le nettoyage des bases temporaires de vérification attend désormais la fermeture réelle des connexions avant DROP, ce qui supprime la course 57P01 observée. Le prochain checkpoint de l'ordre OS-5 reste la saisie humaine du SMS directement dans Meta, puis un inventaire officiel en lecture seule; aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans ce checkpoint.",
+  "currentObjective": "Ajouter au plan Conversation une garde provider-agnostic qui refuse avant toute persistance la recopie verbatim substantielle d'une source external_untrusted_data dans les champs métier, les entrées d'étape ou le message proposé. Le checkpoint SMS Meta reste humainement bloqué; aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans cette tranche.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,11 +30,11 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Poursuivre l'ordre page 48 au niveau du plan Conversation, conformément aux pages 16-18, 22-24, 31-33, 46 et 69-71 : seule une extraction external_untrusted_data dont l'intégrité est vérifiée, liée au même tenant, fil et message source, encore accessible à l'acteur, peut entrer dans un contexte de génération strictement data-only. Son contenu reste borné et filtré; instructionsAllowed demeure false, toolAccess et policyMutation restent forbidden. Revalider droits et intégrité après la génération et avant toute persistance. Ne déclencher aucun fournisseur, secret Meta, Graph, message externe, CRM, Kanban, dashboard secondaire ou OS-6.",
-      "evidenceExpected": "Preuve attendue : le générateur reçoit le texte filtré et borné avec les marqueurs de confiance immuables, tandis que le plan persiste seulement une provenance sûre sans contenu externe; absence d'extraction reste compatible. Extraction altérée, enregistrement partiel, changement concurrent, droit de fil révoqué ou donnée cross-tenant échoue avant plan, validation, message et audit. Conversation affiche en français qu'une donnée externe non fiable vérifiée a été prise en compte. Rejeu du même plan, validation unique et exécution mock durable restent idempotents et sans réseau. Tests unitaires, intégration, PostgreSQL/RLS, Playwright desktop/mobile, lint, TypeScript, suite et build verts."
+      "requirement": "Poursuivre l'étape plan schema de l'ordre page 48, conformément aux pages 17, 23, 32, 38, 43-44 et 69-71 : une sortie de générateur, mock ou modèle futur, reste une proposition non fiable. Après validation structurée et relecture du contexte tenant, refuser avant toute persistance, projection ou audit toute recopie verbatim substantielle des sources external_untrusted_data dans les champs métier, les entrées d'étape, les preuves ou le message final. Tolérer seulement les courtes valeurs métier dérivées, ne jamais journaliser le contenu comparé et ne déclencher aucun fournisseur, secret Meta, Graph, message externe, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Preuve attendue : garde pure provider-agnostic avec normalisation Unicode/casse/ponctuation, détection bornée d'une source courte entièrement recopiée ou d'une séquence substantielle; inspection récursive des entrées d'étape et des champs visibles, exclusion des seules métadonnées de provenance. Un générateur adversarial qui recopie une injection ou un extrait dans businessGoal, finalUserMessageDraft ou un input imbriqué échoue avec une erreur française sûre et laisse zéro plan, étape, validation, message ou audit. Les chevauchements courts légitimes, les marqueurs masqués et le générateur déterministe restent acceptés. Tests unitaires, intégration, PostgreSQL/RLS existants, Playwright desktop/mobile, lint, TypeScript, suite et build verts."
     }
   },
-  "nextAction": "L'utilisateur saisit lui-même le code SMS directement dans Meta puis indique seulement que l'étape est terminée. Effectuer ensuite un inventaire officiel en lecture seule de l'application, du WABA et du Phone Number ID, sans demander ni afficher de secret, puis demander une confirmation distincte au moment exact d'un éventuel token persistant.",
+  "nextAction": "Implémenter et prouver la garde anti-recopie des données externes dans les sorties du plan Conversation; revenir ensuite au checkpoint humain SMS Meta sans demander ni afficher le code ou un secret.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",

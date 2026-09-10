@@ -31,6 +31,7 @@ import {
 } from "@/modules/orchestrator/capabilities";
 import { OrchestratorError } from "@/modules/orchestrator/errors";
 import {
+  assertGeneratedActionPlanDoesNotCopyExternalContext,
   boundActionPlanGenerationContextSources,
   createDeterministicActionPlanGenerator,
   toActionPlanContextSourceMetadata,
@@ -113,21 +114,38 @@ export async function createConversationActionPlan(
   );
   const generator =
     dependencies.generator ?? createDeterministicActionPlanGenerator();
+  const generationContextSources = Object.freeze(
+    source.contextSources.map((contextSource) =>
+      Object.freeze({ ...contextSource }),
+    ),
+  );
   const generated = await generator.generate({
     tenantId: parsed.tenantId,
     threadId: parsed.threadId,
     sourceMessageId: parsed.sourceMessageId,
     sourceText: source.message.text_content,
-    contextSources: source.contextSources,
+    contextSources: generationContextSources,
   });
-  if (
-    (generated.generationSource === "model" && !generated.modelReference) ||
-    (generated.generationSource === "deterministic_mock" &&
-      generated.modelReference)
-  ) {
-    throw new OrchestratorError(
-      "orchestrator_capability_mismatch",
-      "La source de génération du plan est incohérente.",
+  const generationMetadata = normalizeGeneratedPlanMetadata(
+    generated.generationSource,
+    generated.modelReference,
+  );
+  const initialGeneratedPlan = actionPlanSchema.parse({
+    ...generated.plan,
+    contextSources: generationContextSources.map(
+      toActionPlanContextSourceMetadata,
+    ),
+  });
+  const generatedByBuiltInServerTemplate =
+    dependencies.generator === undefined &&
+    generationMetadata.generationSource === "deterministic_mock";
+  if (!generatedByBuiltInServerTemplate) {
+    assertGeneratedActionPlanDoesNotCopyExternalContext(
+      initialGeneratedPlan,
+      generationContextSources,
+      generationMetadata.modelReference
+        ? [generationMetadata.modelReference]
+        : [],
     );
   }
 
@@ -157,7 +175,7 @@ export async function createConversationActionPlan(
         );
       }
       const generatedPlan = {
-        ...generated.plan,
+        ...initialGeneratedPlan,
         contextSources: currentSource.contextSources.map(
           toActionPlanContextSourceMetadata,
         ),
@@ -184,8 +202,8 @@ export async function createConversationActionPlan(
         tenantId: parsed.tenantId,
         threadId: parsed.threadId,
         sourceMessageId: parsed.sourceMessageId,
-        generationSource: generated.generationSource,
-        modelReference: generated.modelReference ?? null,
+        generationSource: generationMetadata.generationSource,
+        modelReference: generationMetadata.modelReference,
         approvalStatus:
           validated.approval.mode === "single"
             ? "awaiting_approval"
@@ -1232,4 +1250,33 @@ function assertValidSourceMessage(direction: string, kind: string) {
       "Seul un message texte entrant peut ouvrir un plan.",
     );
   }
+}
+
+function normalizeGeneratedPlanMetadata(
+  generationSource: unknown,
+  modelReference: unknown,
+): {
+  generationSource: "deterministic_mock" | "model";
+  modelReference: string | null;
+} {
+  if (generationSource === "deterministic_mock") {
+    if (modelReference !== undefined) {
+      throw incoherentGenerationSourceError();
+    }
+    return { generationSource, modelReference: null };
+  }
+  if (generationSource === "model" && typeof modelReference === "string") {
+    const normalizedReference = modelReference.trim();
+    if (normalizedReference.length > 0 && normalizedReference.length <= 160) {
+      return { generationSource, modelReference: normalizedReference };
+    }
+  }
+  throw incoherentGenerationSourceError();
+}
+
+function incoherentGenerationSourceError() {
+  return new OrchestratorError(
+    "orchestrator_capability_mismatch",
+    "La source de génération du plan est incohérente.",
+  );
 }

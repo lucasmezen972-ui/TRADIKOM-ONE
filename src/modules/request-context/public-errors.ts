@@ -114,6 +114,14 @@ function mapOrchestratorError(error: OrchestratorError): PublicError {
       400,
     );
   }
+  if (error.code === "orchestrator_generated_plan_unsafe") {
+    return publicError(
+      error.code,
+      "conversation_plan",
+      "Le plan n’a pas pu être préparé en toute sécurité.",
+      409,
+    );
+  }
   return publicError(
     error.code,
     "conversation_plan",

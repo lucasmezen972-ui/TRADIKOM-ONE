@@ -16,6 +16,7 @@ const capabilityNameSchema = z
   .regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
 const forbiddenInputKey =
   /(authorization|credential|password|secret|token|api[_-]?key)/i;
+const maximumActionPlanInputDepth = 32;
 
 export const capabilityRiskSchema = z.enum([
   "low",
@@ -50,6 +51,16 @@ export const actionPlanStepSchema = z
             code: "custom",
             message: "Une étape ne peut pas contenir plus de 32 entrées.",
           });
+        }
+        const invalidJsonPath = findInvalidJsonInputPath(input);
+        if (invalidJsonPath) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Les entrées de l'étape doivent contenir uniquement des valeurs JSON simples.",
+            path: invalidJsonPath,
+          });
+          return;
         }
         const sensitivePath = findSensitiveInputPath(input);
         if (sensitivePath) {
@@ -232,6 +243,61 @@ function safelySerializeInput(input: Record<string, unknown>) {
   } catch {
     return null;
   }
+}
+
+function findInvalidJsonInputPath(
+  value: unknown,
+  path: Array<string | number> = [],
+  visited = new WeakSet<object>(),
+  depth = 0,
+): Array<string | number> | null {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return null;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? null : path;
+  }
+  if (!value || typeof value !== "object") return path;
+  if (depth > maximumActionPlanInputDepth) return path;
+  if (visited.has(value)) return path;
+  visited.add(value);
+
+  const expectedPrototype = Array.isArray(value)
+    ? Array.prototype
+    : Object.prototype;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== expectedPrototype && prototype !== null) return path;
+  if (
+    Object.prototype.hasOwnProperty.call(value, "toJSON") ||
+    Object.getOwnPropertySymbols(value).length > 0
+  ) {
+    return path;
+  }
+
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (Array.isArray(value) && key === "length") continue;
+    const nextPath = [...path, Array.isArray(value) ? Number(key) : key];
+    if (
+      !("value" in descriptor) ||
+      (!descriptor.enumerable && !Array.isArray(value)) ||
+      (Array.isArray(value) && !/^\d+$/u.test(key))
+    ) {
+      return nextPath;
+    }
+    const nestedInvalidPath = findInvalidJsonInputPath(
+      descriptor.value,
+      nextPath,
+      visited,
+      depth + 1,
+    );
+    if (nestedInvalidPath) return nestedInvalidPath;
+  }
+  return null;
 }
 
 function findSensitiveInputPath(

@@ -9,6 +9,7 @@ export type OrchestratorErrorCode =
   | "orchestrator_source_message_invalid"
   | "orchestrator_source_context_invalid"
   | "orchestrator_source_context_changed"
+  | "orchestrator_generated_plan_unsafe"
   | "orchestrator_plan_not_found"
   | "orchestrator_approval_not_found"
   | "orchestrator_decision_conflict"

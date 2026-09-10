@@ -100,6 +100,36 @@ describe("schémas de l'orchestrateur", () => {
     expect(actionPlanSchema.safeParse(providerAction).success).toBe(false);
   });
 
+  it("refuse les objets capables de modifier leur projection JSON", () => {
+    const boxed = planFixture();
+    boxed.steps[0].input = {
+      payload: Object("CANARI-EXTERNE-BOITE-NE-PAS-PERSISTER"),
+    };
+    expect(actionPlanSchema.safeParse(boxed).success).toBe(false);
+
+    const customSerialization = planFixture();
+    customSerialization.steps[0].input = {
+      payload: {
+        toJSON() {
+          return "CANARI-EXTERNE-TOJSON-NE-PAS-PERSISTER";
+        },
+      },
+    };
+    expect(actionPlanSchema.safeParse(customSerialization).success).toBe(false);
+  });
+
+  it("refuse sans exception une entrée JSON excessivement profonde", () => {
+    const plan = planFixture();
+    let nested: unknown = "feuille";
+    for (let depth = 0; depth < 5_000; depth += 1) {
+      nested = { nested };
+    }
+    plan.steps[0].input = { nested };
+
+    expect(() => actionPlanSchema.safeParse(plan)).not.toThrow();
+    expect(actionPlanSchema.safeParse(plan).success).toBe(false);
+  });
+
   it("conserve source, version et état d'approbation sans exécuter", () => {
     const proposal = actionPlanProposalSchema.parse({
       id: "plan_proposal_1",

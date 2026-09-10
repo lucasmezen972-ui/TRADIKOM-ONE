@@ -92,6 +92,19 @@ describe("request context and public errors", () => {
       message: "Le plan a changé ou ne peut pas être poursuivi dans cet état.",
       status: 409,
     });
+    expect(
+      toPublicError(
+        new OrchestratorError(
+          "orchestrator_generated_plan_unsafe",
+          "La sortie contient le canari privé INTERNE-NE-PAS-AFFICHER.",
+        ),
+      ),
+    ).toEqual({
+      code: "orchestrator_generated_plan_unsafe",
+      classification: "conversation_plan",
+      message: "Le plan n’a pas pu être préparé en toute sécurité.",
+      status: 409,
+    });
   });
 
   it("never exposes unknown database messages or stack traces", () => {
