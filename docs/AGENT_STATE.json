@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T01:53:47.000Z",
+  "updatedAt": "2026-09-10T08:32:38.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
-  "publishedHeadObserved": "cc0bb2b7ff906bba145f26817f43a3ed55b4dd88",
-  "status": "os5_external_untrusted_plan_context_in_progress",
+  "lastCommit": "f692057e284870527d7b162bae6cfa5312d9893c",
+  "publishedHeadObserved": "f692057e284870527d7b162bae6cfa5312d9893c",
+  "status": "os5_external_untrusted_plan_context_ci_proven",
   "currentPhase": "OS-5",
-  "currentObjective": "Raccorder au plan Conversation la vue data-only déjà vérifiée des extractions de pièces jointes external_untrusted_data, sans jamais leur accorder valeur d'instruction, accès outil ou mutation de policy. Le checkpoint SMS Meta reste humainement bloqué et aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans cette tranche.",
+  "currentObjective": "La tranche Conversation qui raccorde les extractions de pièces jointes external_untrusted_data vérifiées au contexte du plan est livrée, publiée et prouvée par la CI PostgreSQL/RLS, le build et 20/20 Playwright. Le nettoyage des bases temporaires de vérification attend désormais la fermeture réelle des connexions avant DROP, ce qui supprime la course 57P01 observée. Le prochain checkpoint de l'ordre OS-5 reste la saisie humaine du SMS directement dans Meta, puis un inventaire officiel en lecture seule; aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans ce checkpoint.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -34,7 +34,7 @@
       "evidenceExpected": "Preuve attendue : le générateur reçoit le texte filtré et borné avec les marqueurs de confiance immuables, tandis que le plan persiste seulement une provenance sûre sans contenu externe; absence d'extraction reste compatible. Extraction altérée, enregistrement partiel, changement concurrent, droit de fil révoqué ou donnée cross-tenant échoue avant plan, validation, message et audit. Conversation affiche en français qu'une donnée externe non fiable vérifiée a été prise en compte. Rejeu du même plan, validation unique et exécution mock durable restent idempotents et sans réseau. Tests unitaires, intégration, PostgreSQL/RLS, Playwright desktop/mobile, lint, TypeScript, suite et build verts."
     }
   },
-  "nextAction": "Livrer puis prouver le passage tenant-aware des extractions externes vérifiées vers le contexte de génération du plan, leur revalidation avant persistance, une provenance française visible et le refus fermé des extractions altérées ou devenues inaccessibles.",
+  "nextAction": "L'utilisateur saisit lui-même le code SMS directement dans Meta puis indique seulement que l'étape est terminée. Effectuer ensuite un inventaire officiel en lecture seule de l'application, du WABA et du Phone Number ID, sans demander ni afficher de secret, puis demander une confirmation distincte au moment exact d'un éventuel token persistant.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -1900,6 +1900,50 @@
     {
       "command": "PR #11 après preuve du contrôle administrateur Meta",
       "status": "open_draft_mergeable_clean_head_cc0bb2b_no_merge_deploy_graph_secret_token_or_message"
+    },
+    {
+      "command": "contexte external_untrusted_data vérifié vers plans Conversation le 2026-09-10",
+      "status": "passed_verified_only_bounded_filtered_ephemeral_content_safe_provenance_no_raw_persistence_post_generation_revalidation_parent_and_child_locks_french_ui_mock_only_no_network"
+    },
+    {
+      "command": "tests ciblés, pnpm test, lint, typecheck, build factice, audit high, continuity-check et diff check le 2026-09-10",
+      "status": "passed_targeted_26_tests_4_postgres_skipped_full_152_files_815_tests_11_files_28_postgres_skipped_zero_failures_lint_typecheck_build_zero_high_critical_three_moderate_ready_diff_clean"
+    },
+    {
+      "command": "publication fast-forward du commit bf54862aee344accd23af9c7a5fba3d856484cd1",
+      "status": "passed_remote_b1f7b54_verified_exact_parent_tmp_untracked_preserved_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34430720259 sur bf54862aee344accd23af9c7a5fba3d856484cd1",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34430720247 sur bf54862aee344accd23af9c7a5fba3d856484cd1",
+      "status": "failed_only_playwright_expected_four_result_routes_received_three_after_audit_migrations_backup_restore_lint_typecheck_163_files_844_tests_postgres_included_build_and_19_of_20_playwright_passed"
+    },
+    {
+      "command": "correctif de preuve E2E et publication 06137acf59e8d87f0deadd9d5da66aaa8b9c597c",
+      "status": "passed_expected_two_routes_for_web_test_thread_plus_one_for_whatsapp_media_thread_eslint_typecheck_diff_fast_forward_tmp_preserved"
+    },
+    {
+      "command": "CI 34432424191 et continuité 34432424276 sur 06137acf59e8d87f0deadd9d5da66aaa8b9c597c",
+      "status": "continuity_passed_ci_failed_early_db_verify_pg_57p01_pool_socket_cleanup_race_before_lint_tests_build_or_playwright"
+    },
+    {
+      "command": "correctif de nettoyage des bases de vérification et publication f692057e284870527d7b162bae6cfa5312d9893c",
+      "status": "passed_waits_bounded_pg_stat_activity_zero_then_drop_without_force_eslint_typecheck_targeted_rls_test_diff_fast_forward_tmp_preserved"
+    },
+    {
+      "command": "CI 34433025988 sur f692057e284870527d7b162bae6cfa5312d9893c",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_163_files_844_tests_postgres_included_build_and_20_playwright"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34433025991 sur f692057e284870527d7b162bae6cfa5312d9893c",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 après preuve du contexte externe vérifié",
+      "status": "open_draft_mergeable_clean_head_f692057_no_merge_deploy_graph_secret_token_or_message"
     }
   ],
   "humanBlockers": [

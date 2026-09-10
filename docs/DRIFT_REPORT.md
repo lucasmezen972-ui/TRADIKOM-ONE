@@ -1,5 +1,37 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 10 septembre 2026, 08:32 UTC
+
+- Branche : `codex/tradikom-one-os`; commit applicatif `bf54862aee344accd23af9c7a5fba3d856484cd1`, correctif E2E `06137acf59e8d87f0deadd9d5da66aaa8b9c597c` puis correctif de nettoyage PostgreSQL `f692057e284870527d7b162bae6cfa5312d9893c` publiés strictement en fast-forward. La copie stable seule a été utilisée et `tmp/` demeure intact, non suivi et hors index.
+- Travail applicatif : le plan Conversation reçoit maintenant, uniquement en mémoire, le texte filtré et borné des extractions média `external_untrusted_data` encore vérifiées. Le contexte refuse plus de dix sources ou 16 000 caractères et ne transforme jamais ces données en instruction, accès outil ou mutation de policy.
+- Persistance minimale : le plan conserve seulement une provenance sûre (`sourceIntegrity=verified`, interdictions immuables et indicateur de troncature), sans contenu, extracteur, empreinte ni identifiant visible. Les plans historiques sans source gardent leur sérialisation et leur fingerprint.
+- Fermeture des courses : droits, message, pièces jointes et extractions sont relus après génération. Le message est verrouillé `FOR UPDATE`, les pièces existantes `FOR SHARE`, puis le fingerprint du contexte est comparé; suppression, insertion, altération ou révocation concurrente échoue avant plan, validation, message et audit.
+- Parcours visible : Conversation annonce en français « Source externe à intégrité vérifiée » et précise qu'elle est traitée comme donnée non fiable, sans instruction ni accès outil. Le scénario vertical approuve puis exécute le plan en mock et prouve zéro réseau Meta ainsi que le masquage des échecs.
+- Preuves locales : ciblés 26 tests verts et 4 PostgreSQL ignorés; suite exhaustive 152 fichiers/815 tests verts et 11 fichiers/28 tests ignorés sans `DATABASE_URL`; lint, TypeScript, build production avec valeurs factices, audit high, continuity-check et diff check verts. Trois avis modérés subsistent, aucun high/critical.
+- Première passe : continuité `34430720259` verte. La CI `34430720247` a validé audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/844 tests PostgreSQL et le build, puis 19 Playwright sur 20. Son seul échec était une attente de quatre projections au lieu des trois produites : deux sur le fil web/test et une sur le fil média WhatsApp.
+- Seconde passe : continuité `34432424276` verte; la CI `34432424191` a échoué avant lint/tests/build sur une course de fermeture de base temporaire (`57P01`). `pg-pool` avait retiré un client de son inventaire avant la fin de sa fermeture TCP, puis `DROP DATABASE ... WITH (FORCE)` terminait cette connexion. Le vérificateur attend maintenant de façon bornée zéro session dans `pg_stat_activity`, supprime sans `FORCE` et échoue explicitement si une session subsiste.
+- Preuve finale : CI `34433025988` entièrement verte sur `f692057` avec audit, migrations et nettoyage sans `57P01`, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/844 tests PostgreSQL, build et 20/20 Playwright. Continuité `34433025991` verte. La PR #11 est ouverte, brouillon, fusionnable et `CLEAN`.
+- Aucun fournisseur réel, secret, token, Graph, message externe, stockage réel, OCR/transcription, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 43-44, 46, 48, 69-71 | Continuer l'ordre page 48 par une tranche verticale Conversation, durable, honnête et démontrable | Contexte vérifié raccordé au plan, provenance française, validation unique et exécution mock dans le parcours vertical; CI `34433025988` et continuité `34433025991` entièrement vertes sur `f692057` | Checkpoint humain Meta ensuite |
+| 10-18, 22-24, 26-30, 35-38, 64-68 | Traiter toute entrée externe comme donnée non fiable, borner, filtrer, isoler le tenant, minimiser la persistance et auditer sans contenu | Intégrité `verified` obligatoire; dix sources/16 000 caractères; marqueurs data-only; aucun contenu/extracteur/hash durable ou audit; erreurs publiques sûres | Stockage réel, antivirus, OCR/transcription et fournisseur IA réel restent absents |
+| 16-18, 22, 32, 38, 69 | Refuser fermé les changements concurrents et prouver sécurité, idempotence, RLS et parcours complet | Double relecture, verrous parent/enfant, fingerprint, tests altération/révocation/cross-tenant/zéro effet; 163 fichiers/844 tests PostgreSQL, build et 20/20 Playwright verts | Avant un modèle réel, ajouter une politique anti-recopie verbatim; envisager un schéma v2 avant API publique ou déploiement mixte |
+
+Le PDF canonique est conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification de la tranche courante
+
+- Livré, publié et prouvé CI : contexte média vérifié vers plan Conversation, fermeture concurrente, provenance française et parcours mock.
+- Réel connecté : aucun; aucune clé réelle enregistrée et aucun appel Graph.
+- Sandbox : aucune configurée ou appelée.
+- Mock : générateur déterministe, workflow et doubles média uniquement en tests, sans réseau.
+- Bloqué humain : saisie du SMS directement dans Meta, inventaire officiel puis confirmation immédiate avant tout token persistant.
+- Hors périmètre : fournisseur IA réel, Graph, stockage réel, antivirus, OCR/transcription, message externe, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
 ## Checkpoint applicatif — 10 septembre 2026, 00:35 UTC
 
 - Branche : `codex/tradikom-one-os`; base locale et distante synchronisée sur `ed5a571d258542df8980095fb5326376c26a8072` avant le lot. Le commit applicatif `cc0bb2b7ff906bba145f26817f43a3ed55b4dd88` a ensuite été publié strictement en fast-forward; `tmp/` demeure intact, non suivi et hors index.
