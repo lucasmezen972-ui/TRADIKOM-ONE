@@ -1648,7 +1648,7 @@ async function runConversationJourney(
       steps: 4,
       runtime_evidence: 4,
       leaked_inputs: 0,
-      routes: 4,
+      routes: 3,
       audits: 2,
       tasks: 0,
     });
