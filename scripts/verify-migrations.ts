@@ -156,8 +156,31 @@ async function withTemporaryDatabase(
     await run(pgPoolAsSqlClient(pool));
   } finally {
     await pool.end();
-    await adminClient.query(`drop database if exists ${identifier} with (force)`);
+    await waitForDatabaseConnectionsToClose(adminClient, databaseName);
+    await adminClient.query(`drop database if exists ${identifier}`);
   }
+}
+
+async function waitForDatabaseConnectionsToClose(
+  adminClient: Client,
+  databaseName: string,
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const activeConnections = await adminClient.query<{
+      count: number | string;
+    }>(
+      `select count(*)::int as count
+       from pg_stat_activity
+       where datname = $1`,
+      [databaseName],
+    );
+    if (Number(activeConnections.rows[0]?.count ?? 0) === 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+
+  throw new Error("Temporary migration database connections did not close.");
 }
 
 function quoteIdentifier(value: string) {
