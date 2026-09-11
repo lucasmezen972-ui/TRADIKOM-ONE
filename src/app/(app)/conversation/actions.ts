@@ -61,36 +61,40 @@ export async function createConversationPlanAction(formData: FormData) {
   );
   revalidatePath("/conversation");
   redirect(
-    `/conversation?fil=${encodeURIComponent(result.threadId)}&plan=cree`,
+    conversationPlanRedirect(result.threadId, "cree", result.id),
   );
 }
 
 export async function decideConversationPlanAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
-  const threadId = text(formData, "threadId");
-  const decision =
-    text(formData, "decision") === "approved" ? "approved" : "rejected";
-  await safeServerAction("conversation.plan_decide", () =>
-    services.decidePlan(
+  const result = await safeServerAction("conversation.plan_decide", async () => {
+    const decision = z
+      .enum(["approved", "rejected"])
+      .parse(text(formData, "decision"));
+    const plan = await services.decidePlan(
       user.id,
       tenant.id,
       text(formData, "planId"),
       decision,
       text(formData, "reason"),
-    ),
-  );
+    );
+    return { decision, plan };
+  });
   revalidatePath("/conversation");
   redirect(
-    `/conversation?fil=${encodeURIComponent(threadId)}&plan=${decision}`,
+    conversationPlanRedirect(
+      result.plan.threadId,
+      result.decision,
+      result.plan.id,
+    ),
   );
 }
 
 export async function executeConversationPlanAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
-  const threadId = text(formData, "threadId");
-  await safeServerAction("conversation.plan_execute", () =>
+  const result = await safeServerAction("conversation.plan_execute", () =>
     services.executePlan(
       user.id,
       tenant.id,
@@ -99,7 +103,7 @@ export async function executeConversationPlanAction(formData: FormData) {
   );
   revalidatePath("/conversation");
   redirect(
-    `/conversation?fil=${encodeURIComponent(threadId)}&plan=executed`,
+    conversationPlanRedirect(result.threadId, "executed", result.id),
   );
 }
 
@@ -163,6 +167,19 @@ function optionalText(formData: FormData, key: string) {
 function requiredConfirmation(formData: FormData, key: string): true {
   z.literal("true").parse(text(formData, key));
   return true;
+}
+
+function conversationPlanRedirect(
+  threadId: string,
+  receipt: "cree" | "approved" | "rejected" | "executed",
+  planId: string,
+) {
+  const params = new URLSearchParams({
+    fil: threadId,
+    plan: receipt,
+    plan_id: planId,
+  });
+  return `/conversation?${params.toString()}`;
 }
 
 function conversationRedirect(

@@ -31,6 +31,10 @@ import {
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
 } from "@/app/(app)/conversation/actions";
+import {
+  planReceiptMessage,
+  resolveConversationPlanReceipt,
+} from "@/modules/orchestrator";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +43,7 @@ type ConversationPageProps = {
     fil?: string;
     envoye?: "web" | "test";
     plan?: "cree" | "approved" | "rejected" | "executed";
+    plan_id?: string;
     reprise?: "demandee";
     meta_essai?: "autorise" | "revoque";
   }>;
@@ -67,7 +72,14 @@ export default async function ConversationPage({
   const plans = thread
     ? await services.listPlans(user.id, tenant.id, thread.id)
     : [];
-  const currentPlan = plans[0];
+  const latestPlan = plans[0];
+  const requestedPlan = plans.find((plan) => plan.id === params.plan_id);
+  const planReceipt = resolveConversationPlanReceipt(
+    params.plan,
+    params.plan_id,
+    requestedPlan,
+  );
+  const currentPlan = planReceipt ? requestedPlan : latestPlan;
   const sourceMessage = thread
     ? [...thread.messages]
         .reverse()
@@ -127,15 +139,13 @@ export default async function ConversationPage({
         </div>
       ) : null}
 
-      {params.plan ? (
-        <div className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-950">
-          {params.plan === "cree"
-            ? "Plan déterministe créé et placé en attente de validation."
-            : params.plan === "approved"
-              ? "Plan approuvé. Il est prêt pour l’exécution mock."
-              : params.plan === "executed"
-                ? "Exécution mock terminée et preuve durable enregistrée."
-                : "Plan refusé. Aucune action n’a été exécutée."}
+      {planReceipt ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-950"
+        >
+          {planReceiptMessage(planReceipt)}
         </div>
       ) : null}
 
@@ -620,7 +630,7 @@ function PlanPanel({
               <li key={step.stepId} className="rounded-md bg-slate-50 p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-bold text-slate-950">
-                    {index + 1}. {step.capability}
+                    {index + 1}. {capabilityLabel(step.capability)}
                   </span>
                   <span className="text-xs font-semibold text-slate-500">
                     {planStepStatusLabel(plan.steps[index]?.status)} · Risque{" "}
@@ -756,6 +766,13 @@ function planStatusLabel(status: ConversationPlan["approvalStatus"]) {
     rejected: "Refusé",
     executed: "Exécuté",
   }[status];
+}
+
+function capabilityLabel(capability: string) {
+  return {
+    "crm.contacts.search": "Rechercher le contact",
+    "project.task.create": "Préparer la tâche de suivi",
+  }[capability] ?? "Capacité contrôlée";
 }
 
 function planStatusClass(status: ConversationPlan["approvalStatus"]) {

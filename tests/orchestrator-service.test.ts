@@ -6,6 +6,7 @@ import {
   configureConversationThreadAccess,
   ingestConversationMessage,
 } from "../src/modules/conversation-hub";
+import { strictMockCapabilityProvider } from "../src/modules/connector-execution";
 import {
   createConversationActionPlan,
   createDeterministicActionPlanGenerator,
@@ -940,6 +941,114 @@ describe("service des plans Conversation", () => {
     expect(audit.rows[1]?.safe_metadata).not.toContain(
       "Validation métier confirmée",
     );
+  });
+
+  it("refuse un plan une seule fois sans déclencher de mission ni inscrire le motif dans l’audit", async () => {
+    const context = await createTenantContext("decision-rejection@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const plan = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    const sensitiveReason =
+      "Refus métier avec détail client qui ne doit jamais apparaître dans l’audit.";
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("Aucun transport externe attendu."));
+    const providerExecuteSpy = vi
+      .spyOn(strictMockCapabilityProvider, "execute")
+      .mockRejectedValue(new Error("Aucun provider ne doit être engagé."));
+
+    const rejected = await decideConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      {
+        planId: plan.id,
+        decision: "rejected",
+        reason: sensitiveReason,
+      },
+    );
+
+    expect(rejected).toMatchObject({
+      id: plan.id,
+      approvalStatus: "rejected",
+      decision: "rejected",
+      idempotentReplay: false,
+      steps: [{ status: "cancelled" }, { status: "cancelled" }],
+    });
+    await expect(
+      executeConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        plan.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_execution_not_approved" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(providerExecuteSpy).not.toHaveBeenCalled();
+
+    const evidence = await context.db.query<{
+      approvalStatus: string;
+      runs: number;
+      events: number;
+      results: number;
+      decisionAudits: number;
+      tasks: number;
+    }>(
+      `select
+         (select status from approvals where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2)
+           as "approvalStatus",
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key = $3) as runs,
+         (select count(*)::int from domain_events where tenant_id = $1
+           and idempotency_key = $4) as events,
+         (select count(*)::int from conversation_messages where tenant_id = $1
+           and thread_id = $5 and kind = 'result') as results,
+         (select count(*)::int from audit_logs where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2
+           and action = 'conversation.plan_rejected') as "decisionAudits",
+         (select count(*)::int from tasks where tenant_id = $1) as tasks`,
+      [
+        context.tenantId,
+        plan.id,
+        `conversation_plan:${plan.id}`,
+        `conversation.plan.execute:${plan.id}`,
+        source.threadId,
+      ],
+    );
+    expect(evidence.rows[0]).toEqual({
+      approvalStatus: "rejected",
+      runs: 0,
+      events: 0,
+      results: 0,
+      decisionAudits: 1,
+      tasks: 0,
+    });
+
+    const audit = await context.db.query<{ safe_metadata: string }>(
+      `select safe_metadata from audit_logs
+       where tenant_id = $1 and target_type = 'conversation_action_plan'
+         and target_id = $2 and action = 'conversation.plan_rejected'`,
+      [context.tenantId, plan.id],
+    );
+    expect(audit.rows).toHaveLength(1);
+    expect(JSON.parse(audit.rows[0]?.safe_metadata ?? "null")).toEqual({
+      threadId: source.threadId,
+      approvalId: rejected.approvalId,
+      decision: "rejected",
+      planFingerprint: plan.planFingerprint,
+    });
   });
 
   it("exécute les deux capacités mock durablement et projette un résultat multicanal", async () => {

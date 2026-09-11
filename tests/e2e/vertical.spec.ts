@@ -6,6 +6,7 @@ import { hashToken, id } from "../../src/lib/security";
 import {
   createChannelProviderMediaReferenceCipher,
   createChannelProviderSecretKeyring,
+  createConversationChannelServices,
   processMetaWhatsAppMediaImport,
   receivePreparedMetaWhatsAppWebhook,
   registerAuthorizedMetaWhatsAppEndpoint,
@@ -1343,8 +1344,20 @@ async function runConversationJourney(
     await expect(prepare).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/plan=cree/);
-    await expect(page.getByText("crm.contacts.search")).toBeVisible();
-    await expect(page.getByText("project.task.create")).toBeVisible();
+    const createdPlanId = new URL(page.url()).searchParams.get("plan_id");
+    expect(createdPlanId).toBeTruthy();
+    await expect(
+      page.getByText(
+        "Plan déterministe créé et placé en attente de validation.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(page.getByText("Rechercher le contact", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Préparer la tâche de suivi", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("crm.contacts.search", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("project.task.create", { exact: true })).toHaveCount(0);
     await expect(page.getByText("0,00 €")).toBeVisible();
 
     await page
@@ -1355,6 +1368,12 @@ async function runConversationJourney(
     await expect(approve).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/plan=approved/);
+    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(createdPlanId);
+    await expect(
+      page.getByText("Plan approuvé. Il est prêt pour l’exécution mock.", {
+        exact: true,
+      }),
+    ).toBeVisible();
 
     const execute = page.getByRole("button", {
       name: "Exécuter les deux étapes en mock",
@@ -1363,6 +1382,13 @@ async function runConversationJourney(
     await expect(execute).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/plan=executed/);
+    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(createdPlanId);
+    await expect(
+      page.getByText(
+        "Exécution mock terminée et preuve durable enregistrée.",
+        { exact: true },
+      ),
+    ).toBeVisible();
     await expect(
       page.getByText(
         "Exécution mock terminée : contact simulé retrouvé et tâche simulée préparée. Aucun effet externe.",
@@ -1372,6 +1398,122 @@ async function runConversationJourney(
     await expect(page.getByText("Exécuté", { exact: true })).toBeVisible();
     await expect(page.getByText("Réussie", { exact: false })).toHaveCount(2);
     expect(metaNetworkRequests).toEqual([]);
+
+    const rejectionChannels = createConversationChannelServices(db);
+    const rejectionOccurredAt = new Date().toISOString();
+    const rejectionSource = await rejectionChannels.web.ingest(user.id, {
+      tenantId: tenant.id,
+      displayName: `Responsable Conversation ${viewport.label}`,
+      externalMessageId: `rejection-message-${suffix}`,
+      idempotencyKey: `rejection-message:${suffix}`,
+      correlationId: `rejection-correlation-${suffix}`,
+      text: `Préparer puis refuser une mission ${suffix}`,
+      occurredAt: rejectionOccurredAt,
+    });
+    await page.goto(
+      `/conversation?fil=${encodeURIComponent(rejectionSource.threadId)}`,
+    );
+    const rejectionPanel = page.getByRole("region", { name: "Plan d’action" });
+    await rejectionPanel
+      .getByRole("button", { name: "Préparer le plan" })
+      .click();
+    await expect(page).toHaveURL(/plan=cree/);
+    const rejectedPlanId = new URL(page.url()).searchParams.get("plan_id");
+    expect(rejectedPlanId).toBeTruthy();
+    await rejectionPanel
+      .getByLabel("Motif de refus")
+      .fill("Mission non autorisée dans ce parcours de preuve.");
+    await rejectionPanel.getByRole("button", { name: "Refuser" }).click();
+    await expect(page).toHaveURL(/plan=rejected/);
+    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(rejectedPlanId);
+    await expect(
+      page.getByText("Plan refusé. Aucune action n’a été exécutée.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(rejectionPanel.getByText("Refusé", { exact: true })).toBeVisible();
+    await expect(rejectionPanel.getByText("Annulée", { exact: false })).toHaveCount(2);
+    await expect(
+      rejectionPanel.getByRole("button", {
+        name: "Exécuter les deux étapes en mock",
+      }),
+    ).toHaveCount(0);
+    await expect(
+      rejectionPanel.getByRole("button", { name: "Reprendre la mission" }),
+    ).toHaveCount(0);
+    const viewportBounds = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(viewportBounds.scrollWidth).toBeLessThanOrEqual(
+      viewportBounds.clientWidth,
+    );
+
+    const rejectionEvidence = await db.query<{
+      approvalStatus: string;
+      cancelledSteps: number;
+      runs: number;
+      events: number;
+      results: number;
+      audits: number;
+      safeMetadata: string | null;
+    }>(
+      `select
+         (select status from approvals where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2)
+           as "approvalStatus",
+         (select count(*)::int from conversation_action_plan_steps
+           where tenant_id = $1 and plan_id = $2 and status = 'cancelled')
+           as "cancelledSteps",
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key = $3) as runs,
+         (select count(*)::int from domain_events where tenant_id = $1
+           and idempotency_key = $4) as events,
+         (select count(*)::int from conversation_messages where tenant_id = $1
+           and thread_id = $5 and kind = 'result') as results,
+         (select count(*)::int from audit_logs where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2
+           and action = 'conversation.plan_rejected') as audits,
+         (select safe_metadata from audit_logs where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2
+           and action = 'conversation.plan_rejected') as "safeMetadata"`,
+      [
+        tenant.id,
+        rejectedPlanId,
+        `conversation_plan:${rejectedPlanId}`,
+        `conversation.plan.execute:${rejectedPlanId}`,
+        rejectionSource.threadId,
+      ],
+    );
+    expect(rejectionEvidence.rows[0]).toEqual({
+      approvalStatus: "rejected",
+      cancelledSteps: 2,
+      runs: 0,
+      events: 0,
+      results: 0,
+      audits: 1,
+      safeMetadata: expect.any(String),
+    });
+    expect(
+      JSON.parse(rejectionEvidence.rows[0]?.safeMetadata ?? "null"),
+    ).toEqual({
+      threadId: rejectionSource.threadId,
+      approvalId: expect.any(String),
+      decision: "rejected",
+      planFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+    expect(metaNetworkRequests).toEqual([]);
+
+    await page.goto(
+      `/conversation?fil=${encodeURIComponent(rejectionSource.threadId)}&plan=executed&plan_id=${encodeURIComponent(rejectedPlanId ?? "")}`,
+    );
+    await expect(
+      page.getByText(
+        "Exécution mock terminée et preuve durable enregistrée.",
+        { exact: true },
+      ),
+    ).toHaveCount(0);
+    await expect(rejectionPanel.getByText("Refusé", { exact: true })).toBeVisible();
 
     const mediaBytes = new TextEncoder().encode("%PDF-1.7\npreuve Playwright mock");
     const mediaChecksum = createHash("sha256").update(mediaBytes).digest("hex");
