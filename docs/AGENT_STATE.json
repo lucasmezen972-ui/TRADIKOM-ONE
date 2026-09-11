@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T18:08:48.000Z",
+  "updatedAt": "2026-09-11T01:51:07.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "2e6fbb28a585dd4ee62efc3d209c3bbab9ecb1dd",
-  "publishedHeadObserved": "2e6fbb28a585dd4ee62efc3d209c3bbab9ecb1dd",
-  "status": "os5_external_untrusted_plan_output_guard_in_progress",
+  "lastCommit": "69b667fdc9502e44a6144d8046c343b5dd000fa0",
+  "publishedHeadObserved": "69b667fdc9502e44a6144d8046c343b5dd000fa0",
+  "status": "os5_external_untrusted_plan_output_preflight_ci_proven",
   "currentPhase": "OS-5",
-  "currentObjective": "Ajouter au plan Conversation une garde provider-agnostic qui refuse avant toute persistance la recopie verbatim substantielle d'une source external_untrusted_data dans les champs métier, les entrées d'étape ou le message proposé. Le checkpoint SMS Meta reste humainement bloqué; aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans cette tranche.",
+  "currentObjective": "La garde provider-agnostic contre la recopie verbatim substantielle des sources external_untrusted_data, l'instantané JSON profond détaché et la prévalidation de l'enveloppe, du plan et des entrées sont livrés, publiés et prouvés CI aux commits a994b3a1836c0a7b2b74284a986975e58539dd1f, 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f et 69b667fdc9502e44a6144d8046c343b5dd000fa0. La CI PostgreSQL/RLS/build/Playwright 34550617800 et la continuité 34550617974 sont entièrement vertes sur le head fonctionnel. Le runtime reste deterministic_mock avec capacités de workflow mock, sans fournisseur ni réseau externe, et le checkpoint SMS Meta reste humainement bloqué; aucun secret, Graph, message externe, fusion, déploiement ou dépense n'entre dans cette tranche.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -30,11 +30,11 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Poursuivre l'étape plan schema de l'ordre page 48, conformément aux pages 17, 23, 32, 38, 43-44 et 69-71 : une sortie de générateur, mock ou modèle futur, reste une proposition non fiable. Après validation structurée et relecture du contexte tenant, refuser avant toute persistance, projection ou audit toute recopie verbatim substantielle des sources external_untrusted_data dans les champs métier, les entrées d'étape, les preuves ou le message final. Tolérer seulement les courtes valeurs métier dérivées, ne jamais journaliser le contenu comparé et ne déclencher aucun fournisseur, secret Meta, Graph, message externe, CRM, Kanban, dashboard secondaire ou OS-6.",
-      "evidenceExpected": "Preuve attendue : garde pure provider-agnostic avec normalisation Unicode/casse/ponctuation, détection bornée d'une source courte entièrement recopiée ou d'une séquence substantielle; inspection récursive des entrées d'étape et des champs visibles, exclusion des seules métadonnées de provenance. Un générateur adversarial qui recopie une injection ou un extrait dans businessGoal, finalUserMessageDraft ou un input imbriqué échoue avec une erreur française sûre et laisse zéro plan, étape, validation, message ou audit. Les chevauchements courts légitimes, les marqueurs masqués et le générateur déterministe restent acceptés. Tests unitaires, intégration, PostgreSQL/RLS existants, Playwright desktop/mobile, lint, TypeScript, suite et build verts."
+      "requirement": "Poursuivre l'étape plan schema de l'ordre page 48, conformément aux pages 17, 23, 32, 38, 43-44 et 69-71 : une sortie de générateur, mock ou modèle futur, reste une proposition non fiable. Prévalider l'enveloppe et le plan avant toute lecture de leurs champs, puis, après validation structurée et relecture du contexte tenant, refuser avant toute persistance ou audit toute recopie verbatim substantielle des sources external_untrusted_data dans les champs métier, les entrées d'étape, les preuves ou le message final. Tolérer seulement les courtes valeurs métier dérivées, ne jamais journaliser le contenu comparé et ne déclencher aucun fournisseur, secret Meta, Graph, message externe, CRM, Kanban, dashboard secondaire ou OS-6.",
+      "evidenceExpected": "Preuve obtenue : garde pure provider-agnostic avec normalisation Unicode/casse/accents/ponctuation, détection bornée d'une source entière à partir de 32 caractères normalisés, fenêtres substantielles de 48 caractères normalisés, jetons denses et fragments cumulés; inspection récursive des entrées d'étape, de leurs clés et valeurs, des champs visibles et de la référence modèle, avec exclusion des seules métadonnées de provenance et des valeurs structurelles fixes du cumul. Le commit 69b667fdc9502e44a6144d8046c343b5dd000fa0 projette profondément, depuis les descripteurs de données, l'enveloppe puis le plan et les entrées dans une copie JSON détachée avant Zod : aucun getter ordinaire, trap get ou toJSON n'est invoqué. Les traps de réflexion d'un Proxy peuvent nécessairement s'exécuter; une réflexion qui échoue est refusée sans propager son exception, et cette validation n'est pas une sandbox pour du code JavaScript hostile. Les graphes acycliques à références partagées restent acceptés; cycles, prototypes personnalisés, symboles, clé __proto__ normalisée, tableaux troués ou à index incohérents, nombres non finis et profondeurs excessives sont refusés. La projection est bornée à 200 000 propriétés et à 512 000 caractères cumulés de clés et chaînes pour le plan ou son enveloppe; chaque entrée d'étape est aussi bornée à 16 000 caractères de clés et chaînes ainsi qu'à 16 000 caractères une fois sérialisée. Un refus retourne une erreur française sûre et ne crée aucun nouvel artefact lié au plan : plan, étape, validation, message de type plan, ligne workflow_runs associée, événement conversation.plan.execute ou audit conversation.plan_created. La canary reste visible dans la source autorisée de Conversation mais est absente du panneau Plan et des sorties de plan persistées inspectées. Les chevauchements courts légitimes, les marqueurs masqués et le template déterministe serveur restent acceptés. L'instantané JSON profond détaché ferme la mutation post-contrôle. Tests ciblés 49/49; suite locale exhaustive : 152 fichiers et 842 tests réussis, 11 fichiers et 29 tests PostgreSQL ignorés faute de DATABASE_URL, soit 163 fichiers et 871 tests au total. Lint, TypeScript, build factice, audit high, continuity-check et diff check sont verts; trois avis modérés et zéro high/critical. La CI 34550617800 est entièrement verte sur 69b667f : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 163 fichiers/871 tests PostgreSQL inclus, build production et 20/20 Playwright. La continuité 34550617974 est également verte et la PR #11 reste ouverte, brouillon, fusionnable et CLEAN."
     }
   },
-  "nextAction": "Implémenter et prouver la garde anti-recopie des données externes dans les sorties du plan Conversation; revenir ensuite au checkpoint humain SMS Meta sans demander ni afficher le code ou un secret.",
+  "nextAction": "L'utilisateur saisit lui-même le code SMS directement dans Meta puis indique seulement que l'étape est terminée. Effectuer ensuite un inventaire officiel en lecture seule de l'application, du WABA et du Phone Number ID, sans demander ni afficher de secret, puis demander une confirmation distincte au moment exact d'un éventuel token persistant.",
   "nextFile": "docs/NEXT_STEPS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -514,7 +514,23 @@
     "fetch final : origin/codex/tradikom-one-os toujours sur ed4aeea, ancêtre exact du head local; push fast-forward ed4aeea..d899d95 sans tmp",
     "continuité 33942266310 verte sur d899d95",
     "CI 33942266316 verte en 22 min 56 s : audit, migrations, db:verify, backup/restauration, lint, TypeScript, 160 fichiers/764 tests PostgreSQL inclus, build et 20 Playwright",
-    "PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur d899d95; aucune fusion, déploiement, clé, Graph ou message externe"
+    "PR #11 OPEN DRAFT MERGEABLE/UNSTABLE sur d899d95; aucune fusion, déploiement, clé, Graph ou message externe",
+    "run 2026-09-10T18:08Z : dépôt Developer courant, lisible et inscriptible; tmp préservé; PDF canonique SHA-256 exact et 71 pages",
+    "pages cœur 3-7, 31-33, 46, 48 et 69-71 et pages OS-5 10-18, 22-24, 26-30, 35-38, 43-44 et 64-68 relues directement; pages 48 et 69 inspectées en rendu",
+    "pnpm agent:continuity-check : ready, zéro erreur et zéro avertissement",
+    "garde provider-agnostic des sorties de plan external_untrusted_data publiée au commit a994b3a1836c0a7b2b74284a986975e58539dd1f",
+    "sorties bornées à du JSON simple; garde Unicode et cumulative sur champs métier, preuves, référence modèle, clés et valeurs imbriquées; erreur française sûre et zéro effet durable au refus",
+    "instantané JSON du plan validé figé avant contrôle et persistance au commit 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f",
+    "tests ciblés finaux 4 fichiers/36 tests verts; suite exhaustive locale 152 fichiers/829 tests verts et 11 fichiers/29 tests PostgreSQL ignorés faute de DATABASE_URL",
+    "ESLint complet, TypeScript, build Next.js production avec valeurs factices, audit high, continuity-check et git diff --check verts; trois avis modérés et zéro high/critical",
+    "publication fast-forward de a994b3a puis 0967ff1; local et origin synchronisés; tmp préservé hors index",
+    "continuités 34544460128 et 34545258568 vertes; CI autoritative 34545258569 encore en cours au checkpoint documentaire",
+    "CI 34545258569 terminée verte sur 0967ff1 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 163 fichiers/858 tests PostgreSQL inclus, build production et 20/20 Playwright",
+    "prévalidation profonde depuis les descripteurs de données de l'enveloppe, du plan et des entrées publiée au commit 69b667fdc9502e44a6144d8046c343b5dd000fa0; copie détachée avant Zod et aucun getter ordinaire, trap get ou toJSON invoqué",
+    "DAG JSON acceptés; cycles, réflexion défaillante, prototypes personnalisés, symboles, clé __proto__ normalisée, tableaux troués ou incohérents, nombres non finis, profondeur et volumes excessifs refusés; traps de réflexion Proxy possibles et validation non présentée comme sandbox",
+    "tests ciblés finaux 4 fichiers/49 tests verts; suite exhaustive locale 152 fichiers/842 tests verts et 11 fichiers/29 tests PostgreSQL ignorés faute de DATABASE_URL, soit 163 fichiers/871 tests au total",
+    "ESLint complet, TypeScript, build Next.js production avec valeurs factices, audit high, continuity-check et git diff --check verts sur 69b667f; trois avis modérés et zéro high/critical",
+    "publication fast-forward de 69b667f; local et origin synchronisés; tmp préservé hors index; continuité 34550617974 et CI autoritative 34550617800 entièrement vertes, avec 163 fichiers/871 tests PostgreSQL, build production et 20/20 Playwright; PR #11 OPEN DRAFT MERGEABLE/CLEAN"
   ],
   "lastValidation": [
     {
@@ -1944,6 +1960,62 @@
     {
       "command": "PR #11 après preuve du contexte externe vérifié",
       "status": "open_draft_mergeable_clean_head_f692057_no_merge_deploy_graph_secret_token_or_message"
+    },
+    {
+      "command": "garde anti-recopie des sorties de plan au commit a994b3a1836c0a7b2b74284a986975e58539dd1f",
+      "status": "passed_published_provider_agnostic_unicode_normalized_recursive_inputs_cumulative_fragments_safe_french_error_zero_persistence"
+    },
+    {
+      "command": "figer le plan validé avant contrôle et persistance au commit 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f",
+      "status": "passed_published_deep_json_snapshot_prevents_post_validation_post_guard_nested_mutation"
+    },
+    {
+      "command": "tests ciblés et pnpm test exhaustif sur 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f",
+      "status": "passed_targeted_4_files_36_tests_full_152_files_829_tests_11_files_29_postgres_tests_skipped_without_database_url_zero_failures"
+    },
+    {
+      "command": "lint, typecheck, build factice, audit high, continuity-check et diff check sur 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f",
+      "status": "passed_zero_lint_type_build_or_diff_errors_zero_high_critical_three_moderate_ready"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34544460128 et 34545258568",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34545258569 sur 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f",
+      "status": "in_progress_postgres_rls_full_suite_build_and_playwright_not_yet_claimed"
+    },
+    {
+      "command": "PR #11 au checkpoint de la garde anti-recopie",
+      "status": "open_draft_mergeable_unstable_head_0967ff1_checks_pending_no_merge_deploy_graph_secret_or_message"
+    },
+    {
+      "command": "CI 34545258569 sur 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_163_files_858_tests_postgres_included_build_and_20_playwright"
+    },
+    {
+      "command": "prévalidation profonde des sorties générées et publication 69b667fdc9502e44a6144d8046c343b5dd000fa0",
+      "status": "passed_published_envelope_plan_inputs_data_descriptor_projection_detached_before_zod_no_getter_get_trap_or_tojson_reflection_traps_possible_not_a_javascript_sandbox"
+    },
+    {
+      "command": "tests ciblés et pnpm test exhaustif sur 69b667fdc9502e44a6144d8046c343b5dd000fa0",
+      "status": "passed_targeted_4_files_49_tests_full_152_files_842_tests_11_files_29_postgres_tests_skipped_without_database_url_163_files_871_tests_total_zero_failures"
+    },
+    {
+      "command": "lint, typecheck, build factice, audit high, continuity-check et diff check sur 69b667fdc9502e44a6144d8046c343b5dd000fa0",
+      "status": "passed_zero_lint_type_build_or_diff_errors_zero_high_critical_three_moderate_ready"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34550617974 sur 69b667fdc9502e44a6144d8046c343b5dd000fa0",
+      "status": "passed_ready_zero_errors_one_warning_pdf_canonical_unavailable_in_ci_local_pdf_verified_sha256_exact_71_pages"
+    },
+    {
+      "command": "CI 34550617800 sur 69b667fdc9502e44a6144d8046c343b5dd000fa0",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_163_files_871_tests_postgres_included_build_and_20_playwright"
+    },
+    {
+      "command": "PR #11 après publication de la prévalidation profonde",
+      "status": "open_draft_mergeable_clean_head_69b667f_checks_green_no_merge_deploy_graph_secret_token_or_message"
     }
   ],
   "humanBlockers": [

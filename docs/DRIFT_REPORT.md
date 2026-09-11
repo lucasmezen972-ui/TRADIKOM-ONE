@@ -1,5 +1,37 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 11 septembre 2026, 01:51 UTC
+
+- Branche `codex/tradikom-one-os`; garde publiée dans `a994b3a1836c0a7b2b74284a986975e58539dd1f`, instantané JSON profond détaché ajouté dans `0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f`, puis prévalidation profonde publiée dans `69b667fdc9502e44a6144d8046c343b5dd000fa0`. Local et distant sont synchronisés; la copie stable seule a été utilisée et `tmp/` reste intact, non suivi et hors index.
+- `69b667f` projette l'enveloppe du générateur, puis le plan et ses entrées, depuis leurs descripteurs de données vers des copies JSON profondes détachées avant Zod. Aucun getter ordinaire, trap `get` ou `toJSON` n'est invoqué. Les traps de réflexion d'un `Proxy` peuvent nécessairement s'exécuter; leurs défaillances sont refusées sans propagation, et ce contrôle n'est pas présenté comme une sandbox JavaScript.
+- Les graphes acycliques sérialisables en JSON avec références partagées sont acceptés. Cycles, accesseurs, prototypes personnalisés, symboles, clé `__proto__` normalisée, tableaux troués ou à index incohérents, nombres non finis et profondeurs excessives sont refusés. La projection est bornée à 200 000 propriétés et à 512 000 caractères cumulés de clés et chaînes pour le plan ou son enveloppe; chaque entrée d'étape est aussi bornée à 16 000 caractères de clés et chaînes ainsi qu'à 16 000 caractères une fois sérialisée.
+- La garde inspecte champs métier, preuves, référence modèle, clés et valeurs imbriquées. Unicode, casse, accents, ponctuation et séparateurs sont normalisés; copies complètes à partir de 32 caractères normalisés, séquences substantielles de 48 caractères normalisés, jetons denses et fragments cumulés sont refusés sans journaliser le contenu. Les métadonnées de provenance et les valeurs structurelles fixes sont exclues du cumul afin de préserver les plans légitimes.
+- Le correctif `0967ff1` garantit que réponse et persistance utilisent le même instantané JSON profond détaché, même si un générateur conserve puis modifie une référence imbriquée. Le refus public est français et ne crée aucun nouvel artefact lié au plan : plan, étape, validation, message de type plan, ligne `workflow_runs` associée, événement `conversation.plan.execute` ou audit `conversation.plan_created`.
+- Le parcours vertical conserve la canary visible dans l'extraction de la pièce jointe pour l'utilisateur autorisé. Il prouve seulement son absence du panneau Plan et des sorties de plan inspectées : `plan_json`, `input_json`, messages plan/résultat et métadonnées d'audit. Cette preuve de non-régression du chemin déterministe complète les tests causaux de refus; elle n'est pas présentée comme un rejet provoqué par le template fixe.
+- Preuve locale finale sur `69b667f` : 4 fichiers/49 tests ciblés et 152 fichiers/842 tests exhaustifs verts; 11 fichiers/29 tests PostgreSQL ignorés faute de `DATABASE_URL`, soit 163 fichiers/871 tests au total. Lint, TypeScript, build production avec valeurs factices, audit high, continuity-check et diff check verts; trois avis modérés, zéro high/critical.
+- La CI autoritative `34550617800` est entièrement verte sur `69b667f` : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/871 tests PostgreSQL inclus, build production Next.js 16.3.4 et 20/20 Playwright. La continuité `34550617974` est également verte; la PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`.
+- Le runtime utilise le générateur déterministe serveur et des capacités de workflow mock; les transports et doubles de modèle sont injectés dans les tests, sans réseau fournisseur. Aucun modèle ou fournisseur réel n'est raccordé. La garde lexicale ne prétend pas détecter une paraphrase sémantique, une obfuscation ou un encodage arbitraire, ni une PII ou un secret court sous les seuils.
+- Aucun secret, Graph, fournisseur réel, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 43-44, 46, 48, 69-71 | Continuer l'étape plan par une tranche Conversation verticale, durable, honnête et démontrable | Garde publiée dans `a994b3a`; instantané JSON profond détaché dans `0967ff1`; prévalidation avant Zod dans `69b667f`; parcours canary, CI `34550617800` et continuité `34550617974` entièrement verts | Checkpoint SMS Meta ensuite |
+| 17, 23, 32, 38, 43-44 | Traiter aussi la sortie du générateur comme non fiable et refuser sa recopie du contexte externe avant effet durable | Projection bornée de l'enveloppe, du plan et des entrées; inspection récursive; seuils 32/48 sur texte normalisé; détection cumulative; erreur française sûre et aucun nouvel artefact de plan au refus | Paraphrase, obfuscation/encodage arbitraire, PII/secrets courts sous les seuils et traps de réflexion Proxy hors garantie passive |
+| 10-18, 22-24, 64-71 | Minimiser les données, préserver tenant/RLS, ne pas journaliser le contenu, garder les actions durables et décrire honnêtement le runtime | Provenance seule exclue; source tenant relue/fingerprintée avant écriture; plan détaché avant garde; aucun contenu comparé dans l'audit; générateur déterministe et capacités workflow mock sans réseau fournisseur | Aucun fournisseur IA réel; avant raccordement, ajouter squelette de capacités/policy côté serveur, garde d'egress/DLP et évaluations adversariales |
+
+Le PDF canonique reste conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification de la tranche courante
+
+- Livré, publié et prouvé CI : garde anti-recopie, projection JSON profonde détachée et instantané avant persistance.
+- Réel connecté : aucun fournisseur ou modèle; aucune clé réelle enregistrée et aucun appel Graph.
+- Sandbox : aucune configurée ou appelée.
+- Mock : générateur déterministe serveur et capacités de workflow mock au runtime; transports et doubles de modèle injectés dans les tests, sans réseau fournisseur.
+- Bloqué humain : saisie directe du SMS Meta, inventaire officiel puis confirmation immédiate avant token persistant.
+- Hors périmètre : fournisseur IA réel, Graph, stockage média/objet réel, antivirus, OCR/transcription, message réel, endpoint public, fusion, production, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
 ## Checkpoint applicatif — 10 septembre 2026, 08:32 UTC
 
 - Branche : `codex/tradikom-one-os`; commit applicatif `bf54862aee344accd23af9c7a5fba3d856484cd1`, correctif E2E `06137acf59e8d87f0deadd9d5da66aaa8b9c597c` puis correctif de nettoyage PostgreSQL `f692057e284870527d7b162bae6cfa5312d9893c` publiés strictement en fast-forward. La copie stable seule a été utilisée et `tmp/` demeure intact, non suivi et hors index.

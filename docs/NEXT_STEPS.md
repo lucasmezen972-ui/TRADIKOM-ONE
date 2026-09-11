@@ -5,10 +5,12 @@
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.
 - Le PDF maître canonique est valide : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Les pages cœur 3-7, 31-33, 46, 48 et 69-71 et les pages candidates OS-5 10-18, 22-24, 26-30, 35-38, 43-44 et 64-68 ont été relues directement le 10 septembre 2026. L'ordre page 48 reste conversation-first; la Definition of Done page 32 et la matrice page 69 exigent notamment les preuves PostgreSQL/RLS et Playwright.
+- Les sorties injectées d'un générateur de plan sont maintenant traitées comme non fiables : garde anti-recopie des sources `external_untrusted_data` dans `a994b3a`, instantané JSON profond détaché dans `0967ff1`, puis projection et prévalidation bornées de l'enveloppe, du plan et des entrées avant Zod dans `69b667fdc9502e44a6144d8046c343b5dd000fa0`. Les trois commits sont publiés strictement en fast-forward.
+- Preuve locale finale sur `69b667f` : 4 fichiers/49 tests ciblés, puis 152 fichiers/842 tests exhaustifs verts; 11 fichiers/29 tests PostgreSQL sont ignorés faute de `DATABASE_URL`, soit 163 fichiers/871 tests au total. Lint, TypeScript, build production avec valeurs factices, audit high, continuity-check et diff check sont verts. La CI `34550617800` est entièrement verte sur le même head avec 163 fichiers/871 tests PostgreSQL inclus, build production et 20/20 Playwright; la continuité `34550617974` est verte.
 - Le plan Conversation reçoit désormais en mémoire le texte filtré et borné des extractions média `external_untrusted_data` dont l'intégrité est encore `verified`. Toute extraction altérée, partielle, étrangère au tenant ou devenue inaccessible est refusée avant plan, validation, message ou audit.
 - La donnée externe reste explicitement non fiable : `instructionsAllowed=false`, `toolAccess=forbidden` et `policyMutation=forbidden`. Le plan durable ne conserve que la provenance sûre et jamais le contenu, l'extracteur ou l'empreinte; les plans historiques sans source gardent leur fingerprint.
 - La relecture finale verrouille le message source et ses pièces jointes, puis recalcule l'empreinte du contexte. Les tests à deux connexions couvrent aussi bien la suppression d'une pièce existante que l'insertion concurrente d'une nouvelle pièce.
-- Conversation affiche en français qu'une source externe vérifiée a été prise en compte comme donnée non fiable, sans afficher son contenu ni son identifiant. Le parcours vertical approuve et exécute le plan en mock, sans réseau Meta.
+- Conversation laisse le contenu extrait visible dans la pièce jointe à l'utilisateur autorisé. Le panneau Plan indique en français qu'une source externe vérifiée a été prise en compte comme donnée non fiable, sans recopier son contenu ni son identifiant dans les sorties du plan. Le parcours vertical approuve et exécute ce plan en mock, sans réseau Meta.
 - Preuves locales : 26 tests ciblés verts et 4 ignorés sans PostgreSQL; suite exhaustive 152 fichiers/815 tests verts et 11 fichiers/28 tests ignorés; ESLint, TypeScript, build production avec valeurs factices, audit high, continuity-check et diff check verts. L'audit conserve trois avis modérés et aucun high/critical.
 - Le commit applicatif `bf54862aee344accd23af9c7a5fba3d856484cd1`, le correctif de preuve E2E `06137acf59e8d87f0deadd9d5da66aaa8b9c597c` puis le correctif de fermeture des bases temporaires `f692057e284870527d7b162bae6cfa5312d9893c` sont publiés strictement en fast-forward. La CI autoritative `34433025988` est entièrement verte : audit, migrations et `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/844 tests PostgreSQL, build et 20/20 Playwright; la continuité `34433025991` est verte. La PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`; `tmp/` demeure hors index.
 - La tranche précédente ajoute une autorisation d'essai WhatsApp Meta durable, tenant/endpoint-scoped, expirante, révocable et limitée en base à exactement un message. Sa consommation précède tout résolveur ou transport réel; le rejeu ne consomme pas deux fois; une seconde livraison est refusée. Le lien d'autorisation est immuable sur la livraison afin qu'un worker puisse reprendre après interruption.
@@ -26,6 +28,18 @@
 1. L'utilisateur saisit lui-même le code SMS dans Meta for Developers, sans jamais le transmettre dans le chat, puis indique seulement que cette étape est terminée.
 2. Inventorier en lecture seule l'application, le WABA et le Phone Number ID dans la console officielle, sans copier de secret dans le chat, les logs ou Git.
 3. Demander une confirmation au moment exact avant tout token persistant; exiger ensuite une autorisation distincte avant Graph, message d'essai, webhook public, fusion, déploiement ou dépense. Continuer les travaux OS-5 non bloqués seulement s'ils respectent l'ordre page 48.
+
+## Tranche applicative publiée et prouvée CI : garde anti-recopie des sorties de plan externes
+
+- Le commit `a994b3a1836c0a7b2b74284a986975e58539dd1f` ajoute une garde provider-agnostic après validation structurée et avant toute persistance. Elle inspecte les champs métier visibles, les preuves, la référence modèle et, récursivement, les clés et valeurs des entrées d'étape; seules les métadonnées sûres de provenance sont exclues.
+- La comparaison normalise Unicode, casse, accents, ponctuation et séparateurs. Elle refuse une source entière à partir de 32 caractères normalisés, des fenêtres substantielles de 48 caractères normalisés, des jetons denses et des fragments cumulés distribués entre plusieurs champs, tout en excluant du cumul les valeurs structurelles fixes afin de préserver les plans légitimes.
+- Le correctif `0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f` crée un instantané JSON profond détaché du plan validé avant la garde et la transaction. Une mutation ultérieure d'une référence imbriquée conservée par un générateur ne peut donc plus changer la réponse ni `plan_json`; cet instantané n'est pas présenté comme profondément gelé.
+- Le commit `69b667fdc9502e44a6144d8046c343b5dd000fa0` projette profondément l'enveloppe, le plan puis les entrées depuis leurs descripteurs de données avant Zod. Les getters ordinaires, traps `get` et fonctions `toJSON` ne sont pas invoqués. Les traps de réflexion d'un `Proxy` peuvent nécessairement s'exécuter; une réflexion défaillante est refusée sans propager son exception, et cette frontière n'est pas une sandbox contre du code JavaScript hostile.
+- Les graphes acycliques sérialisables en JSON avec références partagées restent acceptés. Sont refusés : cycles, accesseurs, prototypes personnalisés, symboles, clé `__proto__` même normalisée avec casse ou espaces, tableaux troués ou à index incohérents, nombres non finis et profondeurs excessives. La projection est bornée à 200 000 propriétés et à 512 000 caractères cumulés de clés et chaînes pour le plan ou son enveloppe; chaque entrée d'étape est aussi bornée à 16 000 caractères de clés et chaînes ainsi qu'à 16 000 caractères une fois sérialisée.
+- L'erreur publique est française et sûre. Les tests causaux prouvent qu'un refus ne crée aucun nouvel artefact lié au plan : plan, étape, validation, message de type plan, ligne `workflow_runs` associée, événement `conversation.plan.execute` ou audit `conversation.plan_created`. Le message entrant source existe normalement déjà. Dans le parcours Playwright, la canary reste visible dans l'extraction de la pièce jointe autorisée mais est absente du panneau Plan, de `plan_json`, des `input_json`, des messages plan/résultat et des métadonnées d'audit inspectées; il s'agit d'une non-régression du chemin déterministe, pas d'un rejet causal par le template fixe.
+- Le runtime utilise le générateur déterministe serveur et des capacités de workflow mock. Les générateurs `model` adversariaux et les transports sont des doubles de test; aucun fournisseur IA ni réseau fournisseur n'est raccordé.
+- Écarts honnêtes : la garde lexicale ne prétend pas détecter une paraphrase sémantique, une obfuscation ou un encodage arbitraire, ni une PII ou un secret court sous les seuils. Avant un modèle réel, ajouter un compilateur/policy de capacités côté serveur et une garde de sortie/DLP avec évaluations adversariales.
+- État au checkpoint : livré, publié et prouvé CI au head `69b667f`. La CI `34550617800` valide audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/871 tests PostgreSQL, build production et 20/20 Playwright; la continuité `34550617974` est verte. La PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`.
 
 ## Tranche applicative publiée et prouvée CI : contexte média vérifié vers plan Conversation
 
@@ -93,7 +107,7 @@
 1. L'utilisateur saisit lui-même le code SMS à six chiffres dans l'onglet Meta for Developers puis indique seulement que l'étape est terminée; ne jamais demander ni afficher le code.
 2. Après validation, inventorier en lecture seule dans la console officielle l'application, le WABA et le Phone Number ID, sans copier de secret dans le chat, les logs ou Git.
 3. Demander une confirmation immédiatement avant toute création d'un token persistant; le stocker ensuite uniquement par référence serveur dans le coffre existant.
-4. Exiger une autorisation distincte avant Graph, message de preuve, webhook public, stockage réel, activation, fusion, déploiement ou dépense. Ne pas démarrer `goal-watch`/OS-6, CRM, Kanban ou dashboard secondaire.
+4. Exiger une autorisation distincte avant Graph, message de preuve, webhook public, stockage média/objet réel, activation, fusion, déploiement ou dépense. Ne pas démarrer `goal-watch`/OS-6, CRM, Kanban ou dashboard secondaire.
 
 ## Tranche publiée et prouvée CI : autorisations durables des fils
 
@@ -288,6 +302,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## Validation disponible
 
+- Head applicatif courant `69b667fdc9502e44a6144d8046c343b5dd000fa0` : garde anti-recopie publiée après `a994b3a`, instantané JSON profond détaché ajouté dans `0967ff1`, puis prévalidation bornée de l'enveloppe, du plan et des entrées avant Zod dans `69b667f`. Localement, 4 fichiers/49 tests ciblés et 152 fichiers/842 tests exhaustifs sont verts; 11 fichiers/29 tests PostgreSQL sont ignorés sans `DATABASE_URL`, soit 163 fichiers/871 tests au total. Lint, TypeScript, build factice, audit high, continuity-check et diff check sont verts. La CI `34550617800` est entièrement verte avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/871 tests PostgreSQL inclus, build production et 20/20 Playwright; continuité `34550617974` verte.
 - Head applicatif courant `f692057e284870527d7b162bae6cfa5312d9893c` : après correction du compteur E2E puis de la course de nettoyage PostgreSQL révélée par `34432424191`, la CI `34433025988` est entièrement verte avec audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 163 fichiers/844 tests PostgreSQL, build et 20/20 Playwright. La continuité `34433025991` est verte.
 - Head publié `25cafcd` : CI `33936955678` verte en 22 min 49 s avec audit, migrations PostgreSQL, `db:verify`, backup/restauration, lint, TypeScript, 159 fichiers/757 tests, build production et 20/20 Playwright; continuité `33936955672` verte. PR #11 ouverte, brouillon et fusionnable.
 - Vérificateur RLS partagé : policy `ALL` ou quatre opérations complètes acceptées; opération manquante et RLS désactivée refusées; test PGlite exécutable et test global PostgreSQL utilisent la même requête.
@@ -329,6 +344,7 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 
 ## État de vérité
 
+- Livré, publié et prouvé CI : garde provider-agnostic contre la recopie verbatim normalisée des sources externes dans les sorties de plan, projection JSON profonde détachée avant Zod et instantané profond avant persistance. La paraphrase, l'obfuscation arbitraire, les PII/secrets courts et l'exécution nécessaire des traps de réflexion d'un `Proxy` restent des limites; cette frontière n'est pas une sandbox JavaScript.
 - Livré et prouvé CI : coffre chiffré Meta provider-scoped, migrations, rotation/révocation, résolveurs, audit sûr et tests.
 - Livré et prouvé CI : compatibilité de l'enveloppe webhook officielle et clés internes hashées.
 - Livré et prouvé CI : notifications de statut Meta signées, idempotentes, monotones et sans PII.
@@ -340,16 +356,16 @@ Les pages 10-24, 26-33, 34-38, 46, 48 et 64-69 imposent Conversation Hub canoniq
 - Livré, publié et prouvé CI : raccordement tenant-aware des extractions `external_untrusted_data` vérifiées aux plans Conversation, contenu borné/filtré, provenance sûre sans contenu brut, revalidation transactionnelle et indication française. La preuve autoritative inclut PostgreSQL/RLS, build et 20/20 Playwright.
 - Réel connecté : aucun fournisseur; aucune clé réelle enregistrée.
 - Sandbox : aucune configurée ou appelée.
-- Mock : transport Meta injecté uniquement dans les tests, sans réseau.
-- Bloqué humain : code SMS Meta, puis création/inventaire app-WABA-numéro et stockage direct des secrets.
-- Hors périmètre : CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
+- Mock : générateur déterministe serveur et capacités de workflow mock au runtime; transports et doubles de modèle injectés dans les tests, sans réseau fournisseur.
+- Bloqué humain : saisie du code SMS directement par l'utilisateur dans Meta, puis inventaire officiel en lecture seule de l'application, du WABA et du Phone Number ID, puis confirmation distincte au moment exact avant tout token persistant stocké uniquement via référence serveur.
+- Hors périmètre : fournisseur IA réel, Graph, stockage média/objet réel, antivirus, OCR/transcription, message réel, endpoint public, CRM, Kanban, dashboard secondaire, OS-6, fusion, production, DNS et dépense.
 
 ## Bloc de reprise exact
 
 ```text
 1. Travailler uniquement dans /Users/TRADIKOM/Developer/TRADIKOM-ONE et préserver tout le worktree, dont tmp/ non suivi.
 2. Vérifier PDF/SHA-256/71 pages, les pages cœur et OS-5, puis pnpm agent:continuity-check.
-3. Le head applicatif courant est f692057e284870527d7b162bae6cfa5312d9893c. La CI 34433025988 et la continuité 34433025991 sont entièrement vertes; la tranche de contexte externe vérifié est livrée, publiée et prouvée.
+3. Le head applicatif courant est 69b667fdc9502e44a6144d8046c343b5dd000fa0 après a994b3a1836c0a7b2b74284a986975e58539dd1f et 0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f. La garde anti-recopie, l'instantané JSON profond détaché et la prévalidation bornée sont livrés, publiés et prouvés par la CI 34550617800 : 163 fichiers/871 tests PostgreSQL, build production et 20/20 Playwright; continuité 34550617974 verte.
 4. L'onglet Meta for Developers attend le code SMS saisi directement par l'utilisateur; ne demander ni afficher le code.
 5. Après validation Meta, demander une confirmation au moment exact avant la création d'un token persistant et stocker les valeurs uniquement via références serveur.
 6. Ne déclencher ni Graph, message, endpoint public, déploiement, fusion ou dépense sans autorisation distincte.
