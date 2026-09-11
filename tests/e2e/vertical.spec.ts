@@ -1352,9 +1352,9 @@ async function runConversationJourney(
         { exact: true },
       ),
     ).toBeVisible();
-    await expect(page.getByText("Rechercher le contact", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^1\. Rechercher le contact$/)).toBeVisible();
     await expect(
-      page.getByText("Préparer la tâche de suivi", { exact: true }),
+      page.getByText(/^2\. Préparer la tâche de suivi$/),
     ).toBeVisible();
     await expect(page.getByText("crm.contacts.search", { exact: true })).toHaveCount(0);
     await expect(page.getByText("project.task.create", { exact: true })).toHaveCount(0);
