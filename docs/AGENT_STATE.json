@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-11T07:06:50.000Z",
+  "updatedAt": "2026-09-11T07:34:29.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "9879cae7e8bd0c9e598cd1c35ac55089f7a29b21",
-  "publishedHeadObserved": "c3bf26ae2f1705d60b8cff838cd10b2002cd24ec",
-  "status": "os5_policy_receipt_local_proven_ci_pending_human_meta_sms_pending",
+  "lastCommit": "e704afd5c247086c69da3f60f6192eef32da7e03",
+  "publishedHeadObserved": "26cc3f197daad92354efcb6700d6f3c964a7c5ba",
+  "status": "os5_policy_receipt_postgres_build_proven_e2e_text_fix_pending_ci_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le reçu de policy serveur append-only, immuable et versionné, l'allowlist tradikom_mock et la revalidation avant exécution, appel direct, reprise et finalisation sont implémentés et prouvés localement dans 9879cae. Publier strictement en fast-forward, obtenir les preuves PostgreSQL/RLS et Playwright de la CI, puis reprendre la première lacune applicative encore non terminée de l'ordre page 48 sans fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense.",
+  "currentObjective": "Le reçu de policy serveur append-only, immuable et versionné, l'allowlist tradikom_mock et la revalidation avant exécution, appel direct, reprise et finalisation sont publiés dans 9879cae. La CI 34573066265 a validé audit, migrations, PostgreSQL/RLS, sauvegarde-restauration, lint, TypeScript, suite exhaustive et build; son seul échec est l'ancienne phrase attendue par Playwright alors que l'interface affiche le nouveau résultat mock générique. Publier le correctif de preuve e704afd, obtenir 20/20 Playwright et reprendre la première lacune applicative restante de l'ordre page 48 sans fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -33,7 +33,7 @@
       "evidenceExpected": "Attendu avant clôture de la prochaine tranche : reçu strictement serveur émis atomiquement avec l'approbation, ou avec la création pour approval none, jamais lors d'un rejet; stockage tenant-first sous RLS, une ligne maximum par plan, JSON canonique et empreinte vérifiés, aucune mise à jour possible. Tests adversariaux : JSON ou hash falsifié, reçu du plan A pour plan B, cross-tenant, fournisseur inconnu ou multiple, scope retiré, rôle ou membership révoqué, validation modifiée, version ou empreinte de catalogue changée, étape ou plan incohérent, appel direct sans reçu, dérive avant reprise worker et finalisation forgée. Chaque refus précède provider, fetch et nouvel effet métier; le parcours tradikom_mock valide, la reprise et le rejeu idempotent restent verts. Preuves tenant/RLS, audit sans donnée sensible, tests ciblés et PostgreSQL, lint, TypeScript, build, Playwright, continuity-check, diff check et CI attendus verts."
     }
   },
-  "nextAction": "Publier 9879cae avec ce checkpoint documentaire, attendre la CI PostgreSQL/RLS et Playwright, corriger tout échec réel, puis relire la page 48 pour sélectionner sa première lacune applicative restante. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
+  "nextAction": "Publier strictement en fast-forward le correctif E2E e704afd et ce checkpoint documentaire, attendre la CI autoritative et exiger 20/20 Playwright. Une fois verte, consigner la preuve dans les quatre documents puis relire la page 48 pour sélectionner sa première lacune applicative restante. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
   "nextFile": "docs/DRIFT_REPORT.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2074,6 +2074,18 @@
     {
       "command": "revues indépendantes RLS, atomicité et récupération terminale",
       "status": "passed_no_remaining_p1_p2_terminal_resume_failure_and_dead_letter_atomic_manual_retry_recoverable"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34573066273 sur 26cc3f197daad92354efcb6700d6f3c964a7c5ba",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34573066265 sur 26cc3f197daad92354efcb6700d6f3c964a7c5ba",
+      "status": "failed_only_stale_playwright_result_text_after_audit_migrations_db_verify_backup_restore_lint_typecheck_full_postgres_rls_tests_and_production_build_passed_19_of_20_playwright"
+    },
+    {
+      "command": "correctif de preuve Conversation e704afd5c247086c69da3f60f6192eef32da7e03",
+      "status": "passed_local_exact_generic_mock_result_text_eslint_typecheck_and_diff_check_no_functional_change"
     }
   ],
   "humanBlockers": [
