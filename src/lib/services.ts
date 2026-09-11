@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getDb, migrate, type DbClient } from "@/lib/db";
+import { getDb, type DbClient } from "@/lib/db";
 import {
   generateWebhookEndpointSecretRotation,
   getConnectors,
@@ -343,7 +343,6 @@ export type ServiceDependencies = {
 
 export async function getServices() {
   const db = await getDb();
-  await migrate(db);
   return createServices(db);
 }
 

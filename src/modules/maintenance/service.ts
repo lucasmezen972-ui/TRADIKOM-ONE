@@ -1,4 +1,5 @@
 import type { DbClient } from "@/lib/db";
+import { runDueGoalWatches } from "@/modules/goal-watch";
 import { enqueueDueMockOAuthRefreshes } from "@/modules/oauth";
 import { createDatabaseRateLimiter } from "@/modules/rate-limit";
 
@@ -31,6 +32,9 @@ export type MaintenanceSummary = {
   connectorContractRuns: number;
   connectorProposals: number;
   expiredExports: number;
+  goalWatchEvaluations: number;
+  goalWatchReports: number;
+  goalWatchFailures: number;
   oauthRefreshEvents: number;
 };
 
@@ -41,6 +45,10 @@ export async function runMaintenance(
   const now = options.now ?? new Date();
   const batchSize = boundedBatchSize(options.batchSize);
   const nowIso = now.toISOString();
+  const goalWatch = await runDueGoalWatches(db, {
+    now,
+    limit: batchSize,
+  });
 
   return {
     expiredSessions: await deleteBounded(
@@ -126,6 +134,9 @@ export async function runMaintenance(
       batchSize,
     ),
     expiredExports: await expireExportFiles(db, nowIso, batchSize),
+    goalWatchEvaluations: goalWatch.evaluated,
+    goalWatchReports: goalWatch.reported,
+    goalWatchFailures: goalWatch.failed,
     oauthRefreshEvents: (
       await enqueueDueMockOAuthRefreshes(db, {
         now,

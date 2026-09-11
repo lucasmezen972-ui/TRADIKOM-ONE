@@ -1,96 +1,34 @@
 # Roadmap TRADIKOM ONE OS
 
-Par tranches verticales. Chaque tranche fonctionne de bout en bout, même avec des
-fournisseurs mockés — à condition que le mock se présente comme un mock. Pas de
-tranche horizontale sans expérience utilisable.
+La roadmap progresse par tranches verticales utilisables. Une tranche horizontale ou un nouvel écran métier n'est pas prioritaire s'il ne rapproche pas la conversation continue d'un résultat auditable.
 
-## État
+Source normative : prompt maître PDF, pages 31-32 et 46-48. La carte de navigation et son empreinte sont conservées dans `docs/MASTER_PROMPT_REFERENCE.md`.
 
-| Phase | Objectif | Critère de succès | État |
+| Phase | Objectif | État | Critère de sortie |
 | --- | --- | --- | --- |
-| **OS-0** | Audit et recadrage | Documents d'entrée, drift report, décisions | **En cours** |
-| OS-1 | Conversation Hub | Un fil canonique visible en web + canal de test | À faire |
-| OS-2 | Omnicanal préparé | Adaptateurs WhatsApp / Teams / Slack feature-flaggés | À faire |
-| OS-3 | Connector Runtime | Deux capacités génériques exécutables en mock strict | À faire |
-| OS-4 | Mission durable | Plan confirmé, exécution multi-étapes, reprise, idempotence | À faire |
-| OS-5 | Premier provider réel | Un outil externe activé en sandbox ou en réel avec clés | À faire |
-| OS-6 | Goal Engine | Un objectif permanent surveillé et rapporté | À faire |
-| OS-7 | Mobile Expo | Chat, vocal, document, décisions fortes | À faire |
-| OS-8 | Marketplace SDK | Un connecteur tiers minimal installé et testé | À faire |
+| OS-0 | Audit, recadrage et continuité | Terminé | Audit, ADR, drift report, état de reprise, automations et suite verte |
+| OS-1 | Conversation Hub canonique | Terminé | Un fil visible sur le web et un canal de test, identité, idempotence, anti-boucle, plan, validation, deux capacités mock, audit et reprise |
+| OS-2 | Omnicanal réel préparé | Terminé | Adaptateurs WhatsApp, Teams, Slack et email feature-flaggés, signatures et erreurs normalisées, sans fausse intégration |
+| OS-3 | Connector Runtime générique | Terminé | Deux capacités génériques exécutables sous policy, preuve, idempotence, quota et classification d'échec |
+| OS-4 | Mission durable | Terminé | Plan confirmé, exécution multi-étapes, attente, retry, reprise et compensation |
+| OS-5 | Premier fournisseur réel | Bloqué fournisseur | Un fournisseur officiel activé en sandbox ou vrai read-only avec clés, consentement et parcours vérifié |
+| OS-6 | Goal and Watch Engine | À faire | Un objectif permanent surveillé et rapporté dans la conversation |
+| OS-7 | Expérience mobile | À faire | Chat, vocal, document et validations fortes sur mobile |
+| OS-8 | Marketplace SDK | À faire | Un connecteur tiers minimal installé, testé et révocable |
 
-## OS-0 — Audit et recadrage
+## Règles de passage
 
-Livre : `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md`, les fichiers de continuité,
-`scripts/agent/continuity-check.ts`, `.github/workflows/tradikom-continuity.yml`,
-le plan de fusion de la PR #10.
+- Une phase n'est ouverte que si la précédente passe lint, typecheck, tests, migrations, build et Playwright pertinents.
+- Toute table tenant porte RLS, un index commençant par `tenant_id` et des relations tenant-composées.
+- Tout fournisseur sans clés reste `not_configured`, `disabled`, `mock` ou `manual`; aucun statut réel n'est inventé.
+- Toute action sensible passe par politique, validation humaine et audit sans secret.
+- Les publications publiques lisent un snapshot immuable.
+- Les sorties IA sont structurées, versionnées, sourcées et approuvées avant tout effet.
 
-Ne touche aucun code produit, ne crée aucune migration.
+## Réutilisation du socle
 
-## OS-1 — Conversation Hub canonique
+OS-1 réutilise le runtime PostgreSQL/RLS, les transactions tenant, l'audit, les approvals, les workflows durables, les événements, les notifications et le Connector Runtime existants. Il n'ajoute pas un deuxième moteur d'exécution.
 
-Le hub est la source de vérité ; les canaux externes n'hébergent que des
-projections.
+## Réutilisation de la PR #10
 
-Livre : `conversation_threads`, `canonical_messages`, `channel_identities`,
-`message_deliveries` — tenant-scopées, **avec migration RLS dédiée**. Identité
-omnicanale. Idempotence portée par une contrainte d'unicité, pas par une
-vérification applicative. Anti-boucle. Adaptateur `web` réel, adaptateur `test`
-mock explicite. Une page de fil qui répond à : qui, quel canal, quand, quel
-statut de livraison.
-
-Hors périmètre : orchestrateur, exécution de capacité, politique.
-
-Prérequis technique : `testTimeout` global dans `vitest.config.ts`, en premier
-commit.
-
-## OS-2 — Omnicanal réel préparé
-
-Adaptateurs WhatsApp, Teams, Slack, email entrant, derrière feature flags, avec
-état `not_configured` visible tant qu'aucune clé n'existe. Le click-to-chat
-WhatsApp actuel devient le mode dégradé explicite de l'adaptateur WhatsApp.
-
-Rien ne doit se présenter comme connecté sans l'être. C'est la règle qui décide de
-l'acceptation de cette tranche.
-
-## OS-3 — Connector Runtime
-
-Capability Manifest, catalogue d'actions, exécution passant par le Policy Engine.
-Deux capacités génériques exécutables en mock strict, avec idempotence,
-classification d'échec et audit. Remplace `connectors/registry.ts` et
-`connectors/catalog.ts`.
-
-## OS-4 — Mission durable
-
-Plan structuré confirmé par le dirigeant, exécution multi-étapes, reprise après
-interruption, idempotence de chaque étape. Le worker maison à sondage
-(`src/modules/workflows/worker.ts`) est la base ; Temporal n'est pas un prérequis
-de la tranche.
-
-## OS-5 — Premier provider réel
-
-Un outil externe réellement appelé, en sandbox ou avec des clés. L'email Resend
-est le candidat naturel : le transport existe déjà et il a l'idempotence, la
-classification d'échec et l'audit. Il lui manque d'être exposé comme capacité.
-
-## OS-6 — Goal Engine
-
-Un objectif permanent — pas une tâche — surveillé en continu et rapporté dans la
-conversation. Les moteurs de règles déterministes existants (conseiller
-stratégique, radar d'opportunités) fournissent les signaux.
-
-## OS-7 — Mobile Expo
-
-Chat, vocal, document, décisions fortes. Rien de tronqué sur mobile.
-
-## OS-8 — Marketplace SDK
-
-Un connecteur tiers minimal, installé et testé, sans accès au cœur.
-
-## Règles qui traversent toutes les tranches
-
-- Migrations additives, tenant-scopées, avec RLS dédiée.
-- Chaque action externe : idempotence, audit, classification d'échec, politique.
-- Aucun fournisseur non configuré ne se présente comme actif.
-- Aucun arrêt sans mise à jour de `AGENT_STATE.json` et `WORKLOG.md`.
-- Le drift report doit confirmer que le travail sert encore la north star
-  conversationnelle.
+La PR #10 ne doit pas être fusionnée comme une tranche unique. Les éléments suivants peuvent être extraits et revalidés séparément : suppression de compte, centre d'approbation, provider email HTTP et suppressions, assets, révision de contenu et normalisation WhatsApp. Le Kanban, l'ordre des cartes, les préférences de pipeline et les enrichissements du dashboard restent secondaires tant qu'OS-1 n'est pas livré.
