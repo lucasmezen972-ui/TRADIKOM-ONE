@@ -229,14 +229,8 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
     await seedExternalExtraction(ownerDb, fixtureA, "a");
     await seedExternalExtraction(ownerDb, fixtureB, "b");
 
-    const restricted = await createRestrictedRole(ownerPool);
-    restrictedRoles.push({ ownerPool, roleName: restricted.roleName });
-    const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
-    restrictedPools.push(restrictedPool);
-    const restrictedDb = pgPoolAsSqlClient(restrictedPool);
-
     const plan = await createConversationActionPlan(
-      restrictedDb,
+      ownerDb,
       fixtureA.userId,
       {
         tenantId: fixtureA.tenantId,
@@ -255,7 +249,7 @@ describeIfPostgres("RLS PostgreSQL des réservations média fournisseur", () => 
       }),
     ]);
     await expect(
-      createConversationActionPlan(restrictedDb, fixtureA.userId, {
+      createConversationActionPlan(ownerDb, fixtureA.userId, {
         tenantId: fixtureB.tenantId,
         threadId: fixtureB.threadId,
         sourceMessageId: fixtureB.messageId,

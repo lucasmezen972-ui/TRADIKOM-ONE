@@ -19,11 +19,14 @@ import {
   type GeneratedActionPlan,
 } from "../src/modules/orchestrator";
 import {
+  approveWorkflowRun,
   cancelWorkflowQueueEvent,
+  cancelWorkflowRun,
   getWorkflowDeadLetters,
   getWorkflowQueueOverview,
   getWorkflowRuns,
   requestManualWorkflowRetry,
+  rejectWorkflowRun,
   retryWorkflowDeadLetter,
 } from "../src/modules/workflows";
 import { processPendingDomainEvents } from "../src/modules/workflows/worker";
@@ -1234,7 +1237,7 @@ describe("service des plans Conversation", () => {
     );
   });
 
-  it("finalise une reprise worker dans le fil sans second clic d'exécution", async () => {
+  it("finalise une reprise demandée par un autre responsable sans changer l'acteur d'exécution", async () => {
     const context = await createTenantContext("resume-plan-owner@example.com");
     const source = await ingestConversationMessage(
       context.db,
@@ -1303,21 +1306,74 @@ describe("service des plans Conversation", () => {
       steps: [{ status: "failed" }, { status: "failed" }],
       mission: { status: "failed" },
     });
+    const failedExecution = await context.db.query<{
+      eventId: string;
+      runId: string;
+    }>(
+      `select
+         (select id from domain_events where tenant_id = $1
+            and event_type = 'conversation.plan.execute') as "eventId",
+         (select id from workflow_runs where tenant_id = $1
+            and workflow_key = $2) as "runId"`,
+      [context.tenantId, `conversation_plan:${plan.id}`],
+    );
+    await expect(
+      retryWorkflowDeadLetter(context.db, context.userId, context.tenantId, {
+        eventId: failedExecution.rows[0]!.eventId,
+      }),
+    ).rejects.toMatchObject({ code: "workflow_run_not_actionable" });
+
+    const manager = await createServices(context.db).registerUser({
+      name: "Responsable de reprise",
+      email: "resume-plan-manager@example.com",
+      password: "Password!1",
+    });
+    await context.db.query(
+      `insert into memberships (tenant_id, user_id, role, created_at)
+       values ($1, $2, 'manager', $3)`,
+      [context.tenantId, manager.id, occurredAt],
+    );
 
     const firstSignal = await requestConversationActionPlanRetry(
       context.db,
-      context.userId,
+      manager.id,
       context.tenantId,
       plan.id,
     );
     const replayedSignal = await requestConversationActionPlanRetry(
       context.db,
-      context.userId,
+      manager.id,
       context.tenantId,
       plan.id,
     );
     expect(firstSignal).toEqual({ idempotentReplay: false });
     expect(replayedSignal).toEqual({ idempotentReplay: true });
+    const resumeEvent = await context.db.query<{ id: string }>(
+      `select id from domain_events
+       where tenant_id = $1 and event_type = 'workflow.resume'
+         and status = 'pending'`,
+      [context.tenantId],
+    );
+    await expect(
+      cancelWorkflowRun(context.db, manager.id, context.tenantId, {
+        runId: failedExecution.rows[0]!.runId,
+      }),
+    ).rejects.toMatchObject({ code: "workflow_run_not_actionable" });
+    await expect(
+      approveWorkflowRun(context.db, manager.id, context.tenantId, {
+        runId: failedExecution.rows[0]!.runId,
+      }),
+    ).rejects.toThrow("uniquement depuis son plan Conversation");
+    await expect(
+      rejectWorkflowRun(context.db, manager.id, context.tenantId, {
+        runId: failedExecution.rows[0]!.runId,
+      }),
+    ).rejects.toThrow("uniquement depuis son plan Conversation");
+    await expect(
+      cancelWorkflowQueueEvent(context.db, manager.id, context.tenantId, {
+        eventId: resumeEvent.rows[0]!.id,
+      }),
+    ).rejects.toMatchObject({ code: "workflow_run_not_actionable" });
 
     const worker = await processPendingDomainEvents(context.db, {
       now: new Date("2999-01-01T00:00:00.000Z"),
@@ -1391,12 +1447,16 @@ describe("service des plans Conversation", () => {
       retryAudits: 1,
     });
 
-    const finalAudit = await context.db.query<{ safe_metadata: string }>(
-      `select safe_metadata from audit_logs
+    const finalAudit = await context.db.query<{
+      actor_id: string;
+      safe_metadata: string;
+    }>(
+      `select actor_id, safe_metadata from audit_logs
        where tenant_id = $1 and action = 'conversation.plan_executed'
          and target_id = $2`,
       [context.tenantId, plan.id],
     );
+    expect(finalAudit.rows[0]?.actor_id).toBe(context.userId);
     expect(finalAudit.rows[0]?.safe_metadata).toContain(
       '"externalSideEffect":false',
     );

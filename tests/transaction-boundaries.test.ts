@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
 import {
+  withSystemDbTransaction,
   withTenantDbTransaction,
   withTenantSystemDbTransaction,
 } from "../src/db/tenant-context";
@@ -197,6 +198,43 @@ describe("critical transaction boundaries", () => {
     );
 
     expect(await tableCount(db, "users")).toBe(1);
+  });
+
+  it("marks fallback transaction clients so nested services share the rollback", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+
+    await expect(
+      withSystemDbTransaction(db, async (transaction) => {
+        expect(
+          (transaction as DbClient & { __transaction?: boolean })
+            .__transaction,
+        ).toBe(true);
+
+        await withTenantDbTransaction(
+          transaction,
+          "tenant_nested_transaction",
+          "user_nested_transaction",
+          async (nestedTransaction) => {
+            expect(nestedTransaction).toBe(transaction);
+            await nestedTransaction.query(
+              "insert into users (id, name, email, password_hash, created_at) values ($1, $2, $3, $4, $5)",
+              [
+                "user_nested_transaction",
+                "Nested transaction",
+                "nested-transaction@example.com",
+                "hash",
+                "2026-07-12T18:00:00.000Z",
+              ],
+            );
+          },
+        );
+
+        throw new Error("simulated outer transaction failure");
+      }),
+    ).rejects.toThrow("simulated outer transaction failure");
+
+    expect(await tableCount(db, "users")).toBe(0);
   });
 
   it("rolls back publication snapshot, live pointer, record, and audit", async () => {

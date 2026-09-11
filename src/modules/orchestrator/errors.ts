@@ -2,6 +2,7 @@ export type OrchestratorErrorCode =
   | "orchestrator_plan_incomplete"
   | "orchestrator_capability_unavailable"
   | "orchestrator_capability_mismatch"
+  | "orchestrator_provider_not_allowed"
   | "orchestrator_scope_missing"
   | "orchestrator_permission_denied"
   | "orchestrator_external_cost_forbidden"
@@ -14,6 +15,7 @@ export type OrchestratorErrorCode =
   | "orchestrator_approval_not_found"
   | "orchestrator_decision_conflict"
   | "orchestrator_execution_not_approved"
+  | "orchestrator_policy_receipt_invalid"
   | "orchestrator_execution_failed";
 
 export class OrchestratorError extends Error {

@@ -64,6 +64,97 @@ type ApprovalRow = {
   created_at: string;
 };
 
+export type ConversationActionPlanPolicyReceiptRow = {
+  id: string;
+  tenant_id: string;
+  plan_id: string;
+  plan_fingerprint: string;
+  approval_id: string | null;
+  approval_mode: "none" | "single";
+  approval_status: "not_required" | "approved";
+  approved_by_user_id: string;
+  payload_json: string;
+  receipt_fingerprint: string;
+  created_at: string;
+};
+
+export async function insertConversationActionPlanPolicyReceipt(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    planId: string;
+    planFingerprint: string;
+    approvalId: string | null;
+    approvalMode: ConversationActionPlanPolicyReceiptRow["approval_mode"];
+    approvedByUserId: string;
+    payloadJson: string;
+    receiptFingerprint: string;
+    createdAt: string;
+  },
+) {
+  const result = await db.query<ConversationActionPlanPolicyReceiptRow>(
+    `insert into conversation_action_plan_policy_receipts (
+       id, tenant_id, plan_id, plan_fingerprint, approval_id, approval_mode,
+       approval_status, approved_by_user_id, payload_json, receipt_fingerprint,
+       created_at
+     ) values (
+       $1, $2, $3, $4, $5, $6, $8::jsonb #>> '{approval,status}', $7,
+       $8::jsonb, $9, $10
+     )
+     on conflict (tenant_id, plan_id) do nothing
+     returning id::text as id, tenant_id, plan_id, plan_fingerprint,
+       approval_id, approval_mode, approval_status, approved_by_user_id,
+       payload_json::text as payload_json, receipt_fingerprint, created_at`,
+    [
+      input.id,
+      input.tenantId,
+      input.planId,
+      input.planFingerprint,
+      input.approvalId,
+      input.approvalMode,
+      input.approvedByUserId,
+      input.payloadJson,
+      input.receiptFingerprint,
+      input.createdAt,
+    ],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function findConversationActionPlanPolicyReceiptByPlan(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ConversationActionPlanPolicyReceiptRow>(
+    `select id::text as id, tenant_id, plan_id, plan_fingerprint,
+       approval_id, approval_mode, approval_status, approved_by_user_id,
+       payload_json::text as payload_json, receipt_fingerprint, created_at
+     from conversation_action_plan_policy_receipts
+     where tenant_id = $1 and plan_id = $2`,
+    [tenantId, planId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function lockConversationActionPlanPolicyReceiptByPlan(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ConversationActionPlanPolicyReceiptRow>(
+    `select id::text as id, tenant_id, plan_id, plan_fingerprint,
+       approval_id, approval_mode, approval_status, approved_by_user_id,
+       payload_json::text as payload_json, receipt_fingerprint, created_at
+     from conversation_action_plan_policy_receipts
+     where tenant_id = $1 and plan_id = $2
+     for update`,
+    [tenantId, planId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function findActionPlanByFingerprint(
   db: DbClient,
   tenantId: string,
@@ -86,6 +177,21 @@ export async function findActionPlanRow(
 ) {
   const result = await db.query<ConversationActionPlanRow>(
     `select * from conversation_action_plans where tenant_id = $1 and id = $2`,
+    [tenantId, planId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function lockActionPlanRow(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ConversationActionPlanRow>(
+    `select *
+     from conversation_action_plans
+     where tenant_id = $1 and id = $2
+     for update`,
     [tenantId, planId],
   );
   return result.rows[0] ?? null;
@@ -226,6 +332,22 @@ export async function listActionPlanStepRows(
   return result.rows;
 }
 
+export async function lockActionPlanStepRows(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ConversationActionPlanStepRow>(
+    `select *
+     from conversation_action_plan_steps
+     where tenant_id = $1 and plan_id = $2
+     order by position asc
+     for share`,
+    [tenantId, planId],
+  );
+  return result.rows;
+}
+
 export async function insertActionPlanApproval(
   db: DbClient,
   input: {
@@ -262,6 +384,22 @@ export async function findActionPlanApproval(
      from approvals
      where tenant_id = $1 and target_type = 'conversation_action_plan'
        and target_id = $2`,
+    [tenantId, planId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function lockActionPlanApproval(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ApprovalRow>(
+    `select *
+     from approvals
+     where tenant_id = $1 and target_type = 'conversation_action_plan'
+       and target_id = $2
+     for share`,
     [tenantId, planId],
   );
   return result.rows[0] ?? null;

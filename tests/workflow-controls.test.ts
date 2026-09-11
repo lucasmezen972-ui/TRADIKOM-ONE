@@ -155,6 +155,12 @@ describe("workflow controls", () => {
 
   it("exposes tenant-scoped workflow queue health", async () => {
     const { db } = await setup();
+    await seedRun(
+      db,
+      "tenant_controls",
+      "run_processing_controls",
+      "waiting",
+    );
     await seedDomainEvent(db, {
       id: "event_pending_controls",
       tenantId: "tenant_controls",
@@ -166,6 +172,7 @@ describe("workflow controls", () => {
       id: "event_processing_controls",
       tenantId: "tenant_controls",
       eventType: "workflow.resume",
+      payload: { runId: "run_processing_controls" },
       status: "processing",
       attempts: 1,
       nextRunAt: "2026-07-11T14:32:00.000Z",
@@ -318,6 +325,7 @@ async function seedDomainEvent(
     status: string;
     nextRunAt: string;
     attempts?: number;
+    payload?: Record<string, unknown>;
   },
 ) {
   await db.query(
@@ -342,7 +350,7 @@ async function seedDomainEvent(
       input.tenantId,
       "system",
       input.eventType,
-      "{}",
+      JSON.stringify(input.payload ?? {}),
       input.status,
       input.attempts ?? 0,
       `${input.id}:idempotency`,

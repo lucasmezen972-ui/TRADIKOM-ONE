@@ -17,6 +17,9 @@ describe("migrations du Conversation Hub", () => {
         "080_os1_conversation_hub_rls",
         "081_os1_conversation_action_plans",
         "082_os1_conversation_action_plans_rls",
+        "116_os5_conversation_action_plan_policy_receipts",
+        "117_os5_conversation_action_plan_policy_receipts_rls",
+        "118_os5_conversation_workflow_writes_rls",
       ]),
     );
 
@@ -30,6 +33,7 @@ describe("migrations du Conversation Hub", () => {
        order by table_name`,
     );
     expect(tables.rows.map((row) => row.table_name)).toEqual([
+      "conversation_action_plan_policy_receipts",
       "conversation_action_plan_steps",
       "conversation_action_plans",
       "conversation_channel_identities",

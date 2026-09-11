@@ -157,6 +157,89 @@ describe("workflow worker", () => {
     expect(afterSecondAttempt.max_attempts).toBe(2);
   });
 
+  it("rolls back handler effects when finalization fails in an existing transaction", async () => {
+    const { db } = await setup();
+    const now = new Date("2026-07-11T10:00:00.000Z");
+    await seedTenant(
+      db,
+      "tenant_worker_atomicity",
+      "user_worker_atomicity",
+    );
+    await insertDomainEvent(db, {
+      id: "event_worker_atomicity",
+      tenantId: "tenant_worker_atomicity",
+      actorId: "user_worker_atomicity",
+      eventType: "test.atomicity",
+      nextRunAt: now.toISOString(),
+    });
+
+    await db.query("begin");
+    const transactionDb: DbClient & { __transaction: true } = {
+      __transaction: true,
+      async query<T>(sql: string, params?: unknown[]) {
+        if (
+          sql.includes("update domain_events") &&
+          params?.[0] === "succeeded"
+        ) {
+          throw new Error("injected_event_finalization_failure");
+        }
+        return db.query<T>(sql, params);
+      },
+    };
+
+    let summary;
+    try {
+      summary = await processPendingDomainEvents(transactionDb, {
+        now,
+        baseBackoffMs: 1_000,
+        handlers: {
+          "test.atomicity": async ({ db: handlerDb }) => {
+            await handlerDb.query(
+              `insert into audit_logs (
+                 id, tenant_id, actor_id, action, target_type, target_id,
+                 safe_metadata, correlation_id, created_at
+               ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [
+                "audit_worker_atomicity",
+                "tenant_worker_atomicity",
+                "user_worker_atomicity",
+                "test.worker_partial_effect",
+                "domain_event",
+                "event_worker_atomicity",
+                "{}",
+                "correlation_worker_atomicity",
+                now.toISOString(),
+              ],
+            );
+          },
+        },
+      });
+      await db.query("commit");
+    } catch (error) {
+      await db.query("rollback");
+      throw error;
+    }
+
+    const event = await loadEvent(db, "event_worker_atomicity");
+    const partialEffects = await db.query<{ count: number | string }>(
+      "select count(*)::int as count from audit_logs where id = $1",
+      ["audit_worker_atomicity"],
+    );
+
+    expect(summary).toMatchObject({
+      selected: 1,
+      processed: 1,
+      succeeded: 0,
+      retried: 1,
+      failed: 0,
+    });
+    expect(Number(partialEffects.rows[0]?.count ?? 0)).toBe(0);
+    expect(event.status).toBe("pending");
+    expect(event.attempts).toBe(1);
+    expect(event.last_error).toBe("injected_event_finalization_failure");
+    expect(event.next_run_at).toBe("2026-07-11T10:00:01.000Z");
+  });
+
   it("requeues stale processing events before dispatching them", async () => {
     const { db } = await setup();
     const now = new Date("2026-07-11T10:00:00.000Z");
@@ -438,6 +521,14 @@ describe("workflow worker", () => {
   it("queues and dispatches workflow webhooks idempotently", async () => {
     const { db } = await setup();
     await seedTenant(db, "tenant_webhook_worker", "user_webhook_worker");
+    const action = {
+      type: "call_webhook" as const,
+      input: {
+        url: "https://hooks.example.com/tradikom",
+        body: { contactId: "contact_webhook_worker" },
+      },
+      idempotencyKey: "lead-action-1",
+    };
     const actionContext = {
       db,
       runId: "run_webhook_worker",
@@ -450,14 +541,11 @@ describe("workflow worker", () => {
         correlationId: "correlation_webhook_worker",
         idempotencyKey: "lead-webhook-worker",
       },
-      definition: leadFollowUpWorkflow,
-      action: {
-        type: "call_webhook" as const,
-        input: {
-          url: "https://hooks.example.com/tradikom",
-          body: { contactId: "contact_webhook_worker" },
-        },
+      definition: {
+        ...leadFollowUpWorkflow,
+        actions: [action],
       },
+      action,
       actionIndex: 0,
       actionIdempotencyKey: "lead-action-1",
       now: "2026-07-11T10:00:00.000Z",
@@ -607,7 +695,12 @@ describe("workflow worker", () => {
     await insertDomainEvent(db, {
       id: "event_requeue_dead_letter",
       tenantId: "tenant_requeue_dead_letter",
-      eventType: "workflow.resume",
+      actorId: "user_requeue_dead_letter",
+      eventType: "connector.sync_requested",
+      payload: {
+        connectorKey: "mock_business",
+        installationId: "connector_installation_dead_letter",
+      },
       status: "failed",
       attempts: 3,
       lastError: "Worker failed permanently.",

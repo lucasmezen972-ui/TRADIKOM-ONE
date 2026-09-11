@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
-import { toJson } from "../src/lib/security";
+import { safeJson, toJson } from "../src/lib/security";
 import {
   approveWorkflowRun,
   cancelWorkflowRun,
@@ -244,7 +244,105 @@ describe("workflow resume", () => {
     ).toBe(1);
   });
 
-  it("reprend une mission conversationnelle depuis son snapshot sans rejouer l'étape réussie", async () => {
+  it("rend une reprise épuisée durablement échouée puis relançable", async () => {
+    const { db } = await setup();
+    const tenantId = "tenant_resume_exhausted";
+    const ownerId = "user_resume_exhausted";
+    const targetContactId = "contact_resume_exhausted_target";
+    await seedTenant(db, {
+      tenantId,
+      ownerId,
+      workflowDefinition: workflowDefinitionSchema.parse({
+        ...leadFollowUpWorkflow,
+        version: 8,
+        actions: [
+          { type: "wait_for_duration", input: { durationMs: 0 } },
+          {
+            type: "update_contact",
+            input: { contactId: targetContactId, status: "Qualifie" },
+          },
+        ],
+      }),
+    });
+    await seedLead(db, {
+      tenantId,
+      contactId: "contact_resume_exhausted_source",
+      leadId: "lead_resume_exhausted",
+      ownerId,
+    });
+
+    const runId = await executeLeadFollowUpWorkflow(db, {
+      tenantId,
+      leadId: "lead_resume_exhausted",
+      contactId: "contact_resume_exhausted_source",
+      ownerId,
+      source: "website",
+      correlationId: "corr_resume_exhausted",
+    });
+    const workerNow = new Date("2999-01-01T00:00:00.000Z");
+
+    const firstAttempt = await processPendingDomainEvents(db, {
+      now: workerNow,
+      maxAttempts: 2,
+      baseBackoffMs: 0,
+    });
+    expect(firstAttempt.retried).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("waiting");
+
+    const terminalAttempt = await processPendingDomainEvents(db, {
+      now: workerNow,
+      maxAttempts: 2,
+      baseBackoffMs: 0,
+    });
+    expect(terminalAttempt.failed).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("failed");
+
+    const terminalStep = await db.query<{
+      status: string;
+      safe_metadata: string;
+      attempts: number;
+    }>(
+      `select status, safe_metadata, attempts
+       from workflow_run_steps
+       where tenant_id = $1 and workflow_run_id = $2 and action_name = $3
+       order by created_at desc
+       limit 1`,
+      [tenantId, runId, "workflow.resume"],
+    );
+    expect(terminalStep.rows[0]).toMatchObject({
+      status: "failed",
+      attempts: 2,
+    });
+    expect(
+      safeJson<Record<string, unknown>>(
+        terminalStep.rows[0]?.safe_metadata,
+        {},
+      ),
+    ).toMatchObject({
+      actionIndex: 1,
+      failureClassification: "max_attempts_exceeded",
+    });
+
+    await seedContact(db, {
+      tenantId,
+      contactId: targetContactId,
+      ownerId,
+    });
+    await requestManualWorkflowRetry(db, ownerId, tenantId, {
+      runId: runId ?? "",
+    });
+    const recovered = await processPendingDomainEvents(db, {
+      now: workerNow,
+    });
+
+    expect(recovered.succeeded).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("succeeded");
+    expect(await loadContactStatus(db, tenantId, targetContactId)).toBe(
+      "Qualifie",
+    );
+  });
+
+  it("refuse une mission conversationnelle directe sans reçu avant toute écriture", async () => {
     const { db } = await setup();
     const tenantId = "tenant_resume_snapshot";
     const ownerId = "user_resume_snapshot";
@@ -281,24 +379,9 @@ describe("workflow resume", () => {
       timeoutMs: 30_000,
       approvalPolicy: "no_approval_required",
     });
-    let interruptionInjected = false;
-    const interruptedDb: DbClient = {
-      query: async <T>(sql: string, params?: unknown[]) => {
-        if (
-          !interruptionInjected &&
-          sql.includes("insert into workflow_run_steps") &&
-          params?.[4] === "succeeded" &&
-          String(params?.[5]).includes('"actionIndex":1')
-        ) {
-          interruptionInjected = true;
-          throw new Error("Interruption simulée après la seconde activité.");
-        }
-        return db.query<T>(sql, params);
-      },
-    };
 
     await expect(
-      executeWorkflowDefinition(interruptedDb, definition, {
+      executeWorkflowDefinition(db, definition, {
         id: "event_plan_snapshot",
         tenantId,
         actorId: ownerId,
@@ -308,92 +391,17 @@ describe("workflow resume", () => {
         causationId: "message_plan_snapshot",
         idempotencyKey: "conversation.plan.execute:plan_snapshot",
       }),
-    ).rejects.toThrow("Interruption simulée");
+    ).rejects.toMatchObject({ code: "orchestrator_policy_receipt_invalid" });
 
-    const runId = await loadRunId(db, tenantId);
-    const snapshot = await db.query<{
-      definition_snapshot: string;
-      definition_version: number;
-    }>(
-      `select definition_snapshot, definition_version
-       from workflow_runs where tenant_id = $1 and id = $2`,
-      [tenantId, runId],
-    );
-    expect(JSON.parse(snapshot.rows[0]?.definition_snapshot ?? "{}")).toMatchObject({
-      key: definition.key,
-      version: definition.version,
-    });
-    expect(snapshot.rows[0]?.definition_version).toBe(1);
-    expect(await loadRunStatus(db, tenantId)).toBe("failed");
-
-    const firstSignal = await requestManualWorkflowRetry(
-      db,
-      ownerId,
-      tenantId,
-      { runId },
-    );
-    const replayedSignal = await requestManualWorkflowRetry(
-      db,
-      ownerId,
-      tenantId,
-      { runId },
-    );
-    expect(firstSignal).toEqual({ idempotentReplay: false });
-    expect(replayedSignal).toEqual({ idempotentReplay: true });
-
-    const summary = await processPendingDomainEvents(db, {
-      now: new Date("2999-01-01T00:00:00.000Z"),
-    });
-    expect(summary.succeeded).toBe(1);
-    expect(await loadRunStatus(db, tenantId)).toBe("succeeded");
-
-    const actionSteps = await db.query<{
-      action_name: string;
-      status: string;
-      attempts: number;
-      safe_metadata: string;
-    }>(
-      `select action_name, status, attempts, safe_metadata
-       from workflow_run_steps
-       where tenant_id = $1
-         and action_name in ('mock_search_contact', 'mock_create_task')
-       order by created_at asc, id asc`,
-      [tenantId],
-    );
-    expect(actionSteps.rows).toMatchObject([
-      { action_name: "mock_search_contact", status: "succeeded", attempts: 1 },
-      { action_name: "mock_create_task", status: "failed", attempts: 1 },
-      { action_name: "mock_create_task", status: "succeeded", attempts: 2 },
-    ]);
     expect(
-      actionSteps.rows.filter(
-        (step) =>
-          step.action_name === "mock_search_contact" &&
-          step.status === "succeeded",
-      ),
-    ).toHaveLength(1);
-    expect(actionSteps.rows.map((step) => step.safe_metadata).join(" ")).not.toContain(
-      "Contact de démonstration",
-    );
-    expect(actionSteps.rows.map((step) => step.safe_metadata).join(" ")).not.toContain(
-      "Relancer le contact",
-    );
+      await countRows(db, "domain_events", "tenant_id = $1", [tenantId]),
+    ).toBe(0);
     expect(
-      await countRows(
-        db,
-        "domain_events",
-        "tenant_id = $1 and event_type = $2",
-        [tenantId, "workflow.resume"],
-      ),
-    ).toBe(1);
+      await countRows(db, "workflow_runs", "tenant_id = $1", [tenantId]),
+    ).toBe(0);
     expect(
-      await countRows(
-        db,
-        "audit_logs",
-        "tenant_id = $1 and action = $2",
-        [tenantId, "workflow.manual_retry_requested"],
-      ),
-    ).toBe(1);
+      await countRows(db, "workflow_run_steps", "tenant_id = $1", [tenantId]),
+    ).toBe(0);
   });
 });
 

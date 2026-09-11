@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-11T04:22:53.000Z",
+  "updatedAt": "2026-09-11T04:27:45.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "84a52a2bebf51c546e1f9f27dbf98dcb79dade20",
-  "publishedHeadObserved": "84a52a2bebf51c546e1f9f27dbf98dcb79dade20",
-  "status": "os5_unique_validation_state_receipt_ci_proven_policy_receipt_next_human_meta_sms_pending",
+  "publishedHeadObserved": "c3bf26ae2f1705d60b8cff838cd10b2002cd24ec",
+  "status": "os5_policy_receipt_in_progress_human_meta_sms_pending",
   "currentPhase": "OS-5",
   "currentObjective": "La validation unique stricte et sa confirmation d'état durable sont livrées, publiées et prouvées CI sur 84a52a2. Poursuivre le même jalon page 48 par un reçu de policy serveur append-only, immuable et versionné, une allowlist de fournisseur fermée et une revalidation avant exécution, appel direct du moteur, reprise durable et finalisation, sans fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense.",
   "masterPrompt": {
@@ -15,10 +15,12 @@
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 15, 16, 17, 18, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 15, 16, 17, 18, 22, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
+        "10-12 Architecture cible, Conversation Hub canonique, preuves et RLS",
         "15-18 Orchestration bornée, plan structuré, validation humaine et sécurité applicative",
+        "22 PostgreSQL, modèle tenant-first et politiques RLS",
         "31-33 Definition of Done, reprise et critères de progression",
         "35-38 Conséquences, données sensibles et évaluation adversariale",
         "43-44 Premier parcours démontrable et preuves visibles dans Conversation",

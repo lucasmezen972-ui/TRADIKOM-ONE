@@ -28,7 +28,7 @@ export async function withTenantDbTransaction<T>(
 
   await db.query("begin");
   try {
-    const result = await callback(db);
+    const result = await callback(asTransactionClient(db));
     await db.query("commit");
     return result;
   } catch (error) {
@@ -57,7 +57,7 @@ export async function withTenantSystemDbTransaction<T>(
 
   await db.query("begin");
   try {
-    const result = await callback(db);
+    const result = await callback(asTransactionClient(db));
     await db.query("commit");
     return result;
   } catch (error) {
@@ -81,7 +81,7 @@ export async function withSystemDbTransaction<T>(
 
   await db.query("begin");
   try {
-    const result = await callback(db);
+    const result = await callback(asTransactionClient(db));
     await db.query("commit");
     return result;
   } catch (error) {
@@ -110,4 +110,24 @@ export async function withSystemTransaction<T>(
     { systemAccess: true },
     callback,
   );
+}
+
+function asTransactionClient(db: DbClient): TransactionClient {
+  const client = db as TransactionClient;
+
+  if (client.__transaction) {
+    return db;
+  }
+
+  return {
+    __runtime: client.__runtime,
+    __transaction: true,
+    __withTransaction: client.__withTransaction,
+    async query<T = Record<string, unknown>>(
+      sql: string,
+      params?: unknown[],
+    ) {
+      return db.query<T>(sql, params);
+    },
+  } satisfies TransactionClient;
 }

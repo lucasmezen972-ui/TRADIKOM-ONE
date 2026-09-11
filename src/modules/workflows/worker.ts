@@ -1,3 +1,4 @@
+import { withSystemDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { executeMockConnectorOperation } from "@/modules/connector-execution";
 import { finalizeConversationActionPlanWorkflow } from "@/modules/orchestrator/service";
@@ -23,6 +24,7 @@ import {
 } from "@/modules/opportunity-radar";
 import {
   leadCreatedEventType,
+  markWorkflowResumeTerminalFailure,
   processLeadFollowUpWorkflowEvent,
   resumeWorkflowRun,
   workflowResumeEventType,
@@ -96,6 +98,7 @@ const defaultMaxAttempts = 3;
 const defaultBaseBackoffMs = 1_000;
 const defaultProcessingTimeoutMs = 5 * 60 * 1_000;
 const connectorSyncRequestedEventType = "connector.sync_requested";
+let workerSavepointSequence = 0;
 
 const selectedColumns = `
   id,
@@ -138,20 +141,24 @@ export async function processPendingDomainEvents(
     [workflowResumeEventType]: async ({ db: handlerDb, event }: {
       db: DbClient;
       event: DomainEvent;
-    }) => {
-      const resumedRunId = await resumeWorkflowRun(handlerDb, {
-        ...event,
-        causationId: event.causationId ?? undefined,
-      });
-      const workflowRunId = resumedRunId ?? stringPayload(event.payload.runId);
-      if (workflowRunId) {
-        await finalizeConversationActionPlanWorkflow(handlerDb, {
-          tenantId: event.tenantId,
-          actorId: event.actorId,
-          workflowRunId,
+    }) =>
+      withSystemDbTransaction(handlerDb, async (transaction) => {
+        const resumedRunId = await resumeWorkflowRun(transaction, {
+          ...event,
+          causationId: event.causationId ?? undefined,
         });
-      }
-    },
+        const workflowRunId =
+          resumedRunId ?? stringPayload(event.payload.runId);
+        const sourceEventId = stringPayload(event.payload.sourceEventId);
+        if (workflowRunId && sourceEventId) {
+          await finalizeConversationActionPlanWorkflow(transaction, {
+            tenantId: event.tenantId,
+            actorId: event.actorId,
+            workflowRunId,
+            sourceEventId,
+          });
+        }
+      }),
     [connectorSyncRequestedEventType]: async ({ db: handlerDb, event }) => {
       if (stringPayload(event.payload.connectorKey) !== "mock_business") {
         throw new Error("Unsupported connector sync request.");
@@ -267,25 +274,27 @@ export async function processPendingDomainEvents(
     requeued: 0,
   };
 
-  summary.requeued = await requeueStaleProcessingEvents(
-    db,
-    now,
-    processingTimeoutMs,
+  summary.requeued = await withWorkerSystemTransaction(db, (transaction) =>
+    requeueStaleProcessingEvents(transaction, now, processingTimeoutMs),
   );
 
-  const pending = await db.query<DomainEventRow>(
-    `select ${selectedColumns}
-     from domain_events
-     where status = $1 and next_run_at <= $2
-     order by next_run_at asc, created_at asc
-     limit ${limit}`,
-    ["pending", nowIso],
+  const pending = await withWorkerSystemTransaction(db, (transaction) =>
+    transaction.query<DomainEventRow>(
+      `select ${selectedColumns}
+       from domain_events
+       where status = $1 and next_run_at <= $2
+       order by next_run_at asc, created_at asc
+       limit ${limit}`,
+      ["pending", nowIso],
+    ),
   );
 
   summary.selected = pending.rows.length;
 
   for (const pendingEvent of pending.rows) {
-    const claimed = await claimPendingEvent(db, pendingEvent.id, nowIso);
+    const claimed = await withWorkerSystemTransaction(db, (transaction) =>
+      claimPendingEvent(transaction, pendingEvent.id, nowIso),
+    );
 
     if (!claimed) {
       summary.skipped += 1;
@@ -298,48 +307,64 @@ export async function processPendingDomainEvents(
     const attempt = Number(claimed.attempts);
 
     if (!handler) {
-      await markFailed(
-        db,
-        claimed.id,
-        nowIso,
-        `No handler registered for domain event type "${claimed.event_type}".`,
-        "handler_missing",
-        1,
+      await withWorkerSystemTransaction(db, (transaction) =>
+        markFailed(
+          transaction,
+          claimed.id,
+          nowIso,
+          `No handler registered for domain event type "${claimed.event_type}".`,
+          "handler_missing",
+          1,
+        ),
       );
       summary.failed += 1;
       continue;
     }
 
     try {
-      await handler({
-        db,
-        event: toDomainEvent(claimed),
-        attempt,
+      await withWorkerSystemTransaction(db, async (transaction) => {
+        await handler({
+          db: transaction,
+          event: toDomainEvent(claimed),
+          attempt,
+        });
+        await markSucceeded(transaction, claimed.id, nowIso);
       });
-      await markSucceeded(db, claimed.id, nowIso);
       summary.succeeded += 1;
     } catch (error) {
       const message = errorMessage(error);
 
       if (attempt >= maxAttempts) {
-        await markFailed(
-          db,
-          claimed.id,
-          nowIso,
-          message,
-          "max_attempts_exceeded",
-          maxAttempts,
-        );
+        await withWorkerSystemTransaction(db, async (transaction) => {
+          await markWorkflowResumeTerminalFailure(
+            transaction,
+            {
+              ...toDomainEvent(claimed),
+              causationId: claimed.causation_id ?? undefined,
+            },
+            { error: message, attempts: attempt },
+          );
+          await markFailed(
+            transaction,
+            claimed.id,
+            nowIso,
+            message,
+            "max_attempts_exceeded",
+            maxAttempts,
+          );
+        });
         summary.failed += 1;
       } else {
-        await markRetry(
-          db,
-          claimed.id,
-          now,
-          attempt,
-          baseBackoffMs,
-          maxAttempts,
-          message,
+        await withWorkerSystemTransaction(db, (transaction) =>
+          markRetry(
+            transaction,
+            claimed.id,
+            now,
+            attempt,
+            baseBackoffMs,
+            maxAttempts,
+            message,
+          ),
         );
         summary.retried += 1;
       }
@@ -347,6 +372,40 @@ export async function processPendingDomainEvents(
   }
 
   return summary;
+}
+
+async function withWorkerSystemTransaction<T>(
+  db: DbClient,
+  callback: (transaction: DbClient) => Promise<T>,
+) {
+  const client = db as DbClient & { __transaction?: boolean };
+
+  if (!client.__transaction) {
+    return withSystemDbTransaction(db, callback);
+  }
+
+  // The shared transaction helpers intentionally join an existing transaction.
+  // A savepoint preserves an actual rollback boundary for one worker operation.
+  workerSavepointSequence += 1;
+  const savepointName = `domain_event_worker_${workerSavepointSequence}`;
+  await db.query(`savepoint ${savepointName}`);
+
+  try {
+    const result = await callback(db);
+    await db.query(`release savepoint ${savepointName}`);
+    return result;
+  } catch (error) {
+    try {
+      await db.query(`rollback to savepoint ${savepointName}`);
+      await db.query(`release savepoint ${savepointName}`);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Domain event worker savepoint rollback failed.",
+      );
+    }
+    throw error;
+  }
 }
 
 export async function getPendingDomainEventCount(

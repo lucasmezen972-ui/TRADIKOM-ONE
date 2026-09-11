@@ -2,6 +2,7 @@ import type { DbClient } from "@/lib/db";
 import { id, safeJson, toJson } from "@/lib/security";
 import { executeGenericCapability } from "@/modules/connector-execution/runtime";
 import { queueWorkflowNotification } from "@/modules/notifications";
+import { assertConversationActionPlanWorkflowActionPolicy } from "@/modules/orchestrator/policy-enforcement";
 import { WorkflowError } from "@/modules/workflows/errors";
 import { queueWorkflowWebhook } from "@/modules/workflows/webhook";
 import type {
@@ -64,6 +65,14 @@ export const workflowActionRegistry: Record<
 export async function executeWorkflowAction(
   context: WorkflowActionContext,
 ): Promise<WorkflowActionResult> {
+  await assertConversationActionPlanWorkflowActionPolicy(context.db, {
+    runId: context.runId,
+    definition: context.definition,
+    event: context.event,
+    action: context.action,
+    actionIndex: context.actionIndex,
+    actionIdempotencyKey: context.actionIdempotencyKey,
+  });
   const handler = workflowActionRegistry[context.action.type];
 
   if (!handler) {
@@ -80,7 +89,12 @@ function mockConversationCapability(
   capability: "crm.contacts.search" | "project.task.create",
   summary: string,
 ): WorkflowActionHandler {
-  return async ({ action, event, definition, actionIdempotencyKey }) => {
+  return async ({
+    action,
+    event,
+    definition,
+    actionIdempotencyKey,
+  }) => {
     const execution = await executeGenericCapability({
       tenantId: event.tenantId,
       capability,

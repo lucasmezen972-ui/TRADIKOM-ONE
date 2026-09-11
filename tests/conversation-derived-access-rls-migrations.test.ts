@@ -24,11 +24,11 @@ describe("migration RLS des objets dérivés de Conversation", () => {
     expect(getMigrationIds()).not.toContain(
       "114_os5_conversation_derived_access_rls",
     );
-    expect(getMigrationIds()).toContain(
-      "115_os5_whatsapp_meta_trial_authorization",
+    expect(getMigrationIds().at(-1)).toBe(
+      "116_os5_conversation_action_plan_policy_receipts",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "115_os5_whatsapp_meta_trial_authorization",
+      "118_os5_conversation_workflow_writes_rls",
     );
   });
 

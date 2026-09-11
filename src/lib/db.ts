@@ -549,6 +549,22 @@ function getMigrations(enableRls: boolean) {
       id: "115_os5_whatsapp_meta_trial_authorization",
       sql: os5WhatsAppMetaTrialAuthorizationMigrationSql,
     },
+    {
+      id: "116_os5_conversation_action_plan_policy_receipts",
+      sql: os5ConversationActionPlanPolicyReceiptsMigrationSql,
+    },
+    ...(enableRls
+      ? [{
+          id: "117_os5_conversation_action_plan_policy_receipts_rls",
+          sql: os5ConversationActionPlanPolicyReceiptsRlsMigrationSql,
+        }]
+      : []),
+    ...(enableRls
+      ? [{
+          id: "118_os5_conversation_workflow_writes_rls",
+          sql: os5ConversationWorkflowWritesRlsMigrationSql,
+        }]
+      : []),
   ];
 }
 
@@ -6842,4 +6858,702 @@ alter table channel_provider_activation_consumptions
   for each row execute function enforce_meta_delivery_activation_authorization();
 end;
 $$;
+`;
+
+const os5ConversationActionPlanPolicyReceiptsMigrationSql = `
+create unique index if not exists uq_conversation_action_plans_policy_receipt_reference
+  on conversation_action_plans (
+    tenant_id, id, plan_fingerprint, decided_by
+  );
+
+create unique index if not exists uq_approvals_policy_receipt_reference
+  on approvals (tenant_id, id, target_type, target_id, status);
+
+create table if not exists conversation_action_plan_policy_receipts (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  plan_id text not null,
+  plan_fingerprint text not null,
+  approval_id text,
+  approval_mode text not null,
+  approval_status text not null,
+  approved_by_user_id text not null,
+  approval_target_type text not null default 'conversation_action_plan',
+  payload_json jsonb not null,
+  receipt_fingerprint text not null,
+  created_at text not null,
+  unique (tenant_id, id),
+  unique (tenant_id, plan_id),
+  unique (tenant_id, receipt_fingerprint),
+  foreign key (
+    tenant_id, plan_id, plan_fingerprint, approved_by_user_id
+  ) references conversation_action_plans(
+    tenant_id, id, plan_fingerprint, decided_by
+  )
+    on delete cascade,
+  foreign key (
+    tenant_id, approval_id, approval_target_type, plan_id, approval_status
+  ) references approvals(tenant_id, id, target_type, target_id, status)
+    on delete cascade,
+  check (plan_fingerprint ~ '^[A-Fa-f0-9]{64}$'),
+  check (receipt_fingerprint ~ '^[a-f0-9]{64}$'),
+  check (char_length(approved_by_user_id) between 1 and 160),
+  check (approval_target_type = 'conversation_action_plan'),
+  check (
+    (approval_mode = 'none'
+      and approval_id is null
+      and approval_status = 'not_required')
+    or (approval_mode = 'single'
+      and approval_id is not null
+      and approval_status = 'approved')
+  ),
+  check (jsonb_typeof(payload_json) = 'object'),
+  check (coalesce(payload_json ->> 'schemaVersion' = '1', false)),
+  check (coalesce(payload_json ->> 'tenantId' = tenant_id, false)),
+  check (coalesce(payload_json #>> '{plan,id}' = plan_id, false)),
+  check (coalesce(
+    payload_json #>> '{plan,fingerprint}' = plan_fingerprint,
+    false
+  )),
+  check (coalesce(payload_json #>> '{approval,mode}' = approval_mode, false)),
+  check (coalesce(
+    payload_json #>> '{approval,status}' = approval_status,
+    false
+  )),
+  check (
+    coalesce(
+      jsonb_typeof(payload_json -> 'approval') = 'object'
+      and (payload_json -> 'approval') ? 'id'
+      and (
+        (approval_id is null
+          and payload_json #> '{approval,id}' = 'null'::jsonb)
+        or payload_json #>> '{approval,id}' = approval_id
+      ),
+      false
+    )
+  ),
+  check (
+    coalesce(
+      payload_json #>> '{catalog,fingerprint}' ~ '^[a-f0-9]{64}$'
+      and jsonb_typeof(payload_json #> '{catalog,projection}') = 'object'
+      and payload_json #>> '{catalog,projection,projectionSchemaVersion}' = '1'
+      and payload_json #>> '{catalog,projection,manifestSchemaVersion}' = '1'
+      and payload_json #>> '{catalog,projection,providerKey}' = 'tradikom_mock'
+      and payload_json #>> '{catalog,projection,providerVersion}' = '1.0.0'
+      and payload_json #>> '{catalog,projection,executionEnvironment}' = 'mock'
+      and payload_json #>> '{catalog,projection,status}' = 'mock'
+      and payload_json #>> '{catalog,projection,auth}' = 'none'
+      and payload_json #> '{catalog,projection,allowedRoles}' =
+        '["administrator", "collaborator", "manager", "owner"]'::jsonb
+      and jsonb_typeof(
+        payload_json #> '{catalog,projection,capabilities}'
+      ) = 'array'
+      and jsonb_array_length(
+        payload_json #> '{catalog,projection,capabilities}'
+      ) between 1 and 256,
+      false
+    )
+  ),
+  check (
+    coalesce(
+      payload_json #>> '{provider,key}' = 'tradikom_mock'
+      and payload_json #>> '{provider,version}' = '1.0.0'
+      and payload_json #>> '{provider,executionEnvironment}' = 'mock'
+      and payload_json #>> '{provider,version}' =
+        payload_json #>> '{catalog,projection,providerVersion}',
+      false
+    )
+  ),
+  check (
+    coalesce(
+      payload_json #>> '{authorization,role}' in (
+        'owner', 'administrator', 'manager', 'collaborator'
+      )
+      and payload_json #> '{authorization,allowedRoles}' =
+        '["administrator", "collaborator", "manager", "owner"]'::jsonb,
+      false
+    )
+  ),
+  check (
+    coalesce(
+      payload_json #> '{authorization,requiredScopes}' in (
+        '["crm.contacts.read"]'::jsonb,
+        '["project.tasks.write"]'::jsonb,
+        '["crm.contacts.read", "project.tasks.write"]'::jsonb
+      ),
+      false
+    )
+  ),
+  check (
+    coalesce(
+      payload_json -> 'capabilities' in (
+        '["crm.contacts.search"]'::jsonb,
+        '["project.task.create"]'::jsonb,
+        '["crm.contacts.search", "project.task.create"]'::jsonb
+      ),
+      false
+    )
+  ),
+  check (
+    coalesce(
+      payload_json #>> '{risk,maximum}' in (
+        'low', 'medium', 'high', 'critical'
+      ),
+      false
+    )
+  ),
+  check (
+    coalesce(
+      jsonb_typeof(payload_json #> '{risk,steps}') = 'array'
+      and jsonb_array_length(payload_json #> '{risk,steps}') between 1 and 12,
+      false
+    )
+  ),
+  check (char_length(payload_json::text) between 2 and 64000)
+);
+
+create index if not exists idx_conversation_plan_policy_receipts_tenant_approval
+  on conversation_action_plan_policy_receipts (
+    tenant_id, approval_id, created_at, plan_id
+  ) where approval_id is not null;
+
+create index if not exists idx_conversation_plan_policy_receipts_tenant_created
+  on conversation_action_plan_policy_receipts (tenant_id, created_at desc, plan_id);
+
+create index if not exists idx_conversation_plan_policy_receipts_tenant_principal
+  on conversation_action_plan_policy_receipts (
+    tenant_id, approved_by_user_id, created_at desc, plan_id
+  );
+
+create or replace function enforce_conversation_action_plan_policy_receipt_binding()
+returns trigger
+language plpgsql
+as $$
+declare
+  target_plan_status text;
+begin
+  select plan.approval_status
+    into target_plan_status
+  from conversation_action_plans plan
+  where plan.tenant_id = new.tenant_id
+    and plan.id = new.plan_id
+    and plan.plan_fingerprint = new.plan_fingerprint
+    and plan.decided_by = new.approved_by_user_id;
+
+  if target_plan_status is distinct from 'approved' then
+    raise exception 'conversation_action_plan_policy_receipt_binding_invalid';
+  end if;
+
+  if new.approval_mode = 'none' and exists (
+    select 1
+    from approvals approval
+    where approval.tenant_id = new.tenant_id
+      and approval.target_type = 'conversation_action_plan'
+      and approval.target_id = new.plan_id
+  ) then
+    raise exception 'conversation_action_plan_policy_receipt_binding_invalid';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists conversation_action_plan_policy_receipts_binding
+  on conversation_action_plan_policy_receipts;
+create trigger conversation_action_plan_policy_receipts_binding
+before insert on conversation_action_plan_policy_receipts
+for each row execute function enforce_conversation_action_plan_policy_receipt_binding();
+
+create or replace function reject_conversation_action_plan_policy_receipt_mutation()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'DELETE' and not exists (
+    select 1 from tenants tenant where tenant.id = old.tenant_id
+  ) then
+    return old;
+  end if;
+  raise exception 'conversation_action_plan_policy_receipt_immutable';
+end;
+$$;
+
+drop trigger if exists conversation_action_plan_policy_receipts_immutable
+  on conversation_action_plan_policy_receipts;
+create trigger conversation_action_plan_policy_receipts_immutable
+before update or delete on conversation_action_plan_policy_receipts
+for each row execute function reject_conversation_action_plan_policy_receipt_mutation();
+`;
+
+const os5ConversationActionPlanPolicyReceiptsRlsMigrationSql = `
+alter table conversation_action_plan_policy_receipts enable row level security;
+
+drop policy if exists conversation_action_plan_policy_receipts_select
+  on conversation_action_plan_policy_receipts;
+create policy conversation_action_plan_policy_receipts_select
+  on conversation_action_plan_policy_receipts for select
+  using (
+    app_is_system()
+    or app_actor_can_access_conversation_plan(tenant_id, plan_id)
+  );
+
+drop policy if exists conversation_action_plan_policy_receipts_insert
+  on conversation_action_plan_policy_receipts;
+create policy conversation_action_plan_policy_receipts_insert
+  on conversation_action_plan_policy_receipts for insert
+  with check (app_is_system());
+
+drop policy if exists conversation_action_plan_policy_receipts_update
+  on conversation_action_plan_policy_receipts;
+create policy conversation_action_plan_policy_receipts_update
+  on conversation_action_plan_policy_receipts for update
+  using (app_is_system())
+  with check (app_is_system());
+
+drop policy if exists conversation_action_plan_policy_receipts_delete
+  on conversation_action_plan_policy_receipts;
+create policy conversation_action_plan_policy_receipts_delete
+  on conversation_action_plan_policy_receipts for delete
+  using (app_is_system());
+`;
+
+const os5ConversationWorkflowWritesRlsMigrationSql = `
+create or replace function app_is_conversation_policy_workflow(
+  target_workflow_key text,
+  target_trigger_name text,
+  target_definition_snapshot text
+)
+returns boolean
+language plpgsql
+immutable
+security invoker
+set search_path = public, pg_catalog
+as $$
+declare
+  parsed_definition jsonb;
+  parsed_action jsonb;
+begin
+  if coalesce(target_workflow_key, '') like 'conversation_plan:%'
+     or target_trigger_name = 'conversation.plan.execute' then
+    return true;
+  end if;
+
+  if target_definition_snapshot is null then
+    return false;
+  end if;
+
+  begin
+    parsed_definition := target_definition_snapshot::jsonb;
+  exception when others then
+    return true;
+  end;
+
+  if jsonb_typeof(parsed_definition) is distinct from 'object'
+     or jsonb_typeof(parsed_definition -> 'key') is distinct from 'string'
+     or nullif(parsed_definition ->> 'key', '') is null
+     or jsonb_typeof(parsed_definition -> 'version') is distinct from 'number'
+     or jsonb_typeof(parsed_definition -> 'trigger') is distinct from 'string'
+     or nullif(parsed_definition ->> 'trigger', '') is null
+     or jsonb_typeof(parsed_definition -> 'active') is distinct from 'boolean'
+     or (
+       parsed_definition ? 'conditions'
+       and jsonb_typeof(parsed_definition -> 'conditions') is distinct from 'array'
+     )
+     or jsonb_typeof(parsed_definition -> 'actions') is distinct from 'array'
+     or jsonb_array_length(parsed_definition -> 'actions') = 0
+     or jsonb_typeof(parsed_definition -> 'retryPolicy') is distinct from 'object'
+     or jsonb_typeof(
+       parsed_definition #> '{retryPolicy,maxAttempts}'
+     ) is distinct from 'number'
+     or jsonb_typeof(
+       parsed_definition #> '{retryPolicy,backoffMs}'
+     ) is distinct from 'number'
+     or jsonb_typeof(parsed_definition -> 'timeoutMs') is distinct from 'number'
+     or coalesce(parsed_definition ->> 'approvalPolicy', '') not in (
+       'no_approval_required',
+       'user_approval_required',
+       'administrator_approval_required',
+       'prohibited_automatic_execution'
+     ) then
+    return true;
+  end if;
+
+  if (parsed_definition ->> 'version')::numeric % 1 <> 0
+     or (parsed_definition ->> 'version')::numeric <= 0
+     or (parsed_definition #>> '{retryPolicy,maxAttempts}')::numeric % 1 <> 0
+     or (parsed_definition #>> '{retryPolicy,maxAttempts}')::numeric
+       not between 1 and 10
+     or (parsed_definition #>> '{retryPolicy,backoffMs}')::numeric % 1 <> 0
+     or (parsed_definition #>> '{retryPolicy,backoffMs}')::numeric < 0
+     or (parsed_definition ->> 'timeoutMs')::numeric % 1 <> 0
+     or (parsed_definition ->> 'timeoutMs')::numeric < 1000 then
+    return true;
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_array_elements(
+      coalesce(parsed_definition -> 'conditions', '[]'::jsonb)
+    ) condition
+    where jsonb_typeof(condition) is distinct from 'string'
+  ) then
+    return true;
+  end if;
+
+  for parsed_action in
+    select action
+    from jsonb_array_elements(parsed_definition -> 'actions') action
+  loop
+    if jsonb_typeof(parsed_action) is distinct from 'object'
+       or coalesce(parsed_action ->> 'type', '') not in (
+         'create_task',
+         'update_contact',
+         'add_tag',
+         'create_activity',
+         'send_mock_email',
+         'send_mock_sms',
+         'send_mock_whatsapp',
+         'call_webhook',
+         'wait_for_duration',
+         'request_approval',
+         'mock_search_contact',
+         'mock_create_task'
+       )
+       or (
+         parsed_action ? 'input'
+         and jsonb_typeof(parsed_action -> 'input') is distinct from 'object'
+       )
+       or (
+         parsed_action ? 'idempotencyKey'
+         and jsonb_typeof(parsed_action -> 'idempotencyKey')
+           is distinct from 'string'
+       ) then
+      return true;
+    end if;
+  end loop;
+
+  if coalesce(parsed_definition ->> 'key', '') like 'conversation_plan:%'
+     or parsed_definition ->> 'trigger' = 'conversation.plan.execute' then
+    return true;
+  end if;
+
+  return exists (
+    select 1
+    from jsonb_array_elements(parsed_definition -> 'actions') action
+    where action ->> 'type' in (
+      'mock_search_contact',
+      'mock_create_task'
+    )
+  );
+end;
+$$;
+
+create or replace function app_is_conversation_policy_workflow_run(
+  target_tenant_id text,
+  target_run_id text
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+  select exists (
+    select 1
+    from workflow_runs run
+    where run.tenant_id = target_tenant_id
+      and run.id = target_run_id
+      and app_is_conversation_policy_workflow(
+        run.workflow_key,
+        run.trigger_name,
+        run.definition_snapshot
+      )
+  )
+$$;
+
+create or replace function app_is_conversation_policy_event(
+  target_tenant_id text,
+  target_event_type text,
+  target_payload text
+)
+returns boolean
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_catalog
+as $$
+declare
+  parsed_payload jsonb;
+  target_run_id text;
+begin
+  if target_event_type = 'conversation.plan.execute' then
+    return true;
+  end if;
+
+  begin
+    parsed_payload := target_payload::jsonb;
+  exception when others then
+    return target_event_type = 'workflow.resume';
+  end;
+
+  target_run_id := nullif(parsed_payload ->> 'runId', '');
+  if target_event_type = 'workflow.resume' and target_run_id is null then
+    return true;
+  end if;
+
+  if target_event_type = 'workflow.resume' and not exists (
+    select 1
+    from workflow_runs run
+    where run.tenant_id = target_tenant_id
+      and run.id = target_run_id
+  ) then
+    return true;
+  end if;
+
+  return target_run_id is not null
+    and app_is_conversation_policy_workflow_run(
+      target_tenant_id,
+      target_run_id
+    );
+end;
+$$;
+
+drop policy if exists workflow_runs_conversation_write_insert
+  on workflow_runs;
+create policy workflow_runs_conversation_write_insert
+  on workflow_runs as restrictive for insert to public
+  with check (
+    app_is_system()
+    or not app_is_conversation_policy_workflow(
+      workflow_key,
+      trigger_name,
+      definition_snapshot
+    )
+  );
+
+drop policy if exists workflow_runs_conversation_write_update
+  on workflow_runs;
+create policy workflow_runs_conversation_write_update
+  on workflow_runs as restrictive for update to public
+  using (
+    app_is_system()
+    or not app_is_conversation_policy_workflow(
+      workflow_key,
+      trigger_name,
+      definition_snapshot
+    )
+  )
+  with check (
+    app_is_system()
+    or not app_is_conversation_policy_workflow(
+      workflow_key,
+      trigger_name,
+      definition_snapshot
+    )
+  );
+
+drop policy if exists workflow_runs_conversation_write_delete
+  on workflow_runs;
+create policy workflow_runs_conversation_write_delete
+  on workflow_runs as restrictive for delete to public
+  using (
+    app_is_system()
+    or not app_is_conversation_policy_workflow(
+      workflow_key,
+      trigger_name,
+      definition_snapshot
+    )
+  );
+
+drop policy if exists workflow_run_steps_conversation_write_insert
+  on workflow_run_steps;
+create policy workflow_run_steps_conversation_write_insert
+  on workflow_run_steps as restrictive for insert to public
+  with check (
+    app_is_system()
+    or not (
+      action_name in ('mock_search_contact', 'mock_create_task')
+      or app_is_conversation_policy_workflow_run(
+        tenant_id,
+        workflow_run_id
+      )
+    )
+  );
+
+drop policy if exists workflow_run_steps_conversation_write_update
+  on workflow_run_steps;
+create policy workflow_run_steps_conversation_write_update
+  on workflow_run_steps as restrictive for update to public
+  using (
+    app_is_system()
+    or not (
+      action_name in ('mock_search_contact', 'mock_create_task')
+      or app_is_conversation_policy_workflow_run(
+        tenant_id,
+        workflow_run_id
+      )
+    )
+  )
+  with check (
+    app_is_system()
+    or not (
+      action_name in ('mock_search_contact', 'mock_create_task')
+      or app_is_conversation_policy_workflow_run(
+        tenant_id,
+        workflow_run_id
+      )
+    )
+  );
+
+drop policy if exists workflow_run_steps_conversation_write_delete
+  on workflow_run_steps;
+create policy workflow_run_steps_conversation_write_delete
+  on workflow_run_steps as restrictive for delete to public
+  using (
+    app_is_system()
+    or not (
+      action_name in ('mock_search_contact', 'mock_create_task')
+      or app_is_conversation_policy_workflow_run(
+        tenant_id,
+        workflow_run_id
+      )
+    )
+  );
+
+drop policy if exists domain_events_conversation_write_insert
+  on domain_events;
+create policy domain_events_conversation_write_insert
+  on domain_events as restrictive for insert to public
+  with check (
+    app_is_system()
+    or not app_is_conversation_policy_event(
+      tenant_id,
+      event_type,
+      payload
+    )
+  );
+
+drop policy if exists domain_events_conversation_write_update
+  on domain_events;
+create policy domain_events_conversation_write_update
+  on domain_events as restrictive for update to public
+  using (
+    app_is_system()
+    or not app_is_conversation_policy_event(
+      tenant_id,
+      event_type,
+      payload
+    )
+  )
+  with check (
+    app_is_system()
+    or not app_is_conversation_policy_event(
+      tenant_id,
+      event_type,
+      payload
+    )
+  );
+
+drop policy if exists domain_events_conversation_write_delete
+  on domain_events;
+create policy domain_events_conversation_write_delete
+  on domain_events as restrictive for delete to public
+  using (
+    app_is_system()
+    or not app_is_conversation_policy_event(
+      tenant_id,
+      event_type,
+      payload
+    )
+  );
+drop policy if exists conversation_action_plans_conversation_write_insert
+  on conversation_action_plans;
+create policy conversation_action_plans_conversation_write_insert
+  on conversation_action_plans as restrictive for insert to public
+  with check (app_is_system());
+
+drop policy if exists conversation_action_plans_conversation_write_update
+  on conversation_action_plans;
+create policy conversation_action_plans_conversation_write_update
+  on conversation_action_plans as restrictive for update to public
+  using (app_is_system())
+  with check (app_is_system());
+
+drop policy if exists conversation_action_plans_conversation_write_delete
+  on conversation_action_plans;
+create policy conversation_action_plans_conversation_write_delete
+  on conversation_action_plans as restrictive for delete to public
+  using (app_is_system());
+
+drop policy if exists conversation_action_plan_steps_conversation_write_insert
+  on conversation_action_plan_steps;
+create policy conversation_action_plan_steps_conversation_write_insert
+  on conversation_action_plan_steps as restrictive for insert to public
+  with check (app_is_system());
+
+drop policy if exists conversation_action_plan_steps_conversation_write_update
+  on conversation_action_plan_steps;
+create policy conversation_action_plan_steps_conversation_write_update
+  on conversation_action_plan_steps as restrictive for update to public
+  using (app_is_system())
+  with check (app_is_system());
+
+drop policy if exists conversation_action_plan_steps_conversation_write_delete
+  on conversation_action_plan_steps;
+create policy conversation_action_plan_steps_conversation_write_delete
+  on conversation_action_plan_steps as restrictive for delete to public
+  using (app_is_system());
+
+drop policy if exists approvals_conversation_write_insert
+  on approvals;
+create policy approvals_conversation_write_insert
+  on approvals as restrictive for insert to public
+  with check (
+    app_is_system()
+    or target_type <> 'conversation_action_plan'
+  );
+
+drop policy if exists approvals_conversation_write_update
+  on approvals;
+create policy approvals_conversation_write_update
+  on approvals as restrictive for update to public
+  using (
+    app_is_system()
+    or target_type <> 'conversation_action_plan'
+  )
+  with check (
+    app_is_system()
+    or target_type <> 'conversation_action_plan'
+  );
+
+drop policy if exists approvals_conversation_write_delete
+  on approvals;
+create policy approvals_conversation_write_delete
+  on approvals as restrictive for delete to public
+  using (
+    app_is_system()
+    or target_type <> 'conversation_action_plan'
+  );
+
+create or replace function reject_conversation_action_plan_delete()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_catalog
+as $$
+begin
+  if app_is_system() or not exists (
+    select 1 from tenants tenant where tenant.id = old.tenant_id
+  ) then
+    return old;
+  end if;
+  raise exception 'conversation_action_plan_delete_forbidden';
+end;
+$$;
+
+drop trigger if exists conversation_action_plans_delete_guard
+  on conversation_action_plans;
+create trigger conversation_action_plans_delete_guard
+before delete on conversation_action_plans
+for each row execute function reject_conversation_action_plan_delete();
 `;

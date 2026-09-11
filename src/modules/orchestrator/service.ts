@@ -1,11 +1,16 @@
+import { randomUUID } from "node:crypto";
 import {
   withSystemDbTransaction,
   withTenantDbTransaction,
+  withTenantSystemDbTransaction,
 } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { hashToken, id, nowIso, safeJson, toJson } from "@/lib/security";
 import type { Role } from "@/lib/types";
-import { recordAuditLog } from "@/modules/audit";
+import {
+  listAuditLogRowsByActionAndTarget,
+  recordAuditLog,
+} from "@/modules/audit";
 import {
   prepareExternalUntrustedDataView,
   readExternalUntrustedDataExtraction,
@@ -13,6 +18,7 @@ import {
 import {
   findAccessibleConversationThreadRow,
   findConversationIdentityByExternalSubject,
+  findConversationMessageByIdempotencyKey,
   findConversationMessageRow,
   insertConversationIdentityIfAbsent,
   insertConversationMessageIfAbsent,
@@ -39,15 +45,18 @@ import {
   type ActionPlanGenerator,
 } from "@/modules/orchestrator/generator";
 import {
+  findConversationActionPlanPolicyReceiptByPlan,
   decideActionPlanRow,
   findActionPlanApproval,
   findActionPlanByFingerprint,
   findActionPlanRow,
   insertActionPlan,
   insertActionPlanApproval,
+  insertConversationActionPlanPolicyReceipt,
   insertActionPlanStep,
   listActionPlanRowsByThread,
   listActionPlanStepRows,
+  lockActionPlanRow,
   markActionPlanExecuted,
   updateActionPlanApprovalStatus,
   updateActionPlanExecutionStatus,
@@ -55,6 +64,17 @@ import {
   updateActionPlanStepStatuses,
   type ConversationActionPlanRow,
 } from "@/modules/orchestrator/repository";
+import {
+  compileConversationActionPlanPolicyReceipt,
+  conversationActionPlanPolicyReceiptSchemaVersion,
+  type ConversationActionPlanPolicyApproval,
+} from "@/modules/orchestrator/policy";
+import {
+  assertConversationActionPlanPolicyReceipt,
+  conversationActionPlanGrantedScopes,
+  type ConversationActionPlanPolicyEvidence,
+  type VerifiedConversationActionPlanPolicy,
+} from "@/modules/orchestrator/policy-enforcement";
 import {
   actionPlanCreationSchema,
   actionPlanDecisionSchema,
@@ -68,7 +88,13 @@ import {
 } from "@/modules/orchestrator/schemas";
 import { assertTenantAccess } from "@/modules/tenants";
 import {
+  buildConversationPlanWorkflow,
+  conversationPlanWorkflowActionType,
+  conversationActionPlanWorkflowKey,
+} from "@/modules/orchestrator/workflow-plan";
+import {
   executeWorkflowDefinition,
+  findDomainEventById,
   findWorkflowRunById,
   findWorkflowRunByKey,
   listWorkflowRunStepRows,
@@ -77,7 +103,6 @@ import {
   WorkflowError,
 } from "@/modules/workflows";
 
-const mockScopes = ["crm.contacts.read", "project.tasks.write"];
 const creationRoles: Role[] = [
   "owner",
   "administrator",
@@ -85,6 +110,8 @@ const creationRoles: Role[] = [
   "collaborator",
 ];
 const decisionRoles: Role[] = ["owner", "administrator", "manager"];
+const conversationActionPlanResultText =
+  "Exécution mock terminée : toutes les étapes simulées ont été vérifiées. Aucun effet externe.";
 
 export async function createConversationActionPlan(
   db: DbClient,
@@ -167,7 +194,7 @@ export async function createConversationActionPlan(
     );
   }
 
-  return withTenantDbTransaction(
+  return withTenantSystemDbTransaction(
     db,
     parsed.tenantId,
     userId,
@@ -200,7 +227,7 @@ export async function createConversationActionPlan(
       };
       const validated = validateActionPlan(generatedPlan, {
         role,
-        grantedScopes: mockScopes,
+        grantedScopes: [...conversationActionPlanGrantedScopes],
       });
       const planJson = serializeActionPlanForPersistence(validated.plan);
       const planFingerprint = hashToken(planJson);
@@ -301,6 +328,20 @@ export async function createConversationActionPlan(
           createdAt,
         });
       }
+      const policyReceipt =
+        validated.approval.mode === "none"
+          ? await issueConversationActionPlanPolicyReceipt(transaction, {
+              plan,
+              approval: {
+                mode: "none",
+                id: null,
+                status: "not_required",
+              },
+              role,
+              approvedByUserId: userId,
+              createdAt,
+            })
+          : null;
       await appendOrchestratorMessage(transaction, {
         tenantId: parsed.tenantId,
         threadId: parsed.threadId,
@@ -338,6 +379,12 @@ export async function createConversationActionPlan(
           ),
           executionEnvironment: "mock",
           estimatedExternalCost: 0,
+          ...(policyReceipt
+            ? {
+                policyReceiptId: policyReceipt.id,
+                policyReceiptFingerprint: policyReceipt.fingerprint,
+              }
+            : {}),
         },
       });
 
@@ -409,8 +456,13 @@ export async function decideConversationActionPlan(
   input: ActionPlanDecision,
 ) {
   const parsed = actionPlanDecisionSchema.parse(input);
-  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
-    await assertTenantAccess(transaction, userId, tenantId, decisionRoles);
+  return withTenantSystemDbTransaction(db, tenantId, userId, async (transaction) => {
+    const role = await assertTenantAccess(
+      transaction,
+      userId,
+      tenantId,
+      decisionRoles,
+    );
     const existing = await findActionPlanRow(
       transaction,
       tenantId,
@@ -483,6 +535,20 @@ export async function decideConversationActionPlan(
       existing.id,
       parsed.decision === "approved" ? "approved" : "cancelled",
     );
+    const policyReceipt =
+      parsed.decision === "approved"
+        ? await issueConversationActionPlanPolicyReceipt(transaction, {
+            plan: decided,
+            approval: {
+              mode: "single",
+              id: approval.id,
+              status: "approved",
+            },
+            role,
+            approvedByUserId: userId,
+            createdAt: decidedAt,
+          })
+        : null;
     await appendOrchestratorMessage(transaction, {
       tenantId,
       threadId: existing.thread_id,
@@ -511,6 +577,12 @@ export async function decideConversationActionPlan(
         approvalId: approval.id,
         decision: parsed.decision,
         planFingerprint: existing.plan_fingerprint,
+        ...(policyReceipt
+          ? {
+              policyReceiptId: policyReceipt.id,
+              policyReceiptFingerprint: policyReceipt.fingerprint,
+            }
+          : {}),
       },
     });
     const result = await mapPlanResult(transaction, decided, false);
@@ -525,13 +597,13 @@ export async function executeConversationActionPlan(
   planId: string,
 ) {
   const parsed = actionPlanExecutionSchema.parse({ planId });
-  const outcome = await withTenantDbTransaction(
+  const outcome = await withTenantSystemDbTransaction(
     db,
     tenantId,
     userId,
     async (transaction) => {
       await assertTenantAccess(transaction, userId, tenantId, decisionRoles);
-      const plan = await findActionPlanRow(transaction, tenantId, parsed.planId);
+      const plan = await lockActionPlanRow(transaction, tenantId, parsed.planId);
       if (!plan) {
         throw new OrchestratorError(
           "orchestrator_plan_not_found",
@@ -545,7 +617,7 @@ export async function executeConversationActionPlan(
         plan.thread_id,
         "plan",
       );
-      const workflowKey = conversationPlanWorkflowKey(plan.id);
+      const workflowKey = conversationActionPlanWorkflowKey(plan.id);
       const existingRun = await findWorkflowRunByKey(
         transaction,
         tenantId,
@@ -558,13 +630,23 @@ export async function executeConversationActionPlan(
             "La preuve durable de l’exécution est introuvable.",
           );
         }
+        const replay = await finalizeConversationActionPlanInTransaction(
+          transaction,
+          {
+            tenantId,
+            actorId: userId,
+            workflowRunId: existingRun.id,
+            sourceEventId: `event_${hashToken(plan.id).slice(0, 32)}`,
+          },
+        );
+        if (!replay) {
+          throw new OrchestratorError(
+            "orchestrator_execution_failed",
+            "La preuve durable de l’exécution est incomplète.",
+          );
+        }
         return {
-          result: await mapExecutionResult(
-            transaction,
-            plan,
-            existingRun,
-            true,
-          ),
+          result: replay.result,
         };
       }
       if (plan.approval_status !== "approved") {
@@ -580,6 +662,40 @@ export async function executeConversationActionPlan(
           "Le plan mock OS-1 doit contenir exactement deux étapes.",
         );
       }
+      const policy = await assertConversationActionPlanPolicyReceipt(
+        transaction,
+        {
+          stage: "execute",
+          tenantId,
+          actorId: userId,
+          planId: plan.id,
+        },
+      );
+      const definition = buildConversationPlanWorkflow(plan, steps);
+      const sourceEvent = {
+        id: `event_${hashToken(plan.id).slice(0, 32)}`,
+        tenantId,
+        actorId: userId,
+        type: "conversation.plan.execute",
+        payload: {
+          planId: plan.id,
+          planFingerprint: plan.plan_fingerprint,
+          threadId: plan.thread_id,
+          sourceMessageId: plan.source_message_id,
+          policyReceipt: policy.evidence,
+        },
+        correlationId: plan.id,
+        causationId: plan.source_message_id,
+        idempotencyKey: `conversation.plan.execute:${plan.id}`,
+      };
+      await assertConversationActionPlanPolicyReceipt(transaction, {
+        stage: "workflow_start",
+        tenantId,
+        actorId: userId,
+        planId: plan.id,
+        definition,
+        sourceEvent,
+      });
       if (existingRun?.status === "failed") {
         return { failure: "mock_workflow_failed" as const };
       }
@@ -589,27 +705,16 @@ export async function executeConversationActionPlan(
         plan.id,
         "running",
       );
+      let succeededRun: NonNullable<
+        Awaited<ReturnType<typeof findWorkflowRunByKey>>
+      >;
       try {
         const runId = existingRun
           ? existingRun.id
           : await executeWorkflowDefinition(
               transaction,
-              buildConversationPlanWorkflow(plan, steps),
-              {
-                id: `event_${hashToken(plan.id).slice(0, 32)}`,
-                tenantId,
-                actorId: userId,
-                type: "conversation.plan.execute",
-                payload: {
-                  planId: plan.id,
-                  planFingerprint: plan.plan_fingerprint,
-                  threadId: plan.thread_id,
-                  sourceMessageId: plan.source_message_id,
-                },
-                correlationId: plan.id,
-                causationId: plan.source_message_id,
-                idempotencyKey: `conversation.plan.execute:${plan.id}`,
-              },
+              definition,
+              sourceEvent,
             );
         const run = runId
           ? await findWorkflowRunByKey(transaction, tenantId, workflowKey)
@@ -618,20 +723,7 @@ export async function executeConversationActionPlan(
         if (!run || run.status !== "succeeded") {
           throw new Error("mock_workflow_not_succeeded");
         }
-        const finalized = await finalizeConversationActionPlanInTransaction(
-          transaction,
-          {
-            tenantId,
-            actorId: userId,
-            workflowRunId: run.id,
-          },
-        );
-        if (!finalized) {
-          throw new Error("conversation_plan_finalization_missing");
-        }
-        return {
-          result: finalized.result,
-        };
+        succeededRun = run;
       } catch {
         await updateActionPlanExecutionStatus(
           transaction,
@@ -654,6 +746,29 @@ export async function executeConversationActionPlan(
         });
         return { failure: "mock_workflow_failed" as const };
       }
+
+      // Finalization is part of the same atomic unit as workflow creation. It is
+      // deliberately outside the execution-failure catch: any persistence fault
+      // must roll the whole transaction back instead of committing a half-finalized
+      // plan as a durable workflow failure.
+      const finalized = await finalizeConversationActionPlanInTransaction(
+        transaction,
+        {
+          tenantId,
+          actorId: userId,
+          workflowRunId: succeededRun.id,
+          sourceEventId: sourceEvent.id,
+        },
+      );
+      if (!finalized) {
+        throw new OrchestratorError(
+          "orchestrator_execution_failed",
+          "La preuve durable de la finalisation est introuvable.",
+        );
+      }
+      return {
+        result: finalized.result,
+      };
     },
   );
   if ("failure" in outcome) {
@@ -671,6 +786,7 @@ export async function finalizeConversationActionPlanWorkflow(
     tenantId: string;
     actorId: string;
     workflowRunId: string;
+    sourceEventId: string;
   },
 ) {
   return withSystemDbTransaction(db, (transaction) =>
@@ -707,7 +823,7 @@ export async function requestConversationActionPlanRetry(
       const run = await findWorkflowRunByKey(
         transaction,
         tenantId,
-        conversationPlanWorkflowKey(plan.id),
+        conversationActionPlanWorkflowKey(plan.id),
       );
       if (!run) {
         throw new OrchestratorError(
@@ -749,6 +865,59 @@ function serializeActionPlanForPersistence(plan: ValidatedActionPlan) {
   const legacyCompatiblePlan: Partial<ValidatedActionPlan> = { ...plan };
   delete legacyCompatiblePlan.contextSources;
   return toJson(legacyCompatiblePlan);
+}
+
+async function issueConversationActionPlanPolicyReceipt(
+  db: DbClient,
+  input: {
+    plan: ConversationActionPlanRow;
+    approval: ConversationActionPlanPolicyApproval;
+    role: Role;
+    approvedByUserId: string;
+    createdAt: string;
+  },
+): Promise<ConversationActionPlanPolicyEvidence> {
+  if (
+    input.plan.approval_status !== "approved" ||
+    input.plan.decided_by !== input.approvedByUserId
+  ) {
+    throw new OrchestratorError(
+      "orchestrator_policy_receipt_invalid",
+      "Le reçu de policy ne peut pas être émis sans décision cohérente.",
+    );
+  }
+  const receipt = compileConversationActionPlanPolicyReceipt({
+    tenantId: input.plan.tenant_id,
+    planId: input.plan.id,
+    planJson: input.plan.plan_json,
+    planFingerprint: input.plan.plan_fingerprint,
+    approval: input.approval,
+    role: input.role,
+    grantedScopes: conversationActionPlanGrantedScopes,
+  });
+  const inserted = await insertConversationActionPlanPolicyReceipt(db, {
+    id: randomUUID(),
+    tenantId: input.plan.tenant_id,
+    planId: input.plan.id,
+    planFingerprint: input.plan.plan_fingerprint,
+    approvalId: input.approval.id,
+    approvalMode: input.approval.mode,
+    approvedByUserId: input.approvedByUserId,
+    payloadJson: toJson(receipt.payload),
+    receiptFingerprint: receipt.fingerprint,
+    createdAt: input.createdAt,
+  });
+  if (!inserted) {
+    throw new OrchestratorError(
+      "orchestrator_decision_conflict",
+      "Le reçu de policy de ce plan existe déjà.",
+    );
+  }
+  return {
+    id: inserted.id,
+    fingerprint: inserted.receipt_fingerprint,
+    schemaVersion: conversationActionPlanPolicyReceiptSchemaVersion,
+  };
 }
 
 async function readConversationPlanGenerationSource(
@@ -860,6 +1029,7 @@ async function finalizeConversationActionPlanInTransaction(
     tenantId: string;
     actorId: string;
     workflowRunId: string;
+    sourceEventId: string;
   },
 ) {
   const run = await findWorkflowRunById(
@@ -875,23 +1045,49 @@ async function finalizeConversationActionPlanInTransaction(
   }
 
   const planId = run.workflow_key.slice("conversation_plan:".length);
-  const plan = await findActionPlanRow(db, input.tenantId, planId);
+  const plan = await lockActionPlanRow(db, input.tenantId, planId);
   if (!plan) {
     return null;
   }
-  if (conversationPlanWorkflowKey(plan.id) !== run.workflow_key) {
+  if (conversationActionPlanWorkflowKey(plan.id) !== run.workflow_key) {
     throw new OrchestratorError(
       "orchestrator_plan_not_found",
       "Le plan lié à la mission durable est introuvable.",
     );
   }
-  if (plan.approval_status === "executed") {
-    return {
-      idempotentReplay: true as const,
-      result: await mapExecutionResult(db, plan, run, true),
-    };
+  const parsedDefinition = workflowDefinitionSchema.safeParse(
+    safeJson<Record<string, unknown>>(run.definition_snapshot, {}),
+  );
+  const sourceEventRow = await findDomainEventById(
+    db,
+    input.tenantId,
+    input.sourceEventId,
+  );
+  if (!parsedDefinition.success || !sourceEventRow) {
+    throw new OrchestratorError(
+      "orchestrator_policy_receipt_invalid",
+      "La preuve durable de la mission autorisée est incomplète.",
+    );
   }
-  if (plan.approval_status !== "approved") {
+  const sourceEvent = {
+    id: sourceEventRow.id,
+    tenantId: sourceEventRow.tenant_id,
+    actorId: sourceEventRow.actor_id,
+    type: sourceEventRow.event_type,
+    payload: safeJson<Record<string, unknown>>(sourceEventRow.payload, {}),
+    idempotencyKey: sourceEventRow.idempotency_key,
+    correlationId: sourceEventRow.correlation_id,
+    causationId: sourceEventRow.causation_id ?? undefined,
+  };
+  const policy = await assertConversationActionPlanPolicyReceipt(db, {
+    stage: "finalize",
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    planId: plan.id,
+    definition: parsedDefinition.data,
+    sourceEvent,
+  });
+  if (!["approved", "executed"].includes(plan.approval_status)) {
     throw new OrchestratorError(
       "orchestrator_execution_not_approved",
       "Le plan lié à la mission n’est plus approuvé.",
@@ -908,12 +1104,29 @@ async function finalizeConversationActionPlanInTransaction(
       "Le plan mock doit contenir exactement deux étapes.",
     );
   }
-  const reconciled = reconcileConversationPlanSteps(planSteps, workflowSteps);
+  const reconciled = reconcileConversationPlanSteps(
+    planSteps,
+    workflowSteps,
+    input.sourceEventId,
+    policy,
+  );
   if (reconciled.some((step) => step.status !== "succeeded")) {
     throw new OrchestratorError(
       "orchestrator_execution_failed",
       "Les preuves durables de toutes les étapes sont incomplètes.",
     );
+  }
+  if (plan.approval_status === "executed") {
+    await assertConversationActionPlanFinalizationProjection(db, {
+      plan,
+      run,
+      sourceEventActorId: sourceEventRow.actor_id,
+      policy,
+    });
+    return {
+      idempotentReplay: true as const,
+      result: await mapExecutionResult(db, plan, run, true),
+    };
   }
   for (const step of reconciled) {
     await updateActionPlanStepStatusByPosition(db, {
@@ -934,6 +1147,12 @@ async function finalizeConversationActionPlanInTransaction(
   if (!executedPlan) {
     const concurrent = await findActionPlanRow(db, input.tenantId, plan.id);
     if (concurrent?.approval_status === "executed") {
+      await assertConversationActionPlanFinalizationProjection(db, {
+        plan: concurrent,
+        run,
+        sourceEventActorId: sourceEventRow.actor_id,
+        policy,
+      });
       return {
         idempotentReplay: true as const,
         result: await mapExecutionResult(db, concurrent, run, true),
@@ -951,7 +1170,7 @@ async function finalizeConversationActionPlanInTransaction(
     sourceMessageId: plan.source_message_id,
     planId: plan.id,
     kind: "result",
-    text: "Exécution mock terminée : contact simulé retrouvé et tâche simulée préparée. Aucun effet externe.",
+    text: conversationActionPlanResultText,
     correlationId: run.id,
     createdAt: executedAt,
   });
@@ -963,7 +1182,7 @@ async function finalizeConversationActionPlanInTransaction(
   });
   await recordAuditLog(db, {
     tenantId: input.tenantId,
-    actorId: input.actorId,
+    actorId: sourceEventRow.actor_id,
     action: "conversation.plan_executed",
     targetType: "conversation_action_plan",
     targetId: plan.id,
@@ -973,8 +1192,17 @@ async function finalizeConversationActionPlanInTransaction(
       planFingerprint: plan.plan_fingerprint,
       executionEnvironment: "mock",
       capabilityCount: planSteps.length,
+      policyReceiptId: policy.evidence.id,
+      policyReceiptFingerprint: policy.evidence.fingerprint,
       externalSideEffect: false,
     },
+  });
+
+  await assertConversationActionPlanFinalizationProjection(db, {
+    plan: executedPlan,
+    run,
+    sourceEventActorId: sourceEventRow.actor_id,
+    policy,
   });
 
   return {
@@ -983,9 +1211,93 @@ async function finalizeConversationActionPlanInTransaction(
   };
 }
 
+async function assertConversationActionPlanFinalizationProjection(
+  db: DbClient,
+  input: {
+    plan: ConversationActionPlanRow;
+    run: NonNullable<Awaited<ReturnType<typeof findWorkflowRunByKey>>>;
+    sourceEventActorId: string;
+    policy: VerifiedConversationActionPlanPolicy;
+  },
+) {
+  const [steps, resultMessage, executionAudits] = await Promise.all([
+    listActionPlanStepRows(db, input.plan.tenant_id, input.plan.id),
+    findConversationMessageByIdempotencyKey(
+      db,
+      input.plan.tenant_id,
+      `orchestrator:${input.plan.id}:executed`,
+    ),
+    listAuditLogRowsByActionAndTarget(db, {
+      tenantId: input.plan.tenant_id,
+      action: "conversation.plan_executed",
+      targetType: "conversation_action_plan",
+      targetId: input.plan.id,
+    }),
+  ]);
+  const messageIsBound =
+    resultMessage?.thread_id === input.plan.thread_id &&
+    resultMessage.direction === "internal" &&
+    resultMessage.kind === "result" &&
+    resultMessage.status === "received" &&
+    resultMessage.text_content === conversationActionPlanResultText &&
+    resultMessage.adapter_key === "orchestrator-mock" &&
+    resultMessage.external_message_id === `${input.plan.id}:executed` &&
+    resultMessage.correlation_id === input.run.id &&
+    resultMessage.causation_id === input.plan.source_message_id &&
+    resultMessage.safe_error_code === null &&
+    resultMessage.occurred_at === input.plan.updated_at &&
+    resultMessage.created_at === input.plan.updated_at;
+  const audit = executionAudits[0];
+  const auditMetadata = safeJson<Record<string, unknown>>(
+    audit?.safe_metadata ?? "",
+    {},
+  );
+  const expectedAuditMetadata = {
+    threadId: input.plan.thread_id,
+    workflowRunId: input.run.id,
+    planFingerprint: input.plan.plan_fingerprint,
+    executionEnvironment: "mock",
+    capabilityCount: steps.length,
+    policyReceiptId: input.policy.evidence.id,
+    policyReceiptFingerprint: input.policy.evidence.fingerprint,
+    externalSideEffect: false,
+  };
+  const auditIsBound =
+    executionAudits.length === 1 &&
+    audit?.actor_id === input.sourceEventActorId &&
+    hasExactPrimitiveRecord(auditMetadata, expectedAuditMetadata);
+  if (
+    input.plan.approval_status !== "executed" ||
+    steps.length !== 2 ||
+    steps.some((step) => step.status !== "succeeded") ||
+    !messageIsBound ||
+    !auditIsBound
+  ) {
+    throw new OrchestratorError(
+      "orchestrator_execution_failed",
+      "La projection durable de l’exécution est incomplète ou incohérente.",
+    );
+  }
+}
+
+function hasExactPrimitiveRecord(
+  actual: Record<string, unknown>,
+  expected: Record<string, string | number | boolean>,
+) {
+  const actualKeys = Object.keys(actual).sort();
+  const expectedKeys = Object.keys(expected).sort();
+  return (
+    actualKeys.length === expectedKeys.length &&
+    actualKeys.every((key, index) => key === expectedKeys[index]) &&
+    expectedKeys.every((key) => actual[key] === expected[key])
+  );
+}
+
 function reconcileConversationPlanSteps(
   planSteps: Awaited<ReturnType<typeof listActionPlanStepRows>>,
   workflowSteps: Awaited<ReturnType<typeof listWorkflowRunStepRows>>,
+  sourceEventId: string,
+  policy: VerifiedConversationActionPlanPolicy,
 ) {
   return planSteps.map((planStep) => {
     const matching = workflowSteps.filter((workflowStep) => {
@@ -993,7 +1305,23 @@ function reconcileConversationPlanSteps(
         workflowStep.safe_metadata,
         {},
       );
-      return metadata.actionIndex === planStep.position;
+      return (
+        workflowStep.action_name ===
+          conversationPlanWorkflowActionType(planStep.capability) &&
+        metadata.actionIndex === planStep.position &&
+        metadata.eventId === sourceEventId &&
+        metadata.idempotencyKey === planStep.idempotency_key &&
+        metadata.planStepId === planStep.step_id &&
+        metadata.capability === planStep.capability &&
+        metadata.providerKey === policy.receipt.payload.provider.key &&
+        metadata.providerVersion === policy.receipt.payload.provider.version &&
+        metadata.manifestVersion ===
+          policy.receipt.payload.catalog.projection.manifestSchemaVersion &&
+        metadata.executionEnvironment ===
+          policy.receipt.payload.provider.executionEnvironment &&
+        metadata.externalSideEffect === false &&
+        metadata.inputStored === false
+      );
     });
     const status = matching.some((step) => step.status === "succeeded")
       ? ("succeeded" as const)
@@ -1075,49 +1403,6 @@ async function appendOrchestratorMessage(
     occurredAt: input.createdAt,
     updatedAt: input.createdAt,
   });
-}
-
-function buildConversationPlanWorkflow(
-  plan: ConversationActionPlanRow,
-  steps: Awaited<ReturnType<typeof listActionPlanStepRows>>,
-) {
-  return workflowDefinitionSchema.parse({
-    key: conversationPlanWorkflowKey(plan.id),
-    version: 1,
-    trigger: "conversation.plan.execute",
-    active: true,
-    conditions: [],
-    actions: steps.map((step) => {
-      const type =
-        step.capability === "crm.contacts.search"
-          ? "mock_search_contact"
-          : step.capability === "project.task.create"
-            ? "mock_create_task"
-            : null;
-      if (!type) {
-        throw new OrchestratorError(
-          "orchestrator_capability_unavailable",
-          "Une capacité du plan n’est pas exécutable en mock.",
-        );
-      }
-      return {
-        type,
-        input: {
-          planStepId: step.step_id,
-          capability: step.capability,
-          capabilityInput: safeJson(step.input_json, {}),
-        },
-        idempotencyKey: step.idempotency_key,
-      };
-    }),
-    retryPolicy: { maxAttempts: 3, backoffMs: 500 },
-    timeoutMs: 30_000,
-    approvalPolicy: "no_approval_required",
-  });
-}
-
-function conversationPlanWorkflowKey(planId: string) {
-  return `conversation_plan:${planId}`;
 }
 
 async function mapExecutionResult(
@@ -1213,13 +1498,18 @@ async function mapPlanResult(
   plan: ConversationActionPlanRow,
   idempotentReplay: boolean,
 ) {
-  const [steps, approval, mission] = await Promise.all([
+  const [steps, approval, mission, policyReceipt] = await Promise.all([
     listActionPlanStepRows(db, plan.tenant_id, plan.id),
     findActionPlanApproval(db, plan.tenant_id, plan.id),
     findWorkflowRunByKey(
       db,
       plan.tenant_id,
-      conversationPlanWorkflowKey(plan.id),
+      conversationActionPlanWorkflowKey(plan.id),
+    ),
+    findConversationActionPlanPolicyReceiptByPlan(
+      db,
+      plan.tenant_id,
+      plan.id,
     ),
   ]);
   return {
@@ -1239,6 +1529,13 @@ async function mapPlanResult(
     decidedAt: plan.decided_at ?? undefined,
     decisionReason: plan.decision_reason ?? undefined,
     idempotentReplay,
+    policyReceipt: policyReceipt
+      ? {
+          id: policyReceipt.id,
+          fingerprint: policyReceipt.receipt_fingerprint,
+          schemaVersion: conversationActionPlanPolicyReceiptSchemaVersion,
+        }
+      : undefined,
     mission: mission
       ? {
           workflowRunId: mission.id,

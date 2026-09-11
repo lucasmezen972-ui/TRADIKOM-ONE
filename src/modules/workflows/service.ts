@@ -1,5 +1,8 @@
 import type { DbClient } from "@/lib/db";
-import { withTenantDbTransaction } from "@/db/tenant-context";
+import {
+  withTenantDbTransaction,
+  withTenantSystemDbTransaction,
+} from "@/db/tenant-context";
 import { id, nowIso, safeJson } from "@/lib/security";
 import type {
   Role,
@@ -12,6 +15,10 @@ import type {
 } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import { findAccessibleConversationThreadRow } from "@/modules/conversation-hub/repository";
+import {
+  assertConversationActionPlanWorkflowPolicy,
+  isConversationActionPlanWorkflowRun,
+} from "@/modules/orchestrator/policy-enforcement";
 import { findActionPlanRow } from "@/modules/orchestrator/repository";
 import { assertTenantAccess } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows/errors";
@@ -24,6 +31,7 @@ import {
   findActiveDomainEventQueueRow,
   findLatestFailedWorkflowActionCursor,
   findFailedDomainEventRow,
+  findDomainEventById,
   findActiveManualResumeEvent,
   findPendingApprovalForRun,
   findWorkflowRunById,
@@ -33,9 +41,11 @@ import {
   listFailedDomainEventRows,
   listWorkflowRunStepRows,
   listWorkflowRunRows,
+  lockWorkflowRunById,
   requeueFailedDomainEvent,
   updateApprovalStatus,
   updateWorkflowRunStatus,
+  type DomainEventRow,
   type WorkflowRunRow,
 } from "@/modules/workflows/repository";
 import {
@@ -46,6 +56,10 @@ import {
   type WorkflowQueueEventControlInput,
   type WorkflowRunControlInput,
 } from "@/modules/workflows/schemas";
+import {
+  workflowDefinitionSchema,
+  type WorkflowEvent,
+} from "@/modules/workflows/types";
 
 const workflowControlRoles: Role[] = ["owner", "administrator", "manager"];
 
@@ -142,6 +156,7 @@ export async function cancelWorkflowRun(
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
     await assertWorkflowRunAccess(transaction, userId, tenantId, run);
+    assertGenericWorkflowRunControlAllowed(run);
 
     if (isTerminalStatus(run.status)) {
       throw new WorkflowError(
@@ -185,6 +200,7 @@ export async function approveWorkflowRun(
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
     await assertWorkflowRunAccess(transaction, userId, tenantId, run);
+    assertGenericWorkflowRunControlAllowed(run);
 
     if (run.status !== "approval_required") {
       throw new WorkflowError(
@@ -236,6 +252,7 @@ export async function rejectWorkflowRun(
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
     const run = await requireWorkflowRun(transaction, tenantId, input);
     await assertWorkflowRunAccess(transaction, userId, tenantId, run);
+    assertGenericWorkflowRunControlAllowed(run);
 
     if (run.status !== "approval_required") {
       throw new WorkflowError(
@@ -277,15 +294,77 @@ export async function requestManualWorkflowRetry(
   tenantId: string,
   input: WorkflowRunControlInput,
 ) {
-  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+  const protectedConversationRun = await withTenantDbTransaction(
+    db,
+    tenantId,
+    userId,
+    async (transaction) => {
+      await assertTenantAccess(
+        transaction,
+        userId,
+        tenantId,
+        workflowControlRoles,
+      );
+      const run = await requireWorkflowRun(transaction, tenantId, input);
+      await assertWorkflowRunAccess(transaction, userId, tenantId, run);
+      return isConversationActionPlanWorkflowRun(run);
+    },
+  );
+  const runInTransaction = protectedConversationRun
+    ? withTenantSystemDbTransaction
+    : withTenantDbTransaction;
+  return runInTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, workflowControlRoles);
-    const run = await requireWorkflowRun(transaction, tenantId, input);
+    const parsed = workflowRunControlSchema.parse(input);
+    const run = await lockWorkflowRunById(transaction, tenantId, parsed.runId);
+    if (!run) {
+      throw new WorkflowError(
+        "workflow_run_not_found",
+        "Execution workflow introuvable.",
+      );
+    }
     await assertWorkflowRunAccess(transaction, userId, tenantId, run);
+    const activeManualResumeEvent =
+      run.status === "waiting"
+        ? await findActiveManualResumeEvent(transaction, tenantId, run.id)
+        : null;
+    const conversationRun = isConversationActionPlanWorkflowRun(run);
+    const failedCursor = conversationRun
+      ? await findLatestFailedWorkflowActionCursor(
+          transaction,
+          tenantId,
+          run.id,
+        )
+      : null;
 
-    if (
-      run.status === "waiting" &&
-      (await findActiveManualResumeEvent(transaction, tenantId, run.id))
-    ) {
+    if (conversationRun) {
+      const activePayload = safeJson<Record<string, unknown>>(
+        activeManualResumeEvent?.payload,
+        {},
+      );
+      const sourceEventId =
+        failedCursor?.eventId ?? stringValue(activePayload.sourceEventId);
+      const sourceEvent = sourceEventId
+        ? await findDomainEventById(transaction, tenantId, sourceEventId)
+        : null;
+      const definition = workflowDefinitionSchema.safeParse(
+        safeJson<Record<string, unknown>>(run.definition_snapshot, {}),
+      );
+      if (!sourceEvent || !definition.success) {
+        throw new WorkflowError(
+          "workflow_run_not_actionable",
+          "La preuve autorisée de cette mission est introuvable.",
+        );
+      }
+      await assertConversationActionPlanWorkflowPolicy(transaction, {
+        stage: "manual_retry",
+        definition: definition.data,
+        event: toWorkflowEvent(sourceEvent),
+        actorId: userId,
+      });
+    }
+
+    if (run.status === "waiting" && activeManualResumeEvent) {
       return { idempotentReplay: true as const };
     }
 
@@ -312,20 +391,22 @@ export async function requestManualWorkflowRetry(
       "waiting",
       { actorId: userId },
     );
-    const failedCursor = await findLatestFailedWorkflowActionCursor(
-      transaction,
-      tenantId,
-      run.id,
-    );
+    const retryCursor =
+      failedCursor ??
+      (await findLatestFailedWorkflowActionCursor(
+        transaction,
+        tenantId,
+        run.id,
+      ));
 
-    if (failedCursor) {
+    if (retryCursor) {
       await enqueueWorkflowResumeEvent(transaction, {
         tenantId,
         runId: run.id,
         actorId: userId,
-        sourceEventId: failedCursor.eventId,
+        sourceEventId: retryCursor.eventId,
         correlationId: `workflow.manual_retry:${run.id}`,
-        resumeFromActionIndex: failedCursor.actionIndex,
+        resumeFromActionIndex: retryCursor.actionIndex,
         reason: "manual_retry",
         resumeKey: `retry${Number(run.retry_count) + 1}`,
       });
@@ -506,6 +587,18 @@ export async function retryWorkflowDeadLetter(
       failedEvent,
       "dead_letter",
     );
+    if (
+      await isConversationActionPlanWorkflowDomainEvent(
+        transaction,
+        tenantId,
+        failedEvent,
+      )
+    ) {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Cette mission se relance uniquement depuis son plan Conversation.",
+      );
+    }
 
     const requeued = await requeueFailedDomainEvent(transaction, {
       tenantId,
@@ -565,6 +658,18 @@ export async function cancelWorkflowQueueEvent(
       activeEvent,
       "queue",
     );
+    if (
+      await isConversationActionPlanWorkflowDomainEvent(
+        transaction,
+        tenantId,
+        activeEvent,
+      )
+    ) {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Cette mission se contrôle uniquement depuis son plan Conversation.",
+      );
+    }
 
     const cancelled = await cancelActiveDomainEvent(transaction, {
       tenantId,
@@ -613,6 +718,28 @@ async function requireWorkflowRun(
   }
 
   return run;
+}
+
+function assertGenericWorkflowRunControlAllowed(run: WorkflowRunRow) {
+  if (!isConversationActionPlanWorkflowRun(run)) return;
+  throw new WorkflowError(
+    "workflow_run_not_actionable",
+    "Cette mission se contrôle uniquement depuis son plan Conversation.",
+  );
+}
+
+async function isConversationActionPlanWorkflowDomainEvent(
+  db: DbClient,
+  tenantId: string,
+  event: WorkflowDomainEventAccessRow,
+) {
+  if (event.event_type === "conversation.plan.execute") return true;
+  if (event.event_type !== "workflow.resume") return false;
+  const payload = safeJson<Record<string, unknown>>(event.payload, {});
+  const runId = stringValue(payload.runId);
+  if (!runId) return true;
+  const run = await findWorkflowRunById(db, tenantId, runId);
+  return !run || isConversationActionPlanWorkflowRun(run);
 }
 
 async function requirePendingApproval(
@@ -855,6 +982,19 @@ function safeDeadLetterError(value: string | null) {
       "$1=[redacted]",
     )
     .slice(0, 280);
+}
+
+function toWorkflowEvent(row: DomainEventRow): WorkflowEvent {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    actorId: row.actor_id,
+    type: row.event_type,
+    payload: safeJson<Record<string, unknown>>(row.payload, {}),
+    idempotencyKey: row.idempotency_key,
+    correlationId: row.correlation_id,
+    causationId: row.causation_id ?? undefined,
+  };
 }
 
 function stringValue(value: unknown) {

@@ -14,12 +14,37 @@ export type MockCapabilityDefinition = GenericCapabilityDefinition;
 // Alias de compatibilité pour les plans OS-1 déjà persistés.
 export const os1MockCapabilityCatalog = os3MockCapabilityCatalog;
 
-const planRoles: Role[] = [
-  "owner",
-  "administrator",
-  "manager",
-  "collaborator",
-];
+export const conversationActionPlanProviderAllowlist = Object.freeze([
+  "tradikom_mock",
+] as const);
+export type ConversationActionPlanProviderKey =
+  (typeof conversationActionPlanProviderAllowlist)[number];
+
+export const conversationActionPlanAllowedRoles: readonly Role[] =
+  Object.freeze([
+    "administrator",
+    "collaborator",
+    "manager",
+    "owner",
+  ]);
+
+export function resolveConversationPlanProviderPreference(
+  providerPreference: readonly string[] = [],
+): ConversationActionPlanProviderKey {
+  if (providerPreference.length === 0) {
+    return conversationActionPlanProviderAllowlist[0];
+  }
+  if (
+    providerPreference.length === 1 &&
+    providerPreference[0] === conversationActionPlanProviderAllowlist[0]
+  ) {
+    return conversationActionPlanProviderAllowlist[0];
+  }
+  throw new OrchestratorError(
+    "orchestrator_provider_not_allowed",
+    "La préférence de fournisseur n'est pas autorisée pour ce plan.",
+  );
+}
 
 export function validateActionPlan(
   input: ActionPlan,
@@ -29,7 +54,7 @@ export function validateActionPlan(
     catalog?: MockCapabilityDefinition[];
   },
 ) {
-  if (!planRoles.includes(context.role)) {
+  if (!conversationActionPlanAllowedRoles.includes(context.role)) {
     throw new OrchestratorError(
       "orchestrator_permission_denied",
       "Votre rôle ne permet pas de préparer ce plan.",
@@ -51,6 +76,9 @@ export function validateActionPlan(
 
   const catalog = context.catalog ?? os3MockCapabilityCatalog;
   const validatedSteps = plan.steps.map((step) => {
+    const providerKey = resolveConversationPlanProviderPreference(
+      step.providerPreference,
+    );
     const capability = catalog.find((entry) => entry.name === step.capability);
     if (!capability) {
       throw new OrchestratorError(
@@ -79,7 +107,7 @@ export function validateActionPlan(
       );
     }
     capability.inputSchema.parse(step.input);
-    return { step, capability };
+    return { step, capability, providerKey };
   });
 
   const approvalRequired = validatedSteps.some(
@@ -89,6 +117,7 @@ export function validateActionPlan(
     plan,
     executionEnvironment: "mock" as const,
     estimatedExternalCost: 0,
+    providerKey: conversationActionPlanProviderAllowlist[0],
     approval: approvalRequired
       ? {
           mode: "single" as const,
@@ -96,8 +125,9 @@ export function validateActionPlan(
             "Une seule validation confirme l'ensemble du plan immuable.",
         }
       : { mode: "none" as const, summary: "Aucune validation requise." },
-    capabilities: validatedSteps.map(({ capability }) => ({
+    capabilities: validatedSteps.map(({ capability, providerKey }) => ({
       name: capability.name,
+      providerKey,
       mode: capability.mode,
       risk: capability.risk,
       environment: capability.executionEnvironment,

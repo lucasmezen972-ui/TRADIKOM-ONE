@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
-import { getDatabaseUrl } from "@/db/client";
-import { withSystemTransaction } from "@/db/tenant-context";
+import { withSystemDbTransaction } from "@/db/tenant-context";
 import { getDb, type DbClient } from "@/lib/db";
 import type { DiscoveryTransport } from "@/modules/api-intelligence/discovery/fetcher";
 import {
@@ -257,19 +256,6 @@ async function runWithRuntimeDatabase(
   discoveryTransport?: DiscoveryTransport,
   mediaImportDependencies?: ChannelProviderMediaImportDependencies,
 ) {
-  if (getDatabaseUrl()) {
-    await getDb();
-    return withSystemTransaction((db) =>
-      runWithClient(
-        db,
-        batchSize,
-        now,
-        discoveryTransport,
-        mediaImportDependencies,
-      ),
-    );
-  }
-
   const db = await getDb();
   return runWithClient(
     db,
@@ -287,19 +273,27 @@ async function runWithClient(
   discoveryTransport?: DiscoveryTransport,
   mediaImportDependencies?: ChannelProviderMediaImportDependencies,
 ) {
-  const pendingBefore = await getPendingDomainEventCount(db, now);
-  const summary = await processPendingDomainEvents(db, { limit, now });
-  const sourceRechecks = await processDueApiSourceRechecks(db, {
-    limit: Math.min(limit, 3),
-    now,
-    transport: discoveryTransport,
-  });
-  const mediaImports = await processMetaWhatsAppMediaImportsSystemWorker(
-    db,
-    mediaImportDependencies,
-    { limit, now },
+  const pendingBefore = await withSystemDbTransaction(db, (transaction) =>
+    getPendingDomainEventCount(transaction, now),
   );
-  const pendingAfter = await getPendingDomainEventCount(db, now);
+  const summary = await processPendingDomainEvents(db, { limit, now });
+  const sourceRechecks = await withSystemDbTransaction(db, (transaction) =>
+    processDueApiSourceRechecks(transaction, {
+      limit: Math.min(limit, 3),
+      now,
+      transport: discoveryTransport,
+    }),
+  );
+  const mediaImports = await withSystemDbTransaction(db, (transaction) =>
+    processMetaWhatsAppMediaImportsSystemWorker(
+      transaction,
+      mediaImportDependencies,
+      { limit, now },
+    ),
+  );
+  const pendingAfter = await withSystemDbTransaction(db, (transaction) =>
+    getPendingDomainEventCount(transaction, now),
+  );
 
   return {
     pendingBefore,

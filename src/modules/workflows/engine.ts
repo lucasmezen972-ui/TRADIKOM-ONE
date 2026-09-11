@@ -1,6 +1,10 @@
 import type { DbClient } from "@/lib/db";
 import { id, nowIso, safeJson, toJson } from "@/lib/security";
 import { recordAuditLog } from "@/modules/audit";
+import {
+  assertConversationActionPlanWorkflowPolicy,
+  isConversationActionPlanWorkflowRun,
+} from "@/modules/orchestrator/policy-enforcement";
 import { executeWorkflowAction } from "@/modules/workflows/actions";
 import { WorkflowError } from "@/modules/workflows/errors";
 import {
@@ -12,6 +16,7 @@ import {
   findWorkflowRunById,
   insertWorkflowRun,
   insertWorkflowRunStep,
+  lockWorkflowRunById,
   updateWorkflowRunStatus,
 } from "@/modules/workflows/repository";
 import {
@@ -52,19 +57,11 @@ export const leadFollowUpWorkflow: WorkflowDefinition =
 
 export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
   const now = nowIso();
-  const existing = await db.query<{ id: string }>(
-    "select id from domain_events where tenant_id = $1 and idempotency_key = $2 limit 1",
-    [event.tenantId, event.idempotencyKey],
-  );
-
-  if (existing.rows[0]) {
-    return false;
-  }
-
-  await db.query(
+  const inserted = await db.query<{ id: string }>(
     `insert into domain_events (id, tenant_id, actor_id, event_type, payload, status, attempts, idempotency_key, correlation_id, causation_id, next_run_at, last_error, created_at, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-     on conflict (tenant_id, idempotency_key) do nothing`,
+     on conflict (tenant_id, idempotency_key) do nothing
+     returning id`,
     [
       event.id,
       event.tenantId,
@@ -83,7 +80,7 @@ export async function enqueueDomainEvent(db: DbClient, event: WorkflowEvent) {
     ],
   );
 
-  return true;
+  return inserted.rows.length === 1;
 }
 
 export async function enqueueWorkflowResumeEvent(
@@ -236,6 +233,11 @@ export async function executeWorkflowDefinition(
   event: WorkflowEvent,
 ) {
   const parsedDefinition = workflowDefinitionSchema.parse(definition);
+  await assertConversationActionPlanWorkflowPolicy(db, {
+    stage: "workflow_start",
+    definition: parsedDefinition,
+    event,
+  });
   const eventInserted = await enqueueDomainEvent(db, event);
 
   if (!eventInserted) {
@@ -336,13 +338,37 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
   }
 
   const payload = parseResumePayload(event.payload);
-  const run = await findWorkflowRunById(db, event.tenantId, payload.runId);
+  const run = await lockWorkflowRunById(db, event.tenantId, payload.runId);
 
   if (!run) {
     throw new WorkflowError(
       "workflow_run_not_found",
       "Execution workflow introuvable.",
     );
+  }
+
+  let definition: WorkflowDefinition | null = null;
+  let sourceWorkflowEvent: WorkflowEvent | null = null;
+  if (isConversationActionPlanWorkflowRun(run)) {
+    definition = await resolveRunDefinition(db, event.tenantId, run);
+    const sourceEvent = await findDomainEventById(
+      db,
+      event.tenantId,
+      payload.sourceEventId,
+    );
+    if (!sourceEvent) {
+      throw new WorkflowError(
+        "workflow_run_not_actionable",
+        "Evenement source introuvable pour la reprise workflow.",
+      );
+    }
+    sourceWorkflowEvent = toWorkflowEvent(sourceEvent);
+    await assertConversationActionPlanWorkflowPolicy(db, {
+      stage: "workflow_resume",
+      definition,
+      event: sourceWorkflowEvent,
+      actorId: event.actorId,
+    });
   }
 
   if (isTerminalRunStatus(run.status)) {
@@ -362,7 +388,7 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
     return null;
   }
 
-  const definition = await resolveRunDefinition(db, event.tenantId, run);
+  definition ??= await resolveRunDefinition(db, event.tenantId, run);
 
   const sourceEvent = await findDomainEventById(
     db,
@@ -385,7 +411,7 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
     error: null,
   });
 
-  const sourceWorkflowEvent = toWorkflowEvent(sourceEvent);
+  sourceWorkflowEvent ??= toWorkflowEvent(sourceEvent);
 
   try {
     const terminal = await runWorkflowActions(db, {
@@ -415,6 +441,56 @@ export async function resumeWorkflowRun(db: DbClient, event: WorkflowEvent) {
     });
     throw error;
   }
+}
+
+export async function markWorkflowResumeTerminalFailure(
+  db: DbClient,
+  event: WorkflowEvent,
+  input: { error: string; attempts: number },
+) {
+  if (event.type !== workflowResumeEventType) {
+    return false;
+  }
+
+  let payload: ReturnType<typeof parseResumePayload>;
+  try {
+    payload = parseResumePayload(event.payload);
+  } catch {
+    return false;
+  }
+
+  const run = await lockWorkflowRunById(db, event.tenantId, payload.runId);
+  if (!run || isTerminalRunStatus(run.status)) {
+    return false;
+  }
+
+  const failedAt = nowIso();
+  await insertWorkflowRunStep(db, {
+    id: id("step"),
+    tenantId: event.tenantId,
+    runId: run.id,
+    actionName: "workflow.resume",
+    status: "failed",
+    metadata: {
+      eventId: payload.sourceEventId,
+      resumeEventId: event.id,
+      actionIndex: payload.resumeFromActionIndex,
+      reason: payload.reason,
+      failureClassification: "max_attempts_exceeded",
+    },
+    attempts: Math.max(1, Math.floor(input.attempts)),
+    error: input.error,
+    createdAt: failedAt,
+  });
+  await updateWorkflowRunStatus(db, {
+    tenantId: event.tenantId,
+    runId: run.id,
+    status: "failed",
+    summary: "La reprise du workflow a échoué après plusieurs tentatives.",
+    error: input.error,
+    incrementRetry: true,
+  });
+  return true;
 }
 
 async function resolveRunDefinition(

@@ -253,6 +253,24 @@ export async function findAccessibleConversationThreadRow(
   return result.rows[0] ?? null;
 }
 
+export async function lockConversationThreadAccessGrant(
+  db: DbClient,
+  tenantId: string,
+  userId: string,
+  thread: ConversationThreadRow,
+) {
+  if (thread.tenant_id !== tenantId) return false;
+  if (thread.visibility_scope === "tenant") return true;
+  const result = await db.query<{ granted: number }>(
+    `select 1 as granted
+     from conversation_thread_access_grants
+     where tenant_id = $1 and thread_id = $2 and user_id = $3 and scope = $4
+     for share`,
+    [tenantId, thread.id, userId, thread.visibility_scope],
+  );
+  return result.rows.length === 1;
+}
+
 export async function listAccessibleConversationThreadRows(
   db: DbClient,
   tenantId: string,

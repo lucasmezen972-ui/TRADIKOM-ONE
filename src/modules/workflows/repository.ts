@@ -272,6 +272,23 @@ export async function findWorkflowRunById(
   return result.rows[0] ?? null;
 }
 
+export async function lockWorkflowRunById(
+  db: DbClient,
+  tenantId: string,
+  runId: string,
+) {
+  const result = await db.query<WorkflowRunRow>(
+    `select *
+     from workflow_runs
+     where tenant_id = $1 and id = $2
+     limit 1
+     for update`,
+    [tenantId, runId],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function findWorkflowRunByKey(
   db: DbClient,
   tenantId: string,
