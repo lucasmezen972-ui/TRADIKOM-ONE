@@ -1,5 +1,35 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 11 septembre 2026, 07:06 UTC
+
+- Branche `codex/tradikom-one-os`; commit applicatif local `9879cae7e8bd0c9e598cd1c35ac55089f7a29b21`. Seule la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` a été utilisée; `tmp/` est intact, non suivi et hors index.
+- Le reçu de policy serveur est append-only, immuable et versionné. Il lie exactement tenant, plan/fingerprint, validation, catalogue/empreinte, capacités, unique fournisseur `tradikom_mock`, scopes, rôle, principal et risque. Il est émis atomiquement avec l'approbation, ou avec la création pour `approval:none`; aucun reçu n'est créé au rejet.
+- Trois migrations additives et leurs miroirs runtime ajoutent le reçu, ses relations tenant-first, sa RLS et dix-huit politiques restrictives d'écriture pour les plans, étapes, validations, missions et événements Conversation. Les écritures directes utilisateur sont fermées, les suppressions indirectes ne peuvent pas effacer une preuve active et la suppression explicite du tenant reste possible.
+- La policy est recalculée avant exécution, appel direct du moteur, reprise durable, relance manuelle et finalisation. Une dérive du plan, des étapes, de la validation, du catalogue, du fournisseur, du rôle, du membership, des scopes, de l'événement, de la mission ou du résultat échoue avant provider et nouvel effet métier. Les anciens plans approuvés sans reçu ne sont pas régularisés silencieusement.
+- L'enqueue concurrent d'un événement accorde l'ownership à une seule insertion. Le worker rend atomiques les effets du handler et le succès de l'événement. Après épuisement d'une reprise, la mission `failed`, une preuve terminale contenant le curseur sûr et la lettre morte sont persistées ensemble; la relance manuelle reprend ensuite l'action exacte.
+- Preuves locales : 15 fichiers ciblés, 86 tests verts et 7 tests PostgreSQL ignorés faute de `DATABASE_URL`; suite exhaustive de 159 fichiers/874 tests verts et 13 fichiers/31 tests ignorés, soit 905 tests sans échec. ESLint, TypeScript, build production factice, continuity-check et diff check sont verts. Audit : trois avis modérés (`qs`, `csv-parse`), zéro high/critical. Trois revues indépendantes ne trouvent plus de défaut P1/P2.
+- La publication fast-forward et la CI autoritative PostgreSQL/RLS, build et 20 Playwright restent nécessaires avant de classer cette tranche « prouvée CI ». Aucun secret, token, fournisseur réel, Graph, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 43-44, 46, 48, 69-71 | Continuer le parcours Conversation par des actions durables, des validations simples et une preuve policy utilisable, selon la Definition of Done et la matrice | Reçu déterministe émis avec la décision, parcours `tradikom_mock` valide, rejeu idempotent et récupération terminale prouvés; 905 tests locaux sans échec | CI PostgreSQL/RLS et 20 Playwright du futur head encore requis |
+| 10-12, 15-18, 22, 35-38 | Préserver tenant/RLS, minimiser les données, fermer les capacités et fournisseurs, auditer sans contenu sensible et refuser toute dérive avant effet | Reçu tenant-first append-only; 18 policies restrictives; catalogue canonique; fournisseur unique; revalidation plan/validation/rôle/scope/mission; tests de falsification, cross-tenant et appels directs | Sept tests PostgreSQL ignorés localement faute de `DATABASE_URL`; la CI doit les exécuter avec rôles non propriétaires |
+| 64-68, 69-71 | Garder un runtime provider explicite, idempotent et honnête, puis distinguer livré, réel, sandbox, mock, bloqué humain et hors périmètre | Provider `tradikom_mock` profondément figé; aucun `fetch`; états et limites documentés; lint, typecheck, build, audit et continuity-check verts | Réel = aucun; sandbox = aucune; Meta reste bloqué par le SMS et exige une autorisation distincte avant token ou Graph |
+
+Le PDF canonique reste conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification de la tranche courante
+
+- Livré et prouvé localement : reçu de policy, enforcement, RLS d'écriture, atomicité worker et récupération terminale.
+- Réel connecté : aucun fournisseur ou modèle; aucune clé réelle enregistrée et aucun appel Graph.
+- Sandbox : aucune configurée ou appelée.
+- Mock : générateur déterministe serveur et capacités `tradikom_mock`, sans réseau fournisseur.
+- Bloqué humain : saisie directe du SMS Meta, inventaire officiel en lecture seule puis confirmation immédiate avant tout token persistant ou effet Graph.
+- Hors périmètre : fournisseur réel, Graph, message externe, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+- Écarts non bloquants : trois avis modérés de dépendances; publication et preuve CI encore en attente.
+
 ## Checkpoint applicatif — 11 septembre 2026, 03:27 UTC
 
 - Branche `codex/tradikom-one-os`; commit applicatif `dc9cf0c641bab56ac66d451aac5b18368ef8c12a` publié strictement en fast-forward depuis `897c5a0fa61ad03a00bc10fc3e6cc5aee0c9add7`, puis correctif de preuve `84a52a2bebf51c546e1f9f27dbf98dcb79dade20`. Seule la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` a été utilisée; `tmp/` est intact, non suivi et hors index.

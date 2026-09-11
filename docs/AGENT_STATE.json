@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-11T04:27:45.000Z",
+  "updatedAt": "2026-09-11T07:06:50.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "84a52a2bebf51c546e1f9f27dbf98dcb79dade20",
+  "lastCommit": "9879cae7e8bd0c9e598cd1c35ac55089f7a29b21",
   "publishedHeadObserved": "c3bf26ae2f1705d60b8cff838cd10b2002cd24ec",
-  "status": "os5_policy_receipt_in_progress_human_meta_sms_pending",
+  "status": "os5_policy_receipt_local_proven_ci_pending_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La validation unique stricte et sa confirmation d'état durable sont livrées, publiées et prouvées CI sur 84a52a2. Poursuivre le même jalon page 48 par un reçu de policy serveur append-only, immuable et versionné, une allowlist de fournisseur fermée et une revalidation avant exécution, appel direct du moteur, reprise durable et finalisation, sans fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense.",
+  "currentObjective": "Le reçu de policy serveur append-only, immuable et versionné, l'allowlist tradikom_mock et la revalidation avant exécution, appel direct, reprise et finalisation sont implémentés et prouvés localement dans 9879cae. Publier strictement en fast-forward, obtenir les preuves PostgreSQL/RLS et Playwright de la CI, puis reprendre la première lacune applicative encore non terminée de l'ordre page 48 sans fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -33,8 +33,8 @@
       "evidenceExpected": "Attendu avant clôture de la prochaine tranche : reçu strictement serveur émis atomiquement avec l'approbation, ou avec la création pour approval none, jamais lors d'un rejet; stockage tenant-first sous RLS, une ligne maximum par plan, JSON canonique et empreinte vérifiés, aucune mise à jour possible. Tests adversariaux : JSON ou hash falsifié, reçu du plan A pour plan B, cross-tenant, fournisseur inconnu ou multiple, scope retiré, rôle ou membership révoqué, validation modifiée, version ou empreinte de catalogue changée, étape ou plan incohérent, appel direct sans reçu, dérive avant reprise worker et finalisation forgée. Chaque refus précède provider, fetch et nouvel effet métier; le parcours tradikom_mock valide, la reprise et le rejeu idempotent restent verts. Preuves tenant/RLS, audit sans donnée sensible, tests ciblés et PostgreSQL, lint, TypeScript, build, Playwright, continuity-check, diff check et CI attendus verts."
     }
   },
-  "nextAction": "Produire côté serveur un reçu de policy append-only, immuable et versionné lié au tenant, au plan/fingerprint, à la validation, au catalogue, au fournisseur canonique tradikom_mock, aux scopes, au rôle et au risque; fermer providerPreference par allowlist et revalider avant exécution, appel direct du moteur, reprise et finalisation. Le SMS Meta reste un checkpoint humain parallèle.",
-  "nextFile": "src/modules/orchestrator/capabilities.ts",
+  "nextAction": "Publier 9879cae avec ce checkpoint documentaire, attendre la CI PostgreSQL/RLS et Playwright, corriger tout échec réel, puis relire la page 48 pour sélectionner sa première lacune applicative restante. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
+  "nextFile": "docs/DRIFT_REPORT.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -2054,6 +2054,26 @@
     {
       "command": "PR #11 après preuve de la validation unique",
       "status": "open_draft_mergeable_clean_head_84a52a2_checks_green_no_merge_deploy_graph_secret_token_or_message"
+    },
+    {
+      "command": "reçu de policy et enforcement OS-5 dans 9879cae7e8bd0c9e598cd1c35ac55089f7a29b21",
+      "status": "passed_local_append_only_immutable_versioned_receipt_closed_tradikom_mock_allowlist_exact_plan_approval_catalog_role_scope_risk_binding_revalidated_execute_direct_resume_finalize_historical_receipt_missing_fail_closed"
+    },
+    {
+      "command": "tests ciblés finaux du reçu, RLS, workflow et worker",
+      "status": "passed_15_files_86_tests_7_postgres_tests_skipped_without_database_url_zero_failures"
+    },
+    {
+      "command": "pnpm test exhaustif après correction de récupération terminale",
+      "status": "passed_159_files_874_tests_13_files_31_tests_skipped_905_total_zero_failures"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, build production factice, audit high, continuity-check et diff check",
+      "status": "passed_zero_lint_type_build_or_diff_errors_ready_zero_warnings_zero_high_critical_three_moderate"
+    },
+    {
+      "command": "revues indépendantes RLS, atomicité et récupération terminale",
+      "status": "passed_no_remaining_p1_p2_terminal_resume_failure_and_dead_letter_atomic_manual_retry_recoverable"
     }
   ],
   "humanBlockers": [
