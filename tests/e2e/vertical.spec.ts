@@ -1391,7 +1391,7 @@ async function runConversationJourney(
     ).toBeVisible();
     await expect(
       page.getByText(
-        "Exécution mock terminée : contact simulé retrouvé et tâche simulée préparée. Aucun effet externe.",
+        "Exécution mock terminée : toutes les étapes simulées ont été vérifiées. Aucun effet externe.",
         { exact: true },
       ),
     ).toBeVisible();
