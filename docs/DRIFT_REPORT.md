@@ -1,5 +1,36 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
+## Checkpoint applicatif — 11 septembre 2026, 03:27 UTC
+
+- Branche `codex/tradikom-one-os`; commit applicatif `dc9cf0c641bab56ac66d451aac5b18368ef8c12a` publié strictement en fast-forward depuis `897c5a0fa61ad03a00bc10fc3e6cc5aee0c9add7`, puis correctif de preuve `84a52a2bebf51c546e1f9f27dbf98dcb79dade20`. Seule la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` a été utilisée; `tmp/` est intact, non suivi et hors index.
+- La décision Conversation est maintenant parsée par une enum fermée `approved|rejected` dans la frontière d'erreur publique. Une valeur malformée échoue en français avant l'appel au service, sans revalidation, redirection, audit ou message de décision; elle ne devient plus un refus implicite.
+- Toutes les redirections de plan utilisent le fil et l'identifiant retournés par le service. Une confirmation visuelle exige l'identifiant exact d'un plan accessible dans le fil tenant et un état durable cohérent. Créé, approuvé et refusé exigent l'absence de mission; exécuté exige une mission réussie. Si un autre plan est créé entre-temps, le reçu cohérent reste attaché au plan demandé et le repli sans reçu montre le dernier plan.
+- Cette confirmation est une attestation de l'état courant, pas une preuve causale ou non répudiable de la navigation; elle est rejouable par URL et n'autorise aucune mutation.
+- Le refus initial est visible et causalement testé : validation rejetée, deux étapes annulées, tentative d'exécution refusée, zéro workflow, événement d'exécution, résultat ou tâche, et canaris provider/`fetch` non appelés. L'audit `conversation.plan_rejected` est comparé à l'allowlist exacte `threadId`, `approvalId`, `decision`, `planFingerprint`; le motif métier n'y est jamais inscrit.
+- Le parcours vertical desktop et mobile utilise le vrai formulaire, affiche « Refusé » et deux « Annulée », retire Exécuter/Reprendre, refuse un faux reçu `executed`, masque les codes internes derrière des libellés français et exige zéro débordement horizontal. Aucun réseau Meta n'est observé.
+- Preuves locales : 3 fichiers/27 tests ciblés verts; suite exhaustive 165 fichiers, 849 tests verts et 29 ignorés sans PostgreSQL local sur 878; canari provider ciblé vert après le dernier durcissement. ESLint, TypeScript, build production factice, audit high, continuity-check et diff check verts; trois avis modérés, zéro high/critical.
+- La continuité distante `34558477110` est verte sur `dc9cf0c`. La CI `34558477111` a validé audit, migrations, sauvegarde/restauration, lint, TypeScript, les 165 fichiers/878 tests PostgreSQL et le build, puis a échoué uniquement parce qu'un sélecteur Playwright recherchait « Rechercher le contact » exactement alors que le texte visible complet est « 1. Rechercher le contact ». Le correctif `84a52a2` utilise les deux libellés numérotés complets. La continuité `34560151763` est verte et la CI `34560151750` est entièrement verte sur ce même head : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 165 fichiers/878 tests PostgreSQL, build production et 20/20 Playwright. Aucun secret, Graph, message externe, endpoint public, fusion, déploiement ou dépense n'a été déclenché.
+
+## Alignement prompt maître
+
+| Pages relues | Exigence | Preuve obtenue | Écarts restants |
+| --- | --- | --- | --- |
+| 3-7, 31-33, 43-44, 46, 48, 69-71 | Continuer l'ordre page 48 par une validation unique, visible, durable, honnête et démontrable dans Conversation | Parse stricte avant service; IDs autoritatifs; confirmation corroborée par l'état durable; refus desktop/mobile avec zéro mission durable et provider non engagé; CI `34560151750` verte avec 165 fichiers/878 tests et 20/20 Playwright | La confirmation URL atteste l'état courant mais pas la causalité et ne sert jamais d'autorisation |
+| 15-18, 32, 35-38, 64-69 | Préserver tenant/RLS, refuser fermé, auditer sans contenu sensible et prouver l'absence d'effet au refus | Plan résolu uniquement parmi les fils accessibles; service revérifie membership et tenant; audit comparé à quatre clés sûres; zéro workflow, événement, résultat, tâche, provider ou `fetch` au refus | Ajouter un reçu de policy serveur append-only/versionné et le revalider avant exécution, appel direct, reprise et finalisation |
+| 15-18, 35-38, 46, 69-71 | Maintenir capacités et fournisseurs sous policy explicite, runtime honnête et matrice adversariale | Runtime `deterministic_mock`/`tradikom_mock`, libellés français et aucun fournisseur réel; URL incohérente, décision malformée et mission contradictoire refusées | Fermer `providerPreference`, figer le provider mock et tester falsification, plan A/B, cross-tenant, fournisseur multiple, scope/rôle/membership/catalogue modifiés et ancien plan sans reçu |
+
+Le PDF canonique reste conforme : 71 pages, SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+
+## Classification de la tranche courante
+
+- Livré, publié et prouvé CI : validation stricte, confirmation d'état durable, refus initial et interface française.
+- Réel connecté : aucun fournisseur ou modèle; aucune clé réelle enregistrée et aucun appel Graph.
+- Sandbox : aucune configurée ou appelée.
+- Mock : générateur déterministe serveur et capacités `tradikom_mock`; fixtures et canaris de test sans réseau fournisseur.
+- Bloqué humain : saisie directe du SMS Meta, inventaire officiel puis confirmation immédiate avant token persistant ou effet Graph.
+- Hors périmètre : fournisseur réel, Graph, message externe, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+- Écart d'infrastructure non bloquant : `pnpm/action-setup@v4` cible encore Node.js 20 et GitHub l'exécute désormais sous Node.js 24; trois avis de dépendances modérés restent suivis, sans high/critical.
+
 ## Checkpoint applicatif — 11 septembre 2026, 01:51 UTC
 
 - Branche `codex/tradikom-one-os`; garde publiée dans `a994b3a1836c0a7b2b74284a986975e58539dd1f`, instantané JSON profond détaché ajouté dans `0967ff15e53a0bd0a3fb3c50e9fe03f97b89eb8f`, puis prévalidation profonde publiée dans `69b667fdc9502e44a6144d8046c343b5dd000fa0`. Local et distant sont synchronisés; la copie stable seule a été utilisée et `tmp/` reste intact, non suivi et hors index.
