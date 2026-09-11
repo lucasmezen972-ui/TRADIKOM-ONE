@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   actionPlanProposalSchema,
   actionPlanSchema,
+  generatedActionPlanEnvelopeSchema,
   type ActionPlan,
 } from "../src/modules/orchestrator";
 
@@ -118,6 +119,193 @@ describe("schémas de l'orchestrateur", () => {
     expect(actionPlanSchema.safeParse(customSerialization).success).toBe(false);
   });
 
+  it("refuse les propriétés actives à la racine d'une entrée sans les exécuter", () => {
+    let getterCalls = 0;
+    let toJsonCalls = 0;
+    const withGetter = planFixture();
+    withGetter.steps[0].input = Object.defineProperty({}, "payload", {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return "CANARI-GETTER-NE-PAS-EXECUTER";
+      },
+    });
+
+    const withToJson = planFixture();
+    withToJson.steps[0].input = Object.defineProperty(
+      { query: "contact" },
+      "toJSON",
+      {
+        enumerable: false,
+        value() {
+          toJsonCalls += 1;
+          return "CANARI-TOJSON-NE-PAS-EXECUTER";
+        },
+      },
+    );
+
+    expect(actionPlanSchema.safeParse(withGetter).success).toBe(false);
+    expect(actionPlanSchema.safeParse(withToJson).success).toBe(false);
+    expect(getterCalls).toBe(0);
+    expect(toJsonCalls).toBe(0);
+  });
+
+  it("prévalide le plan entier avant de lire un accesseur", () => {
+    let getterCalls = 0;
+    const plan = Object.defineProperty(
+      { ...planFixture() },
+      "businessGoal",
+      {
+        enumerable: true,
+        get() {
+          getterCalls += 1;
+          return "CANARI-PLAN-GETTER-NE-PAS-EXECUTER";
+        },
+      },
+    );
+
+    expect(actionPlanSchema.safeParse(plan).success).toBe(false);
+    expect(getterCalls).toBe(0);
+  });
+
+  it("projette les descripteurs sans lire les traps get d'un Proxy", () => {
+    let getterCalls = 0;
+    const proxiedPlan = new Proxy(planFixture(), {
+      get(target, key, receiver) {
+        getterCalls += 1;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const proxiedPlanResult = actionPlanSchema.safeParse(proxiedPlan);
+
+    expect(proxiedPlanResult.success).toBe(true);
+    expect(getterCalls).toBe(0);
+
+    const planWithProxiedInput = planFixture();
+    planWithProxiedInput.steps[0].input = new Proxy(
+      { query: "contact sûr" },
+      {
+        get(target, key, receiver) {
+          getterCalls += 1;
+          if (key === "query") return () => "CANARI-GET-NE-PAS-PERSISTER";
+          return Reflect.get(target, key, receiver);
+        },
+      },
+    );
+    const proxiedInputResult = actionPlanSchema.safeParse(planWithProxiedInput);
+
+    expect(proxiedInputResult.success).toBe(true);
+    expect(getterCalls).toBe(0);
+    if (!proxiedInputResult.success) throw proxiedInputResult.error;
+    expect(proxiedInputResult.data.steps[0]?.input).toEqual({
+      query: "contact sûr",
+    });
+  });
+
+  it("refuse une clé normalisée __proto__ sans polluer la sortie", () => {
+    const plan = planFixture();
+    plan.steps[0].input = JSON.parse(
+      '{" __proto__ ":{"polluted":"CANARI-PROTOTYPE"}}',
+    ) as Record<string, unknown>;
+
+    expect(actionPlanSchema.safeParse(plan).success).toBe(false);
+    expect(
+      (Object.prototype as { polluted?: unknown }).polluted,
+    ).toBeUndefined();
+  });
+
+  it("prévalide aussi l'enveloppe générée avant d'en lire les champs", () => {
+    let getterCalls = 0;
+    const envelope = Object.defineProperty(
+      {
+        generationSource: "model",
+        modelReference: "modele-envelope-v1",
+      },
+      "plan",
+      {
+        enumerable: true,
+        get() {
+          getterCalls += 1;
+          return planFixture();
+        },
+      },
+    );
+
+    expect(generatedActionPlanEnvelopeSchema.safeParse(envelope).success).toBe(
+      false,
+    );
+    expect(getterCalls).toBe(0);
+  });
+
+  it("refuse prototypes et symboles à la racine d'une entrée", () => {
+    const withCustomPrototype = planFixture();
+    withCustomPrototype.steps[0].input = Object.assign(
+      Object.create({ inherited: "interdit" }) as Record<string, unknown>,
+      { query: "contact" },
+    );
+
+    const withSymbol = planFixture();
+    const symbolInput: Record<string | symbol, unknown> = { query: "contact" };
+    symbolInput[Symbol("payload")] = "CANARI-SYMBOLE-NE-PAS-PERSISTER";
+    withSymbol.steps[0].input = symbolInput;
+
+    expect(actionPlanSchema.safeParse(withCustomPrototype).success).toBe(false);
+    expect(actionPlanSchema.safeParse(withSymbol).success).toBe(false);
+  });
+
+  it("refuse fermé une réflexion défaillante sans propager l'exception", () => {
+    const plan = planFixture();
+    plan.steps[0].input = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error("CANARI-REFLEXION-NE-PAS-PROPAGER");
+        },
+      },
+    );
+
+    expect(() => actionPlanSchema.safeParse(plan)).not.toThrow();
+    expect(actionPlanSchema.safeParse(plan).success).toBe(false);
+
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    const planWithRevokedProxy = planFixture();
+    planWithRevokedProxy.steps[0].input = revoked.proxy;
+
+    expect(() => actionPlanSchema.safeParse(planWithRevokedProxy)).not.toThrow();
+    expect(actionPlanSchema.safeParse(planWithRevokedProxy).success).toBe(false);
+  });
+
+  it("refuse les tableaux troués ou aux index incohérents", () => {
+    const sparsePlan = planFixture();
+    const sparseFragments = new Array<string>(2);
+    sparseFragments[1] = "fragment";
+    sparsePlan.steps[0].input = { fragments: sparseFragments };
+    expect(actionPlanSchema.safeParse(sparsePlan).success).toBe(false);
+
+    const virtualIndices = new Proxy(new Array<unknown>(2), {
+      ownKeys() {
+        return ["1", "100", "length"];
+      },
+      getOwnPropertyDescriptor(target, key) {
+        if (key === "length") {
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        }
+        return {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value: "fragment",
+        };
+      },
+    });
+    const proxyPlan = planFixture();
+    proxyPlan.steps[0].input = { fragments: virtualIndices };
+
+    expect(() => actionPlanSchema.safeParse(proxyPlan)).not.toThrow();
+    expect(actionPlanSchema.safeParse(proxyPlan).success).toBe(false);
+  });
+
   it("refuse sans exception une entrée JSON excessivement profonde", () => {
     const plan = planFixture();
     let nested: unknown = "feuille";
@@ -128,6 +316,37 @@ describe("schémas de l'orchestrateur", () => {
 
     expect(() => actionPlanSchema.safeParse(plan)).not.toThrow();
     expect(actionPlanSchema.safeParse(plan).success).toBe(false);
+  });
+
+  it("borne les chaînes et clés avant leur sérialisation", () => {
+    const oversizedValuePlan = planFixture();
+    oversizedValuePlan.steps[0].input = { value: "x".repeat(16_001) };
+    expect(actionPlanSchema.safeParse(oversizedValuePlan).success).toBe(false);
+
+    const oversizedKeyPlan = planFixture();
+    oversizedKeyPlan.steps[0].input = {
+      nested: { ["k".repeat(16_001)]: true },
+    };
+    expect(actionPlanSchema.safeParse(oversizedKeyPlan).success).toBe(false);
+  });
+
+  it("accepte les références partagées sérialisables mais refuse les cycles", () => {
+    const sharedProviders: string[] = [];
+    const sharedEvidence = ["Preuve métier partagée"];
+    const planWithSharedValues = planFixture();
+    for (const step of planWithSharedValues.steps) {
+      step.providerPreference = sharedProviders;
+      step.evidenceRequired = sharedEvidence;
+    }
+
+    expect(actionPlanSchema.safeParse(planWithSharedValues).success).toBe(true);
+
+    const cyclicPlan = planFixture();
+    const cyclicInput: Record<string, unknown> = {};
+    cyclicInput.self = cyclicInput;
+    cyclicPlan.steps[0].input = cyclicInput;
+
+    expect(actionPlanSchema.safeParse(cyclicPlan).success).toBe(false);
   });
 
   it("conserve source, version et état d'approbation sans exécuter", () => {

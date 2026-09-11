@@ -61,6 +61,7 @@ import {
   actionPlanExecutionSchema,
   actionPlanListSchema,
   actionPlanSchema,
+  generatedActionPlanEnvelopeSchema,
   type ActionPlanCreation,
   type ActionPlanDecision,
   type ValidatedActionPlan,
@@ -119,23 +120,37 @@ export async function createConversationActionPlan(
       Object.freeze({ ...contextSource }),
     ),
   );
-  const generated = await generator.generate({
-    tenantId: parsed.tenantId,
-    threadId: parsed.threadId,
-    sourceMessageId: parsed.sourceMessageId,
-    sourceText: source.message.text_content,
-    contextSources: generationContextSources,
-  });
+  const generatedResult = generatedActionPlanEnvelopeSchema.safeParse(
+    await generator.generate({
+      tenantId: parsed.tenantId,
+      threadId: parsed.threadId,
+      sourceMessageId: parsed.sourceMessageId,
+      sourceText: source.message.text_content,
+      contextSources: generationContextSources,
+    }),
+  );
+  if (!generatedResult.success) {
+    throw unsafeGeneratedPlanContractError();
+  }
+  const generated = generatedResult.data;
   const generationMetadata = normalizeGeneratedPlanMetadata(
     generated.generationSource,
     generated.modelReference,
   );
-  const validatedGeneratedPlan = actionPlanSchema.parse({
-    ...generated.plan,
+  const generatedPlanResult = actionPlanSchema.safeParse(generated.plan);
+  if (!generatedPlanResult.success) {
+    throw unsafeGeneratedPlanContractError();
+  }
+  const authoritativePlanResult = actionPlanSchema.safeParse({
+    ...generatedPlanResult.data,
     contextSources: generationContextSources.map(
       toActionPlanContextSourceMetadata,
     ),
   });
+  if (!authoritativePlanResult.success) {
+    throw unsafeGeneratedPlanContractError();
+  }
+  const validatedGeneratedPlan = authoritativePlanResult.data;
   const initialGeneratedPlan = cloneValidatedActionPlan(
     validatedGeneratedPlan,
   );
@@ -1287,5 +1302,12 @@ function incoherentGenerationSourceError() {
   return new OrchestratorError(
     "orchestrator_capability_mismatch",
     "La source de génération du plan est incohérente.",
+  );
+}
+
+function unsafeGeneratedPlanContractError() {
+  return new OrchestratorError(
+    "orchestrator_generated_plan_unsafe",
+    "Le plan généré ne respecte pas le contrat de sécurité.",
   );
 }

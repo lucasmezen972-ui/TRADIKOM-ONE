@@ -15,6 +15,7 @@ import {
   listConversationActionPlans,
   requestConversationActionPlanRetry,
   type ActionPlanGenerationContext,
+  type GeneratedActionPlan,
 } from "../src/modules/orchestrator";
 import {
   cancelWorkflowQueueEvent,
@@ -342,6 +343,153 @@ describe("service des plans Conversation", () => {
       ),
     ).rejects.toMatchObject({ code: "orchestrator_capability_mismatch" });
     await expectNoPlanCreationSideEffects(context.db, context.tenantId);
+  });
+
+  it("refuse une entrée active sans exécuter son getter ni créer d'artefact", async () => {
+    const context = await createTenantContext("plan-active-input@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    let getterCalls = 0;
+    const activeInput = Object.defineProperty({}, "query", {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return "CANARI-GETTER-NE-PAS-EXECUTER";
+      },
+    });
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      generate: vi.fn(async (generationContext: ActionPlanGenerationContext) => {
+        const generated = await baseGenerator.generate(generationContext);
+        return {
+          ...generated,
+          generationSource: "model" as const,
+          modelReference: "modele-test-entree-active-v1",
+          plan: {
+            ...generated.plan,
+            steps: generated.plan.steps.map((step, index) =>
+              index === 0 ? { ...step, input: activeInput } : step,
+            ),
+          },
+        };
+      }),
+    };
+
+    const error = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+      { generator },
+    ).catch((caught: unknown) => caught);
+
+    expect(generator.generate).toHaveBeenCalledOnce();
+    expect(getterCalls).toBe(0);
+    expect(error).toMatchObject({ code: "orchestrator_generated_plan_unsafe" });
+    expect(String(error)).not.toContain("CANARI-GETTER");
+    await expectNoPlanCreationSideEffects(context.db, context.tenantId);
+    await expectThreadStatus(context.db, context.tenantId, source.threadId, "open");
+  });
+
+  it("prévalide le plan généré avant de lire un accesseur métier", async () => {
+    const context = await createTenantContext("plan-active-field@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    let getterCalls = 0;
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      generate: vi.fn(async (generationContext: ActionPlanGenerationContext) => {
+        const generated = await baseGenerator.generate(generationContext);
+        return {
+          ...generated,
+          generationSource: "model" as const,
+          modelReference: "modele-test-plan-actif-v1",
+          plan: Object.defineProperty(
+            { ...generated.plan },
+            "businessGoal",
+            {
+              enumerable: true,
+              get() {
+                getterCalls += 1;
+                return "CANARI-PLAN-GETTER-NE-PAS-EXECUTER";
+              },
+            },
+          ),
+        };
+      }),
+    };
+
+    const error = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+      { generator },
+    ).catch((caught: unknown) => caught);
+
+    expect(generator.generate).toHaveBeenCalledOnce();
+    expect(getterCalls).toBe(0);
+    expect(error).toMatchObject({ code: "orchestrator_generated_plan_unsafe" });
+    expect(String(error)).not.toContain("CANARI-PLAN-GETTER");
+    await expectNoPlanCreationSideEffects(context.db, context.tenantId);
+    await expectThreadStatus(context.db, context.tenantId, source.threadId, "open");
+  });
+
+  it("prévalide l'enveloppe générée avant de lire son plan", async () => {
+    const context = await createTenantContext("plan-active-envelope@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    let getterCalls = 0;
+    const generator = {
+      generate: vi.fn(async () =>
+        Object.defineProperty(
+          {
+            generationSource: "model" as const,
+            modelReference: "modele-test-envelope-active-v1",
+          },
+          "plan",
+          {
+            enumerable: true,
+            get() {
+              getterCalls += 1;
+              return createDeterministicActionPlanGenerator();
+            },
+          },
+        ) as GeneratedActionPlan,
+      ),
+    };
+
+    const error = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+      { generator },
+    ).catch((caught: unknown) => caught);
+
+    expect(generator.generate).toHaveBeenCalledOnce();
+    expect(getterCalls).toBe(0);
+    expect(error).toMatchObject({ code: "orchestrator_generated_plan_unsafe" });
+    await expectNoPlanCreationSideEffects(context.db, context.tenantId);
+    await expectThreadStatus(context.db, context.tenantId, source.threadId, "open");
   });
 
   it("persiste l'instantané contrôlé même si le générateur conserve une référence imbriquée", async () => {

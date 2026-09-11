@@ -16,7 +16,20 @@ const capabilityNameSchema = z
   .regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
 const forbiddenInputKey =
   /(authorization|credential|password|secret|token|api[_-]?key)/i;
+const forbiddenJsonObjectKey = /^__proto__$/u;
 const maximumActionPlanInputDepth = 32;
+const maximumActionPlanDepth = maximumActionPlanInputDepth + 3;
+const maximumGeneratedActionPlanDepth = maximumActionPlanDepth + 1;
+const maximumActionPlanJsonProperties = 200_000;
+const maximumActionPlanInputCharacters = 16_000;
+const maximumActionPlanJsonCharacters = 512_000;
+const actionPlanInputKeySchema = z
+  .string()
+  .min(1)
+  .max(120)
+  .refine((key) => key === key.trim(), {
+    message: "Les clés d'entrée ne doivent pas contenir d'espaces superflus.",
+  });
 
 export const capabilityRiskSchema = z.enum([
   "low",
@@ -37,48 +50,68 @@ export const actionPlanContextSourceSchema = z
   })
   .strict();
 
+const actionPlanStepInputSchema = z.preprocess(
+  (rawInput, context) => {
+    const jsonProjection = projectSimpleJsonValue(
+      rawInput,
+      [],
+      new WeakSet<object>(),
+      0,
+      maximumActionPlanInputDepth,
+      {
+        remainingProperties: maximumActionPlanJsonProperties,
+        remainingCharacters: maximumActionPlanInputCharacters,
+      },
+    );
+    if (!jsonProjection.success) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Les entrées de l'étape doivent contenir uniquement des valeurs JSON simples.",
+        path: jsonProjection.path,
+      });
+      return z.NEVER;
+    }
+    return jsonProjection.value;
+  },
+  z
+    .record(actionPlanInputKeySchema, z.unknown())
+    .superRefine((input, context) => {
+      const keys = Object.keys(input);
+      if (keys.length > 32) {
+        context.addIssue({
+          code: "custom",
+          message: "Une étape ne peut pas contenir plus de 32 entrées.",
+        });
+      }
+      const sensitivePath = findSensitiveInputPath(input);
+      if (sensitivePath) {
+        context.addIssue({
+          code: "custom",
+          message: "Les secrets et credentials sont interdits dans un plan.",
+          path: sensitivePath,
+        });
+      }
+      const serialized = safelySerializeInput(input);
+      if (
+        serialized === null ||
+        serialized.length > maximumActionPlanInputCharacters
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "Les entrées de l'étape doivent être sérialisables et bornées.",
+        });
+      }
+    }),
+);
+
 export const actionPlanStepSchema = z
   .object({
     stepId: identifierSchema,
     capability: capabilityNameSchema,
     providerPreference: z.array(identifierSchema).max(5).default([]),
-    input: z
-      .record(z.string().trim().min(1).max(120), z.unknown())
-      .superRefine((input, context) => {
-        const keys = Object.keys(input);
-        if (keys.length > 32) {
-          context.addIssue({
-            code: "custom",
-            message: "Une étape ne peut pas contenir plus de 32 entrées.",
-          });
-        }
-        const invalidJsonPath = findInvalidJsonInputPath(input);
-        if (invalidJsonPath) {
-          context.addIssue({
-            code: "custom",
-            message:
-              "Les entrées de l'étape doivent contenir uniquement des valeurs JSON simples.",
-            path: invalidJsonPath,
-          });
-          return;
-        }
-        const sensitivePath = findSensitiveInputPath(input);
-        if (sensitivePath) {
-          context.addIssue({
-            code: "custom",
-            message: "Les secrets et credentials sont interdits dans un plan.",
-            path: sensitivePath,
-          });
-        }
-        const serialized = safelySerializeInput(input);
-        if (serialized === null || serialized.length > 16_000) {
-          context.addIssue({
-            code: "custom",
-            message:
-              "Les entrées de l'étape doivent être sérialisables et bornées.",
-          });
-        }
-      }),
+    input: actionPlanStepInputSchema,
     risk: capabilityRiskSchema,
     requiresApproval: z.boolean(),
     reversible: z.union([z.boolean(), z.literal("compensation_only")]),
@@ -87,7 +120,7 @@ export const actionPlanStepSchema = z
   })
   .strict();
 
-export const actionPlanSchema = z
+const actionPlanObjectSchema = z
   .object({
     intent: businessTextSchema,
     businessGoal: businessTextSchema,
@@ -147,6 +180,57 @@ export const actionPlanSchema = z
     finalUserMessageDraft: businessTextSchema,
   })
   .strict();
+
+export const actionPlanSchema = z.preprocess(
+  (rawPlan, context) => {
+    const jsonProjection = projectSimpleJsonValue(
+      rawPlan,
+      [],
+      new WeakSet<object>(),
+      0,
+      maximumActionPlanDepth,
+    );
+    if (!jsonProjection.success) {
+      context.addIssue({
+        code: "custom",
+        message: "Le plan doit contenir uniquement des valeurs JSON simples.",
+        path: jsonProjection.path,
+      });
+      return z.NEVER;
+    }
+    return jsonProjection.value;
+  },
+  actionPlanObjectSchema,
+);
+
+export const generatedActionPlanEnvelopeSchema = z.preprocess(
+  (rawEnvelope, context) => {
+    const jsonProjection = projectSimpleJsonValue(
+      rawEnvelope,
+      [],
+      new WeakSet<object>(),
+      0,
+      maximumGeneratedActionPlanDepth,
+    );
+    if (!jsonProjection.success) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "La proposition générée doit contenir uniquement des valeurs JSON simples.",
+        path: jsonProjection.path,
+      });
+      return z.NEVER;
+    }
+    return jsonProjection.value;
+  },
+  z
+    .object({
+      generationSource: z.unknown(),
+      modelReference: z.unknown().optional(),
+      plan: z.unknown(),
+    })
+    .strict(),
+);
 
 export const actionPlanProposalSchema = z
   .object({
@@ -229,8 +313,8 @@ export type ActionPlanContextSource = z.infer<
 >;
 // Le type d'entrée conserve la compatibilité des générateurs et fixtures
 // historiques; `actionPlanSchema.parse` matérialise toujours `contextSources`.
-export type ActionPlan = z.input<typeof actionPlanSchema>;
-export type ValidatedActionPlan = z.output<typeof actionPlanSchema>;
+export type ActionPlan = z.input<typeof actionPlanObjectSchema>;
+export type ValidatedActionPlan = z.output<typeof actionPlanObjectSchema>;
 export type ActionPlanProposal = z.infer<typeof actionPlanProposalSchema>;
 export type ActionPlanCreation = z.infer<typeof actionPlanCreationSchema>;
 export type ActionPlanDecision = z.infer<typeof actionPlanDecisionSchema>;
@@ -245,59 +329,156 @@ function safelySerializeInput(input: Record<string, unknown>) {
   }
 }
 
-function findInvalidJsonInputPath(
+type SimpleJsonProjection =
+  | { success: true; value: unknown }
+  | { success: false; path: Array<string | number> };
+
+type SimpleJsonProjectionBudget = {
+  remainingProperties: number;
+  remainingCharacters: number;
+};
+
+function projectSimpleJsonValue(
   value: unknown,
   path: Array<string | number> = [],
-  visited = new WeakSet<object>(),
+  ancestors = new WeakSet<object>(),
   depth = 0,
-): Array<string | number> | null {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "boolean"
-  ) {
-    return null;
+  maximumDepth = maximumActionPlanInputDepth,
+  budget: SimpleJsonProjectionBudget = {
+    remainingProperties: maximumActionPlanJsonProperties,
+    remainingCharacters: maximumActionPlanJsonCharacters,
+  },
+): SimpleJsonProjection {
+  if (value === null || typeof value === "boolean") {
+    return { success: true, value };
+  }
+  if (typeof value === "string") {
+    if (value.length > budget.remainingCharacters) {
+      return { success: false, path };
+    }
+    budget.remainingCharacters -= value.length;
+    return { success: true, value };
   }
   if (typeof value === "number") {
-    return Number.isFinite(value) ? null : path;
+    return Number.isFinite(value)
+      ? { success: true, value }
+      : { success: false, path };
   }
-  if (!value || typeof value !== "object") return path;
-  if (depth > maximumActionPlanInputDepth) return path;
-  if (visited.has(value)) return path;
-  visited.add(value);
-
-  const expectedPrototype = Array.isArray(value)
-    ? Array.prototype
-    : Object.prototype;
-  const prototype = Object.getPrototypeOf(value);
-  if (prototype !== expectedPrototype && prototype !== null) return path;
-  if (
-    Object.prototype.hasOwnProperty.call(value, "toJSON") ||
-    Object.getOwnPropertySymbols(value).length > 0
-  ) {
-    return path;
+  if (!value || typeof value !== "object") {
+    return { success: false, path };
   }
+  if (depth > maximumDepth || ancestors.has(value)) {
+    return { success: false, path };
+  }
+  ancestors.add(value);
 
-  const descriptors = Object.getOwnPropertyDescriptors(value);
-  for (const [key, descriptor] of Object.entries(descriptors)) {
-    if (Array.isArray(value) && key === "length") continue;
-    const nextPath = [...path, Array.isArray(value) ? Number(key) : key];
-    if (
-      !("value" in descriptor) ||
-      (!descriptor.enumerable && !Array.isArray(value)) ||
-      (Array.isArray(value) && !/^\d+$/u.test(key))
-    ) {
-      return nextPath;
+  try {
+    let isArray: boolean;
+    let prototype: object | null;
+    let ownKeys: Array<string | symbol>;
+    try {
+      isArray = Array.isArray(value);
+      prototype = Object.getPrototypeOf(value);
+      ownKeys = Reflect.ownKeys(value);
+    } catch {
+      return { success: false, path };
     }
-    const nestedInvalidPath = findInvalidJsonInputPath(
-      descriptor.value,
-      nextPath,
-      visited,
-      depth + 1,
-    );
-    if (nestedInvalidPath) return nestedInvalidPath;
+    const expectedPrototype = isArray ? Array.prototype : Object.prototype;
+    if (prototype !== expectedPrototype && prototype !== null) {
+      return { success: false, path };
+    }
+    if (
+      ownKeys.some((key) => typeof key === "symbol") ||
+      ownKeys.length > budget.remainingProperties
+    ) {
+      return { success: false, path };
+    }
+    budget.remainingProperties -= ownKeys.length;
+    for (const ownKey of ownKeys) {
+      if (isArray && ownKey === "length") continue;
+      const keyLength = (ownKey as string).length;
+      if (keyLength > budget.remainingCharacters) {
+        return { success: false, path };
+      }
+      budget.remainingCharacters -= keyLength;
+    }
+
+    const projectedValue: Record<string, unknown> | unknown[] = isArray
+      ? []
+      : Object.create(null);
+    let arrayLength: number | null = null;
+    const projectedArrayIndices: number[] = [];
+
+    for (const ownKey of ownKeys) {
+      const key = ownKey as string;
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, key);
+      } catch {
+        return { success: false, path };
+      }
+      if (!descriptor || !("value" in descriptor)) {
+        return { success: false, path: [...path, key] };
+      }
+
+      if (isArray && key === "length") {
+        if (
+          typeof descriptor.value !== "number" ||
+          !Number.isSafeInteger(descriptor.value) ||
+          descriptor.value < 0
+        ) {
+          return { success: false, path };
+        }
+        arrayLength = descriptor.value;
+        continue;
+      }
+
+      const normalizedKey = key.trim().toLowerCase();
+      const arrayIndex = isArray ? Number(key) : null;
+      const nextPath = [...path, isArray ? (arrayIndex as number) : key];
+      if (
+        (!descriptor.enumerable && !isArray) ||
+        forbiddenJsonObjectKey.test(normalizedKey) ||
+        (isArray &&
+          (!/^(?:0|[1-9]\d*)$/u.test(key) ||
+            !Number.isSafeInteger(arrayIndex) ||
+            (arrayIndex as number) >= 4_294_967_295))
+      ) {
+        return { success: false, path: nextPath };
+      }
+      if (arrayIndex !== null) projectedArrayIndices.push(arrayIndex);
+
+      const nestedProjection = projectSimpleJsonValue(
+        descriptor.value,
+        nextPath,
+        ancestors,
+        depth + 1,
+        maximumDepth,
+        budget,
+      );
+      if (!nestedProjection.success) return nestedProjection;
+      Object.defineProperty(projectedValue, key, {
+        value: nestedProjection.value,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+
+    if (isArray) {
+      if (
+        arrayLength === null ||
+        projectedArrayIndices.length !== arrayLength ||
+        projectedArrayIndices.some((index) => index >= arrayLength)
+      ) {
+        return { success: false, path };
+      }
+      (projectedValue as unknown[]).length = arrayLength;
+    }
+    return { success: true, value: projectedValue };
+  } finally {
+    ancestors.delete(value);
   }
-  return null;
 }
 
 function findSensitiveInputPath(
