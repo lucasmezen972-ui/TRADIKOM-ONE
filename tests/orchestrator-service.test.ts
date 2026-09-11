@@ -344,6 +344,76 @@ describe("service des plans Conversation", () => {
     await expectNoPlanCreationSideEffects(context.db, context.tenantId);
   });
 
+  it("persiste l'instantané contrôlé même si le générateur conserve une référence imbriquée", async () => {
+    const context = await createTenantContext("plan-output-snapshot@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const copiedText =
+      "CANARI EXTERNE MUTABLE QUI NE DOIT JAMAIS ATTEINDRE LE PLAN PERSISTE";
+    await insertExtractedAttachment(context.db, {
+      tenantId: context.tenantId,
+      messageId: source.messageId,
+      attachmentId: "attachment_plan_output_snapshot",
+      extractedText: copiedText,
+    });
+    const mutableInput = { title: "Préparer le suivi contrôlé" };
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      generate: vi.fn(async (generationContext: ActionPlanGenerationContext) => {
+        const generated = await baseGenerator.generate(generationContext);
+        return {
+          ...generated,
+          generationSource: "model" as const,
+          modelReference: "modele-test-instantane-v1",
+          plan: {
+            ...generated.plan,
+            steps: generated.plan.steps.map((step, index) =>
+              index === 1 ? { ...step, input: mutableInput } : step,
+            ),
+          },
+        };
+      }),
+    };
+    let transactionStarts = 0;
+    const mutatingDb: DbClient = {
+      query: async <T = Record<string, unknown>>(
+        sql: string,
+        params?: unknown[],
+      ) => {
+        if (sql.trim().toLowerCase() === "begin") {
+          transactionStarts += 1;
+          if (transactionStarts === 2) mutableInput.title = copiedText;
+        }
+        return context.db.query<T>(sql, params);
+      },
+    };
+
+    const created = await createConversationActionPlan(
+      mutatingDb,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+      { generator },
+    );
+
+    expect(transactionStarts).toBe(2);
+    expect(JSON.stringify(created)).not.toContain(copiedText);
+    const stored = await context.db.query<{ planJson: string }>(
+      `select plan_json as "planJson"
+       from conversation_action_plans
+       where tenant_id = $1 and id = $2`,
+      [context.tenantId, created.id],
+    );
+    expect(stored.rows[0]?.planJson).not.toContain(copiedText);
+    expect(stored.rows[0]?.planJson).toContain("Préparer le suivi contrôlé");
+  });
+
   it("refuse un générateur valide qui recopie une donnée externe dans le message proposé", async () => {
     const context = await createTenantContext("plan-output-message@example.com");
     const source = await ingestConversationMessage(

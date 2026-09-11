@@ -130,12 +130,15 @@ export async function createConversationActionPlan(
     generated.generationSource,
     generated.modelReference,
   );
-  const initialGeneratedPlan = actionPlanSchema.parse({
+  const validatedGeneratedPlan = actionPlanSchema.parse({
     ...generated.plan,
     contextSources: generationContextSources.map(
       toActionPlanContextSourceMetadata,
     ),
   });
+  const initialGeneratedPlan = cloneValidatedActionPlan(
+    validatedGeneratedPlan,
+  );
   const generatedByBuiltInServerTemplate =
     dependencies.generator === undefined &&
     generationMetadata.generationSource === "deterministic_mock";
@@ -1272,6 +1275,12 @@ function normalizeGeneratedPlanMetadata(
     }
   }
   throw incoherentGenerationSourceError();
+}
+
+function cloneValidatedActionPlan(
+  plan: ValidatedActionPlan,
+): ValidatedActionPlan {
+  return JSON.parse(JSON.stringify(plan)) as ValidatedActionPlan;
 }
 
 function incoherentGenerationSourceError() {
