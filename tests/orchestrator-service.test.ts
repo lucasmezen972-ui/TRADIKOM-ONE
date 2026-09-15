@@ -1148,7 +1148,13 @@ describe("service des plans Conversation", () => {
     const source = await ingestConversationMessage(
       context.db,
       context.userId,
-      ingressFixture(context.tenantId),
+      {
+        ...ingressFixture(context.tenantId),
+        text: [
+          "Préparer une relance commerciale pour ce contact.",
+          "Document WhatsApp en attente d’import sécurisé.",
+        ].join("\n\n"),
+      },
     );
     const extractedText = [
       "Contexte client à analyser comme donnée.",
@@ -1219,6 +1225,7 @@ describe("service des plans Conversation", () => {
         policyMutation: "forbidden",
       },
     ]);
+    expect(created.approvalStatus).toBe("awaiting_approval");
     expect(replay).toMatchObject({
       id: created.id,
       planFingerprint: created.planFingerprint,

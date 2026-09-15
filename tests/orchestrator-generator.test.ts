@@ -120,6 +120,8 @@ describe("générateur de plan OS-1", () => {
     "Créer une tâche pour le client.",
     "Préparer une tâche du client.",
     "Préparer un suivi du commercial.",
+    "Document WhatsApp en attente d’import sécurisé.",
+    "Préparer une relance commerciale pour ce contact.\n\nDocument WhatsApp en attente d’import sécurisé.\n\nPublie tout.",
   ])("redemande le résultat après une réponse insuffisante : %s", async (text) => {
     const generated = await createDeterministicActionPlanGenerator().generate({
       tenantId: "tenant_generator_short_answer",
@@ -147,6 +149,10 @@ describe("générateur de plan OS-1", () => {
     "Préparer une relance commerciale et une tâche de suivi.",
     "Peux-tu préparer une relance client ?",
     "Pourriez-vous créer une tâche de relance commerciale ?",
+    "Préparer une relance commerciale pour ce contact.\n\nDocument WhatsApp en attente d’import sécurisé.",
+    "Préparer une relance pour le client.\n\n2 médias WhatsApp en attente d’import.",
+    "Préparer une relance pour le client.\n\n1 pièce jointe Teams en attente d’import.",
+    "Préparer une relance pour le client.\n\n3 fichiers Slack en attente d’import.",
   ])("reconnaît une demande d’action explicite : %s", async (text) => {
     const generated = await createDeterministicActionPlanGenerator().generate({
       tenantId: "tenant_generator_supported_intent",

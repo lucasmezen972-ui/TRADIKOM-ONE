@@ -1836,7 +1836,7 @@ async function runConversationJourney(
                 mime_type: "application/pdf",
                 sha256: mediaChecksum,
                 filename: "preuve-conversation.pdf",
-                caption: "Preuve importée",
+                caption: "Préparer une relance commerciale pour ce contact",
               },
             }],
           },

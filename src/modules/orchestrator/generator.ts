@@ -14,6 +14,8 @@ export const minimumExternalContextVerbatimCharacters = 48;
 
 const supportedConversationRequestPrefixPattern =
   /^(?:(?:merci de|veuillez|peux tu|pouvez vous|pourrais tu|pourriez vous|je (?:veux|souhaite|voudrais|dois)|nous (?:voulons|souhaitons|voudrions|devons))\s+)?/u;
+const canonicalChannelAttachmentNoticeSuffixPattern =
+  /(?:^|\s)(?:(?:image|audio|document|video|sticker) whatsapp en attente d import securise|\d+ medias? whatsapp en attente d import|\d+ pieces? jointes? teams en attente d import|\d+ fichiers? slack en attente d import)$/u;
 const supportedConversationIntentPatterns = [
   /^(?:prepare|preparer|preparez|preparons|planifie|planifier|planifiez|planifions|organise|organiser|organisez|organisons|cree|creer|creez|creons|ajoute|ajouter|ajoutez|ajoutons)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:(?:nouveau|nouvelle|nouveaux|nouvelles|prochain|prochaine|prochains|prochaines|premier|premiere)\s+)?relances?(?:\s+commerciale?s?)?(?:(?:\s+(?:pour|concernant)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?))|(?:\s+(?:clients?|contacts?|prospects?))|(?:\s+(?:avec|et)\s+une\s+tache\s+de\s+suivi)|(?:\s+(?:demain|aujourd hui))|(?:\s+quand\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?)\s+n\s+a\s+pas\s+encore\s+repondu)|(?:\s+sans\s+effet\s+externe))*$/u,
   /^(?:prepare|preparer|preparez|preparons|planifie|planifier|planifiez|planifions|organise|organiser|organisez|organisons|cree|creer|creez|creons|ajoute|ajouter|ajoutez|ajoutons)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:(?:nouveau|nouvelle|nouveaux|nouvelles|prochain|prochaine|prochains|prochaines|premier|premiere)\s+)?(?:rappels?|suivis?)(?:(?:\s+commerciale?s?)|(?:\s+(?:clients?|contacts?|prospects?))|(?:\s+(?:pour|du|de|des)\s+(?:(?:un|une|le|la|les|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?)))(?:\s+(?:demain|aujourd hui))?$/u,
@@ -64,10 +66,10 @@ function hasSupportedConversationIntent(
     return false;
   }
 
-  const request = normalizedRequest.replace(
-    supportedConversationRequestPrefixPattern,
-    "",
-  );
+  const request = normalizedRequest
+    .replace(canonicalChannelAttachmentNoticeSuffixPattern, "")
+    .trim()
+    .replace(supportedConversationRequestPrefixPattern, "");
   return supportedConversationIntentPatterns.some((pattern) =>
     pattern.test(request),
   );
