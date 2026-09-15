@@ -1226,60 +1226,77 @@ describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
       ),
     ).rejects.toThrow(/row-level security|violates/i);
 
-    await expect(
-      withTenantContext(
-        restrictedPool,
-        fixtureA.tenantId,
-        fixtureA.userId,
-        (client) =>
-          client.query(
-            `insert into conversation_message_attachments (
-               id, tenant_id, message_id, kind, file_name, media_type,
-               size_bytes, storage_reference, checksum_sha256, created_at
-             ) select $1, message.tenant_id, message.id, 'document',
-                 'usurpation.txt', 'text/plain', 12, $2, $3,
-                 message.created_at
-               from conversation_messages message
-               where message.tenant_id = $4
-                 and message.idempotency_key = $5`,
-            [
-              `attachment_reserved_${fixtureA.unique}`,
-              `mock:reserved/${fixtureA.unique}`,
-              "2".repeat(64),
-              fixtureA.tenantId,
-              `orchestrator:${revisionId}:proposal`,
-            ],
-          ),
-      ),
-    ).rejects.toThrow(/row-level security|violates/i);
+    const reservedAttachmentId = `attachment_reserved_${fixtureA.unique}`;
+    const hiddenAttachmentInsert = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      fixtureA.userId,
+      (client) =>
+        client.query(
+          `insert into conversation_message_attachments (
+             id, tenant_id, message_id, kind, file_name, media_type,
+             size_bytes, storage_reference, checksum_sha256, created_at
+           ) select $1, message.tenant_id, message.id, 'document',
+               'usurpation.txt', 'text/plain', 12, $2, $3,
+               message.created_at
+             from conversation_messages message
+             where message.tenant_id = $4
+               and message.idempotency_key = $5`,
+          [
+            reservedAttachmentId,
+            `mock:reserved/${fixtureA.unique}`,
+            "2".repeat(64),
+            fixtureA.tenantId,
+            `orchestrator:${revisionId}:proposal`,
+          ],
+        ),
+    );
+    expect(hiddenAttachmentInsert.rowCount).toBe(0);
 
-    await expect(
-      withTenantContext(
-        restrictedPool,
-        fixtureA.tenantId,
-        fixtureA.userId,
-        (client) =>
-          client.query(
-            `insert into conversation_message_route_hops (
-               tenant_id, message_id, position, adapter_key,
-               channel_identity_id, external_message_id
-             ) select message.tenant_id, message.id, 7, identity.adapter_key,
-                 identity.id, $1
-               from conversation_messages message
-               join conversation_channel_identities identity
-                 on identity.tenant_id = message.tenant_id
-                and identity.adapter_key = 'web-chat'
-               where message.tenant_id = $2
-                 and message.idempotency_key = $3
-               limit 1`,
-            [
-              `route_reserved_${fixtureA.unique}`,
-              fixtureA.tenantId,
-              `orchestrator:${revisionId}:proposal`,
-            ],
-          ),
-      ),
-    ).rejects.toThrow(/row-level security|violates/i);
+    const reservedRouteExternalId = `route_reserved_${fixtureA.unique}`;
+    const hiddenRouteInsert = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      fixtureA.userId,
+      (client) =>
+        client.query(
+          `insert into conversation_message_route_hops (
+             tenant_id, message_id, position, adapter_key,
+             channel_identity_id, external_message_id
+           ) select message.tenant_id, message.id, 7, identity.adapter_key,
+               identity.id, $1
+             from conversation_messages message
+             join conversation_channel_identities identity
+               on identity.tenant_id = message.tenant_id
+              and identity.adapter_key = 'web-chat'
+             where message.tenant_id = $2
+               and message.idempotency_key = $3
+             limit 1`,
+          [
+            reservedRouteExternalId,
+            fixtureA.tenantId,
+            `orchestrator:${revisionId}:proposal`,
+          ],
+        ),
+    );
+    expect(hiddenRouteInsert.rowCount).toBe(0);
+
+    const absentDerivedRows = await primaryPool.query<{
+      attachment_count: number;
+      route_count: number;
+    }>(
+      `select
+         (select count(*)::int
+            from conversation_message_attachments
+           where tenant_id = $1 and id = $2) as attachment_count,
+         (select count(*)::int
+            from conversation_message_route_hops
+           where tenant_id = $1 and external_message_id = $3) as route_count`,
+      [fixtureA.tenantId, reservedAttachmentId, reservedRouteExternalId],
+    );
+    expect(absentDerivedRows.rows).toEqual([
+      { attachment_count: 0, route_count: 0 },
+    ]);
   });
 });
 

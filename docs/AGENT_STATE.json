@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-15T03:25:00.000Z",
+  "updatedAt": "2026-09-15T04:00:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "55fece072beb0b0b53e9db7eb823fb425f1aa2b2",
   "publishedHeadObserved": "55fece072beb0b0b53e9db7eb823fb425f1aa2b2",
-  "status": "os5_immutable_plan_revision_published_ci_rls_correction_local_proven_ci_pending_human_meta_sms_pending",
+  "status": "os5_immutable_plan_revision_rls_fix_published_ci_assertion_correction_local_proven_ci_pending_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche applicative Modifier avant validation est publiée dans 55fece0. La CI a validé migrations, sauvegarde/restauration, lint et TypeScript puis révélé deux défauts RLS PostgreSQL précis : un message canonique interne restait lisible par un collaborateur du fil et la reprise d'une livraison WhatsApp ordinaire sans contexte acteur était bloquée. La migration additive 0115 ferme la lecture interne et restaure la reprise tenant-scoped grâce à une classification interne immuable, calculée à l'insertion depuis le message ou l'identité puis rétro-remplie à la mise à niveau, sans desserrer l'insertion ni l'isolation cross-tenant. Les preuves locales ciblées et la revue adversariale sont vertes; la publication du correctif et sa CI autoritative restent à obtenir. Aucun fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense n'est autorisé.",
+  "currentObjective": "La tranche applicative Modifier avant validation et son correctif RLS 0115 sont publiés dans 305ffa9. La continuité 34925372099 est verte. La CI 34925372084 a validé audit, migrations, sauvegarde/restauration, lint, TypeScript et 929 tests sur 930; le test PostgreSQL exact 120 vers 121 est vert. Son unique échec est une assertion devenue obsolète : la lecture du message interne étant maintenant masquée, un INSERT SELECT adversarial écrit zéro ligne au lieu de lever une erreur RLS. Les assertions pièce jointe et route exigent désormais zéro ligne puis vérifient l'absence durable en base. ESLint ciblé, TypeScript et test local sans DATABASE_URL sont verts; publier ce correctif de preuve et obtenir la CI complète restent requis. Aucun fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense n'est autorisé.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,11 +31,11 @@
         "69-71 Matrice de tests et auto-contrôle final"
       ],
       "requirement": "Dans la carte de validation de Conversation, permettre à un décideur autorisé de modifier un plan encore en attente sans muter son instantané historique. La modification crée une nouvelle révision immuable, tenant-scoped et durable; elle annule ou remplace atomiquement le plan précédent, régénère ses clés d'idempotence, repasse par la validation du catalogue et de la policy, puis exige une nouvelle approbation avant toute exécution. Aucun reçu de policy, provider, fetch ou effet métier ne peut être produit pour l'ancien plan remplacé.",
-      "evidenceExpected": "Preuve locale obtenue : schéma, repository et service de révision avec lien durable entre versions, contrôle membership/rôle et transaction atomique; RLS système-only, idempotence et concurrence couvertes; rejet cross-tenant et des plans déjà décidés; ancien plan et anciennes étapes inexécutables sans reçu, nouvelle révision approuvable puis exécutable indépendamment en tradikom_mock. L'audit ne contient ni le titre métier saisi ni contenu sensible. Le WebChat français expose Modifier et le parcours desktop/mobile couvre l'état durable sans débordement. La CI 34922145782 a exécuté 928 tests PostgreSQL et isolé deux écarts RLS; la migration additive 0115 les corrige avec une policy SELECT restrictive sur les messages internes et une classification de livraison interne immuable, calculée depuis le message ou l'identité, rétro-remplie sur le chemin exact 120 vers 121 et utilisée directement par SELECT, UPDATE et DELETE. L'insertion conserve ses contrôles message et identité. Tests ciblés, lint, TypeScript, build factice, audit high, continuity-check et diff check sont verts; la nouvelle CI doit confirmer 928/928 tests, migrations, sauvegarde/restauration, build et 20/20 Playwright."
+      "evidenceExpected": "Preuve locale obtenue : schéma, repository et service de révision avec lien durable entre versions, contrôle membership/rôle et transaction atomique; RLS système-only, idempotence et concurrence couvertes; rejet cross-tenant et des plans déjà décidés; ancien plan et anciennes étapes inexécutables sans reçu, nouvelle révision approuvable puis exécutable indépendamment en tradikom_mock. L'audit ne contient ni le titre métier saisi ni contenu sensible. Le WebChat français expose Modifier et le parcours desktop/mobile couvre l'état durable sans débordement. La CI 34925372084 valide le chemin PostgreSQL exact 120 vers 121 et 929 tests sur 930; son unique échec est l'ancienne attente d'une erreur RLS sur un INSERT SELECT dont la source interne est désormais invisible. La preuve corrigée exige zéro ligne puis contrôle l'absence durable de pièce jointe et de route. La nouvelle CI doit confirmer 930/930 tests, migrations, sauvegarde/restauration, build et 20/20 Playwright."
     }
   },
-  "nextAction": "Publier la migration corrective 0115 et ses preuves strictement en fast-forward sans inclure tmp, attendre la CI autoritative et exiger les deux régressions PostgreSQL vertes avec 20/20 Playwright. Corriger tout nouvel échec avant de relire la page 48. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
-  "nextFile": "src/db/migrations/0115_os5_orchestrator_namespace_read_delivery_rls.sql",
+  "nextAction": "Publier le correctif d'assertion PostgreSQL strictement en fast-forward sans inclure tmp, attendre la CI autoritative et exiger 930/930 tests avec build et 20/20 Playwright. Corriger tout nouvel échec avant de relire la page 48. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
+  "nextFile": "tests/orchestrator-plan-revisions-postgres-rls.test.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -547,7 +547,10 @@
     "deux revues indépendantes finales ne trouvent aucun défaut P1/P2; publication et CI PostgreSQL/RLS avec 20/20 Playwright encore requises",
     "publication fast-forward de 55fece0; continuité 34922145838 verte; CI 34922145782 a validé migrations, sauvegarde/restauration, lint et TypeScript puis a échoué sur 2 tests RLS PostgreSQL parmi 928",
     "migration additive 0115 : SELECT restrictif masque les messages canoniques internes aux acteurs non système; classification interne de livraison calculée depuis le message ou l'identité, rétro-remplie et figée par triggers; SELECT, UPDATE et DELETE utilisent ce booléen sans relire un message masqué; INSERT reste protégé par message et identité",
-    "preuves locales du correctif : 17 fichiers de migrations/66 tests verts; ciblage RLS 1 fichier/12 tests verts et 2 fichiers/3 tests PostgreSQL ignorés sans DATABASE_URL; chemin exact 120 vers 121 couvert en PGlite et préparé en PostgreSQL; scénarios PostgreSQL éphémères message interne plus identité ordinaire et message ordinaire plus identité interne verts en revue; lint, TypeScript, build factice, audit high, continuity-check et diff check verts"
+    "preuves locales du correctif : 17 fichiers de migrations/66 tests verts; ciblage RLS 1 fichier/12 tests verts et 2 fichiers/3 tests PostgreSQL ignorés sans DATABASE_URL; chemin exact 120 vers 121 couvert en PGlite et préparé en PostgreSQL; scénarios PostgreSQL éphémères message interne plus identité ordinaire et message ordinaire plus identité interne verts en revue; lint, TypeScript, build factice, audit high, continuity-check et diff check verts",
+    "publication fast-forward de 305ffa94061b6628fb7f70a0fa8cc71f8bfd44cc sans tmp; continuité 34925372099 verte",
+    "CI 34925372084 : audit, migrations, sauvegarde/restauration, lint, TypeScript et test PostgreSQL exact 120 vers 121 verts; 929 tests sur 930; unique échec sur une ancienne assertion attendant une erreur alors que la source interne masquée produit correctement zéro insertion; build et Playwright sautés",
+    "correction locale de preuve : les INSERT SELECT adversariaux de pièce jointe et route exigent rowCount zéro puis une requête système confirme zéro ligne persistée; ESLint ciblé, TypeScript, test local ignoré sans DATABASE_URL et diff check verts"
   ],
   "lastValidation": [
     {
@@ -2153,6 +2156,18 @@
     {
       "command": "pnpm lint, pnpm typecheck, build production factice, audit high, continuity-check et git diff --check après 0115",
       "status": "passed_zero_lint_type_build_or_diff_errors_ready_zero_warnings_zero_high_critical_three_moderate"
+    },
+    {
+      "command": "publication 305ffa94061b6628fb7f70a0fa8cc71f8bfd44cc et Continuité TRADIKOM ONE 34925372099",
+      "status": "passed_fast_forward_tmp_excluded_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34925372084 sur 305ffa94061b6628fb7f70a0fa8cc71f8bfd44cc",
+      "status": "failed_only_stale_insert_select_rejection_assertion_929_of_930_tests_passed_exact_postgres_upgrade_120_to_121_passed_audit_migrations_backup_restore_lint_typecheck_passed_build_playwright_skipped"
+    },
+    {
+      "command": "assertions PostgreSQL zéro ligne pour dérivés d'un message interne masqué",
+      "status": "passed_local_attachment_and_route_insert_select_row_count_zero_then_system_absence_check_eslint_typecheck_diff_postgres_test_skipped_without_database_url"
     }
   ],
   "humanBlockers": [
