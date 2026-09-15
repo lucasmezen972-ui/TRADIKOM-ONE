@@ -28,6 +28,7 @@ import {
   insertThreadParticipantIfAbsent,
   listConversationAttachmentRows,
   listConversationIdentityRows,
+  lockConversationThreadAccessGrant,
   updateConversationThreadLastMessage,
   updateConversationThreadStatus,
   type ConversationMessageRow,
@@ -50,6 +51,8 @@ import {
 } from "@/modules/orchestrator/generator";
 import {
   findConversationActionPlanPolicyReceiptByPlan,
+  findConversationActionPlanDelegationByIdempotencyHash,
+  findLatestConversationActionPlanDelegation,
   decideActionPlanRow,
   findActionPlanApproval,
   findActionPlanByFingerprint,
@@ -58,8 +61,10 @@ import {
   insertActionPlan,
   insertActionPlanApproval,
   insertConversationActionPlanPolicyReceipt,
+  insertConversationActionPlanDelegation,
   insertActionPlanStep,
   listActionPlanRowsByThread,
+  listConversationActionPlanDelegationTargetRows,
   listActionPlanStepRows,
   lockActionPlanRow,
   markActionPlanExecuted,
@@ -68,6 +73,7 @@ import {
   updateActionPlanStepStatusByPosition,
   updateActionPlanStepStatuses,
   type ConversationActionPlanRow,
+  type ConversationActionPlanDelegationViewRow,
 } from "@/modules/orchestrator/repository";
 import {
   compileConversationActionPlanPolicyReceipt,
@@ -82,6 +88,8 @@ import {
 } from "@/modules/orchestrator/policy-enforcement";
 import {
   actionPlanCreationSchema,
+  actionPlanDelegationSchema,
+  actionPlanDelegationTargetListSchema,
   actionPlanDecisionSchema,
   actionPlanExecutionSchema,
   actionPlanListSchema,
@@ -90,6 +98,7 @@ import {
   buildActionPlanClarificationMessage,
   generatedActionPlanEnvelopeSchema,
   type ActionPlanCreation,
+  type ActionPlanDelegation,
   type ActionPlanDecision,
   type ActionPlanRevision,
   type ValidatedActionPlan,
@@ -127,6 +136,7 @@ const conversationActionPlanResultText =
 const conversationActionPlanRevisionDecisionReason =
   "Plan remplacé par une révision demandée.";
 const maximumConversationActionPlanRevisionDepth = 32;
+const maximumConversationActionPlanDelegationVersion = 32;
 
 export async function createConversationActionPlan(
   db: DbClient,
@@ -494,6 +504,342 @@ export async function listConversationActionPlans(
   });
 }
 
+export async function listConversationActionPlanDelegationTargets(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  planId: string,
+) {
+  const parsed = actionPlanDelegationTargetListSchema.parse({ planId });
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    const actorRole = await assertTenantAccess(
+      transaction,
+      userId,
+      tenantId,
+      decisionRoles,
+    );
+    const plan = await findActionPlanRow(transaction, tenantId, parsed.planId);
+    if (!plan) {
+      throw new OrchestratorError(
+        "orchestrator_plan_not_found",
+        "Le plan est introuvable.",
+      );
+    }
+    await assertConversationPlanThreadAccess(
+      transaction,
+      userId,
+      tenantId,
+      plan.thread_id,
+      "plan",
+    );
+    if (plan.approval_status !== "awaiting_approval") return [];
+
+    const currentDelegation =
+      await findLatestConversationActionPlanDelegation(
+        transaction,
+        tenantId,
+        plan.id,
+      );
+    if (
+      currentDelegation &&
+      currentDelegation.version >= maximumConversationActionPlanDelegationVersion
+    ) {
+      return [];
+    }
+    if (
+      currentDelegation &&
+      currentDelegation.delegated_to_user_id !== userId &&
+      actorRole !== "owner" &&
+      actorRole !== "administrator"
+    ) {
+      return [];
+    }
+
+    const excludedUserId = currentDelegation?.delegated_to_user_id ?? userId;
+    const targets = await listConversationActionPlanDelegationTargetRows(
+      transaction,
+      tenantId,
+      plan.id,
+    );
+    return targets
+      .filter((target) => target.user_id !== excludedUserId)
+      .map((target) => ({
+        userId: target.user_id,
+        name: target.name,
+        email: target.email,
+        role: target.role,
+      }));
+  });
+}
+
+export async function delegateConversationActionPlan(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: ActionPlanDelegation,
+) {
+  const parsed = actionPlanDelegationSchema.parse(input);
+  const idempotencyKeyHash = hashToken(parsed.idempotencyKey);
+  const requestFingerprint = hashToken(
+    toJson({
+      schemaVersion: 1,
+      planId: parsed.planId,
+      delegatedToUserId: parsed.delegatedToUserId,
+      expectedDelegationVersion: parsed.expectedDelegationVersion,
+      confirmed: parsed.confirmed,
+    }),
+  );
+
+  return withTenantSystemDbTransaction(
+    db,
+    tenantId,
+    userId,
+    async (transaction) => {
+      await assertTenantAccess(
+        transaction,
+        userId,
+        tenantId,
+        decisionRoles,
+      );
+      const plan = await lockActionPlanRow(
+        transaction,
+        tenantId,
+        parsed.planId,
+      );
+      if (!plan) {
+        throw new OrchestratorError(
+          "orchestrator_plan_not_found",
+          "Le plan est introuvable.",
+        );
+      }
+
+      const lockedRoles = await lockConversationPlanDecisionRoles(
+        transaction,
+        tenantId,
+        [userId, parsed.delegatedToUserId],
+      );
+      const actorRole = lockedRoles.get(userId);
+      const targetRole = lockedRoles.get(parsed.delegatedToUserId);
+      if (!actorRole || !decisionRoles.includes(actorRole)) {
+        throw new TenantError(
+          "tenant_access_denied",
+          "Acces refuse pour cette organisation.",
+        );
+      }
+      if (!targetRole || !decisionRoles.includes(targetRole)) {
+        throw new OrchestratorError(
+          "orchestrator_permission_denied",
+          "La personne choisie ne peut pas recevoir cette décision.",
+        );
+      }
+
+      await assertConversationPlanThreadAccess(
+        transaction,
+        userId,
+        tenantId,
+        plan.thread_id,
+        "plan",
+      );
+      await assertConversationPlanDelegationTargetAccess(
+        transaction,
+        tenantId,
+        parsed.delegatedToUserId,
+        plan.thread_id,
+      );
+
+      const approval = await findActionPlanApproval(
+        transaction,
+        tenantId,
+        plan.id,
+      );
+      const existingByIdempotency =
+        await findConversationActionPlanDelegationByIdempotencyHash(
+          transaction,
+          tenantId,
+          idempotencyKeyHash,
+        );
+      if (existingByIdempotency) {
+        assertExactConversationPlanDelegationReplay(existingByIdempotency, {
+          plan,
+          approvalId: approval?.id ?? null,
+          delegatedByUserId: userId,
+          delegatedToUserId: parsed.delegatedToUserId,
+          expectedPreviousVersion: parsed.expectedDelegationVersion,
+          requestFingerprint,
+        });
+        assertCurrentConversationPlanDelegationReplay(
+          existingByIdempotency,
+          await findLatestConversationActionPlanDelegation(
+            transaction,
+            tenantId,
+            plan.id,
+          ),
+        );
+        return mapPlanResult(transaction, plan, true);
+      }
+
+      if (plan.approval_status !== "awaiting_approval") {
+        throw new OrchestratorError(
+          "orchestrator_decision_conflict",
+          "Seul un plan encore en attente peut être délégué.",
+        );
+      }
+      if (!approval || approval.status !== "pending") {
+        throw new OrchestratorError(
+          "orchestrator_approval_not_found",
+          "La validation unique de ce plan est introuvable.",
+        );
+      }
+      const [policyReceipt, mission, successor, currentDelegation] =
+        await Promise.all([
+          findConversationActionPlanPolicyReceiptByPlan(
+            transaction,
+            tenantId,
+            plan.id,
+          ),
+          findWorkflowRunByKey(
+            transaction,
+            tenantId,
+            conversationActionPlanWorkflowKey(plan.id),
+          ),
+          findActionPlanRevisionByPreviousPlan(
+            transaction,
+            tenantId,
+            plan.id,
+          ),
+          findLatestConversationActionPlanDelegation(
+            transaction,
+            tenantId,
+            plan.id,
+          ),
+        ]);
+      if (policyReceipt || mission || successor) {
+        throw new OrchestratorError(
+          "orchestrator_decision_conflict",
+          "Un plan déjà engagé ou remplacé ne peut pas être délégué.",
+        );
+      }
+
+      const currentVersion = currentDelegation?.version ?? 0;
+      if (parsed.expectedDelegationVersion !== currentVersion) {
+        throw new OrchestratorError(
+          "orchestrator_decision_conflict",
+          "La responsabilité de décision a changé. Rechargez le plan.",
+        );
+      }
+      if (currentVersion >= maximumConversationActionPlanDelegationVersion) {
+        throw new OrchestratorError(
+          "orchestrator_decision_conflict",
+          "Ce plan a atteint la limite de délégations autorisée.",
+        );
+      }
+      if (!currentDelegation) {
+        if (parsed.delegatedToUserId === userId) {
+          throw new OrchestratorError(
+            "orchestrator_decision_conflict",
+            "Vous détenez déjà la responsabilité de cette décision.",
+          );
+        }
+      } else {
+        if (
+          currentDelegation.delegated_to_user_id !== userId &&
+          actorRole !== "owner" &&
+          actorRole !== "administrator"
+        ) {
+          throw new OrchestratorError(
+            "orchestrator_permission_denied",
+            "Seul le délégataire actuel peut transmettre cette décision.",
+          );
+        }
+        if (
+          currentDelegation.delegated_to_user_id ===
+          parsed.delegatedToUserId
+        ) {
+          throw new OrchestratorError(
+            "orchestrator_decision_conflict",
+            "Cette personne détient déjà la responsabilité de la décision.",
+          );
+        }
+      }
+
+      const createdAt = nowIso();
+      const delegation = await insertConversationActionPlanDelegation(
+        transaction,
+        {
+          id: id("conversation_action_plan_delegation"),
+          tenantId,
+          planId: plan.id,
+          planFingerprint: plan.plan_fingerprint,
+          approvalId: approval.id,
+          version: currentVersion + 1,
+          expectedPreviousVersion: currentVersion,
+          delegatedByUserId: userId,
+          delegatedToUserId: parsed.delegatedToUserId,
+          delegatedToRole: targetRole as
+            | "owner"
+            | "administrator"
+            | "manager",
+          idempotencyKeyHash,
+          requestFingerprint,
+          createdAt,
+        },
+      );
+      if (!delegation) {
+        const concurrentReplay =
+          await findConversationActionPlanDelegationByIdempotencyHash(
+            transaction,
+            tenantId,
+            idempotencyKeyHash,
+          );
+        if (!concurrentReplay) {
+          throw new OrchestratorError(
+            "orchestrator_decision_conflict",
+            "La responsabilité de décision a changé. Rechargez le plan.",
+          );
+        }
+        assertExactConversationPlanDelegationReplay(concurrentReplay, {
+          plan,
+          approvalId: approval.id,
+          delegatedByUserId: userId,
+          delegatedToUserId: parsed.delegatedToUserId,
+          expectedPreviousVersion: parsed.expectedDelegationVersion,
+          requestFingerprint,
+        });
+        assertCurrentConversationPlanDelegationReplay(
+          concurrentReplay,
+          await findLatestConversationActionPlanDelegation(
+            transaction,
+            tenantId,
+            plan.id,
+          ),
+        );
+        return mapPlanResult(transaction, plan, true);
+      }
+
+      await recordAuditLog(transaction, {
+        tenantId,
+        actorId: userId,
+        action: "conversation.plan_delegated",
+        targetType: "conversation_action_plan",
+        targetId: plan.id,
+        metadata: {
+          approvalId: approval.id,
+          planFingerprint: plan.plan_fingerprint,
+          delegationId: delegation.id,
+          delegationVersion: delegation.version,
+          previousDelegationVersion: delegation.expected_previous_version,
+          delegatedPrincipalStoredInAudit: false,
+          idempotencyKeyStoredInAudit: false,
+          conversationContentStoredInAudit: false,
+          estimatedExternalCost: 0,
+        },
+      });
+
+      return mapPlanResult(transaction, plan, false);
+    },
+  );
+}
+
 export async function reviseConversationActionPlan(
   db: DbClient,
   userId: string,
@@ -536,6 +882,12 @@ export async function reviseConversationActionPlan(
         tenantId,
         previousPlan.thread_id,
         "plan",
+      );
+      await assertCurrentConversationPlanDelegationAuthority(
+        transaction,
+        tenantId,
+        previousPlan.id,
+        userId,
       );
       const revisionDepth = await getActionPlanRevisionDepth(
         transaction,
@@ -796,7 +1148,7 @@ export async function decideConversationActionPlan(
 ) {
   const parsed = actionPlanDecisionSchema.parse(input);
   return withTenantSystemDbTransaction(db, tenantId, userId, async (transaction) => {
-    const role = await assertTenantAccess(
+    await assertTenantAccess(
       transaction,
       userId,
       tenantId,
@@ -813,12 +1165,25 @@ export async function decideConversationActionPlan(
         "Le plan est introuvable.",
       );
     }
+    const role = await lockMembershipRole(transaction, userId, tenantId);
+    if (!role || !decisionRoles.includes(role)) {
+      throw new TenantError(
+        "tenant_access_denied",
+        "Acces refuse pour cette organisation.",
+      );
+    }
     await assertConversationPlanThreadAccess(
       transaction,
       userId,
       tenantId,
       existing.thread_id,
       "plan",
+    );
+    await assertCurrentConversationPlanDelegationAuthority(
+      transaction,
+      tenantId,
+      existing.id,
+      userId,
     );
     const successor = await findActionPlanRevisionByPreviousPlan(
       transaction,
@@ -1377,7 +1742,12 @@ async function assertConversationPlanThreadAccess(
     userId,
     threadId,
   );
-  if (thread) return thread;
+  if (
+    thread &&
+    (await lockConversationThreadAccessGrant(db, tenantId, userId, thread))
+  ) {
+    return thread;
+  }
   if (target === "source") {
     throw new OrchestratorError(
       "orchestrator_source_message_not_found",
@@ -1388,6 +1758,108 @@ async function assertConversationPlanThreadAccess(
     "orchestrator_plan_not_found",
     "Le plan est introuvable ou inaccessible.",
   );
+}
+
+async function assertConversationPlanDelegationTargetAccess(
+  db: DbClient,
+  tenantId: string,
+  targetUserId: string,
+  threadId: string,
+) {
+  const thread = await findAccessibleConversationThreadRow(
+    db,
+    tenantId,
+    targetUserId,
+    threadId,
+  );
+  if (
+    thread &&
+    (await lockConversationThreadAccessGrant(
+      db,
+      tenantId,
+      targetUserId,
+      thread,
+    ))
+  ) {
+    return thread;
+  }
+  throw new OrchestratorError(
+    "orchestrator_permission_denied",
+    "La personne choisie n’a pas accès à cette conversation.",
+  );
+}
+
+async function lockConversationPlanDecisionRoles(
+  db: DbClient,
+  tenantId: string,
+  userIds: string[],
+) {
+  const roles = new Map<string, Role | null>();
+  for (const userId of [...new Set(userIds)].sort()) {
+    roles.set(userId, await lockMembershipRole(db, userId, tenantId));
+  }
+  return roles;
+}
+
+async function assertCurrentConversationPlanDelegationAuthority(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+  userId: string,
+) {
+  const delegation = await findLatestConversationActionPlanDelegation(
+    db,
+    tenantId,
+    planId,
+  );
+  if (delegation && delegation.delegated_to_user_id !== userId) {
+    throw new OrchestratorError(
+      "orchestrator_permission_denied",
+      "La décision de ce plan a été déléguée à une autre personne.",
+    );
+  }
+  return delegation;
+}
+
+function assertExactConversationPlanDelegationReplay(
+  delegation: ConversationActionPlanDelegationViewRow,
+  expected: {
+    plan: ConversationActionPlanRow;
+    approvalId: string | null;
+    delegatedByUserId: string;
+    delegatedToUserId: string;
+    expectedPreviousVersion: number;
+    requestFingerprint: string;
+  },
+) {
+  if (
+    delegation.tenant_id !== expected.plan.tenant_id ||
+    delegation.plan_id !== expected.plan.id ||
+    delegation.plan_fingerprint !== expected.plan.plan_fingerprint ||
+    delegation.approval_id !== expected.approvalId ||
+    delegation.delegated_by_user_id !== expected.delegatedByUserId ||
+    delegation.delegated_to_user_id !== expected.delegatedToUserId ||
+    delegation.expected_previous_version !==
+      expected.expectedPreviousVersion ||
+    delegation.request_fingerprint !== expected.requestFingerprint
+  ) {
+    throw new OrchestratorError(
+      "orchestrator_decision_conflict",
+      "Cette clé de rejeu est déjà liée à une autre délégation.",
+    );
+  }
+}
+
+function assertCurrentConversationPlanDelegationReplay(
+  replay: ConversationActionPlanDelegationViewRow,
+  current: ConversationActionPlanDelegationViewRow | null,
+) {
+  if (!current || current.id !== replay.id) {
+    throw new OrchestratorError(
+      "orchestrator_decision_conflict",
+      "Cette délégation a été remplacée par une réaffectation plus récente.",
+    );
+  }
 }
 
 async function finalizeConversationActionPlanInTransaction(
@@ -1957,7 +2429,7 @@ async function mapPlanResult(
   plan: ConversationActionPlanRow,
   idempotentReplay: boolean,
 ) {
-  const [steps, approval, mission, policyReceipt] = await Promise.all([
+  const [steps, approval, mission, policyReceipt, delegation] = await Promise.all([
     listActionPlanStepRows(db, plan.tenant_id, plan.id),
     findActionPlanApproval(db, plan.tenant_id, plan.id),
     findWorkflowRunByKey(
@@ -1966,6 +2438,11 @@ async function mapPlanResult(
       conversationActionPlanWorkflowKey(plan.id),
     ),
     findConversationActionPlanPolicyReceiptByPlan(
+      db,
+      plan.tenant_id,
+      plan.id,
+    ),
+    findLatestConversationActionPlanDelegation(
       db,
       plan.tenant_id,
       plan.id,
@@ -1989,6 +2466,17 @@ async function mapPlanResult(
     decisionReason: plan.decision_reason ?? undefined,
     supersedesPlanId: plan.supersedes_plan_id ?? undefined,
     idempotentReplay,
+    delegation: delegation
+      ? {
+          id: delegation.id,
+          version: delegation.version,
+          delegatedByUserId: delegation.delegated_by_user_id,
+          delegatedToUserId: delegation.delegated_to_user_id,
+          delegatedToName: delegation.delegated_to_name,
+          delegatedToRole: delegation.delegated_to_role,
+          delegatedAt: delegation.created_at,
+        }
+      : undefined,
     policyReceipt: policyReceipt
       ? {
           id: policyReceipt.id,

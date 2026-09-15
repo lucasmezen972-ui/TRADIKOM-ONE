@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createPlan: vi.fn(),
   decidePlan: vi.fn(),
+  delegatePlan: vi.fn(),
   revisePlan: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@/modules/channels", () => ({
   getConversationChannelServices: async () => ({
     createPlan: mocks.createPlan,
     decidePlan: mocks.decidePlan,
+    delegatePlan: mocks.delegatePlan,
     revisePlan: mocks.revisePlan,
   }),
 }));
@@ -39,6 +41,7 @@ vi.mock("@/modules/channels", () => ({
 import {
   createConversationPlanAction,
   decideConversationPlanAction,
+  delegateConversationPlanAction,
   reviseConversationPlanAction,
 } from "../src/app/(app)/conversation/actions";
 
@@ -154,6 +157,84 @@ describe("actions serveur Conversation", () => {
       "/conversation?fil=thread_revised_authoritative&plan=revised&plan_id=plan_revised_authoritative",
     );
   });
+
+  it("refuse une délégation sans confirmation sans appeler le service", async () => {
+    const logger = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const formData = delegationForm({ confirmed: false });
+
+    await expect(delegateConversationPlanAction(formData)).rejects.toMatchObject({
+      code: "invalid_input",
+      status: 400,
+      message: expect.stringContaining(
+        "Les informations fournies sont invalides. Référence : correlation-decision-test",
+      ),
+    });
+
+    expect(mocks.delegatePlan).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    const logged = logger.mock.calls.flat().join(" ");
+    expect(logged).not.toContain("user_target_submitted");
+    expect(logged).not.toContain("delegation-key-never-logged");
+  });
+
+  it.each(["absent", "vide"])(
+    "refuse une version de délégation %s sans appeler le service",
+    async (versionState) => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const formData = delegationForm({ confirmed: true });
+      if (versionState === "absent") {
+        formData.delete("expectedDelegationVersion");
+      } else {
+        formData.set("expectedDelegationVersion", "");
+      }
+
+      await expect(delegateConversationPlanAction(formData)).rejects.toMatchObject({
+        code: "invalid_input",
+        status: 400,
+      });
+
+      expect(mocks.delegatePlan).not.toHaveBeenCalled();
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
+      expect(mocks.redirect).not.toHaveBeenCalled();
+    },
+  );
+
+  it("redirige une délégation confirmée vers le plan et la délégation autoritatifs", async () => {
+    mocks.delegatePlan.mockResolvedValue({
+      id: "plan_delegated_authoritative",
+      threadId: "thread_delegated_authoritative",
+      delegation: {
+        id: "delegation_authoritative",
+        version: 2,
+        delegatedByUserId: "user_decision_test",
+        delegatedToUserId: "user_target_submitted",
+        delegatedToName: "Responsable autorisée",
+        delegatedToRole: "manager",
+        delegatedAt: "2026-09-15T12:00:00.000Z",
+      },
+    });
+    const formData = delegationForm({ confirmed: true });
+    formData.set("threadId", "thread_forged_ignored");
+
+    await delegateConversationPlanAction(formData);
+
+    expect(mocks.delegatePlan).toHaveBeenCalledWith(
+      "user_decision_test",
+      "tenant_decision_test",
+      {
+        planId: "plan_submitted",
+        delegatedToUserId: "user_target_submitted",
+        expectedDelegationVersion: 1,
+        idempotencyKey: "delegation-key-never-logged",
+        confirmed: true,
+      },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/conversation");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/conversation?fil=thread_delegated_authoritative&plan=delegated&plan_id=plan_delegated_authoritative&delegation_id=delegation_authoritative",
+    );
+  });
 });
 
 function creationForm() {
@@ -169,5 +250,15 @@ function decisionForm(decision: string) {
   formData.set("planId", "plan_submitted");
   formData.set("decision", decision);
   formData.set("reason", "Validation métier");
+  return formData;
+}
+
+function delegationForm({ confirmed }: { confirmed: boolean }) {
+  const formData = new FormData();
+  formData.set("planId", "plan_submitted");
+  formData.set("delegatedToUserId", "user_target_submitted");
+  formData.set("expectedDelegationVersion", "1");
+  formData.set("idempotencyKey", "delegation-key-never-logged");
+  if (confirmed) formData.set("delegationConfirmed", "true");
   return formData;
 }

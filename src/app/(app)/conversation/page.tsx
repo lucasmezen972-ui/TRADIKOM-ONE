@@ -31,6 +31,10 @@ import {
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
 } from "@/app/(app)/conversation/actions";
+import {
+  PlanDelegationForm,
+  type PlanDelegationTargetOption,
+} from "@/app/(app)/conversation/plan-delegation-form";
 import { PlanRevisionForm } from "@/app/(app)/conversation/plan-revision-form";
 import {
   planReceiptMessage,
@@ -47,10 +51,12 @@ type ConversationPageProps = {
       | "clarification"
       | "cree"
       | "revised"
+      | "delegated"
       | "approved"
       | "rejected"
       | "executed";
     plan_id?: string;
+    delegation_id?: string;
     reprise?: "demandee";
     meta_essai?: "autorise" | "revoque";
   }>;
@@ -61,6 +67,15 @@ export default async function ConversationPage({
 }: ConversationPageProps) {
   const params = await searchParams;
   const { user, tenant, membership } = await requireTenantContext();
+  const canWrite = [
+    "owner",
+    "administrator",
+    "manager",
+    "collaborator",
+  ].includes(membership.role);
+  const canDecide = ["owner", "administrator", "manager"].includes(
+    membership.role,
+  );
   const metaManifest = getPreparedChannelProvider("whatsapp_meta");
   const services = await getConversationChannelServices();
   const [threads, metaTenantReadiness] = await Promise.all([
@@ -85,8 +100,13 @@ export default async function ConversationPage({
     params.plan,
     params.plan_id,
     requestedPlan,
+    params.delegation_id,
   );
   const currentPlan = planReceipt ? requestedPlan : latestPlan;
+  const delegationTargets =
+    currentPlan?.approvalStatus === "awaiting_approval" && canDecide
+      ? await services.listDelegationTargets(user.id, tenant.id, currentPlan.id)
+      : [];
   const sourceMessage = thread
     ? [...thread.messages]
         .reverse()
@@ -97,15 +117,6 @@ export default async function ConversationPage({
     : undefined;
   const identities = new Map(
     thread?.identities.map((identity) => [identity.id, identity] as const),
-  );
-  const canWrite = [
-    "owner",
-    "administrator",
-    "manager",
-    "collaborator",
-  ].includes(membership.role);
-  const canDecide = ["owner", "administrator", "manager"].includes(
-    membership.role,
   );
   const metaTrialManagementAction = resolveMetaWhatsAppTrialManagementAction(
     metaActivation,
@@ -336,6 +347,9 @@ export default async function ConversationPage({
               plan={currentPlan}
               canCreate={canWrite}
               canDecide={canDecide}
+              actorUserId={user.id}
+              delegationTargets={delegationTargets}
+              delegationIdempotencyKey={`conversation-plan-delegation:${randomUUID()}`}
             />
           ) : null}
 
@@ -552,12 +566,18 @@ function PlanPanel({
   plan,
   canCreate,
   canDecide,
+  actorUserId,
+  delegationTargets,
+  delegationIdempotencyKey,
 }: {
   threadId: string;
   sourceMessageId?: string;
   plan?: ConversationPlan;
   canCreate: boolean;
   canDecide: boolean;
+  actorUserId: string;
+  delegationTargets: PlanDelegationTargetOption[];
+  delegationIdempotencyKey: string;
 }) {
   const hasVerifiedExternalContext = plan?.plan.contextSources.some(
     (source) =>
@@ -571,6 +591,11 @@ function PlanPanel({
   const requiresClarification =
     plan?.approvalStatus === "draft" &&
     plan.plan.missingContextQuestions.length > 0;
+  const isCurrentDelegate =
+    Boolean(plan?.delegation) &&
+    plan?.delegation?.delegatedToUserId === actorUserId;
+  const canActOnPendingPlan =
+    canDecide && (!plan?.delegation || isCurrentDelegate);
 
   return (
     <section className="border-t border-slate-200 bg-violet-50/50 p-4 lg:p-5" aria-label="Plan d’action">
@@ -631,6 +656,26 @@ function PlanPanel({
             <p className="mt-4 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-950">
               Version révisée : l’ancienne version est conservée et annulée.
             </p>
+          ) : null}
+          {plan.delegation ? (
+            <section
+              aria-label="Responsable de la décision"
+              data-delegation-id={plan.delegation.id}
+              className="mt-4 min-w-0 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-blue-950"
+            >
+              <p className="text-sm font-bold">Décision déléguée</p>
+              <p className="mt-1 break-words text-sm font-semibold">
+                {plan.delegation.delegatedToName} ·{" "}
+                {delegationRoleLabel(plan.delegation.delegatedToRole)}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-blue-900">
+                {plan.approvalStatus !== "awaiting_approval"
+                  ? "Responsable enregistré pour la décision de cette version."
+                  : isCurrentDelegate
+                    ? "Cette décision vous est confiée. Vous pouvez modifier, approuver ou annuler cette version."
+                    : `Tant que cette délégation reste en vigueur, seul ${plan.delegation.delegatedToName} peut modifier, approuver ou annuler cette version.`}
+              </p>
+            </section>
           ) : null}
           {requiresClarification ? (
             <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
@@ -695,28 +740,45 @@ function PlanPanel({
           )}
 
           {plan.approvalStatus === "awaiting_approval" ? (
-            canDecide ? (
-              <div className="mt-4 grid gap-3 border-t border-slate-200 pt-4 lg:grid-cols-3">
-                <PlanRevisionForm
+            <div className="mt-4 min-w-0 border-t border-slate-200 pt-4">
+              {delegationTargets.length > 0 ? (
+                <PlanDelegationForm
                   planId={plan.id}
-                  taskTitle={currentTaskTitle}
+                  targets={delegationTargets}
+                  expectedDelegationVersion={plan.delegation?.version ?? 0}
+                  idempotencyKey={delegationIdempotencyKey}
                 />
-                <DecisionForm
-                  threadId={threadId}
-                  planId={plan.id}
-                  decision="approved"
-                />
-                <DecisionForm
-                  threadId={threadId}
-                  planId={plan.id}
-                  decision="rejected"
-                />
-              </div>
-            ) : (
-              <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                Un responsable, administrateur ou propriétaire doit valider ce plan.
-              </p>
-            )
+              ) : !plan.delegation && canDecide ? (
+                <p className="rounded-md border border-dashed border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950">
+                  Aucun autre membre autorisé n’a accès à ce fil pour recevoir la décision.
+                </p>
+              ) : null}
+
+              {canActOnPendingPlan ? (
+                <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-3">
+                  <PlanRevisionForm
+                    planId={plan.id}
+                    taskTitle={currentTaskTitle}
+                  />
+                  <DecisionForm
+                    threadId={threadId}
+                    planId={plan.id}
+                    decision="approved"
+                  />
+                  <DecisionForm
+                    threadId={threadId}
+                    planId={plan.id}
+                    decision="rejected"
+                  />
+                </div>
+              ) : (
+                <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  {plan.delegation
+                    ? `Décision en lecture seule : ${plan.delegation.delegatedToName} en est actuellement responsable.`
+                    : "Un manager, administrateur ou propriétaire doit valider ce plan."}
+                </p>
+              )}
+            </div>
           ) : null}
           {plan.approvalStatus === "approved" &&
           plan.mission?.status === "failed" &&
@@ -820,6 +882,14 @@ function planStatusLabel(status: ConversationPlan["approvalStatus"]) {
     rejected: "Annulé",
     executed: "Exécuté",
   }[status];
+}
+
+function delegationRoleLabel(role: string) {
+  return {
+    owner: "Propriétaire",
+    administrator: "Administrateur",
+    manager: "Manager",
+  }[role] ?? "Membre autorisé";
 }
 
 function capabilityLabel(capability: string) {

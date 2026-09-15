@@ -17,9 +17,11 @@ import {
 } from "@/modules/channels/whatsapp-meta-activation-authorization-service";
 import {
   createConversationActionPlan,
+  delegateConversationActionPlan,
   decideConversationActionPlan,
   executeConversationActionPlan,
   listConversationActionPlans,
+  listConversationActionPlanDelegationTargets,
   requestConversationActionPlanRetry,
   reviseConversationActionPlan,
 } from "@/modules/orchestrator";
@@ -104,6 +106,28 @@ export function createConversationChannelServices(
       }),
     listPlans: (userId: string, tenantId: string, threadId: string) =>
       listConversationActionPlans(db, userId, tenantId, threadId),
+    listDelegationTargets: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+    ) =>
+      listConversationActionPlanDelegationTargets(
+        db,
+        userId,
+        tenantId,
+        planId,
+      ),
+    delegatePlan: (
+      userId: string,
+      tenantId: string,
+      input: {
+        planId: string;
+        delegatedToUserId: string;
+        expectedDelegationVersion: number;
+        idempotencyKey: string;
+        confirmed: true;
+      },
+    ) => delegateConversationActionPlan(db, userId, tenantId, input),
     decidePlan: (
       userId: string,
       tenantId: string,

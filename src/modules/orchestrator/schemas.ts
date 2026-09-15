@@ -362,6 +362,20 @@ export const actionPlanRevisionSchema = z
   })
   .strict();
 
+export const actionPlanDelegationSchema = z
+  .object({
+    planId: identifierSchema,
+    delegatedToUserId: identifierSchema,
+    expectedDelegationVersion: z.number().int().min(0).max(32),
+    idempotencyKey: identifierSchema.min(8),
+    confirmed: z.literal(true),
+  })
+  .strict();
+
+export const actionPlanDelegationTargetListSchema = z
+  .object({ planId: identifierSchema })
+  .strict();
+
 export const actionPlanListSchema = z
   .object({ threadId: identifierSchema })
   .strict();
@@ -383,6 +397,7 @@ export type ActionPlanProposal = z.infer<typeof actionPlanProposalSchema>;
 export type ActionPlanCreation = z.infer<typeof actionPlanCreationSchema>;
 export type ActionPlanDecision = z.infer<typeof actionPlanDecisionSchema>;
 export type ActionPlanRevision = z.infer<typeof actionPlanRevisionSchema>;
+export type ActionPlanDelegation = z.infer<typeof actionPlanDelegationSchema>;
 export type ActionPlanList = z.infer<typeof actionPlanListSchema>;
 export type ActionPlanExecution = z.infer<typeof actionPlanExecutionSchema>;
 

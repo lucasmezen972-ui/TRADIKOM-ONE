@@ -1073,6 +1073,26 @@ async function runConversationJourney(
     name: `Organisation Conversation ${viewport.label}`,
     category: "Services",
   });
+  const delegateEmail = `conversation-delegate-${suffix}@example.com`;
+  const delegatePassword = "ConversationDelegateE2E!2026";
+  const delegate = await services.registerUser({
+    name: `Responsable délégué ${viewport.label}`,
+    email: delegateEmail,
+    password: delegatePassword,
+  });
+  const readOnlyEmail = `conversation-readonly-${suffix}@example.com`;
+  const readOnlyPassword = "ConversationReadOnlyE2E!2026";
+  const readOnly = await services.registerUser({
+    name: `Observateur Conversation ${viewport.label}`,
+    email: readOnlyEmail,
+    password: readOnlyPassword,
+  });
+  const membershipCreatedAt = new Date().toISOString();
+  await db.query(
+    `insert into memberships (tenant_id, user_id, role, created_at)
+     values ($1, $2, 'manager', $4), ($1, $3, 'read-only', $4)`,
+    [tenant.id, delegate.id, readOnly.id, membershipCreatedAt],
+  );
   const metaTenantState = viewport.label === "desktop" ? "ready" : "not_registered";
   let metaEndpointId: string | null = null;
   if (metaTenantState === "ready") {
@@ -1400,20 +1420,310 @@ async function runConversationJourney(
       revisedViewportBounds.clientWidth,
     );
 
-    await page
-      .getByLabel("Motif de validation")
-      .fill("Nouvelle version vérifiée au clavier avant exécution mock.");
-    const approve = page.getByRole("button", { name: "Approuver une fois" });
-    await approve.focus();
-    await expect(approve).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/plan=approved/);
-    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(revisedPlanId);
+    const delegationSelect = page.getByLabel("Membre responsable");
+    await expect(delegationSelect).toBeVisible();
     await expect(
-      page.getByText("Plan approuvé. Il est prêt pour l’exécution mock.", {
-        exact: true,
-      }),
+      delegationSelect.locator(`option[value="${delegate.id}"]`),
+    ).toHaveCount(1);
+    await expect(
+      delegationSelect.locator(`option[value="${readOnly.id}"]`),
+    ).toHaveCount(0);
+    await expect(
+      delegationSelect.locator(`option[value="${user.id}"]`),
+    ).toHaveCount(0);
+    const delegateButton = page.getByRole("button", {
+      name: "Déléguer la décision",
+    });
+    const delegationIdempotencyKey = await delegationSelect
+      .locator("xpath=ancestor::form")
+      .locator('input[name="idempotencyKey"]')
+      .inputValue();
+    await expect(delegateButton).toBeDisabled();
+    await delegationSelect.selectOption(delegate.id);
+    await expect(delegateButton).toBeDisabled();
+    await page
+      .getByRole("checkbox", {
+        name: `Je confirme confier cette décision à Responsable délégué ${viewport.label}.`,
+      })
+      .check();
+    await expect(delegateButton).toBeEnabled();
+    await delegateButton.focus();
+    await expect(delegateButton).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=delegated/);
+    const delegatedUrl = new URL(page.url());
+    const delegatedThreadId = delegatedUrl.searchParams.get("fil");
+    const delegationId = delegatedUrl.searchParams.get("delegation_id");
+    expect(delegatedThreadId).toBeTruthy();
+    expect(delegationId).toBeTruthy();
+    expect(delegatedUrl.searchParams.get("plan_id")).toBe(revisedPlanId);
+    if (!delegatedThreadId || !delegationId || !revisedPlanId) {
+      throw new Error("La délégation durable n’a pas été renvoyée par l’action.");
+    }
+    await expect(
+      page.getByText(
+        "Décision déléguée. Le plan reste en attente de validation et aucune action n’a été exécutée.",
+        { exact: true },
+      ),
     ).toBeVisible();
+    const ownerDelegationCard = page.getByRole("region", {
+      name: "Responsable de la décision",
+    });
+    await expect(ownerDelegationCard).toContainText(
+      `Responsable délégué ${viewport.label}`,
+    );
+    await expect(ownerDelegationCard).toContainText("Manager");
+    await expect(
+      page.getByText(
+        `Décision en lecture seule : Responsable délégué ${viewport.label} en est actuellement responsable.`,
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const ownerReassignmentButton = page.getByRole("button", {
+      name: "Confirmer la réaffectation",
+    });
+    await expect(ownerReassignmentButton).toBeVisible();
+    await expect(ownerReassignmentButton).toBeDisabled();
+    await expect(
+      delegationSelect.locator(`option[value="${user.id}"]`),
+    ).toHaveCount(1);
+    await expect(
+      delegationSelect.locator(`option[value="${delegate.id}"]`),
+    ).toHaveCount(0);
+    await expect(
+      delegationSelect.locator(`option[value="${readOnly.id}"]`),
+    ).toHaveCount(0);
+    for (const actionName of [
+      "Déléguer la décision",
+      "Modifier le plan",
+      "Approuver une fois",
+      "Annuler le plan",
+    ]) {
+      await expect(page.getByRole("button", { name: actionName })).toHaveCount(0);
+    }
+
+    const delegationEvidence = await db.query<{
+      id: string;
+      version: number;
+      expectedPreviousVersion: number;
+      delegatedByUserId: string;
+      delegatedToUserId: string;
+      delegatedToRole: string;
+      idempotencyKeyHash: string;
+      planStatus: string;
+      approvalStatus: string;
+      plannedSteps: number;
+      policyReceipts: number;
+      runs: number;
+      events: number;
+      results: number;
+      audits: number;
+      safeMetadata: string | null;
+    }>(
+      `select
+         (select id from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as id,
+         (select version from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as version,
+         (select expected_previous_version from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as "expectedPreviousVersion",
+         (select delegated_by_user_id from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as "delegatedByUserId",
+         (select delegated_to_user_id from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as "delegatedToUserId",
+         (select delegated_to_role from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as "delegatedToRole",
+         (select idempotency_key_hash from conversation_action_plan_delegations
+           where tenant_id = $1 and plan_id = $2 order by version desc limit 1)
+           as "idempotencyKeyHash",
+         (select approval_status from conversation_action_plans
+           where tenant_id = $1 and id = $2) as "planStatus",
+         (select status from approvals where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2)
+           as "approvalStatus",
+         (select count(*)::int from conversation_action_plan_steps
+           where tenant_id = $1 and plan_id = $2 and status = 'planned')
+           as "plannedSteps",
+         (select count(*)::int from conversation_action_plan_policy_receipts
+           where tenant_id = $1 and plan_id = $2) as "policyReceipts",
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key = $3) as runs,
+         (select count(*)::int from domain_events where tenant_id = $1
+           and idempotency_key = $4) as events,
+         (select count(*)::int from conversation_messages where tenant_id = $1
+           and thread_id = $5 and kind = 'result') as results,
+         (select count(*)::int from audit_logs where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2
+           and action = 'conversation.plan_delegated') as audits,
+         (select safe_metadata from audit_logs where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2
+           and action = 'conversation.plan_delegated') as "safeMetadata"`,
+      [
+        tenant.id,
+        revisedPlanId,
+        `conversation_plan:${revisedPlanId}`,
+        `conversation.plan.execute:${revisedPlanId}`,
+        delegatedThreadId,
+      ],
+    );
+    expect(delegationEvidence.rows[0]).toMatchObject({
+      id: delegationId,
+      version: 1,
+      expectedPreviousVersion: 0,
+      delegatedByUserId: user.id,
+      delegatedToUserId: delegate.id,
+      delegatedToRole: "manager",
+      idempotencyKeyHash: hashToken(delegationIdempotencyKey),
+      planStatus: "awaiting_approval",
+      approvalStatus: "pending",
+      plannedSteps: 2,
+      policyReceipts: 0,
+      runs: 0,
+      events: 0,
+      results: 0,
+      audits: 1,
+      safeMetadata: expect.any(String),
+    });
+    const delegationAudit = delegationEvidence.rows[0]?.safeMetadata ?? "";
+    expect(delegationAudit).not.toContain(delegationIdempotencyKey);
+    expect(delegationAudit).not.toContain(delegate.id);
+    expect(delegationAudit).not.toContain(delegateEmail);
+    expect(delegationAudit).not.toContain(
+      `Responsable délégué ${viewport.label}`,
+    );
+    expect(JSON.parse(delegationAudit)).toEqual({
+      approvalId: expect.any(String),
+      planFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      delegationId,
+      delegationVersion: 1,
+      previousDelegationVersion: 0,
+      delegatedPrincipalStoredInAudit: false,
+      idempotencyKeyStoredInAudit: false,
+      conversationContentStoredInAudit: false,
+      estimatedExternalCost: 0,
+    });
+
+    const staleDelegationUrl = new URL(page.url());
+    staleDelegationUrl.searchParams.set(
+      "delegation_id",
+      "delegation_obsolete_non_corroboree",
+    );
+    await page.goto(staleDelegationUrl.toString());
+    await expect(
+      page.getByText(
+        "Décision déléguée. Le plan reste en attente de validation et aucune action n’a été exécutée.",
+        { exact: true },
+      ),
+    ).toHaveCount(0);
+    await expect(ownerDelegationCard).toContainText(
+      `Responsable délégué ${viewport.label}`,
+    );
+
+    const readOnlyContext = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+    try {
+      const readOnlyPage = await readOnlyContext.newPage();
+      await loginConversationUser(readOnlyPage, readOnlyEmail, readOnlyPassword);
+      await readOnlyPage.goto(
+        `/conversation?fil=${encodeURIComponent(delegatedThreadId ?? "")}&plan_id=${encodeURIComponent(revisedPlanId ?? "")}`,
+      );
+      const readOnlyDelegationCard = readOnlyPage.getByRole("region", {
+        name: "Responsable de la décision",
+      });
+      await expect(readOnlyDelegationCard).toContainText(
+        `Responsable délégué ${viewport.label}`,
+      );
+      await expect(
+        readOnlyPage.getByText(
+          "Votre rôle permet de lire ce fil, mais pas d’envoyer de message.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      for (const actionName of [
+        "Déléguer la décision",
+        "Confirmer la réaffectation",
+        "Modifier le plan",
+        "Approuver une fois",
+        "Annuler le plan",
+        "Exécuter les deux étapes en mock",
+      ]) {
+        await expect(
+          readOnlyPage.getByRole("button", { name: actionName }),
+        ).toHaveCount(0);
+      }
+      await expect(readOnlyPage.getByLabel("Membre responsable")).toHaveCount(0);
+      const readOnlyBounds = await readOnlyPage.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(readOnlyBounds.scrollWidth).toBeLessThanOrEqual(
+        readOnlyBounds.clientWidth,
+      );
+    } finally {
+      await readOnlyContext.close();
+    }
+
+    const delegateContext = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+    let approvedUrl = "";
+    try {
+      const delegatePage = await delegateContext.newPage();
+      await loginConversationUser(delegatePage, delegateEmail, delegatePassword);
+      await delegatePage.goto(
+        `/conversation?fil=${encodeURIComponent(delegatedThreadId ?? "")}&plan_id=${encodeURIComponent(revisedPlanId ?? "")}`,
+      );
+      const delegateCard = delegatePage.getByRole("region", {
+        name: "Responsable de la décision",
+      });
+      await expect(delegateCard).toContainText(
+        "Cette décision vous est confiée.",
+      );
+      await expect(
+        delegatePage.getByRole("button", {
+          name: "Confirmer la réaffectation",
+        }),
+      ).toBeDisabled();
+      const delegateReassignmentSelect =
+        delegatePage.getByLabel("Membre responsable");
+      await expect(
+        delegateReassignmentSelect.locator(`option[value="${user.id}"]`),
+      ).toHaveCount(1);
+      await expect(
+        delegateReassignmentSelect.locator(`option[value="${delegate.id}"]`),
+      ).toHaveCount(0);
+      await delegatePage
+        .getByLabel("Motif de validation")
+        .fill("Version déléguée vérifiée au clavier avant exécution mock.");
+      const approve = delegatePage.getByRole("button", {
+        name: "Approuver une fois",
+      });
+      await approve.focus();
+      await expect(approve).toBeFocused();
+      await delegatePage.keyboard.press("Enter");
+      await expect(delegatePage).toHaveURL(/plan=approved/);
+      expect(new URL(delegatePage.url()).searchParams.get("plan_id")).toBe(
+        revisedPlanId,
+      );
+      await expect(
+        delegatePage.getByText(
+          "Plan approuvé. Il est prêt pour l’exécution mock.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      approvedUrl = delegatePage.url();
+    } finally {
+      await delegateContext.close();
+    }
+
+    await page.goto(approvedUrl);
 
     const execute = page.getByRole("button", {
       name: "Exécuter les deux étapes en mock",
@@ -1670,6 +1980,7 @@ async function runConversationJourney(
     ).toHaveCount(0);
     await expect(clarificationPanel.getByText("0,00 €")).toHaveCount(0);
     for (const actionName of [
+      "Déléguer la décision",
       "Modifier le plan",
       "Approuver une fois",
       "Annuler le plan",
@@ -2092,6 +2403,21 @@ async function runConversationJourney(
   } finally {
     await context.close();
   }
+}
+
+async function loginConversationUser(
+  page: Page,
+  email: string,
+  password: string,
+) {
+  await page.goto("/");
+  const loginForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Se connecter" }),
+  });
+  await loginForm.getByPlaceholder("Email professionnel").fill(email);
+  await loginForm.getByPlaceholder("Mot de passe").fill(password);
+  await loginForm.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page).toHaveURL(/aujourdhui/);
 }
 
 async function openDemo(page: Page) {

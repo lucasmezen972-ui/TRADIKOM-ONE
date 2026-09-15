@@ -80,6 +80,169 @@ export type ConversationActionPlanPolicyReceiptRow = {
   created_at: string;
 };
 
+export type ConversationActionPlanDelegationRow = {
+  id: string;
+  tenant_id: string;
+  plan_id: string;
+  plan_fingerprint: string;
+  approval_id: string;
+  approval_target_type: "conversation_action_plan";
+  version: number;
+  expected_previous_version: number;
+  delegated_by_user_id: string;
+  delegated_to_user_id: string;
+  delegated_to_role: "owner" | "administrator" | "manager";
+  idempotency_key_hash: string;
+  request_fingerprint: string;
+  created_at: string;
+};
+
+export type ConversationActionPlanDelegationViewRow =
+  ConversationActionPlanDelegationRow & {
+    delegated_to_name: string;
+    delegated_to_email: string;
+  };
+
+export type ConversationActionPlanDelegationTargetRow = {
+  user_id: string;
+  name: string;
+  email: string;
+  role: "owner" | "administrator" | "manager";
+};
+
+const conversationActionPlanDelegationProjection = `
+  delegation.id, delegation.tenant_id, delegation.plan_id,
+  delegation.plan_fingerprint, delegation.approval_id,
+  delegation.approval_target_type, delegation.version,
+  delegation.expected_previous_version, delegation.delegated_by_user_id,
+  delegation.delegated_to_user_id, delegation.delegated_to_role,
+  delegation.idempotency_key_hash, delegation.request_fingerprint,
+  delegation.created_at, delegated_user.name as delegated_to_name,
+  delegated_user.email as delegated_to_email
+`;
+
+export async function findConversationActionPlanDelegationByIdempotencyHash(
+  db: DbClient,
+  tenantId: string,
+  idempotencyKeyHash: string,
+) {
+  const result = await db.query<ConversationActionPlanDelegationViewRow>(
+    `select ${conversationActionPlanDelegationProjection}
+     from conversation_action_plan_delegations delegation
+     join users delegated_user on delegated_user.id = delegation.delegated_to_user_id
+     where delegation.tenant_id = $1
+       and delegation.idempotency_key_hash = $2`,
+    [tenantId, idempotencyKeyHash],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function findLatestConversationActionPlanDelegation(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ConversationActionPlanDelegationViewRow>(
+    `select ${conversationActionPlanDelegationProjection}
+     from conversation_action_plan_delegations delegation
+     join users delegated_user on delegated_user.id = delegation.delegated_to_user_id
+     where delegation.tenant_id = $1 and delegation.plan_id = $2
+     order by delegation.version desc
+     limit 1`,
+    [tenantId, planId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function insertConversationActionPlanDelegation(
+  db: DbClient,
+  input: {
+    id: string;
+    tenantId: string;
+    planId: string;
+    planFingerprint: string;
+    approvalId: string;
+    version: number;
+    expectedPreviousVersion: number;
+    delegatedByUserId: string;
+    delegatedToUserId: string;
+    delegatedToRole: ConversationActionPlanDelegationRow["delegated_to_role"];
+    idempotencyKeyHash: string;
+    requestFingerprint: string;
+    createdAt: string;
+  },
+) {
+  const result = await db.query<ConversationActionPlanDelegationRow>(
+    `insert into conversation_action_plan_delegations (
+       id, tenant_id, plan_id, plan_fingerprint, approval_id,
+       approval_target_type, version, expected_previous_version,
+       delegated_by_user_id, delegated_to_user_id, delegated_to_role,
+       idempotency_key_hash, request_fingerprint, created_at
+     ) values (
+       $1, $2, $3, $4, $5, 'conversation_action_plan', $6, $7, $8, $9,
+       $10, $11, $12, $13
+     )
+     on conflict (tenant_id, idempotency_key_hash) do nothing
+     returning *`,
+    [
+      input.id,
+      input.tenantId,
+      input.planId,
+      input.planFingerprint,
+      input.approvalId,
+      input.version,
+      input.expectedPreviousVersion,
+      input.delegatedByUserId,
+      input.delegatedToUserId,
+      input.delegatedToRole,
+      input.idempotencyKeyHash,
+      input.requestFingerprint,
+      input.createdAt,
+    ],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function listConversationActionPlanDelegationTargetRows(
+  db: DbClient,
+  tenantId: string,
+  planId: string,
+) {
+  const result = await db.query<ConversationActionPlanDelegationTargetRow>(
+    `select membership.user_id, delegated_user.name, delegated_user.email,
+       membership.role
+     from conversation_action_plans plan
+     join conversation_threads thread
+       on thread.tenant_id = plan.tenant_id and thread.id = plan.thread_id
+     join memberships membership on membership.tenant_id = plan.tenant_id
+     join users delegated_user on delegated_user.id = membership.user_id
+     where plan.tenant_id = $1 and plan.id = $2
+       and plan.approval_status = 'awaiting_approval'
+       and membership.role in ('owner', 'administrator', 'manager')
+       and delegated_user.deleted_at is null
+       and (
+         thread.visibility_scope = 'tenant'
+         or exists (
+           select 1 from conversation_thread_access_grants access_grant
+           where access_grant.tenant_id = thread.tenant_id
+             and access_grant.thread_id = thread.id
+             and access_grant.user_id = membership.user_id
+             and access_grant.scope = thread.visibility_scope
+         )
+       )
+     order by
+       case membership.role
+         when 'owner' then 0
+         when 'administrator' then 1
+         else 2
+       end,
+       delegated_user.name asc,
+       delegated_user.id asc`,
+    [tenantId, planId],
+  );
+  return result.rows;
+}
+
 export async function insertConversationActionPlanPolicyReceipt(
   db: DbClient,
   input: {

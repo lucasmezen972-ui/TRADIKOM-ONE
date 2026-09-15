@@ -112,6 +112,39 @@ export async function reviseConversationPlanAction(formData: FormData) {
   );
 }
 
+export async function delegateConversationPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction("conversation.plan_delegate", async () => {
+    const expectedDelegationVersion = z
+      .string()
+      .regex(/^\d+$/)
+      .transform(Number)
+      .pipe(z.number().int().min(0).max(31))
+      .parse(text(formData, "expectedDelegationVersion"));
+    const plan = await services.delegatePlan(user.id, tenant.id, {
+      planId: text(formData, "planId"),
+      delegatedToUserId: text(formData, "delegatedToUserId"),
+      expectedDelegationVersion,
+      idempotencyKey: text(formData, "idempotencyKey"),
+      confirmed: requiredConfirmation(formData, "delegationConfirmed"),
+    });
+    return {
+      plan,
+      delegationId: z.string().min(1).parse(plan.delegation?.id),
+    };
+  });
+  revalidatePath("/conversation");
+  redirect(
+    conversationPlanRedirect(
+      result.plan.threadId,
+      "delegated",
+      result.plan.id,
+      result.delegationId,
+    ),
+  );
+}
+
 export async function executeConversationPlanAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
@@ -196,16 +229,19 @@ function conversationPlanRedirect(
     | "clarification"
     | "cree"
     | "revised"
+    | "delegated"
     | "approved"
     | "rejected"
     | "executed",
   planId: string,
+  delegationId?: string,
 ) {
   const params = new URLSearchParams({
     fil: threadId,
     plan: receipt,
     plan_id: planId,
   });
+  if (delegationId) params.set("delegation_id", delegationId);
   return `/conversation?${params.toString()}`;
 }
 

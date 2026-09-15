@@ -31,7 +31,7 @@ describe("reçu durable d’un plan Conversation", () => {
     ).toBeNull();
   });
 
-  it("reconnaît uniquement les six états durables correspondants", () => {
+  it("reconnaît uniquement les sept états durables correspondants", () => {
     expect(
       resolveConversationPlanReceipt("clarification", "plan_clarification", {
         id: "plan_clarification",
@@ -56,6 +56,22 @@ describe("reçu durable d’un plan Conversation", () => {
         supersedesPlanId: "plan_previous",
       }),
     ).toBe("revised");
+    expect(
+      resolveConversationPlanReceipt(
+        "delegated",
+        "plan_delegated",
+        {
+          id: "plan_delegated",
+          approvalStatus: "awaiting_approval",
+          delegation: {
+            id: "delegation_durable",
+            version: 1,
+            delegatedToUserId: "user_responsable",
+          },
+        },
+        "delegation_durable",
+      ),
+    ).toBe("delegated");
     expect(
       resolveConversationPlanReceipt("approved", "plan_approved", {
         id: "plan_approved",
@@ -156,6 +172,87 @@ describe("reçu durable d’un plan Conversation", () => {
         supersedesPlanId: "plan_previous",
       }),
     ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("revised", "plan_revised", {
+        id: "plan_revised",
+        approvalStatus: "awaiting_approval",
+        supersedesPlanId: "plan_previous",
+        delegation: {
+          id: "delegation_durable",
+          version: 1,
+          delegatedToUserId: "user_responsable",
+        },
+      }),
+    ).toBeNull();
+  });
+
+  it("n’atteste la délégation que si l’affectation durable exacte existe", () => {
+    const delegatedPlan = {
+      id: "plan_delegated",
+      approvalStatus: "awaiting_approval" as const,
+      delegation: {
+        id: "delegation_durable",
+        version: 1,
+        delegatedToUserId: "user_responsable",
+      },
+    };
+
+    expect(
+      resolveConversationPlanReceipt(
+        "delegated",
+        "plan_delegated",
+        delegatedPlan,
+        "delegation_durable",
+      ),
+    ).toBe("delegated");
+    expect(
+      resolveConversationPlanReceipt("delegated", "plan_delegated", {
+        ...delegatedPlan,
+        delegation: null,
+      }, "delegation_durable"),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("delegated", "plan_delegated", {
+        ...delegatedPlan,
+        delegation: { ...delegatedPlan.delegation, version: 0 },
+      }, "delegation_durable"),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("delegated", "plan_delegated", {
+        ...delegatedPlan,
+        approvalStatus: "approved",
+      }, "delegation_durable"),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt(
+        "delegated",
+        "plan_delegated",
+        delegatedPlan,
+      ),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt(
+        "delegated",
+        "plan_delegated",
+        delegatedPlan,
+        "delegation_obsolete",
+      ),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("cree", "plan_delegated", delegatedPlan),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("delegated", "plan_delegated", {
+        ...delegatedPlan,
+        mission: { status: "running" },
+      }, "delegation_durable"),
+    ).toBeNull();
+  });
+
+  it("explique qu’une délégation n’exécute aucune action", () => {
+    expect(planReceiptMessage("delegated")).toBe(
+      "Décision déléguée. Le plan reste en attente de validation et aucune action n’a été exécutée.",
+    );
   });
 
   it("n’atteste jamais une exécution sans mission durable réussie", () => {
@@ -171,9 +268,20 @@ describe("reçu durable d’un plan Conversation", () => {
   });
 
   it("n’affiche jamais un reçu de préparation, approbation ou refus après le démarrage d’une mission", () => {
-    for (const [receipt, approvalStatus] of [
+    for (const [receipt, approvalStatus, extra] of [
       ["cree", "awaiting_approval"],
       ["revised", "awaiting_approval"],
+      [
+        "delegated",
+        "awaiting_approval",
+        {
+          delegation: {
+            id: "delegation_durable",
+            version: 1,
+            delegatedToUserId: "user_responsable",
+          },
+        },
+      ],
       ["approved", "approved"],
       ["rejected", "rejected"],
     ] as const) {
@@ -182,8 +290,9 @@ describe("reçu durable d’un plan Conversation", () => {
           resolveConversationPlanReceipt(receipt, `plan_${receipt}`, {
             id: `plan_${receipt}`,
             approvalStatus,
+            ...extra,
             mission: { status },
-          }),
+          }, receipt === "delegated" ? "delegation_durable" : undefined),
         ).toBeNull();
       }
     }

@@ -36,10 +36,10 @@ describe("migration des révisions de plans Conversation", () => {
       ).trim(),
     ).toBe(mirror.trim());
     expect(getMigrationIds().at(-1)).toBe(
-      "119_os5_conversation_action_plan_revisions",
+      "122_os5_conversation_action_plan_delegations",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "121_os5_orchestrator_namespace_read_delivery_rls",
+      "123_os5_conversation_action_plan_delegations_rls",
     );
   });
 

@@ -23,6 +23,8 @@ describe("migrations du Conversation Hub", () => {
         "119_os5_conversation_action_plan_revisions",
         "120_os5_orchestrator_internal_namespace_rls",
         "121_os5_orchestrator_namespace_read_delivery_rls",
+        "122_os5_conversation_action_plan_delegations",
+        "123_os5_conversation_action_plan_delegations_rls",
       ]),
     );
 
@@ -36,6 +38,7 @@ describe("migrations du Conversation Hub", () => {
        order by table_name`,
     );
     expect(tables.rows.map((row) => row.table_name)).toEqual([
+      "conversation_action_plan_delegations",
       "conversation_action_plan_policy_receipts",
       "conversation_action_plan_steps",
       "conversation_action_plans",
