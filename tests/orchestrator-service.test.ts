@@ -15,6 +15,7 @@ import {
   getConversationActionPlan,
   listConversationActionPlans,
   requestConversationActionPlanRetry,
+  reviseConversationActionPlan,
   type ActionPlanGenerationContext,
   type GeneratedActionPlan,
 } from "../src/modules/orchestrator";
@@ -178,6 +179,656 @@ describe("service des plans Conversation", () => {
       "Texte client confidentiel",
     );
     expect(audits.rows[0]?.safe_metadata).not.toContain("Relancer le contact");
+  });
+
+  it("remplace atomiquement un plan en attente par une révision approuvable et exécutable", async () => {
+    const context = await createTenantContext("plan-revision@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const original = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    const taskTitle = "Rappeler le contact jeudi matin";
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("Aucun transport externe attendu."));
+    const providerExecuteSpy = vi.spyOn(
+      strictMockCapabilityProvider,
+      "execute",
+    );
+
+    const revised = await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { planId: original.id, taskTitle },
+    );
+    const replay = await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { planId: original.id, taskTitle },
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(providerExecuteSpy).not.toHaveBeenCalled();
+    expect(revised).toMatchObject({
+      approvalStatus: "awaiting_approval",
+      supersedesPlanId: original.id,
+      revisedFromPlanId: original.id,
+      idempotentReplay: false,
+      steps: [{ status: "planned" }, { status: "planned" }],
+    });
+    expect(revised.id).not.toBe(original.id);
+    expect(revised.plan.steps[1]?.input).toEqual({ title: taskTitle });
+    expect(revised.steps.map((step) => step.idempotencyKey)).not.toEqual(
+      original.steps.map((step) => step.idempotencyKey),
+    );
+    expect(replay).toMatchObject({
+      id: revised.id,
+      supersedesPlanId: original.id,
+      revisedFromPlanId: original.id,
+      idempotentReplay: true,
+    });
+
+    const beforeApproval = await context.db.query<{
+      originalStatus: string;
+      revisedStatus: string;
+      originalApproval: string;
+      revisedApproval: string;
+      originalCancelledSteps: number;
+      originalReceipts: number;
+      revisedReceipts: number;
+      originalRuns: number;
+      revisions: number;
+    }>(
+      `select
+         (select approval_status from conversation_action_plans
+          where tenant_id = $1 and id = $2) as "originalStatus",
+         (select approval_status from conversation_action_plans
+          where tenant_id = $1 and id = $3) as "revisedStatus",
+         (select status from approvals where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $2)
+          as "originalApproval",
+         (select status from approvals where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $3)
+          as "revisedApproval",
+         (select count(*)::int from conversation_action_plan_steps
+          where tenant_id = $1 and plan_id = $2 and status = 'cancelled')
+          as "originalCancelledSteps",
+         (select count(*)::int from conversation_action_plan_policy_receipts
+          where tenant_id = $1 and plan_id = $2) as "originalReceipts",
+         (select count(*)::int from conversation_action_plan_policy_receipts
+          where tenant_id = $1 and plan_id = $3) as "revisedReceipts",
+         (select count(*)::int from workflow_runs
+          where tenant_id = $1 and workflow_key = $4) as "originalRuns",
+         (select count(*)::int from conversation_action_plans
+          where tenant_id = $1 and supersedes_plan_id = $2) as revisions`,
+      [
+        context.tenantId,
+        original.id,
+        revised.id,
+        `conversation_plan:${original.id}`,
+      ],
+    );
+    expect(beforeApproval.rows[0]).toEqual({
+      originalStatus: "rejected",
+      revisedStatus: "awaiting_approval",
+      originalApproval: "rejected",
+      revisedApproval: "pending",
+      originalCancelledSteps: 2,
+      originalReceipts: 0,
+      revisedReceipts: 0,
+      originalRuns: 0,
+      revisions: 1,
+    });
+
+    const revisionMessages = await context.db.query<{
+      externalMessageId: string;
+      occurredAt: string;
+    }>(
+      `select external_message_id as "externalMessageId",
+              occurred_at as "occurredAt"
+       from conversation_messages
+       where tenant_id = $1
+         and external_message_id in ($2, $3)
+       order by occurred_at asc, created_at asc, id asc`,
+      [
+        context.tenantId,
+        `${original.id}:rejected`,
+        `${revised.id}:proposal`,
+      ],
+    );
+    expect(revisionMessages.rows.map((message) => message.externalMessageId)).toEqual(
+      [`${original.id}:rejected`, `${revised.id}:proposal`],
+    );
+    expect(
+      Date.parse(revisionMessages.rows[1]?.occurredAt ?? ""),
+    ).toBeGreaterThan(
+      Date.parse(revisionMessages.rows[0]?.occurredAt ?? ""),
+    );
+
+    await expect(
+      decideConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        {
+          planId: original.id,
+          decision: "rejected",
+          reason: "Rejeu obsolète.",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+    await expect(
+      executeConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        original.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_execution_not_approved" });
+
+    const revisionAudit = await context.db.query<{ safe_metadata: string }>(
+      `select safe_metadata from audit_logs
+       where tenant_id = $1 and action = 'conversation.plan_revised'
+         and target_type = 'conversation_action_plan' and target_id = $2`,
+      [context.tenantId, revised.id],
+    );
+    expect(revisionAudit.rows).toHaveLength(1);
+    expect(revisionAudit.rows[0]?.safe_metadata).not.toContain(taskTitle);
+    expect(JSON.parse(revisionAudit.rows[0]?.safe_metadata ?? "null")).toEqual({
+      threadId: source.threadId,
+      previousPlanId: original.id,
+      previousApprovalId: original.approvalId,
+      revisedApprovalId: revised.approvalId,
+      previousPlanFingerprint: original.planFingerprint,
+      revisedPlanFingerprint: revised.planFingerprint,
+      changedFields: ["steps.project.task.create.input.title"],
+      capabilityCount: 2,
+      executionEnvironment: "mock",
+      estimatedExternalCost: 0,
+    });
+
+    const approved = await decideConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      {
+        planId: revised.id,
+        decision: "approved",
+        reason: "Révision métier validée.",
+      },
+    );
+    expect(approved.policyReceipt).toBeTruthy();
+    const executed = await executeConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      revised.id,
+    );
+    expect(executed).toMatchObject({
+      id: revised.id,
+      approvalStatus: "executed",
+      supersedesPlanId: original.id,
+    });
+    expect(providerExecuteSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    const generationReplay = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    expect(generationReplay).toMatchObject({
+      id: revised.id,
+      approvalStatus: "executed",
+      supersedesPlanId: original.id,
+      idempotentReplay: true,
+    });
+  });
+
+  it("fait converger le rejeu d'une révision ancestrale vers la feuille courante", async () => {
+    const context = await createTenantContext(
+      "plan-revision-ancestral-replay@example.com",
+    );
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const original = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    const firstTitle = "Rappeler le contact jeudi matin";
+    const secondTitle = "Rappeler le contact vendredi après-midi";
+    const firstRevision = await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { planId: original.id, taskTitle: firstTitle },
+    );
+    const currentRevision = await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { planId: firstRevision.id, taskTitle: secondTitle },
+    );
+
+    const ancestralReplay = await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { planId: original.id, taskTitle: firstTitle },
+    );
+
+    expect(ancestralReplay).toMatchObject({
+      id: currentRevision.id,
+      approvalStatus: "awaiting_approval",
+      supersedesPlanId: firstRevision.id,
+      revisedFromPlanId: original.id,
+      idempotentReplay: true,
+    });
+    expect(ancestralReplay.plan.steps[1]?.input).toEqual({
+      title: secondTitle,
+    });
+  });
+
+  it("verrouille et revalide le rôle dans la transaction de révision", async () => {
+    const context = await createTenantContext(
+      "plan-revision-membership-lock@example.com",
+    );
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const original = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    const querySpy = vi.spyOn(context.db, "query");
+
+    await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      {
+        planId: original.id,
+        taskTitle: "Préparer la relance après revalidation du rôle",
+      },
+    );
+
+    const queries = querySpy.mock.calls.map(([sql]) =>
+      String(sql).replace(/\s+/gu, " ").trim().toLowerCase(),
+    );
+    const planLockIndex = queries.findIndex(
+      (sql) =>
+        sql.includes("from conversation_action_plans") &&
+        sql.endsWith("for update"),
+    );
+    const membershipLockIndex = queries.findIndex(
+      (sql) => sql.includes("from memberships") && sql.endsWith("for share"),
+    );
+
+    expect(planLockIndex).toBeGreaterThanOrEqual(0);
+    expect(membershipLockIndex).toBeGreaterThan(planLockIndex);
+  });
+
+  it("refuse une révision sans changement, concurrente ou hors rôle", async () => {
+    const context = await createTenantContext("plan-revision-guards@example.com");
+    const second = await createSecondUserAndTenant(
+      context.db,
+      "plan-revision-collaborator@example.com",
+    );
+    await context.db.query(
+      `insert into memberships (tenant_id, user_id, role, created_at)
+       values ($1, $2, 'collaborator', $3)`,
+      [context.tenantId, second.userId, occurredAt],
+    );
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const original = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        {
+          planId: original.id,
+          taskTitle: "Relancer le contact de la conversation",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        second.userId,
+        context.tenantId,
+        { planId: original.id, taskTitle: "Titre interdit au collaborateur" },
+      ),
+    ).rejects.toMatchObject({ code: "tenant_access_denied" });
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        second.userId,
+        second.tenantId,
+        { planId: original.id, taskTitle: "Titre du mauvais tenant" },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+
+    await reviseConversationActionPlan(
+      context.db,
+      context.userId,
+      context.tenantId,
+      { planId: original.id, taskTitle: "Première révision durable" },
+    );
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { planId: original.id, taskTitle: "Seconde révision contradictoire" },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+    const revisions = await context.db.query<{ count: number }>(
+      `select count(*)::int as count from conversation_action_plans
+       where tenant_id = $1 and supersedes_plan_id = $2`,
+      [context.tenantId, original.id],
+    );
+    expect(revisions.rows[0]?.count).toBe(1);
+  });
+
+  it("annule toute la révision si un message entrant usurpe sa clé interne", async () => {
+    const context = await createTenantContext("plan-revision-collision@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const original = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+    );
+    const reservedIdempotencyKey = `orchestrator:${original.id}:rejected`;
+    await expect(
+      ingestConversationMessage(context.db, context.userId, {
+        ...ingressFixture(context.tenantId),
+        threadId: source.threadId,
+        externalMessageId: `collision_service_${original.id}`,
+        idempotencyKey: reservedIdempotencyKey,
+        correlationId: `collision_service_${original.id}`,
+        text: "Message entrant qui ne doit jamais devenir une preuve système.",
+      }),
+    ).rejects.toMatchObject({ code: "conversation_idempotency_conflict" });
+
+    // PGlite n'active pas la RLS : cette écriture directe simule une donnée
+    // historique empoisonnée et prouve que l'orchestrateur échoue fermé.
+    await context.db.query(
+      `insert into conversation_messages (
+         id, tenant_id, thread_id, channel_identity_id, direction, kind,
+         status, text_content, adapter_key, external_message_id,
+         idempotency_key, correlation_id, causation_id, safe_error_code,
+         occurred_at, created_at
+       )
+       select $3, tenant_id, thread_id, channel_identity_id, 'inbound', 'text',
+         'received', $4, adapter_key, $5, $6, $7, id, null,
+         occurred_at, created_at
+       from conversation_messages
+       where tenant_id = $1 and id = $2`,
+      [
+        context.tenantId,
+        source.messageId,
+        `collision_message_${original.id}`,
+        "Message historique qui ne doit jamais devenir une preuve système.",
+        `collision_raw_${original.id}`,
+        reservedIdempotencyKey,
+        `collision_raw_${original.id}`,
+      ],
+    );
+
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        {
+          planId: original.id,
+          taskTitle: "Révision qui doit être entièrement annulée",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+
+    const state = await context.db.query<{
+      approvalStatus: string;
+      approval: string;
+      plannedSteps: number;
+      revisions: number;
+      revisionAudits: number;
+    }>(
+      `select
+         (select approval_status from conversation_action_plans
+          where tenant_id = $1 and id = $2) as "approvalStatus",
+         (select status from approvals where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $2)
+          as approval,
+         (select count(*)::int from conversation_action_plan_steps
+          where tenant_id = $1 and plan_id = $2 and status = 'planned')
+          as "plannedSteps",
+         (select count(*)::int from conversation_action_plans
+          where tenant_id = $1 and supersedes_plan_id = $2) as revisions,
+         (select count(*)::int from audit_logs
+          where tenant_id = $1 and action = 'conversation.plan_revised')
+          as "revisionAudits"`,
+      [context.tenantId, original.id],
+    );
+    expect(state.rows[0]).toEqual({
+      approvalStatus: "awaiting_approval",
+      approval: "pending",
+      plannedSteps: 2,
+      revisions: 0,
+      revisionAudits: 0,
+    });
+  });
+
+  it("échoue fermé si une ancienne donnée a préempté l'identité interne", async () => {
+    const participantPoisoned = await createTenantContext(
+      "plan-orchestrator-participant-poison@example.com",
+    );
+    const participantSource = await ingestConversationMessage(
+      participantPoisoned.db,
+      participantPoisoned.userId,
+      ingressFixture(participantPoisoned.tenantId),
+    );
+    const participantFingerprint = sha256(
+      participantPoisoned.tenantId,
+    ).slice(0, 32);
+    await participantPoisoned.db.query(
+      `insert into conversation_participants (
+         id, tenant_id, role, display_name, created_at, updated_at
+       ) values ($1, $2, 'member', 'Identité empoisonnée', $3, $3)`,
+      [
+        `orchestrator_participant_${participantFingerprint}`,
+        participantPoisoned.tenantId,
+        occurredAt,
+      ],
+    );
+
+    await expect(
+      createConversationActionPlan(
+        participantPoisoned.db,
+        participantPoisoned.userId,
+        {
+          tenantId: participantPoisoned.tenantId,
+          threadId: participantSource.threadId,
+          sourceMessageId: participantSource.messageId,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+
+    const identityPoisoned = await createTenantContext(
+      "plan-orchestrator-identity-poison@example.com",
+    );
+    const identitySource = await ingestConversationMessage(
+      identityPoisoned.db,
+      identityPoisoned.userId,
+      ingressFixture(identityPoisoned.tenantId),
+    );
+    const identityFingerprint = sha256(identityPoisoned.tenantId).slice(0, 32);
+    const canonicalParticipantId =
+      `orchestrator_participant_${identityFingerprint}`;
+    await identityPoisoned.db.query(
+      `insert into conversation_participants (
+         id, tenant_id, role, display_name, created_at, updated_at
+       ) values ($1, $2, 'system', 'TRADIKOM ONE', $3, $3)`,
+      [canonicalParticipantId, identityPoisoned.tenantId, occurredAt],
+    );
+    await identityPoisoned.db.query(
+      `insert into conversation_channel_identities (
+         id, tenant_id, participant_id, channel_kind, adapter_key,
+         external_subject_id, display_name, role, state, created_at, updated_at
+       ) values (
+         $1, $2, $3, 'test', 'orchestrator-mock',
+         'tradikom-one-orchestrator', 'TRADIKOM ONE', 'system', 'active',
+         $4, $4
+       )`,
+      [
+        `identity_poisoned_${identityFingerprint}`,
+        identityPoisoned.tenantId,
+        canonicalParticipantId,
+        occurredAt,
+      ],
+    );
+
+    await expect(
+      createConversationActionPlan(
+        identityPoisoned.db,
+        identityPoisoned.userId,
+        {
+          tenantId: identityPoisoned.tenantId,
+          threadId: identitySource.threadId,
+          sourceMessageId: identitySource.messageId,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+
+    for (const context of [participantPoisoned, identityPoisoned]) {
+      const state = await context.db.query<{
+        plans: number;
+        planAudits: number;
+      }>(
+        `select
+           (select count(*)::int from conversation_action_plans
+            where tenant_id = $1) as plans,
+           (select count(*)::int from audit_logs
+            where tenant_id = $1 and action = 'conversation.plan_proposed')
+            as "planAudits"`,
+        [context.tenantId],
+      );
+      expect(state.rows[0]).toEqual({ plans: 0, planAudits: 0 });
+    }
+  });
+
+  it("borne la lignée à 32 révisions tout en rejouant sa version terminale", async () => {
+    const context = await createTenantContext("plan-revision-depth@example.com");
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      ingressFixture(context.tenantId),
+    );
+    const creationInput = {
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+      sourceMessageId: source.messageId,
+    };
+    const original = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      creationInput,
+    );
+    let current = original;
+    for (let revision = 1; revision <= 32; revision += 1) {
+      current = await reviseConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        {
+          planId: current.id,
+          taskTitle: `Révision durable numéro ${revision}`,
+        },
+      );
+    }
+
+    const replay = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      creationInput,
+    );
+    expect(replay).toMatchObject({
+      id: current.id,
+      supersedesPlanId: current.supersedesPlanId,
+      approvalStatus: "awaiting_approval",
+      idempotentReplay: true,
+    });
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        {
+          planId: current.id,
+          taskTitle: "Révision durable numéro 33",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+
+    const plans = await context.db.query<{ count: number }>(
+      `select count(*)::int as count from conversation_action_plans
+       where tenant_id = $1 and thread_id = $2`,
+      [context.tenantId, source.threadId],
+    );
+    expect(plans.rows[0]?.count).toBe(33);
   });
 
   it("transmet une extraction vérifiée comme donnée bornée sans persister son contenu", async () => {

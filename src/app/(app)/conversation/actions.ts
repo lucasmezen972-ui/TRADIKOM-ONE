@@ -91,6 +91,23 @@ export async function decideConversationPlanAction(formData: FormData) {
   );
 }
 
+export async function reviseConversationPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction("conversation.plan_revise", () =>
+    services.revisePlan(
+      user.id,
+      tenant.id,
+      text(formData, "planId"),
+      text(formData, "taskTitle"),
+    ),
+  );
+  revalidatePath("/conversation");
+  redirect(
+    conversationPlanRedirect(result.threadId, "revised", result.id),
+  );
+}
+
 export async function executeConversationPlanAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
@@ -171,7 +188,7 @@ function requiredConfirmation(formData: FormData, key: string): true {
 
 function conversationPlanRedirect(
   threadId: string,
-  receipt: "cree" | "approved" | "rejected" | "executed",
+  receipt: "cree" | "revised" | "approved" | "rejected" | "executed",
   planId: string,
 ) {
   const params = new URLSearchParams({

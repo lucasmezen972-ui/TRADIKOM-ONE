@@ -28,6 +28,8 @@ export type ConversationActionPlanRow = {
   decided_by: string | null;
   decided_at: string | null;
   decision_reason: string | null;
+  supersedes_plan_id: string | null;
+  revision_request_fingerprint: string | null;
 };
 
 export type ConversationActionPlanStepRow = {
@@ -197,6 +199,20 @@ export async function lockActionPlanRow(
   return result.rows[0] ?? null;
 }
 
+export async function findActionPlanRevisionByPreviousPlan(
+  db: DbClient,
+  tenantId: string,
+  previousPlanId: string,
+) {
+  const result = await db.query<ConversationActionPlanRow>(
+    `select *
+     from conversation_action_plans
+     where tenant_id = $1 and supersedes_plan_id = $2`,
+    [tenantId, previousPlanId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function listActionPlanRowsByThread(
   db: DbClient,
   tenantId: string,
@@ -235,6 +251,8 @@ export async function insertActionPlan(
     decidedBy: string | null;
     decidedAt: string | null;
     decisionReason: string | null;
+    supersedesPlanId?: string | null;
+    revisionRequestFingerprint?: string | null;
   },
 ) {
   const result = await db.query<ConversationActionPlanRow>(
@@ -243,10 +261,11 @@ export async function insertActionPlan(
        generation_source, model_reference, approval_status, intent,
        business_goal, confidence, risk_summary, estimated_cost_minor,
        estimated_cost_currency, plan_json, plan_fingerprint, created_by,
-       created_at, updated_at, decided_by, decided_at, decision_reason
+       created_at, updated_at, decided_by, decided_at, decision_reason,
+       supersedes_plan_id, revision_request_fingerprint
      ) values (
        $1, $2, $3, $4, 1, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-       $14, $15, $16, $17, $17, $18, $19, $20
+       $14, $15, $16, $17, $17, $18, $19, $20, $21, $22
      )
      on conflict (tenant_id, source_message_id, plan_fingerprint) do nothing
      returning *`,
@@ -271,6 +290,8 @@ export async function insertActionPlan(
       input.decidedBy,
       input.decidedAt,
       input.decisionReason,
+      input.supersedesPlanId ?? null,
+      input.revisionRequestFingerprint ?? null,
     ],
   );
   return result.rows[0] ?? null;

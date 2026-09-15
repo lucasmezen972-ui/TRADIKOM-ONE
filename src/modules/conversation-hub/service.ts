@@ -14,6 +14,7 @@ import {
   findAccessibleConversationThreadRow,
   findConversationIdentityByExternalSubject,
   findConversationMessageByIdempotencyKey,
+  findConversationParticipantRow,
   findConversationThreadRow,
   findConversationThreadAccessOperation,
   insertConversationThreadAccessOperationIfAbsent,
@@ -60,6 +61,7 @@ export async function ingestConversationMessage(
   input: MessageIngress,
 ) {
   const parsed = messageIngressSchema.parse(input);
+  assertIngressDoesNotUseReservedOrchestratorNamespace(parsed, false);
 
   return withTenantDbTransaction(
     db,
@@ -77,12 +79,47 @@ export async function ingestConversationMessage(
   );
 }
 
+function assertIngressDoesNotUseReservedOrchestratorNamespace(
+  input: MessageIngress,
+  allowSystemRole: boolean,
+) {
+  if (input.idempotencyKey.startsWith("orchestrator:")) {
+    throw new ConversationHubError(
+      "conversation_idempotency_conflict",
+      "Cette clé d'idempotence est réservée aux messages internes.",
+    );
+  }
+
+  const identityUsesReservedNamespace =
+    input.channelIdentity.id.startsWith("orchestrator_identity_") ||
+    input.channelIdentity.participantId.startsWith(
+      "orchestrator_participant_",
+    ) ||
+    input.channelIdentity.adapterKey === "orchestrator-mock" ||
+    input.channelIdentity.externalSubjectId ===
+      "tradikom-one-orchestrator" ||
+    (!allowSystemRole && input.channelIdentity.role === "system");
+  const routeUsesReservedNamespace = input.routeTrace.some(
+    (hop) =>
+      hop.adapterKey === "orchestrator-mock" ||
+      hop.channelIdentityId.startsWith("orchestrator_identity_"),
+  );
+
+  if (identityUsesReservedNamespace || routeUsesReservedNamespace) {
+    throw new ConversationHubError(
+      "conversation_identity_conflict",
+      "Cette identité de canal est réservée aux messages internes.",
+    );
+  }
+}
+
 export async function ingestSystemConversationMessage(
   db: DbClient,
   systemActorId: string,
   input: MessageIngress,
 ) {
   const parsed = messageIngressSchema.parse(input);
+  assertIngressDoesNotUseReservedOrchestratorNamespace(parsed, true);
   if (!/^system_[A-Za-z0-9_:-]{1,151}$/.test(systemActorId)) {
     throw new ConversationHubError(
       "conversation_access_denied",
@@ -606,6 +643,7 @@ async function ensureConversationIdentity(db: DbClient, input: MessageIngress) {
   );
   if (existing) {
     assertIdentityMatchesIngress(existing, input);
+    await assertParticipantMatchesIngress(db, input);
     if (existing.state === "blocked" || existing.state === "revoked") {
       throw new ConversationHubError(
         "conversation_identity_unavailable",
@@ -633,6 +671,7 @@ async function ensureConversationIdentity(db: DbClient, input: MessageIngress) {
     createdAt: input.channelIdentity.createdAt,
     updatedAt: input.channelIdentity.updatedAt,
   });
+  await assertParticipantMatchesIngress(db, input);
   await insertConversationIdentityIfAbsent(db, {
     id: input.channelIdentity.id,
     tenantId: input.tenantId,
@@ -661,6 +700,23 @@ async function ensureConversationIdentity(db: DbClient, input: MessageIngress) {
   }
   assertIdentityMatchesIngress(inserted, input);
   return inserted;
+}
+
+async function assertParticipantMatchesIngress(
+  db: DbClient,
+  input: MessageIngress,
+) {
+  const participant = await findConversationParticipantRow(
+    db,
+    input.tenantId,
+    input.channelIdentity.participantId,
+  );
+  if (!participant || participant.role !== input.channelIdentity.role) {
+    throw new ConversationHubError(
+      "conversation_identity_conflict",
+      "Le participant ne correspond pas à l'identité de canal demandée.",
+    );
+  }
 }
 
 function assertIdentityMatchesIngress(

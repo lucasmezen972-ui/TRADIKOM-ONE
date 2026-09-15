@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   decidePlan: vi.fn(),
+  revisePlan: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -29,10 +30,14 @@ vi.mock("@/lib/session", () => ({
 vi.mock("@/modules/channels", () => ({
   getConversationChannelServices: async () => ({
     decidePlan: mocks.decidePlan,
+    revisePlan: mocks.revisePlan,
   }),
 }));
 
-import { decideConversationPlanAction } from "../src/app/(app)/conversation/actions";
+import {
+  decideConversationPlanAction,
+  reviseConversationPlanAction,
+} from "../src/app/(app)/conversation/actions";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -77,6 +82,29 @@ describe("actions serveur Conversation", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/conversation");
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/conversation?fil=thread_authoritative&plan=approved&plan_id=plan_authoritative",
+    );
+  });
+
+  it("redirige une modification vers la nouvelle version autoritative", async () => {
+    mocks.revisePlan.mockResolvedValue({
+      id: "plan_revised_authoritative",
+      threadId: "thread_revised_authoritative",
+    });
+    const formData = new FormData();
+    formData.set("planId", "plan_submitted");
+    formData.set("taskTitle", "Rappeler le contact jeudi matin");
+
+    await reviseConversationPlanAction(formData);
+
+    expect(mocks.revisePlan).toHaveBeenCalledWith(
+      "user_decision_test",
+      "tenant_decision_test",
+      "plan_submitted",
+      "Rappeler le contact jeudi matin",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/conversation");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/conversation?fil=thread_revised_authoritative&plan=revised&plan_id=plan_revised_authoritative",
     );
   });
 });

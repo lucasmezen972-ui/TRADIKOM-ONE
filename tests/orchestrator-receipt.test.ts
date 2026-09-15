@@ -28,13 +28,20 @@ describe("reçu durable d’un plan Conversation", () => {
     ).toBeNull();
   });
 
-  it("reconnaît uniquement les quatre états durables correspondants", () => {
+  it("reconnaît uniquement les cinq états durables correspondants", () => {
     expect(
       resolveConversationPlanReceipt("cree", "plan_created", {
         id: "plan_created",
         approvalStatus: "awaiting_approval",
       }),
     ).toBe("cree");
+    expect(
+      resolveConversationPlanReceipt("revised", "plan_revised", {
+        id: "plan_revised",
+        approvalStatus: "awaiting_approval",
+        supersedesPlanId: "plan_previous",
+      }),
+    ).toBe("revised");
     expect(
       resolveConversationPlanReceipt("approved", "plan_approved", {
         id: "plan_approved",
@@ -56,6 +63,29 @@ describe("reçu durable d’un plan Conversation", () => {
     ).toBe("executed");
   });
 
+  it("n’atteste une révision que si son parent durable est identifié", () => {
+    expect(
+      resolveConversationPlanReceipt("revised", "plan_revised", {
+        id: "plan_revised",
+        approvalStatus: "awaiting_approval",
+      }),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("revised", "plan_revised", {
+        id: "plan_revised",
+        approvalStatus: "rejected",
+        supersedesPlanId: "plan_previous",
+      }),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("cree", "plan_revised", {
+        id: "plan_revised",
+        approvalStatus: "awaiting_approval",
+        supersedesPlanId: "plan_previous",
+      }),
+    ).toBeNull();
+  });
+
   it("n’atteste jamais une exécution sans mission durable réussie", () => {
     for (const status of [undefined, "running", "failed"] as const) {
       expect(
@@ -71,6 +101,7 @@ describe("reçu durable d’un plan Conversation", () => {
   it("n’affiche jamais un reçu de préparation, approbation ou refus après le démarrage d’une mission", () => {
     for (const [receipt, approvalStatus] of [
       ["cree", "awaiting_approval"],
+      ["revised", "awaiting_approval"],
       ["approved", "approved"],
       ["rejected", "rejected"],
     ] as const) {

@@ -1,12 +1,33 @@
 import { describe, expect, it } from "vitest";
 import {
   actionPlanProposalSchema,
+  actionPlanRevisionSchema,
   actionPlanSchema,
   generatedActionPlanEnvelopeSchema,
   type ActionPlan,
 } from "../src/modules/orchestrator";
 
 describe("schémas de l'orchestrateur", () => {
+  it("borne le titre métier d’une révision avant le service", () => {
+    expect(
+      actionPlanRevisionSchema.parse({
+        planId: "plan_revision_1",
+        taskTitle: "  Rappeler le contact jeudi  ",
+      }),
+    ).toEqual({
+      planId: "plan_revision_1",
+      taskTitle: "Rappeler le contact jeudi",
+    });
+    for (const taskTitle of ["", "ab", "a".repeat(161), "Titre\nforgé"]) {
+      expect(
+        actionPlanRevisionSchema.safeParse({
+          planId: "plan_revision_1",
+          taskTitle,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
   it("valide un plan métier structuré avec deux capacités génériques", () => {
     const plan = planFixture();
     expect(actionPlanSchema.parse(plan)).toMatchObject({

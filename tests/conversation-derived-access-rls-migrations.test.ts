@@ -25,10 +25,10 @@ describe("migration RLS des objets dérivés de Conversation", () => {
       "114_os5_conversation_derived_access_rls",
     );
     expect(getMigrationIds().at(-1)).toBe(
-      "116_os5_conversation_action_plan_policy_receipts",
+      "119_os5_conversation_action_plan_revisions",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "118_os5_conversation_workflow_writes_rls",
+      "120_os5_orchestrator_internal_namespace_rls",
     );
   });
 

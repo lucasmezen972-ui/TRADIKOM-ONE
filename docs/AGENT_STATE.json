@@ -1,26 +1,27 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-11T07:34:29.000Z",
+  "updatedAt": "2026-09-15T02:39:44.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "e704afd5c247086c69da3f60f6192eef32da7e03",
-  "publishedHeadObserved": "26cc3f197daad92354efcb6700d6f3c964a7c5ba",
-  "status": "os5_policy_receipt_postgres_build_proven_e2e_text_fix_pending_ci_human_meta_sms_pending",
+  "lastCommit": "953f1b60329af3544392edd967e059a2c081dede",
+  "publishedHeadObserved": "953f1b60329af3544392edd967e059a2c081dede",
+  "status": "os5_immutable_plan_revision_local_proven_ci_pending_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Le reçu de policy serveur append-only, immuable et versionné, l'allowlist tradikom_mock et la revalidation avant exécution, appel direct, reprise et finalisation sont publiés dans 9879cae. La CI 34573066265 a validé audit, migrations, PostgreSQL/RLS, sauvegarde-restauration, lint, TypeScript, suite exhaustive et build; son seul échec est l'ancienne phrase attendue par Playwright alors que l'interface affiche le nouveau résultat mock générique. Publier le correctif de preuve e704afd, obtenir 20/20 Playwright et reprendre la première lacune applicative restante de l'ordre page 48 sans fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense.",
+  "currentObjective": "La tranche applicative Modifier avant validation est implémentée et prouvée localement : elle crée une nouvelle révision immuable du plan Conversation, annule atomiquement l'ancien plan et ses étapes, régénère l'approbation et l'idempotence, puis permet d'approuver et d'exécuter uniquement la révision courante en tradikom_mock. La publication fast-forward et la CI autoritative PostgreSQL/RLS, build et Playwright restent à obtenir; aucun fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense n'est autorisé.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 15, 16, 17, 18, 22, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 15, 16, 17, 18, 22, 24, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "10-12 Architecture cible, Conversation Hub canonique, preuves et RLS",
         "15-18 Orchestration bornée, plan structuré, validation humaine et sécurité applicative",
         "22 PostgreSQL, modèle tenant-first et politiques RLS",
+        "24 Cartes de validation avec actions confirmer, modifier et annuler",
         "31-33 Definition of Done, reprise et critères de progression",
         "35-38 Conséquences, données sensibles et évaluation adversariale",
         "43-44 Premier parcours démontrable et preuves visibles dans Conversation",
@@ -29,12 +30,12 @@
         "64-68 Gouvernance, périmètre, documentation et handoff",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Produire côté serveur un reçu de policy append-only, immuable et versionné, lié au tenant, au plan et à son fingerprint, à la validation, au catalogue de capacités, au fournisseur canonique tradikom_mock, aux scopes, au rôle et au risque. Refuser toute capacité ou préférence fournisseur hors allowlist, puis recalculer et comparer cette décision immédiatement avant l'exécution, lors d'un appel direct du moteur, de chaque reprise durable et de la finalisation. Toute dérive échoue fermée avant appel fournisseur ou nouvel effet métier; un ancien plan approuvé sans reçu n'est jamais régularisé silencieusement.",
-      "evidenceExpected": "Attendu avant clôture de la prochaine tranche : reçu strictement serveur émis atomiquement avec l'approbation, ou avec la création pour approval none, jamais lors d'un rejet; stockage tenant-first sous RLS, une ligne maximum par plan, JSON canonique et empreinte vérifiés, aucune mise à jour possible. Tests adversariaux : JSON ou hash falsifié, reçu du plan A pour plan B, cross-tenant, fournisseur inconnu ou multiple, scope retiré, rôle ou membership révoqué, validation modifiée, version ou empreinte de catalogue changée, étape ou plan incohérent, appel direct sans reçu, dérive avant reprise worker et finalisation forgée. Chaque refus précède provider, fetch et nouvel effet métier; le parcours tradikom_mock valide, la reprise et le rejeu idempotent restent verts. Preuves tenant/RLS, audit sans donnée sensible, tests ciblés et PostgreSQL, lint, TypeScript, build, Playwright, continuity-check, diff check et CI attendus verts."
+      "requirement": "Dans la carte de validation de Conversation, permettre à un décideur autorisé de modifier un plan encore en attente sans muter son instantané historique. La modification crée une nouvelle révision immuable, tenant-scoped et durable; elle annule ou remplace atomiquement le plan précédent, régénère ses clés d'idempotence, repasse par la validation du catalogue et de la policy, puis exige une nouvelle approbation avant toute exécution. Aucun reçu de policy, provider, fetch ou effet métier ne peut être produit pour l'ancien plan remplacé.",
+      "evidenceExpected": "Preuve locale obtenue : schéma, repository et service de révision avec lien durable entre versions, contrôle membership/rôle et transaction atomique; RLS système-only, idempotence et concurrence couvertes; rejet cross-tenant et des plans déjà décidés; ancien plan et anciennes étapes inexécutables sans reçu, nouvelle révision approuvable puis exécutable indépendamment en tradikom_mock. L'audit ne contient ni le titre métier saisi ni contenu sensible. Le WebChat français expose Modifier et le parcours desktop/mobile couvre l'état durable sans débordement. Suite exhaustive, lint, TypeScript, build, audit high et diff check sont verts; la CI autoritative doit encore confirmer PostgreSQL/RLS, migrations, sauvegarde/restauration et 20/20 Playwright."
     }
   },
-  "nextAction": "Publier strictement en fast-forward le correctif E2E e704afd et ce checkpoint documentaire, attendre la CI autoritative et exiger 20/20 Playwright. Une fois verte, consigner la preuve dans les quatre documents puis relire la page 48 pour sélectionner sa première lacune applicative restante. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
-  "nextFile": "docs/DRIFT_REPORT.md",
+  "nextAction": "Publier la tranche de révision immuable strictement en fast-forward sans inclure tmp, attendre la CI autoritative PostgreSQL/RLS et Playwright, puis corriger tout échec avant de relire la page 48 et choisir la première lacune conversation-first encore non terminée. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
+  "nextFile": "tests/orchestrator-plan-revisions-postgres-rls.test.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -536,7 +537,14 @@
     "tests locaux finaux sur dc9cf0c : 3 fichiers/27 tests ciblés, suite exhaustive 165 fichiers/849 tests verts et 29 ignorés sans PostgreSQL local sur 878; canari provider ciblé vert; lint, TypeScript, build factice, audit high, continuity-check et diff check verts",
     "publication fast-forward de dc9cf0c; continuité 34558477110 verte; CI 34558477111 a validé audit, migrations, backup/restauration, lint, TypeScript, 165 fichiers/878 tests PostgreSQL et build puis a échoué uniquement sur un sélecteur Playwright incomplet",
     "correctif de sélecteurs Playwright numérotés publié en fast-forward dans 84a52a2; relecture indépendante sans ambiguïté desktop/mobile; tmp resté hors index",
-    "continuité 34560151763 verte et CI 34560151750 entièrement verte sur 84a52a2 : audit, migrations, db:verify, backup/restauration, lint, TypeScript, 165 fichiers/878 tests PostgreSQL, build production et 20/20 Playwright; PR #11 OPEN DRAFT MERGEABLE/CLEAN"
+    "continuité 34560151763 verte et CI 34560151750 entièrement verte sur 84a52a2 : audit, migrations, db:verify, backup/restauration, lint, TypeScript, 165 fichiers/878 tests PostgreSQL, build production et 20/20 Playwright; PR #11 OPEN DRAFT MERGEABLE/CLEAN",
+    "run 2026-09-14T20:14Z : dépôt Developer uniquement; tmp préservé; PDF canonique SHA-256 exact et 71 pages; pages cœur et pages candidates de révision relues directement, pages 48 et 69 inspectées en rendu",
+    "révision immuable d'un plan en attente implémentée de bout en bout : nouvelle lignée, annulation atomique de l'ancien plan et de ses étapes, nouvelle approbation, idempotence, concurrence, rôle verrouillé et exécution tradikom_mock uniquement sur la révision courante",
+    "namespace orchestrateur et preuves Conversation durcis par 30 politiques RLS restrictives, fonctions SECURITY INVOKER, identité canonique exacte, livraisons provider ordinaires préservées et identité d'un message rendue immuable",
+    "tests ciblés finaux 9 fichiers verts et 2 ignorés sans PostgreSQL, 76 tests verts et 2 ignorés; suite exhaustive locale mono-worker 160 fichiers verts et 14 ignorés, 896 tests verts et 32 ignorés sur 928; lint, TypeScript, build production factice, audit high et diff check verts",
+    "revue indépendante : rejeu ancestral A vers B après B vers C corrigé pour résoudre la feuille courante; test rouge avant correction puis vert, aucun P1/P2 résiduel",
+    "run exhaustif parallèle abandonné après saturation locale et délais simultanés sans lien; les 7 fichiers signalés repassés 7/7 et 10/10 en série, puis suite exhaustive mono-worker verte en 831,47 s",
+    "deux revues indépendantes finales ne trouvent aucun défaut P1/P2; publication et CI PostgreSQL/RLS avec 20/20 Playwright encore requises"
   ],
   "lastValidation": [
     {
@@ -2086,6 +2094,46 @@
     {
       "command": "correctif de preuve Conversation e704afd5c247086c69da3f60f6192eef32da7e03",
       "status": "passed_local_exact_generic_mock_result_text_eslint_typecheck_and_diff_check_no_functional_change"
+    },
+    {
+      "command": "CI 34575174169 sur 953f1b60329af3544392edd967e059a2c081dede",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_full_postgres_rls_suite_production_build_and_20_of_20_playwright"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34575174298 sur 953f1b60329af3544392edd967e059a2c081dede",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PDF maître et continuity-check local avant la révision de plan WebChat",
+      "status": "passed_source_downloads_sha256_bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5_71_pages_core_pages_and_candidate_pages_10_12_15_18_22_24_35_38_43_44_64_68_directly_read_pages_48_and_69_visually_checked_ready_zero_errors"
+    },
+    {
+      "command": "révision immuable Conversation et durcissement du namespace orchestrateur",
+      "status": "passed_local_new_lineage_atomic_supersession_fresh_approval_idempotency_concurrency_role_lock_exact_canonical_identity_message_identity_immutability_30_restrictive_rls_policies_security_invoker_only_no_old_receipt_workflow_provider_or_execution_audit"
+    },
+    {
+      "command": "matrice ciblée finale après durcissements RLS et identité",
+      "status": "passed_9_files_2_skipped_75_tests_2_skipped_without_database_url_zero_failures"
+    },
+    {
+      "command": "vitest exhaustif mono-worker après correction du rejeu ancestral",
+      "status": "passed_160_files_14_skipped_896_tests_32_skipped_928_total_zero_failures_in_831_47_seconds"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, build production factice, audit high et git diff --check",
+      "status": "passed_zero_lint_type_build_or_diff_errors_zero_high_critical_three_moderate"
+    },
+    {
+      "command": "revues indépendantes finales service, migrations, RLS, identité et régression providers",
+      "status": "passed_no_remaining_p1_p2_ci_postgres_rls_and_playwright_pending"
+    },
+    {
+      "command": "régression A vers B vers C puis rejeu ancestral",
+      "status": "passed_red_before_fix_green_after_resolves_current_leaf_preserves_ancestral_replay_origin"
+    },
+    {
+      "command": "diagnostic du run exhaustif parallèle saturé",
+      "status": "parallel_run_aborted_after_local_worker_saturation_7_reported_files_retried_sequentially_7_files_10_tests_passed_then_full_mono_worker_passed"
     }
   ],
   "humanBlockers": [

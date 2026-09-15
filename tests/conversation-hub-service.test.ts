@@ -4,6 +4,7 @@ import { createServices } from "../src/lib/services";
 import {
   getConversationThread,
   ingestConversationMessage,
+  ingestSystemConversationMessage,
   listConversationThreads,
 } from "../src/modules/conversation-hub/service";
 
@@ -15,6 +16,130 @@ afterEach(async () => {
 });
 
 describe("service du Conversation Hub", () => {
+  it("réserve les identités et clés internes de l'orchestrateur", async () => {
+    const context = await createTenantContext(
+      "conversation-reserved-namespace@example.com",
+    );
+    const base = ingressFixture(context.tenantId);
+
+    await expect(
+      ingestConversationMessage(context.db, context.userId, {
+        ...base,
+        idempotencyKey: "orchestrator:plan-test:approved",
+      }),
+    ).rejects.toMatchObject({ code: "conversation_idempotency_conflict" });
+
+    await expect(
+      ingestConversationMessage(context.db, context.userId, {
+        ...base,
+        idempotencyKey: "ingress:reserved:adapter",
+        externalMessageId: "external_reserved_adapter",
+        channelIdentity: {
+          ...base.channelIdentity,
+          id: "identity_reserved_adapter",
+          participantId: "participant_reserved_adapter",
+          adapterKey: "orchestrator-mock",
+          externalSubjectId: "reserved-adapter-subject",
+        },
+        routeTrace: [],
+      }),
+    ).rejects.toMatchObject({ code: "conversation_identity_conflict" });
+
+    await expect(
+      ingestConversationMessage(context.db, context.userId, {
+        ...base,
+        idempotencyKey: "ingress:reserved:identity",
+        externalMessageId: "external_reserved_identity",
+        channelIdentity: {
+          ...base.channelIdentity,
+          id: "orchestrator_identity_spoofed",
+          participantId: "orchestrator_participant_spoofed",
+          adapterKey: "public-test",
+          externalSubjectId: "tradikom-one-orchestrator",
+          role: "system",
+        },
+        routeTrace: [],
+      }),
+    ).rejects.toMatchObject({ code: "conversation_identity_conflict" });
+
+    await expect(
+      ingestSystemConversationMessage(context.db, "system_test_ingress", {
+        ...base,
+        idempotencyKey: "orchestrator:system-spoof:result",
+        externalMessageId: "external_system_spoof",
+        channelIdentity: {
+          ...base.channelIdentity,
+          id: "identity_system_connector",
+          participantId: "participant_system_connector",
+          adapterKey: "system-connector",
+          externalSubjectId: "system-connector-subject",
+          role: "system",
+        },
+        routeTrace: [],
+      }),
+    ).rejects.toMatchObject({ code: "conversation_idempotency_conflict" });
+
+    await context.db.query(
+      `insert into conversation_participants (
+         id, tenant_id, role, display_name, created_at, updated_at
+       ) values ($1, $2, 'system', 'Système interne', $3, $3)`,
+      ["participant_internal_existing", context.tenantId, timestamp],
+    );
+    await expect(
+      ingestConversationMessage(context.db, context.userId, {
+        ...base,
+        idempotencyKey: "ingress:reserved:participant-alias",
+        externalMessageId: "external_reserved_participant_alias",
+        channelIdentity: {
+          ...base.channelIdentity,
+          id: "identity_reserved_participant_alias",
+          participantId: "participant_internal_existing",
+          externalSubjectId: "reserved-participant-alias-subject",
+        },
+        routeTrace: [],
+      }),
+    ).rejects.toMatchObject({ code: "conversation_identity_conflict" });
+
+    await context.db.query(
+      `insert into conversation_channel_identities (
+         id, tenant_id, participant_id, channel_kind, adapter_key,
+         external_subject_id, display_name, role, state, created_at, updated_at
+       ) values (
+         $1, $2, $3, 'test', 'public-test', $4, 'Alias existant',
+         'member', 'active', $5, $5
+       )`,
+      [
+        "identity_existing_participant_alias",
+        context.tenantId,
+        "participant_internal_existing",
+        "existing-participant-alias-subject",
+        timestamp,
+      ],
+    );
+    await expect(
+      ingestConversationMessage(context.db, context.userId, {
+        ...base,
+        idempotencyKey: "ingress:reserved:existing-participant-alias",
+        externalMessageId: "external_existing_participant_alias",
+        channelIdentity: {
+          ...base.channelIdentity,
+          id: "identity_existing_participant_alias",
+          participantId: "participant_internal_existing",
+          adapterKey: "public-test",
+          externalSubjectId: "existing-participant-alias-subject",
+        },
+        routeTrace: [],
+      }),
+    ).rejects.toMatchObject({ code: "conversation_identity_conflict" });
+
+    const counts = await context.db.query<{ count: number }>(
+      `select count(*)::int as count from conversation_messages
+       where tenant_id = $1`,
+      [context.tenantId],
+    );
+    expect(counts.rows[0]?.count).toBe(0);
+  });
+
   it("ingère un message une seule fois et restitue un fil canonique", async () => {
     const context = await createTenantContext("conversation-owner@example.com");
     const input = ingressFixture(context.tenantId);

@@ -31,6 +31,7 @@ import {
   sendTestChannelMessageAction,
   sendWebConversationMessageAction,
 } from "@/app/(app)/conversation/actions";
+import { PlanRevisionForm } from "@/app/(app)/conversation/plan-revision-form";
 import {
   planReceiptMessage,
   resolveConversationPlanReceipt,
@@ -42,7 +43,7 @@ type ConversationPageProps = {
   searchParams: Promise<{
     fil?: string;
     envoye?: "web" | "test";
-    plan?: "cree" | "approved" | "rejected" | "executed";
+    plan?: "cree" | "revised" | "approved" | "rejected" | "executed";
     plan_id?: string;
     reprise?: "demandee";
     meta_essai?: "autorise" | "revoque";
@@ -557,6 +558,10 @@ function PlanPanel({
       source.type === "external_untrusted_data" &&
       source.sourceIntegrity === "verified",
   );
+  const taskTitle = plan?.plan.steps.find(
+    (step) => step.capability === "project.task.create",
+  )?.input.title;
+  const currentTaskTitle = typeof taskTitle === "string" ? taskTitle : "";
 
   return (
     <section className="border-t border-slate-200 bg-violet-50/50 p-4 lg:p-5" aria-label="Plan d’action">
@@ -570,7 +575,9 @@ function PlanPanel({
             Deux capacités locales, coût externe nul, une seule validation.
           </p>
         </div>
-        {sourceMessageId && canCreate ? (
+        {sourceMessageId &&
+        canCreate &&
+        (!plan || plan.sourceMessageId !== sourceMessageId) ? (
           <form action={createConversationPlanAction}>
             <input type="hidden" name="threadId" value={threadId} />
             <input
@@ -579,7 +586,7 @@ function PlanPanel({
               value={sourceMessageId}
             />
             <button className="min-h-11 rounded-md bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800">
-              {plan ? "Rejouer la génération" : "Préparer le plan"}
+              Préparer le plan
             </button>
           </form>
         ) : null}
@@ -608,6 +615,11 @@ function PlanPanel({
                 accès à un outil.
               </p>
             </div>
+          ) : null}
+          {plan.supersedesPlanId ? (
+            <p className="mt-4 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-950">
+              Version révisée : l’ancienne version est conservée et annulée.
+            </p>
           ) : null}
           <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
             <div>
@@ -640,13 +652,23 @@ function PlanPanel({
                 <p className="mt-1 text-xs text-slate-600">
                   Preuve attendue : {step.evidenceRequired.join(" · ")}
                 </p>
+                {step.capability === "project.task.create" &&
+                typeof step.input.title === "string" ? (
+                  <p className="mt-2 break-words text-xs font-semibold text-slate-800">
+                    Tâche proposée : {step.input.title}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ol>
 
           {plan.approvalStatus === "awaiting_approval" ? (
             canDecide ? (
-              <div className="mt-4 grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 border-t border-slate-200 pt-4 lg:grid-cols-3">
+                <PlanRevisionForm
+                  planId={plan.id}
+                  taskTitle={currentTaskTitle}
+                />
                 <DecisionForm
                   threadId={threadId}
                   planId={plan.id}
@@ -738,7 +760,7 @@ function DecisionForm({
       <input type="hidden" name="planId" value={planId} />
       <input type="hidden" name="decision" value={decision} />
       <label className="text-xs font-bold text-slate-700" htmlFor={`reason-${decision}`}>
-        Motif de {approved ? "validation" : "refus"}
+        Motif de {approved ? "validation" : "l’annulation"}
       </label>
       <textarea
         id={`reason-${decision}`}
@@ -752,7 +774,7 @@ function DecisionForm({
       />
       <button className={`mt-2 inline-flex min-h-11 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white ${approved ? "bg-emerald-700 hover:bg-emerald-800" : "bg-rose-700 hover:bg-rose-800"}`}>
         {approved ? <CheckCircle2 size={16} aria-hidden /> : <XCircle size={16} aria-hidden />}
-        {approved ? "Approuver une fois" : "Refuser"}
+        {approved ? "Approuver une fois" : "Annuler le plan"}
       </button>
     </form>
   );
@@ -763,7 +785,7 @@ function planStatusLabel(status: ConversationPlan["approvalStatus"]) {
     draft: "Brouillon",
     awaiting_approval: "Validation requise",
     approved: "Approuvé",
-    rejected: "Refusé",
+    rejected: "Annulé",
     executed: "Exécuté",
   }[status];
 }

@@ -1344,8 +1344,8 @@ async function runConversationJourney(
     await expect(prepare).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/plan=cree/);
-    const createdPlanId = new URL(page.url()).searchParams.get("plan_id");
-    expect(createdPlanId).toBeTruthy();
+    const originalPlanId = new URL(page.url()).searchParams.get("plan_id");
+    expect(originalPlanId).toBeTruthy();
     await expect(
       page.getByText(
         "Plan déterministe créé et placé en attente de validation.",
@@ -1360,15 +1360,55 @@ async function runConversationJourney(
     await expect(page.getByText("project.task.create", { exact: true })).toHaveCount(0);
     await expect(page.getByText("0,00 €")).toBeVisible();
 
+    const revisedTaskTitle =
+      viewport.label === "mobile"
+        ? `R${"x".repeat(159)}`
+        : `Rappeler le contact après validation ${suffix}`;
+    const revise = page.getByRole("button", { name: "Modifier le plan" });
+    await expect(revise).toBeDisabled();
+    await page
+      .getByLabel("Nouveau titre de la tâche")
+      .fill(revisedTaskTitle);
+    await expect(revise).toBeEnabled();
+    await revise.focus();
+    await expect(revise).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/plan=revised/);
+    const revisedPlanId = new URL(page.url()).searchParams.get("plan_id");
+    expect(revisedPlanId).toBeTruthy();
+    expect(revisedPlanId).not.toBe(originalPlanId);
+    await expect(
+      page.getByText(
+        "Nouvelle version du plan créée et placée en attente de validation.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Version révisée : l’ancienne version est conservée et annulée.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(`Tâche proposée : ${revisedTaskTitle}`, { exact: true }),
+    ).toBeVisible();
+    const revisedViewportBounds = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(revisedViewportBounds.scrollWidth).toBeLessThanOrEqual(
+      revisedViewportBounds.clientWidth,
+    );
+
     await page
       .getByLabel("Motif de validation")
-      .fill("Parcours vérifié au clavier avant exécution mock.");
+      .fill("Nouvelle version vérifiée au clavier avant exécution mock.");
     const approve = page.getByRole("button", { name: "Approuver une fois" });
     await approve.focus();
     await expect(approve).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/plan=approved/);
-    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(createdPlanId);
+    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(revisedPlanId);
     await expect(
       page.getByText("Plan approuvé. Il est prêt pour l’exécution mock.", {
         exact: true,
@@ -1382,7 +1422,7 @@ async function runConversationJourney(
     await expect(execute).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/plan=executed/);
-    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(createdPlanId);
+    expect(new URL(page.url()).searchParams.get("plan_id")).toBe(revisedPlanId);
     await expect(
       page.getByText(
         "Exécution mock terminée et preuve durable enregistrée.",
@@ -1399,6 +1439,59 @@ async function runConversationJourney(
     await expect(page.getByText("Réussie", { exact: false })).toHaveCount(2);
     expect(metaNetworkRequests).toEqual([]);
 
+    const revisionEvidence = await db.query<{
+      originalStatus: string;
+      originalApprovalStatus: string;
+      originalCancelledSteps: number;
+      originalPolicyReceipts: number;
+      originalRuns: number;
+      originalEvents: number;
+      originalExecutionAudits: number;
+      revisedStatus: string;
+      revisedSupersedesPlanId: string;
+    }>(
+      `select
+         (select approval_status from conversation_action_plans
+           where tenant_id = $1 and id = $2) as "originalStatus",
+         (select status from approvals where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2)
+           as "originalApprovalStatus",
+         (select count(*)::int from conversation_action_plan_steps
+           where tenant_id = $1 and plan_id = $2 and status = 'cancelled')
+           as "originalCancelledSteps",
+         (select count(*)::int from conversation_action_plan_policy_receipts
+           where tenant_id = $1 and plan_id = $2) as "originalPolicyReceipts",
+         (select count(*)::int from workflow_runs where tenant_id = $1
+           and workflow_key = $4) as "originalRuns",
+         (select count(*)::int from domain_events where tenant_id = $1
+           and idempotency_key = $5) as "originalEvents",
+         (select count(*)::int from audit_logs where tenant_id = $1
+           and target_type = 'conversation_action_plan' and target_id = $2
+           and action = 'conversation.plan_executed') as "originalExecutionAudits",
+         (select approval_status from conversation_action_plans
+           where tenant_id = $1 and id = $3) as "revisedStatus",
+         (select supersedes_plan_id from conversation_action_plans
+           where tenant_id = $1 and id = $3) as "revisedSupersedesPlanId"`,
+      [
+        tenant.id,
+        originalPlanId,
+        revisedPlanId,
+        `conversation_plan:${originalPlanId}`,
+        `conversation.plan.execute:${originalPlanId}`,
+      ],
+    );
+    expect(revisionEvidence.rows[0]).toEqual({
+      originalStatus: "rejected",
+      originalApprovalStatus: "rejected",
+      originalCancelledSteps: 2,
+      originalPolicyReceipts: 0,
+      originalRuns: 0,
+      originalEvents: 0,
+      originalExecutionAudits: 0,
+      revisedStatus: "executed",
+      revisedSupersedesPlanId: originalPlanId,
+    });
+
     const rejectionChannels = createConversationChannelServices(db);
     const rejectionOccurredAt = new Date().toISOString();
     const rejectionSource = await rejectionChannels.web.ingest(user.id, {
@@ -1407,7 +1500,7 @@ async function runConversationJourney(
       externalMessageId: `rejection-message-${suffix}`,
       idempotencyKey: `rejection-message:${suffix}`,
       correlationId: `rejection-correlation-${suffix}`,
-      text: `Préparer puis refuser une mission ${suffix}`,
+      text: `Préparer puis annuler une mission ${suffix}`,
       occurredAt: rejectionOccurredAt,
     });
     await page.goto(
@@ -1421,17 +1514,19 @@ async function runConversationJourney(
     const rejectedPlanId = new URL(page.url()).searchParams.get("plan_id");
     expect(rejectedPlanId).toBeTruthy();
     await rejectionPanel
-      .getByLabel("Motif de refus")
+      .getByLabel("Motif de l’annulation")
       .fill("Mission non autorisée dans ce parcours de preuve.");
-    await rejectionPanel.getByRole("button", { name: "Refuser" }).click();
+    await rejectionPanel
+      .getByRole("button", { name: "Annuler le plan" })
+      .click();
     await expect(page).toHaveURL(/plan=rejected/);
     expect(new URL(page.url()).searchParams.get("plan_id")).toBe(rejectedPlanId);
     await expect(
-      page.getByText("Plan refusé. Aucune action n’a été exécutée.", {
+      page.getByText("Plan annulé. Aucune action n’a été exécutée.", {
         exact: true,
       }),
     ).toBeVisible();
-    await expect(rejectionPanel.getByText("Refusé", { exact: true })).toBeVisible();
+    await expect(rejectionPanel.getByText("Annulé", { exact: true })).toBeVisible();
     await expect(rejectionPanel.getByText("Annulée", { exact: false })).toHaveCount(2);
     await expect(
       rejectionPanel.getByRole("button", {
@@ -1513,7 +1608,7 @@ async function runConversationJourney(
         { exact: true },
       ),
     ).toHaveCount(0);
-    await expect(rejectionPanel.getByText("Refusé", { exact: true })).toBeVisible();
+    await expect(rejectionPanel.getByText("Annulé", { exact: true })).toBeVisible();
 
     const mediaBytes = new TextEncoder().encode("%PDF-1.7\npreuve Playwright mock");
     const mediaChecksum = createHash("sha256").update(mediaBytes).digest("hex");

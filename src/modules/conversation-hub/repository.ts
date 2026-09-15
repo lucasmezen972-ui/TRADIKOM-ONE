@@ -133,6 +133,20 @@ export async function findConversationIdentityByExternalSubject(
   return result.rows[0] ?? null;
 }
 
+export async function findConversationParticipantRow(
+  db: DbClient,
+  tenantId: string,
+  participantId: string,
+) {
+  const result = await db.query<ConversationParticipantRow>(
+    `select *
+     from conversation_participants
+     where tenant_id = $1 and id = $2`,
+    [tenantId, participantId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function insertConversationParticipantIfAbsent(
   db: DbClient,
   input: {

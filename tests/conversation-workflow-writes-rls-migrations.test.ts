@@ -31,7 +31,7 @@ describe("migration RLS des écritures workflow Conversation", () => {
     expect(getMigrationIds()).not.toContain(
       "118_os5_conversation_workflow_writes_rls",
     );
-    expect(getMigrationIds(true).at(-1)).toBe(
+    expect(getMigrationIds(true)).toContain(
       "118_os5_conversation_workflow_writes_rls",
     );
   });

@@ -1,5 +1,6 @@
 export type ConversationPlanReceipt =
   | "cree"
+  | "revised"
   | "approved"
   | "rejected"
   | "executed";
@@ -13,6 +14,7 @@ export type ConversationPlanReceiptState = {
     | "rejected"
     | "executed";
   mission?: { status: string } | null;
+  supersedesPlanId?: string | null;
 };
 
 export function resolveConversationPlanReceipt(
@@ -29,8 +31,17 @@ export function resolveConversationPlanReceipt(
     return null;
   }
   if (
+    requestedReceipt === "revised" &&
+    currentPlan.approvalStatus === "awaiting_approval" &&
+    currentPlan.supersedesPlanId &&
+    !currentPlan.mission
+  ) {
+    return requestedReceipt;
+  }
+  if (
     requestedReceipt === "cree" &&
     currentPlan.approvalStatus === "awaiting_approval" &&
+    !currentPlan.supersedesPlanId &&
     !currentPlan.mission
   ) {
     return requestedReceipt;
@@ -62,8 +73,9 @@ export function resolveConversationPlanReceipt(
 export function planReceiptMessage(receipt: ConversationPlanReceipt) {
   return {
     cree: "Plan déterministe créé et placé en attente de validation.",
+    revised: "Nouvelle version du plan créée et placée en attente de validation.",
     approved: "Plan approuvé. Il est prêt pour l’exécution mock.",
-    rejected: "Plan refusé. Aucune action n’a été exécutée.",
+    rejected: "Plan annulé. Aucune action n’a été exécutée.",
     executed: "Exécution mock terminée et preuve durable enregistrée.",
   }[receipt];
 }

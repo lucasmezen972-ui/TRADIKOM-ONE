@@ -298,6 +298,20 @@ export const actionPlanDecisionSchema = z
   })
   .strict();
 
+export const actionPlanRevisionSchema = z
+  .object({
+    planId: identifierSchema,
+    taskTitle: z
+      .string()
+      .trim()
+      .min(3)
+      .max(160)
+      .refine((value) => !/[\u0000-\u001f\u007f]/u.test(value), {
+        message: "Le titre de la tâche ne doit pas contenir de caractère de contrôle.",
+      }),
+  })
+  .strict();
+
 export const actionPlanListSchema = z
   .object({ threadId: identifierSchema })
   .strict();
@@ -318,6 +332,7 @@ export type ValidatedActionPlan = z.output<typeof actionPlanObjectSchema>;
 export type ActionPlanProposal = z.infer<typeof actionPlanProposalSchema>;
 export type ActionPlanCreation = z.infer<typeof actionPlanCreationSchema>;
 export type ActionPlanDecision = z.infer<typeof actionPlanDecisionSchema>;
+export type ActionPlanRevision = z.infer<typeof actionPlanRevisionSchema>;
 export type ActionPlanList = z.infer<typeof actionPlanListSchema>;
 export type ActionPlanExecution = z.infer<typeof actionPlanExecutionSchema>;
 

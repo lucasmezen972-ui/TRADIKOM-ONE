@@ -1,5 +1,20 @@
 # Étapes suivantes TRADIKOM ONE OS
 
+## Situation actuelle — 14 septembre 2026, 22:39 UTC
+
+- La tranche applicative « Modifier » avant validation est terminée localement dans la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; `tmp/` reste intact, non suivi et hors index. Le PDF maître est confirmé à 71 pages avec le SHA-256 exact `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
+- Un décideur autorisé peut modifier le titre d'un plan encore en attente depuis Conversation. Le serveur crée une nouvelle révision immuable liée à l'ancienne, annule atomiquement l'ancien plan, ses étapes et son approbation, régénère ses clés d'idempotence, revalide catalogue et policy, puis exige une nouvelle approbation. Un plan déjà décidé ou remplacé reste inexécutable et ne reçoit aucun nouveau reçu, workflow, provider ou effet métier.
+- Le formulaire visible est français, désactivé tant que le titre normalisé n'est pas réellement modifié, borné entre 3 et 160 caractères et couvert sur desktop/mobile. Le parcours vertical modifie, approuve et exécute uniquement la nouvelle révision en `tradikom_mock`, avec identifiant distinct et sans débordement horizontal.
+- La lignée, les contraintes tenant-first, l'idempotence, la concurrence, le verrou de rôle et l'audit sans titre métier sont couverts. Le namespace interne de l'orchestrateur est réservé à l'identité canonique exacte; 30 politiques RLS restrictives protègent les preuves Conversation, les fonctions restent `SECURITY INVOKER` et l'identité liée à un message est immuable. Les livraisons Twilio/Meta ordinaires de l'application restent autorisées et testées sans appel réseau.
+- Preuves locales finales : matrice ciblée 9 fichiers verts et 2 ignorés, 76 tests verts et 2 ignorés sans PostgreSQL; suite exhaustive mono-worker 160 fichiers verts et 14 ignorés, 896 tests verts et 32 ignorés sur 928. Le rejeu ancestral A→B→C a été reproduit rouge puis corrigé pour résoudre la feuille courante. Les sept fichiers touchés par une saturation du runner parallèle repassent 7/7 et 10/10 en série. ESLint, TypeScript, build Next.js production avec valeurs factices, audit high et diff check sont verts. Trois avis modérés restent suivis, aucun high/critical; deux revues indépendantes ne trouvent aucun défaut P1/P2.
+- État honnête : livré localement = révision immuable et durcissement RLS; réel connecté = aucun; sandbox = aucune; mock = `tradikom_mock`; bloqué humain = SMS Meta et autorisation distincte au moment exact avant Graph; hors périmètre = Graph, message réel, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
+## Prochaine action exacte — 14 septembre 2026, 22:39 UTC
+
+1. Publier uniquement les fichiers applicatifs, migrations, tests et documents suivis en fast-forward sur `codex/tradikom-one-os`, sans jamais indexer `tmp/`.
+2. Attendre la CI autoritative et exiger migrations, `db:verify`, sauvegarde/restauration, PostgreSQL/RLS, lint, TypeScript, suite exhaustive, build et 20/20 Playwright verts; corriger tout échec avant de poursuivre.
+3. Une fois cette preuve obtenue, relire la page 48 et sélectionner la première lacune conversation-first réellement non terminée; ne pas dériver vers CRM, Kanban, dashboard secondaire ou OS-6.
+
 ## Situation actuelle
 
 - Travailler uniquement dans `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; préserver tous les changements. `tmp/` reste non suivi et strictement hors commit.

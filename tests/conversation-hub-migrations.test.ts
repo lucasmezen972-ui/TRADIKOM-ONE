@@ -20,6 +20,8 @@ describe("migrations du Conversation Hub", () => {
         "116_os5_conversation_action_plan_policy_receipts",
         "117_os5_conversation_action_plan_policy_receipts_rls",
         "118_os5_conversation_workflow_writes_rls",
+        "119_os5_conversation_action_plan_revisions",
+        "120_os5_orchestrator_internal_namespace_rls",
       ]),
     );
 

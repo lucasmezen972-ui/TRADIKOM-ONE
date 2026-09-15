@@ -21,6 +21,7 @@ import {
   executeConversationActionPlan,
   listConversationActionPlans,
   requestConversationActionPlanRetry,
+  reviseConversationActionPlan,
 } from "@/modules/orchestrator";
 
 export type ConversationChannelServiceDependencies = {
@@ -114,6 +115,16 @@ export function createConversationChannelServices(
         planId,
         decision,
         reason,
+      }),
+    revisePlan: (
+      userId: string,
+      tenantId: string,
+      planId: string,
+      taskTitle: string,
+    ) =>
+      reviseConversationActionPlan(db, userId, tenantId, {
+        planId,
+        taskTitle,
       }),
     executePlan: (userId: string, tenantId: string, planId: string) =>
       executeConversationActionPlan(db, userId, tenantId, planId),
