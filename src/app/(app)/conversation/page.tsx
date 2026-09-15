@@ -379,7 +379,7 @@ export default async function ConversationPage({
               </div>
             ) : (
               <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                Votre rôle permet de lire ce fil, mais pas d&apos;envoyer de message.
+                Votre rôle permet de lire ce fil, mais pas d’envoyer de message.
               </p>
             )}
           </div>
