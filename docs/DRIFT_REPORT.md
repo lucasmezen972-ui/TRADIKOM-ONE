@@ -1,30 +1,30 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint applicatif — 15 septembre 2026, 04:00 UTC
+## Checkpoint applicatif — 15 septembre 2026, 04:32 UTC
 
 - Seule la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` a été utilisée; `tmp/` reste intact, non suivi et hors index. Le PDF canonique est confirmé à 71 pages et au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - L'action visible « Modifier » crée maintenant une révision durable et immuable d'un plan Conversation encore en attente. Le remplacement annule atomiquement l'ancien plan, ses étapes et son approbation, régénère la clé d'idempotence, revalide catalogue et policy, puis impose une nouvelle approbation avant toute exécution. L'ancien plan ne peut produire ni reçu, workflow, provider, audit d'exécution ni effet métier.
 - La frontière serveur verrouille le plan puis le membership et le rôle décideur dans la même transaction. Les rejeux convergent vers la révision courante, la concurrence ne produit qu'un successeur et la profondeur de lignée est bornée. L'audit n'enregistre ni le titre saisi ni contenu métier sensible.
 - Le namespace interne de l'orchestrateur est réservé à l'identité canonique exacte. Trente-deux politiques RLS restrictives et des fonctions `SECURITY INVOKER` protègent participants, identités, messages, pièces jointes, sauts, livraisons, secrets, bindings et médias, y compris la lecture des messages et livraisons internes. L'identité d'un message et la classification interne d'une livraison sont immuables après insertion.
-- Le correctif 0115 est publié dans `305ffa9` et la continuité `34925372099` est verte. La CI `34925372084` valide audit, migrations, sauvegarde/restauration, lint, TypeScript, le chemin PostgreSQL exact 120 vers 121 et 929 tests sur 930. Son unique échec est une attente de test devenue obsolète : la policy SELECT masque maintenant le message interne, donc deux `INSERT SELECT` adversariaux doivent produire zéro ligne plutôt qu'une erreur RLS. La preuve corrigée exige ce résultat puis contrôle côté système qu'aucune pièce jointe ni route n'existe. ESLint ciblé, TypeScript et diff check sont verts; le test local est ignoré honnêtement faute de `DATABASE_URL`. La publication de cette assertion et sa CI autoritative restent requises avant la classification « prouvé CI ».
+- Le correctif RLS 0115 et sa preuve corrigée sont publiés dans `75c7442`. La continuité `34927229359` est verte. La CI `34927229378` est entièrement verte : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, chemin PostgreSQL exact 120 vers 121, 174 fichiers et 930/930 tests, build de production et 20/20 Playwright. La PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`.
 
 ## Alignement prompt maître — révision immuable des plans Conversation
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 24, 31-33, 43-44, 46, 48, 68-71 | Continuer l'ordre conversation-first par une action « Modifier » visible, durable, approuvable et démontrable selon la Definition of Done | Nouvelle lignée immuable, annulation atomique, nouvelle approbation, interface française et parcours desktop/mobile jusqu'à l'exécution `tradikom_mock`; correctif RLS publié et continuité verte | CI autoritative complète et 20/20 Playwright encore requis sur l'assertion corrigée |
-| 10-18, 22, 35-38, 69-71 | Préserver tenant/RLS, idempotence, concurrence, contrôle du rôle, audit sans contenu et absence d'effet sur le plan remplacé | Contraintes tenant-first, triggers, 32 policies restrictives dont SELECT des messages et livraisons internes, identité canonique exacte, classification interne immuable issue du message ou de l'identité, rejet cross-tenant et plans décidés; upgrade PostgreSQL 120 vers 121 et 929/930 tests verts | L'unique échec est l'ancienne sémantique d'une assertion `INSERT SELECT`; la correction locale doit être confirmée avec 930/930 tests |
+| 3-7, 24, 31-33, 43-44, 46, 48, 68-71 | Continuer l'ordre conversation-first par une action « Modifier » visible, durable, approuvable et démontrable selon la Definition of Done | Nouvelle lignée immuable, annulation atomique, nouvelle approbation, interface française et parcours desktop/mobile jusqu'à l'exécution `tradikom_mock`; continuité et 20/20 Playwright verts | Aucun écart connu pour cette tranche; reprendre la première lacune de la page 48 |
+| 10-18, 22, 35-38, 69-71 | Préserver tenant/RLS, idempotence, concurrence, contrôle du rôle, audit sans contenu et absence d'effet sur le plan remplacé | Contraintes tenant-first, triggers, 32 policies restrictives dont SELECT des messages et livraisons internes, identité canonique exacte, classification interne immuable issue du message ou de l'identité, rejet cross-tenant et plans décidés; upgrade PostgreSQL 120 vers 121 et 930/930 tests verts | Aucun écart RLS connu après la CI autoritative |
 | 64-71 | Garder fournisseurs et effets explicitement bornés et distinguer honnêtement les états | Exécution uniquement via `tradikom_mock`; aucun transport réel, `fetch`, secret, Graph, message externe, fusion, déploiement ou dépense | Meta réel reste bloqué humainement par le SMS puis une autorisation distincte au moment exact |
 
 ## Classification de la tranche courante
 
-- Livré et publié : révision immuable, interface « Modifier », lignée durable et correctif RLS 0115. Livré localement : correction d'assertion PostgreSQL et preuve d'absence durable.
+- Livré, publié et prouvé CI : révision immuable, interface « Modifier », lignée durable, correctif RLS 0115 et preuve d'absence durable.
 - Réel connecté : aucun fournisseur, modèle ou transport.
 - Sandbox : aucune configurée ou appelée.
 - Mock : générateur déterministe serveur et capacités `tradikom_mock`, sans réseau fournisseur.
 - Bloqué humain : SMS Meta saisi directement dans la console officielle, puis inventaire en lecture seule et confirmation distincte avant tout token persistant ou appel Graph.
 - Hors périmètre : Graph, message réel, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
-- Écarts restants : publication fast-forward de l'assertion corrigée, CI à 930/930 tests, build et 20/20 Playwright; trois avis modérés de dépendances sans high/critical.
+- Écarts restants : aucun connu pour la tranche; trois avis modérés de dépendances sans high/critical restent suivis. La prochaine lacune doit être sélectionnée dans l'ordre de la page 48.
 
 ## Checkpoint applicatif — 11 septembre 2026, 07:34 UTC
 

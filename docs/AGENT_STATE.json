@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-15T04:00:00.000Z",
+  "updatedAt": "2026-09-15T04:32:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "55fece072beb0b0b53e9db7eb823fb425f1aa2b2",
-  "publishedHeadObserved": "55fece072beb0b0b53e9db7eb823fb425f1aa2b2",
-  "status": "os5_immutable_plan_revision_rls_fix_published_ci_assertion_correction_local_proven_ci_pending_human_meta_sms_pending",
+  "lastCommit": "75c74424d19e31432f8621d08920eda26f436958",
+  "publishedHeadObserved": "75c74424d19e31432f8621d08920eda26f436958",
+  "status": "os5_immutable_plan_revision_and_rls_fix_published_ci_proven_human_meta_sms_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche applicative Modifier avant validation et son correctif RLS 0115 sont publiés dans 305ffa9. La continuité 34925372099 est verte. La CI 34925372084 a validé audit, migrations, sauvegarde/restauration, lint, TypeScript et 929 tests sur 930; le test PostgreSQL exact 120 vers 121 est vert. Son unique échec est une assertion devenue obsolète : la lecture du message interne étant maintenant masquée, un INSERT SELECT adversarial écrit zéro ligne au lieu de lever une erreur RLS. Les assertions pièce jointe et route exigent désormais zéro ligne puis vérifient l'absence durable en base. ESLint ciblé, TypeScript et test local sans DATABASE_URL sont verts; publier ce correctif de preuve et obtenir la CI complète restent requis. Aucun fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense n'est autorisé.",
+  "currentObjective": "La tranche applicative Modifier avant validation, la migration RLS 0115 et sa preuve corrigée sont publiées dans 75c7442. La continuité 34927229359 et la CI 34927229378 sont entièrement vertes : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 930 tests PostgreSQL inclus, build de production et 20/20 Playwright. Les messages et livraisons internes restent réservés au système; la reprise des livraisons ordinaires et l'isolation cross-tenant sont préservées. Aucun fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense n'a été déclenché. La prochaine reprise doit relire la page 48 et sélectionner la première lacune conversation-first encore non terminée.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -31,11 +31,11 @@
         "69-71 Matrice de tests et auto-contrôle final"
       ],
       "requirement": "Dans la carte de validation de Conversation, permettre à un décideur autorisé de modifier un plan encore en attente sans muter son instantané historique. La modification crée une nouvelle révision immuable, tenant-scoped et durable; elle annule ou remplace atomiquement le plan précédent, régénère ses clés d'idempotence, repasse par la validation du catalogue et de la policy, puis exige une nouvelle approbation avant toute exécution. Aucun reçu de policy, provider, fetch ou effet métier ne peut être produit pour l'ancien plan remplacé.",
-      "evidenceExpected": "Preuve locale obtenue : schéma, repository et service de révision avec lien durable entre versions, contrôle membership/rôle et transaction atomique; RLS système-only, idempotence et concurrence couvertes; rejet cross-tenant et des plans déjà décidés; ancien plan et anciennes étapes inexécutables sans reçu, nouvelle révision approuvable puis exécutable indépendamment en tradikom_mock. L'audit ne contient ni le titre métier saisi ni contenu sensible. Le WebChat français expose Modifier et le parcours desktop/mobile couvre l'état durable sans débordement. La CI 34925372084 valide le chemin PostgreSQL exact 120 vers 121 et 929 tests sur 930; son unique échec est l'ancienne attente d'une erreur RLS sur un INSERT SELECT dont la source interne est désormais invisible. La preuve corrigée exige zéro ligne puis contrôle l'absence durable de pièce jointe et de route. La nouvelle CI doit confirmer 930/930 tests, migrations, sauvegarde/restauration, build et 20/20 Playwright."
+      "evidenceExpected": "Preuve obtenue : schéma, repository et service de révision avec lien durable entre versions, contrôle membership/rôle et transaction atomique; RLS système-only, idempotence et concurrence couvertes; rejet cross-tenant et des plans déjà décidés; ancien plan et anciennes étapes inexécutables sans reçu, nouvelle révision approuvable puis exécutable indépendamment en tradikom_mock. L'audit ne contient ni le titre métier saisi ni contenu sensible. Le WebChat français expose Modifier et le parcours desktop/mobile couvre l'état durable sans débordement. La CI 34927229378 confirme le chemin PostgreSQL exact 120 vers 121, 174 fichiers et 930/930 tests, le build et 20/20 Playwright; la continuité 34927229359 confirme le PDF canonique et la north star."
     }
   },
-  "nextAction": "Publier le correctif d'assertion PostgreSQL strictement en fast-forward sans inclure tmp, attendre la CI autoritative et exiger 930/930 tests avec build et 20/20 Playwright. Corriger tout nouvel échec avant de relire la page 48. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
-  "nextFile": "tests/orchestrator-plan-revisions-postgres-rls.test.ts",
+  "nextAction": "Relire directement la page 48 et les pages métier/techniques indiquées par MASTER_PROMPT_REFERENCE, puis sélectionner la première lacune conversation-first réellement non terminée. Actualiser masterPrompt.alignment avant tout nouveau code. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
+  "nextFile": "docs/MASTER_PROMPT_REFERENCE.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -550,7 +550,9 @@
     "preuves locales du correctif : 17 fichiers de migrations/66 tests verts; ciblage RLS 1 fichier/12 tests verts et 2 fichiers/3 tests PostgreSQL ignorés sans DATABASE_URL; chemin exact 120 vers 121 couvert en PGlite et préparé en PostgreSQL; scénarios PostgreSQL éphémères message interne plus identité ordinaire et message ordinaire plus identité interne verts en revue; lint, TypeScript, build factice, audit high, continuity-check et diff check verts",
     "publication fast-forward de 305ffa94061b6628fb7f70a0fa8cc71f8bfd44cc sans tmp; continuité 34925372099 verte",
     "CI 34925372084 : audit, migrations, sauvegarde/restauration, lint, TypeScript et test PostgreSQL exact 120 vers 121 verts; 929 tests sur 930; unique échec sur une ancienne assertion attendant une erreur alors que la source interne masquée produit correctement zéro insertion; build et Playwright sautés",
-    "correction locale de preuve : les INSERT SELECT adversariaux de pièce jointe et route exigent rowCount zéro puis une requête système confirme zéro ligne persistée; ESLint ciblé, TypeScript, test local ignoré sans DATABASE_URL et diff check verts"
+    "correction locale de preuve : les INSERT SELECT adversariaux de pièce jointe et route exigent rowCount zéro puis une requête système confirme zéro ligne persistée; ESLint ciblé, TypeScript, test local ignoré sans DATABASE_URL et diff check verts",
+    "publication fast-forward de 75c74424d19e31432f8621d08920eda26f436958 sans tmp; continuité 34927229359 verte",
+    "CI 34927229378 entièrement verte : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 930 tests PostgreSQL inclus, build production et 20/20 Playwright; PR 11 OPEN DRAFT MERGEABLE/CLEAN"
   ],
   "lastValidation": [
     {
@@ -2168,6 +2170,18 @@
     {
       "command": "assertions PostgreSQL zéro ligne pour dérivés d'un message interne masqué",
       "status": "passed_local_attachment_and_route_insert_select_row_count_zero_then_system_absence_check_eslint_typecheck_diff_postgres_test_skipped_without_database_url"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34927229359 sur 75c74424d19e31432f8621d08920eda26f436958",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34927229378 sur 75c74424d19e31432f8621d08920eda26f436958",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_174_files_930_tests_postgres_build_and_20_of_20_playwright"
+    },
+    {
+      "command": "PR #11 après correctif RLS 0115",
+      "status": "open_draft_mergeable_clean_head_75c7442_checks_green_no_merge_deploy_graph_secret_token_message_or_spend"
     }
   ],
   "humanBlockers": [

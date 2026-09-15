@@ -1,19 +1,19 @@
 # Étapes suivantes TRADIKOM ONE OS
 
-## Situation actuelle — 15 septembre 2026, 04:00 UTC
+## Situation actuelle — 15 septembre 2026, 04:32 UTC
 
 - La tranche applicative « Modifier » avant validation est publiée dans `55fece0` depuis la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; `tmp/` reste intact, non suivi et hors index. Le PDF maître est confirmé à 71 pages avec le SHA-256 exact `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - Un décideur autorisé peut modifier le titre d'un plan encore en attente depuis Conversation. Le serveur crée une nouvelle révision immuable liée à l'ancienne, annule atomiquement l'ancien plan, ses étapes et son approbation, régénère ses clés d'idempotence, revalide catalogue et policy, puis exige une nouvelle approbation. Un plan déjà décidé ou remplacé reste inexécutable et ne reçoit aucun nouveau reçu, workflow, provider ou effet métier.
 - Le formulaire visible est français, désactivé tant que le titre normalisé n'est pas réellement modifié, borné entre 3 et 160 caractères et couvert sur desktop/mobile. Le parcours vertical modifie, approuve et exécute uniquement la nouvelle révision en `tradikom_mock`, avec identifiant distinct et sans débordement horizontal.
 - La lignée, les contraintes tenant-first, l'idempotence, la concurrence, le verrou de rôle et l'audit sans titre métier sont couverts. Le namespace interne de l'orchestrateur est réservé à l'identité canonique exacte; 32 politiques RLS restrictives protègent désormais aussi la lecture des messages et livraisons internes, les fonctions restent `SECURITY INVOKER`, et l'identité d'un message comme la classification interne d'une livraison sont immuables. Les livraisons Twilio/Meta ordinaires de l'application restent autorisées et testées sans appel réseau.
-- Le correctif 0115 est publié dans `305ffa9` et la continuité `34925372099` est verte. La CI `34925372084` a validé audit, migrations, sauvegarde/restauration, lint, TypeScript et 929 tests sur 930, dont le nouveau chemin PostgreSQL exact 120 vers 121. Son unique échec est une ancienne assertion de preuve : puisque la policy masque maintenant le message interne, l'`INSERT SELECT` adversarial écrit correctement zéro ligne au lieu de lever une erreur RLS. Les deux assertions concernées exigent désormais zéro ligne puis vérifient en base qu'aucune pièce jointe ni route n'a été persistée. ESLint ciblé, TypeScript, test local sans `DATABASE_URL` et diff check sont verts; la nouvelle CI doit encore confirmer 930/930 tests, build et 20/20 Playwright.
-- État honnête : livré et publié = révision immuable et correctif RLS 0115; livré localement = correction de preuve PostgreSQL en attente de publication et CI; réel connecté = aucun; sandbox = aucune; mock = `tradikom_mock`; bloqué humain = SMS Meta et autorisation distincte au moment exact avant Graph; hors périmètre = Graph, message réel, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+- Le correctif RLS 0115 et sa preuve corrigée sont publiés dans `75c7442`. La continuité `34927229359` et la CI `34927229378` sont entièrement vertes : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 930/930 tests PostgreSQL inclus, build de production et 20/20 Playwright. La PR #11 reste ouverte, brouillon, fusionnable et `CLEAN`.
+- État honnête : livré, publié et prouvé CI = révision immuable et correctif RLS 0115; réel connecté = aucun; sandbox = aucune; mock = `tradikom_mock`; bloqué humain = SMS Meta et autorisation distincte au moment exact avant Graph; hors périmètre = Graph, message réel, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
-## Prochaine action exacte — 15 septembre 2026, 04:00 UTC
+## Prochaine action exacte — 15 septembre 2026, 04:32 UTC
 
-1. Publier la correction d'assertion PostgreSQL et les documents suivis en fast-forward sur `codex/tradikom-one-os`, sans jamais indexer `tmp/`.
-2. Attendre la CI autoritative et exiger migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 930/930 tests, build et 20/20 Playwright verts; corriger tout échec avant de poursuivre.
-3. Une fois cette preuve obtenue, relire la page 48 et sélectionner la première lacune conversation-first réellement non terminée; ne pas dériver vers CRM, Kanban, dashboard secondaire ou OS-6.
+1. Relire directement la page 48 et la carte de `docs/MASTER_PROMPT_REFERENCE.md` afin de sélectionner la première lacune conversation-first réellement non terminée; ne pas dériver vers CRM, Kanban, dashboard secondaire ou OS-6.
+2. Relire les pages métier/techniques de cette tâche, puis actualiser `masterPrompt.alignment` avec pages, exigence et preuve attendue avant tout code.
+3. Livrer la prochaine tranche verticale jusqu'à sa preuve locale et CI, en gardant tout provider réel, Graph, secret, fusion, déploiement et dépense hors périmètre sans nouvelle autorisation précise.
 
 ## Situation actuelle
 
