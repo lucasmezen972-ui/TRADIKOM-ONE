@@ -37,6 +37,7 @@ import {
 import {
   os1MockCapabilityCatalog,
   validateActionPlan,
+  validateActionPlanProposal,
 } from "@/modules/orchestrator/capabilities";
 import { OrchestratorError } from "@/modules/orchestrator/errors";
 import {
@@ -86,6 +87,7 @@ import {
   actionPlanListSchema,
   actionPlanRevisionSchema,
   actionPlanSchema,
+  buildActionPlanClarificationMessage,
   generatedActionPlanEnvelopeSchema,
   type ActionPlanCreation,
   type ActionPlanDecision,
@@ -238,10 +240,17 @@ export async function createConversationActionPlan(
           toActionPlanContextSourceMetadata,
         ),
       };
-      const validated = validateActionPlan(generatedPlan, {
+      const validatedProposal = validateActionPlanProposal(generatedPlan, {
         role,
         grantedScopes: [...conversationActionPlanGrantedScopes],
       });
+      const requiresClarification = validatedProposal.requiresClarification;
+      const validated = {
+        ...validatedProposal,
+        plan: normalizeConversationActionPlanClarification(
+          validatedProposal.plan,
+        ),
+      };
       const planJson = serializeActionPlanForPersistence(validated.plan);
       const planFingerprint = hashToken(planJson);
       const existing = await findActionPlanByFingerprint(
@@ -266,8 +275,9 @@ export async function createConversationActionPlan(
         sourceMessageId: parsed.sourceMessageId,
         generationSource: generationMetadata.generationSource,
         modelReference: generationMetadata.modelReference,
-        approvalStatus:
-          validated.approval.mode === "single"
+        approvalStatus: requiresClarification
+          ? "draft"
+          : validated.approval.mode === "single"
             ? "awaiting_approval"
             : "approved",
         intent: validated.plan.intent,
@@ -284,11 +294,15 @@ export async function createConversationActionPlan(
         createdBy: userId,
         createdAt,
         decidedBy:
-          validated.approval.mode === "none" ? userId : null,
+          !requiresClarification && validated.approval.mode === "none"
+            ? userId
+            : null,
         decidedAt:
-          validated.approval.mode === "none" ? createdAt : null,
+          !requiresClarification && validated.approval.mode === "none"
+            ? createdAt
+            : null,
         decisionReason:
-          validated.approval.mode === "none"
+          !requiresClarification && validated.approval.mode === "none"
             ? "Aucune validation requise selon la politique OS-1."
             : null,
       });
@@ -312,34 +326,36 @@ export async function createConversationActionPlan(
         return mapPlanResult(transaction, currentRevision, true);
       }
 
-      for (const [position, step] of validated.plan.steps.entries()) {
-        const capability = os1MockCapabilityCatalog.find(
-          (entry) => entry.name === step.capability,
-        );
-        if (!capability) {
-          throw new OrchestratorError(
-            "orchestrator_capability_unavailable",
-            `La capacité ${step.capability} n'est pas disponible.`,
+      if (!requiresClarification) {
+        for (const [position, step] of validated.plan.steps.entries()) {
+          const capability = os1MockCapabilityCatalog.find(
+            (entry) => entry.name === step.capability,
           );
+          if (!capability) {
+            throw new OrchestratorError(
+              "orchestrator_capability_unavailable",
+              `La capacité ${step.capability} n'est pas disponible.`,
+            );
+          }
+          await insertActionPlanStep(transaction, {
+            tenantId: parsed.tenantId,
+            planId: plan.id,
+            position,
+            stepId: step.stepId,
+            capability: step.capability,
+            mode: capability.mode,
+            risk: step.risk,
+            requiresApproval: step.requiresApproval,
+            reversible: reversibleValue(step.reversible),
+            inputJson: toJson(step.input),
+            evidenceRequiredJson: toJson(step.evidenceRequired),
+            idempotencyKey: step.idempotencyKey,
+          });
         }
-        await insertActionPlanStep(transaction, {
-          tenantId: parsed.tenantId,
-          planId: plan.id,
-          position,
-          stepId: step.stepId,
-          capability: step.capability,
-          mode: capability.mode,
-          risk: step.risk,
-          requiresApproval: step.requiresApproval,
-          reversible: reversibleValue(step.reversible),
-          inputJson: toJson(step.input),
-          evidenceRequiredJson: toJson(step.evidenceRequired),
-          idempotencyKey: step.idempotencyKey,
-        });
       }
 
       let approvalId: string | undefined;
-      if (validated.approval.mode === "single") {
+      if (!requiresClarification && validated.approval.mode === "single") {
         approvalId = id("approval");
         await insertActionPlanApproval(transaction, {
           id: approvalId,
@@ -350,7 +366,7 @@ export async function createConversationActionPlan(
         });
       }
       const policyReceipt =
-        validated.approval.mode === "none"
+        !requiresClarification && validated.approval.mode === "none"
           ? await issueConversationActionPlanPolicyReceipt(transaction, {
               plan,
               approval: {
@@ -377,7 +393,7 @@ export async function createConversationActionPlan(
         tenantId: parsed.tenantId,
         threadId: parsed.threadId,
         status:
-          validated.approval.mode === "single"
+          !requiresClarification && validated.approval.mode === "single"
             ? "awaiting_validation"
             : "open",
         updatedAt: createdAt,
@@ -392,13 +408,21 @@ export async function createConversationActionPlan(
           threadId: parsed.threadId,
           sourceMessageId: parsed.sourceMessageId,
           schemaVersion: 1,
-          approvalMode: validated.approval.mode,
-          capabilityCount: validated.plan.steps.length,
+          approvalMode: requiresClarification
+            ? "clarification_required"
+            : validated.approval.mode,
+          clarificationQuestionCount:
+            validated.plan.missingContextQuestions.length,
+          capabilityCount: requiresClarification
+            ? 0
+            : validated.plan.steps.length,
           contextSourceCount: validated.plan.contextSources.length,
           contextWasTruncated: validated.plan.contextSources.some(
             (source) => source.truncated,
           ),
-          executionEnvironment: "mock",
+          executionEnvironment: requiresClarification
+            ? "not_started"
+            : "mock",
           estimatedExternalCost: 0,
           ...(policyReceipt
             ? {
@@ -1182,6 +1206,23 @@ type ConversationPlanGenerationSource = {
   contextSources: ActionPlanGenerationContextSource[];
   fingerprint: string;
 };
+
+function normalizeConversationActionPlanClarification(
+  plan: ValidatedActionPlan,
+): ValidatedActionPlan {
+  if (plan.missingContextQuestions.length === 0) return plan;
+
+  const finalUserMessageDraft = buildActionPlanClarificationMessage(
+    plan.missingContextQuestions,
+  );
+  const normalized = actionPlanSchema.safeParse({
+    ...plan,
+    steps: [],
+    finalUserMessageDraft,
+  });
+  if (!normalized.success) throw unsafeGeneratedPlanContractError();
+  return normalized.data;
+}
 
 function serializeActionPlanForPersistence(plan: ValidatedActionPlan) {
   if (plan.contextSources.length > 0) {

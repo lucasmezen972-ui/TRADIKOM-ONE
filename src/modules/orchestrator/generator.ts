@@ -12,6 +12,16 @@ export const maximumActionPlanContextCharacters = 16_000;
 export const minimumExternalContextWholeCopyCharacters = 32;
 export const minimumExternalContextVerbatimCharacters = 48;
 
+const supportedConversationRequestPrefixPattern =
+  /^(?:(?:merci de|veuillez|peux tu|pouvez vous|pourrais tu|pourriez vous|je (?:veux|souhaite|voudrais|dois)|nous (?:voulons|souhaitons|voudrions|devons))\s+)?/u;
+const supportedConversationIntentPatterns = [
+  /^(?:prepare|preparer|preparez|preparons|planifie|planifier|planifiez|planifions|organise|organiser|organisez|organisons|cree|creer|creez|creons|ajoute|ajouter|ajoutez|ajoutons)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:(?:nouveau|nouvelle|nouveaux|nouvelles|prochain|prochaine|prochains|prochaines|premier|premiere)\s+)?relances?(?:\s+commerciale?s?)?(?:(?:\s+(?:pour|concernant)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?))|(?:\s+(?:clients?|contacts?|prospects?))|(?:\s+(?:avec|et)\s+une\s+tache\s+de\s+suivi)|(?:\s+(?:demain|aujourd hui))|(?:\s+quand\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?)\s+n\s+a\s+pas\s+encore\s+repondu)|(?:\s+sans\s+effet\s+externe))*$/u,
+  /^(?:prepare|preparer|preparez|preparons|planifie|planifier|planifiez|planifions|organise|organiser|organisez|organisons|cree|creer|creez|creons|ajoute|ajouter|ajoutez|ajoutons)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:(?:nouveau|nouvelle|nouveaux|nouvelles|prochain|prochaine|prochains|prochaines|premier|premiere)\s+)?(?:rappels?|suivis?)(?:(?:\s+commerciale?s?)|(?:\s+(?:clients?|contacts?|prospects?))|(?:\s+(?:pour|du|de|des)\s+(?:(?:un|une|le|la|les|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?)))(?:\s+(?:demain|aujourd hui))?$/u,
+  /^(?:prepare|preparer|preparez|preparons|planifie|planifier|planifiez|planifions|organise|organiser|organisez|organisons|cree|creer|creez|creons|ajoute|ajouter|ajoutez|ajoutons)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:(?:nouveau|nouvelle|nouveaux|nouvelles|prochain|prochaine|prochains|prochaines|premier|premiere)\s+)?taches?(?:(?:\s+de\s+relance(?:\s+commerciale?s?)?(?:\s+pour\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:clients?|contacts?|prospects?))?)|(?:\s+de\s+suivi\s+(?:clients?|contacts?|prospects?|commerciale?s?)))(?:\s+(?:demain|aujourd hui))?$/u,
+  /^(?:relance|relancer|relancez|relancons|rappelle|rappeler|rappelez|rappelons)\s+(?:un|une|le|la|les|des|ce|cet|cette|ces|mon|ma|mes|notre|nos|votre|vos)\s+(?:clients?|contacts?|prospects?)(?:\s+(?:demain|aujourd hui))?$/u,
+  /^(?:recherche|rechercher|recherchez|recherchons|retrouve|retrouver|retrouvez|retrouvons)\s+(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+(?:clients?|contacts?|prospects?)(?:\s+(?:concerne|concernee|concernes|concernees|lie|liee|lies|liees))?\s+puis\s+(?:prepare|preparer|preparez|cree|creer|creez)\s+(?:(?:un|une|le|la|les|des|ce|cet|cette|ces)\s+)?(?:relances?(?:\s+commerciale?s?)?|taches?\s+de\s+(?:relance(?:\s+commerciale?s?)?|suivi\s+(?:client|contact|prospect|commercial)))$/u,
+] as const;
+
 const minimumExternalContextDenseTokenCharacters = 32;
 const minimumExternalContextCompactVerbatimCharacters =
   minimumExternalContextVerbatimCharacters;
@@ -42,6 +52,25 @@ export interface ActionPlanGenerator {
   generate(
     context: ActionPlanGenerationContext,
   ): Promise<GeneratedActionPlan>;
+}
+
+function hasSupportedConversationIntent(
+  normalizedRequest: string,
+) {
+  if (!normalizedRequest) {
+    return false;
+  }
+  if (/^(?:ne|n|non|pas|aucun|aucune)\b/u.test(normalizedRequest)) {
+    return false;
+  }
+
+  const request = normalizedRequest.replace(
+    supportedConversationRequestPrefixPattern,
+    "",
+  );
+  return supportedConversationIntentPatterns.some((pattern) =>
+    pattern.test(request),
+  );
 }
 
 export function assertGeneratedActionPlanDoesNotCopyExternalContext(
@@ -185,44 +214,65 @@ export function createDeterministicActionPlanGenerator(): ActionPlanGenerator {
       const contextSources = boundActionPlanGenerationContextSources(
         context.contextSources ?? [],
       );
+      const normalizedRequest = normalizeComparableText(
+        context.sourceText ?? "",
+      );
+      const requiresClarification = !hasSupportedConversationIntent(
+        normalizedRequest,
+      );
       return {
         generationSource: "deterministic_mock",
         plan: {
-          intent: "Préparer une relance commerciale",
-          businessGoal:
-            "Retrouver le contact lié à la conversation puis préparer une tâche de suivi.",
-          confidence: context.sourceText ? 0.9 : 0.75,
-          missingContextQuestions: [],
+          intent: requiresClarification
+            ? "Clarifier la demande"
+            : "Préparer une relance commerciale",
+          businessGoal: requiresClarification
+            ? "Comprendre le résultat métier attendu avant de préparer des actions."
+            : "Retrouver le contact lié à la conversation puis préparer une tâche de suivi.",
+          confidence: requiresClarification
+            ? 0.2
+            : context.sourceText
+              ? 0.9
+              : 0.75,
+          missingContextQuestions: requiresClarification
+            ? ["Quel résultat métier souhaitez-vous obtenir ?"]
+            : [],
           contextSources: contextSources.map(toActionPlanContextSourceMetadata),
-          riskSummary:
-            "Lecture de démonstration puis création réversible d'une tâche mock.",
+          riskSummary: requiresClarification
+            ? "Aucune action ne sera préparée ni exécutée avant votre réponse."
+            : "Lecture de démonstration puis création réversible d'une tâche mock.",
           estimatedCost: { amount: 0, currency: "EUR" },
-          steps: [
-            {
-              stepId: "search_contact",
-              capability: "crm.contacts.search",
-              providerPreference: [],
-              input: { query: "contact lié à la conversation" },
-              risk: "low",
-              requiresApproval: false,
-              reversible: true,
-              evidenceRequired: ["Nombre de contacts mock correspondants"],
-              idempotencyKey: `plan:${sourceFingerprint}:search_contact`,
-            },
-            {
-              stepId: "create_follow_up",
-              capability: "project.task.create",
-              providerPreference: [],
-              input: { title: "Relancer le contact de la conversation" },
-              risk: "medium",
-              requiresApproval: true,
-              reversible: true,
-              evidenceRequired: ["Référence de la tâche mock"],
-              idempotencyKey: `plan:${sourceFingerprint}:create_follow_up`,
-            },
-          ],
-          finalUserMessageDraft:
-            "Je propose de retrouver le contact puis de préparer une tâche de relance. Une seule validation confirmera le plan complet.",
+          steps: requiresClarification
+            ? []
+            : [
+                {
+                  stepId: "search_contact",
+                  capability: "crm.contacts.search",
+                  providerPreference: [],
+                  input: { query: "contact lié à la conversation" },
+                  risk: "low",
+                  requiresApproval: false,
+                  reversible: true,
+                  evidenceRequired: [
+                    "Nombre de contacts mock correspondants",
+                  ],
+                  idempotencyKey: `plan:${sourceFingerprint}:search_contact`,
+                },
+                {
+                  stepId: "create_follow_up",
+                  capability: "project.task.create",
+                  providerPreference: [],
+                  input: { title: "Relancer le contact de la conversation" },
+                  risk: "medium",
+                  requiresApproval: true,
+                  reversible: true,
+                  evidenceRequired: ["Référence de la tâche mock"],
+                  idempotencyKey: `plan:${sourceFingerprint}:create_follow_up`,
+                },
+              ],
+          finalUserMessageDraft: requiresClarification
+            ? "J’ai besoin d’une précision avant de préparer le plan : quel résultat métier souhaitez-vous obtenir ?"
+            : "Je propose de retrouver le contact puis de préparer une tâche de relance. Une seule validation confirmera le plan complet.",
         },
       };
     },

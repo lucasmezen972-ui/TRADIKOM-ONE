@@ -43,7 +43,13 @@ type ConversationPageProps = {
   searchParams: Promise<{
     fil?: string;
     envoye?: "web" | "test";
-    plan?: "cree" | "revised" | "approved" | "rejected" | "executed";
+    plan?:
+      | "clarification"
+      | "cree"
+      | "revised"
+      | "approved"
+      | "rejected"
+      | "executed";
     plan_id?: string;
     reprise?: "demandee";
     meta_essai?: "autorise" | "revoque";
@@ -252,7 +258,7 @@ export default async function ConversationPage({
                         {formatDate(message.occurredAt)}
                       </time>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
+                    <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-6">
                       {message.text}
                     </p>
                     {message.attachments.length > 0 ? (
@@ -562,6 +568,9 @@ function PlanPanel({
     (step) => step.capability === "project.task.create",
   )?.input.title;
   const currentTaskTitle = typeof taskTitle === "string" ? taskTitle : "";
+  const requiresClarification =
+    plan?.approvalStatus === "draft" &&
+    plan.plan.missingContextQuestions.length > 0;
 
   return (
     <section className="border-t border-slate-200 bg-violet-50/50 p-4 lg:p-5" aria-label="Plan d’action">
@@ -572,7 +581,9 @@ function PlanPanel({
             Plan d’action contrôlé
           </div>
           <p className="mt-1 text-xs text-slate-600">
-            Deux capacités locales, coût externe nul, une seule validation.
+            {requiresClarification
+              ? "Aucune action ne sera préparée avant votre réponse."
+              : "Deux capacités locales, coût externe nul, une seule validation."}
           </p>
         </div>
         {sourceMessageId &&
@@ -621,46 +632,67 @@ function PlanPanel({
               Version révisée : l’ancienne version est conservée et annulée.
             </p>
           ) : null}
-          <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
-            <div>
-              <dt className="text-slate-500">Confiance</dt>
-              <dd className="mt-1 font-bold text-slate-900">
-                {Math.round(plan.plan.confidence * 100)} %
-              </dd>
+          {requiresClarification ? (
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+              <p className="font-bold">Précision requise</p>
+              <ul className="mt-2 list-disc space-y-1 break-words pl-5 text-sm">
+                {plan.plan.missingContextQuestions.map((question) => (
+                  <li key={question}>{question}</li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs leading-5">
+                {canCreate
+                  ? "Répondez directement dans la conversation, puis préparez le nouveau plan."
+                  : "Demandez à un membre autorisé de répondre dans la conversation puis de préparer le nouveau plan."}
+              </p>
             </div>
-            <div>
-              <dt className="text-slate-500">Coût externe estimé</dt>
-              <dd className="mt-1 font-bold text-slate-900">0,00 €</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Environnement</dt>
-              <dd className="mt-1 font-bold text-slate-900">Mock local</dd>
-            </div>
-          </dl>
-          <ol className="mt-4 grid gap-3">
-            {plan.plan.steps.map((step, index) => (
-              <li key={step.stepId} className="rounded-md bg-slate-50 p-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-slate-950">
-                    {index + 1}. {capabilityLabel(step.capability)}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {planStepStatusLabel(plan.steps[index]?.status)} · Risque{" "}
-                    {step.risk === "low" ? "faible" : "moyen"}
-                  </span>
+          ) : (
+            <>
+              <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+                <div>
+                  <dt className="text-slate-500">Confiance</dt>
+                  <dd className="mt-1 font-bold text-slate-900">
+                    {Math.round(plan.plan.confidence * 100)} %
+                  </dd>
                 </div>
-                <p className="mt-1 text-xs text-slate-600">
-                  Preuve attendue : {step.evidenceRequired.join(" · ")}
-                </p>
-                {step.capability === "project.task.create" &&
-                typeof step.input.title === "string" ? (
-                  <p className="mt-2 break-words text-xs font-semibold text-slate-800">
-                    Tâche proposée : {step.input.title}
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ol>
+                <div>
+                  <dt className="text-slate-500">Coût externe estimé</dt>
+                  <dd className="mt-1 font-bold text-slate-900">0,00 €</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Environnement</dt>
+                  <dd className="mt-1 font-bold text-slate-900">Mock local</dd>
+                </div>
+              </dl>
+              <ol className="mt-4 grid gap-3">
+                {plan.plan.steps.map((step, index) => (
+                  <li
+                    key={step.stepId}
+                    className="rounded-md bg-slate-50 p-3 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-slate-950">
+                        {index + 1}. {capabilityLabel(step.capability)}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500">
+                        {planStepStatusLabel(plan.steps[index]?.status)} · Risque{" "}
+                        {step.risk === "low" ? "faible" : "moyen"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Preuve attendue : {step.evidenceRequired.join(" · ")}
+                    </p>
+                    {step.capability === "project.task.create" &&
+                    typeof step.input.title === "string" ? (
+                      <p className="mt-2 break-words text-xs font-semibold text-slate-800">
+                        Tâche proposée : {step.input.title}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
 
           {plan.approvalStatus === "awaiting_approval" ? (
             canDecide ? (
@@ -782,7 +814,7 @@ function DecisionForm({
 
 function planStatusLabel(status: ConversationPlan["approvalStatus"]) {
   return {
-    draft: "Brouillon",
+    draft: "Précision requise",
     awaiting_approval: "Validation requise",
     approved: "Approuvé",
     rejected: "Annulé",

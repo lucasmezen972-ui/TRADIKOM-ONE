@@ -1,4 +1,5 @@
 export type ConversationPlanReceipt =
+  | "clarification"
   | "cree"
   | "revised"
   | "approved"
@@ -15,6 +16,7 @@ export type ConversationPlanReceiptState = {
     | "executed";
   mission?: { status: string } | null;
   supersedesPlanId?: string | null;
+  plan?: { missingContextQuestions: readonly string[] };
 };
 
 export function resolveConversationPlanReceipt(
@@ -29,6 +31,15 @@ export function resolveConversationPlanReceipt(
     currentPlan.id !== requestedPlanId
   ) {
     return null;
+  }
+  if (
+    requestedReceipt === "clarification" &&
+    currentPlan.approvalStatus === "draft" &&
+    Boolean(currentPlan.plan?.missingContextQuestions.length) &&
+    !currentPlan.supersedesPlanId &&
+    !currentPlan.mission
+  ) {
+    return requestedReceipt;
   }
   if (
     requestedReceipt === "revised" &&
@@ -72,6 +83,8 @@ export function resolveConversationPlanReceipt(
 
 export function planReceiptMessage(receipt: ConversationPlanReceipt) {
   return {
+    clarification:
+      "Une précision est nécessaire avant de préparer ce plan. Aucune action n’a été exécutée.",
     cree: "Plan déterministe créé et placé en attente de validation.",
     revised: "Nouvelle version du plan créée et placée en attente de validation.",
     approved: "Plan approuvé. Il est prêt pour l’exécution mock.",

@@ -1,5 +1,23 @@
 # Étapes suivantes TRADIKOM ONE OS
 
+## Situation actuelle — 15 septembre 2026, 06:27 UTC
+
+- La tranche « Précision requise » est implémentée et validée localement dans la copie stable. Une demande vague, négative, informative ou hors du domaine commercial reste un brouillon durable sans étape exécutable. Une demande d'action commerciale complète, y compris formulée comme un ordre interrogatif poli, prépare le plan mock existant; la grammaire positive doit consommer toute la demande.
+- Le brouillon contient au plus trois questions françaises uniques dont le message final est borné par un contrat partagé à 2 000 caractères. Il ne crée ni validation, reçu de policy, workflow, événement, résultat, tâche, provider ou `fetch`. Il ne peut être ni approuvé, ni modifié, ni exécuté.
+- Conversation affiche les questions sans coût, étapes ou boutons de décision. Les mots très longs ne débordent pas sur mobile et la consigne tient compte du droit d'écriture. Une réponse exploitable dans le même fil prépare un nouveau plan distinct `awaiting_approval`.
+- Preuves locales finales : 8 fichiers/136 tests ciblés verts; suite exhaustive 160 fichiers/949 tests verts et 14 fichiers/33 tests ignorés faute des services PostgreSQL locaux, soit 174 fichiers/982 tests sans échec; ESLint, TypeScript, build production factice, audit high, continuity-check et diff check verts. La revue indépendante ne trouve plus de défaut P0-P2. PostgreSQL/RLS et Playwright ne sont pas revendiqués avant la CI.
+- État honnête : livré et validé localement = oui; publié et prouvé CI = pas encore pour cette tranche; réel connecté = aucun; sandbox = aucune; mock = générateur déterministe et `tradikom_mock`; bloqué humain = SMS Meta puis confirmation distincte au moment exact; hors périmètre = Graph, message externe, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+
+## Prochaine action exacte — 15 septembre 2026, 06:27 UTC
+
+1. Publier strictement en fast-forward sur `codex/tradikom-one-os`, sans inclure `tmp/`, puis relever les identifiants des nouveaux runs.
+2. Exiger la CI PostgreSQL/RLS, la suite exhaustive, le build et 20/20 Playwright avant de classer la tranche prouvée; corriger tout échec réel sans contourner la sécurité.
+3. Après preuve verte, relire les pages 17-18, 24, 48 et 68-69 et traiter la première lacune conversationnelle suivante : le signal humain durable « déléguer » encore absent du WebChat, uniquement si l'audit confirme qu'il précède toute autre lacune non terminée. Avant tout code, réécrire `masterPrompt.alignment`; aucun CRM, Kanban, dashboard secondaire ou fournisseur réel ne doit être sélectionné.
+
+### Checkpoint humain parallèle — inchangé
+
+- La saisie du code SMS reste directement dans Meta for Developers et ne passe jamais par le chat. Toute création de token persistant, requête Graph, activation, message d'essai, webhook public, fusion, déploiement ou dépense exige une autorisation distincte au moment exact.
+
 ## Situation actuelle — 15 septembre 2026, 04:32 UTC
 
 - La tranche applicative « Modifier » avant validation est publiée dans `55fece0` depuis la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE`; `tmp/` reste intact, non suivi et hors index. Le PDF maître est confirmé à 71 pages avec le SHA-256 exact `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.

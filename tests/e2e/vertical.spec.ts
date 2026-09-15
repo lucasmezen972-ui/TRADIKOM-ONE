@@ -1046,7 +1046,7 @@ test("operational health distinguishes measured incidents from unknown telemetry
 test("Conversation completes an audited mock plan on desktop and mobile", async ({
   browser,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   for (const viewport of [
     { label: "desktop", width: 1440, height: 900 },
     { label: "mobile", width: 390, height: 844 },
@@ -1264,14 +1264,14 @@ async function runConversationJourney(
       ).toHaveCount(0);
       await expect(metaCheckpoint.getByRole("checkbox")).toHaveCount(0);
     }
-    const webMessage = `Préparer un suivi client ${suffix}`;
+    const webMessage = "Préparer un suivi client";
     const webForm = page.locator("form").filter({ hasText: "Écrire depuis le web" });
     await webForm.getByLabel("Écrire depuis le web").fill(webMessage);
     await webForm.getByRole("button", { name: "Envoyer" }).click();
     await expect(page).toHaveURL(/envoye=web/);
     await expect(page.getByText(webMessage)).toBeVisible();
 
-    const testMessage = `Confirmation depuis le canal test ${suffix}`;
+    const testMessage = "Préparer une relance commerciale pour ce contact";
     const testForm = page
       .locator("form")
       .filter({ hasText: "Simuler le canal de test" });
@@ -1500,7 +1500,7 @@ async function runConversationJourney(
       externalMessageId: `rejection-message-${suffix}`,
       idempotencyKey: `rejection-message:${suffix}`,
       correlationId: `rejection-correlation-${suffix}`,
-      text: `Préparer puis annuler une mission ${suffix}`,
+      text: "Préparer une relance client",
       occurredAt: rejectionOccurredAt,
     });
     await page.goto(
@@ -1609,6 +1609,192 @@ async function runConversationJourney(
       ),
     ).toHaveCount(0);
     await expect(rejectionPanel.getByText("Annulé", { exact: true })).toBeVisible();
+
+    const clarificationChannels = createConversationChannelServices(db);
+    const clarificationSource = await clarificationChannels.web.ingest(
+      user.id,
+      {
+        tenantId: tenant.id,
+        displayName: `Responsable clarification ${viewport.label}`,
+        externalMessageId: `clarification-message-${suffix}`,
+        idempotencyKey: `clarification-message:${suffix}`,
+        correlationId: `clarification-correlation-${suffix}`,
+        text: "Aide-moi.",
+        occurredAt: new Date().toISOString(),
+      },
+    );
+    await page.goto(
+      `/conversation?fil=${encodeURIComponent(clarificationSource.threadId)}`,
+    );
+    const clarificationPanel = page.getByRole("region", {
+      name: "Plan d’action",
+    });
+    await clarificationPanel
+      .getByRole("button", { name: "Préparer le plan" })
+      .click();
+    await expect(page).toHaveURL(/plan=clarification/);
+    const clarificationPlanId = new URL(page.url()).searchParams.get("plan_id");
+    expect(clarificationPlanId).toBeTruthy();
+    await expect(
+      page.getByText(
+        "Une précision est nécessaire avant de préparer ce plan. Aucune action n’a été exécutée.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      clarificationPanel.getByText("Précision requise", { exact: true }),
+    ).toHaveCount(2);
+    const clarificationQuestion = clarificationPanel.getByText(
+      "Quel résultat métier souhaitez-vous obtenir ?",
+      { exact: true },
+    );
+    await expect(clarificationQuestion).toBeVisible();
+    await clarificationQuestion.evaluate((element) => {
+      element.textContent = "P".repeat(1_900);
+    });
+    const longQuestionViewportBounds = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(longQuestionViewportBounds.scrollWidth).toBeLessThanOrEqual(
+      longQuestionViewportBounds.clientWidth,
+    );
+    await expect(
+      clarificationPanel.getByText(
+        "Répondez directement dans la conversation, puis préparez le nouveau plan.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      clarificationPanel.getByText(/^1\. Rechercher le contact$/),
+    ).toHaveCount(0);
+    await expect(clarificationPanel.getByText("0,00 €")).toHaveCount(0);
+    for (const actionName of [
+      "Modifier le plan",
+      "Approuver une fois",
+      "Annuler le plan",
+      "Exécuter les deux étapes en mock",
+    ]) {
+      await expect(
+        clarificationPanel.getByRole("button", { name: actionName }),
+      ).toHaveCount(0);
+    }
+
+    const clarificationEvidence = await db.query<{
+      status: string;
+      steps: number;
+      approvals: number;
+      receipts: number;
+      runs: number;
+      events: number;
+      results: number;
+      audits: number;
+      safeMetadata: string | null;
+    }>(
+      `select
+         (select approval_status from conversation_action_plans
+          where tenant_id = $1 and id = $2) as status,
+         (select count(*)::int from conversation_action_plan_steps
+          where tenant_id = $1 and plan_id = $2) as steps,
+         (select count(*)::int from approvals where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $2)
+          as approvals,
+         (select count(*)::int from conversation_action_plan_policy_receipts
+          where tenant_id = $1 and plan_id = $2) as receipts,
+         (select count(*)::int from workflow_runs where tenant_id = $1
+          and workflow_key = $3) as runs,
+         (select count(*)::int from domain_events where tenant_id = $1
+          and idempotency_key = $4) as events,
+         (select count(*)::int from conversation_messages where tenant_id = $1
+          and thread_id = $5 and kind = 'result') as results,
+         (select count(*)::int from audit_logs where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $2
+          and action = 'conversation.plan_created') as audits,
+         (select safe_metadata from audit_logs where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $2
+          and action = 'conversation.plan_created') as "safeMetadata"`,
+      [
+        tenant.id,
+        clarificationPlanId,
+        `conversation_plan:${clarificationPlanId}`,
+        `conversation.plan.execute:${clarificationPlanId}`,
+        clarificationSource.threadId,
+      ],
+    );
+    expect(clarificationEvidence.rows[0]).toMatchObject({
+      status: "draft",
+      steps: 0,
+      approvals: 0,
+      receipts: 0,
+      runs: 0,
+      events: 0,
+      results: 0,
+      audits: 1,
+      safeMetadata: expect.any(String),
+    });
+    const clarificationAudit =
+      clarificationEvidence.rows[0]?.safeMetadata ?? "";
+    expect(clarificationAudit).not.toContain("Aide-moi");
+    expect(clarificationAudit).not.toContain("Quel résultat métier");
+    expect(JSON.parse(clarificationAudit)).toMatchObject({
+      approvalMode: "clarification_required",
+      clarificationQuestionCount: 1,
+      capabilityCount: 0,
+      executionEnvironment: "not_started",
+    });
+
+    const clarificationAnswer =
+      "Préparer une relance commerciale avec une tâche de suivi";
+    const clarificationWebForm = page
+      .locator("form")
+      .filter({ hasText: "Écrire depuis le web" });
+    await clarificationWebForm
+      .getByLabel("Écrire depuis le web")
+      .fill(clarificationAnswer);
+    await clarificationWebForm.getByRole("button", { name: "Envoyer" }).click();
+    await expect(page).toHaveURL(/envoye=web/);
+    await expect(page.getByText(clarificationAnswer, { exact: true })).toBeVisible();
+    await clarificationPanel
+      .getByRole("button", { name: "Préparer le plan" })
+      .click();
+    await expect(page).toHaveURL(/plan=cree/);
+    const clarifiedPlanId = new URL(page.url()).searchParams.get("plan_id");
+    expect(clarifiedPlanId).toBeTruthy();
+    expect(clarifiedPlanId).not.toBe(clarificationPlanId);
+    await expect(
+      clarificationPanel.getByText("Validation requise", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      clarificationPanel.getByRole("button", { name: "Approuver une fois" }),
+    ).toBeVisible();
+    const clarifiedEvidence = await db.query<{
+      status: string;
+      steps: number;
+      approvalStatus: string;
+    }>(
+      `select
+         (select approval_status from conversation_action_plans
+          where tenant_id = $1 and id = $2) as status,
+         (select count(*)::int from conversation_action_plan_steps
+          where tenant_id = $1 and plan_id = $2) as steps,
+         (select status from approvals where tenant_id = $1
+          and target_type = 'conversation_action_plan' and target_id = $2)
+          as "approvalStatus"`,
+      [tenant.id, clarifiedPlanId],
+    );
+    expect(clarifiedEvidence.rows[0]).toEqual({
+      status: "awaiting_approval",
+      steps: 2,
+      approvalStatus: "pending",
+    });
+    const clarificationViewportBounds = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(clarificationViewportBounds.scrollWidth).toBeLessThanOrEqual(
+      clarificationViewportBounds.clientWidth,
+    );
+    expect(metaNetworkRequests).toEqual([]);
 
     const mediaBytes = new TextEncoder().encode("%PDF-1.7\npreuve Playwright mock");
     const mediaChecksum = createHash("sha256").update(mediaBytes).digest("hex");

@@ -44,6 +44,79 @@ describe("schémas de l'orchestrateur", () => {
     });
   });
 
+  it("autorise zéro étape uniquement tant qu'une précision métier manque", () => {
+    const incomplete = {
+      ...planFixture(),
+      missingContextQuestions: [
+        "Quel résultat métier souhaitez-vous obtenir ?",
+      ],
+      steps: [],
+    };
+    expect(actionPlanSchema.parse(incomplete)).toMatchObject({
+      missingContextQuestions: [
+        "Quel résultat métier souhaitez-vous obtenir ?",
+      ],
+      steps: [],
+    });
+    expect(
+      actionPlanSchema.safeParse({
+        ...incomplete,
+        missingContextQuestions: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      actionPlanSchema.safeParse({
+        ...incomplete,
+        missingContextQuestions: [
+          "Quel résultat métier souhaitez-vous obtenir ?",
+          "Quel résultat métier souhaitez-vous obtenir ?",
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("borne les questions pour garantir un message de clarification durable", () => {
+    const incomplete = {
+      ...planFixture(),
+      missingContextQuestions: ["a".repeat(1_900)],
+      steps: [],
+    };
+
+    expect(actionPlanSchema.safeParse(incomplete).success).toBe(true);
+    expect(
+      actionPlanSchema.safeParse({
+        ...incomplete,
+        missingContextQuestions: [
+          "a".repeat(500),
+          "b".repeat(500),
+          "c".repeat(500),
+        ],
+      }).success,
+    ).toBe(true);
+
+    const tooLong = actionPlanSchema.safeParse({
+      ...incomplete,
+      missingContextQuestions: [
+        `${"A".repeat(649)}?`,
+        `${"B".repeat(649)}?`,
+        `${"C".repeat(649)}?`,
+      ],
+    });
+    expect(tooLong.success).toBe(false);
+    if (!tooLong.success) {
+      expect(tooLong.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["missingContextQuestions"],
+            message:
+              "Les questions de précision dépassent la longueur totale autorisée.",
+          }),
+        ]),
+      );
+    }
+  });
+
   it("borne les sources de contexte à des métadonnées sûres", () => {
     const source = {
       type: "external_untrusted_data" as const,
@@ -390,21 +463,45 @@ describe("schémas de l'orchestrateur", () => {
     expect(proposal).not.toHaveProperty("execution");
   });
 
-  it("refuse l'approbation d'un plan encore incomplet", () => {
-    expect(
-      actionPlanProposalSchema.safeParse({
+  it("réserve strictement le brouillon aux plans encore incomplets", () => {
+    const incompleteProposal = {
         id: "plan_proposal_2",
         tenantId: "tenant_plan_1",
         threadId: "thread_plan_1",
         sourceMessageId: "message_plan_1",
         schemaVersion: 1,
-        generationSource: "model",
-        approvalStatus: "approved",
+        generationSource: "model" as const,
+        modelReference: "modele-clarification-v1",
         createdAt: "2026-07-30T13:55:00.000Z",
         plan: {
           ...planFixture(),
           missingContextQuestions: ["Quel contact faut-il relancer ?"],
         },
+      };
+    expect(
+      actionPlanProposalSchema.safeParse({
+        ...incompleteProposal,
+        approvalStatus: "draft",
+      }).success,
+    ).toBe(true);
+    for (const approvalStatus of [
+      "awaiting_approval",
+      "approved",
+      "rejected",
+      "executed",
+    ] as const) {
+      expect(
+        actionPlanProposalSchema.safeParse({
+          ...incompleteProposal,
+          approvalStatus,
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      actionPlanProposalSchema.safeParse({
+        ...incompleteProposal,
+        approvalStatus: "draft",
+        plan: planFixture(),
       }).success,
     ).toBe(false);
   });

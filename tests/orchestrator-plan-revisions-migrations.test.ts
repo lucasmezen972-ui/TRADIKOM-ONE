@@ -485,7 +485,7 @@ describe("migration des révisions de plans Conversation", () => {
       idempotencyKey: "ingress:migration:legacy-rejection",
       correlationId: "correlation_migration_legacy_rejection",
       routeTrace: [],
-      text: "Préparer un plan destiné à être refusé.",
+      text: "Préparer une relance client.",
       attachments: [],
       occurredAt,
     });

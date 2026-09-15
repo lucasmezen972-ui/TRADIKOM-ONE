@@ -7,7 +7,12 @@ const identifierSchema = z
   .max(160)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 
-const businessTextSchema = z.string().trim().min(1).max(2_000);
+export const maximumActionPlanBusinessTextCharacters = 2_000;
+const businessTextSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(maximumActionPlanBusinessTextCharacters);
 const capabilityNameSchema = z
   .string()
   .trim()
@@ -125,7 +130,28 @@ const actionPlanObjectSchema = z
     intent: businessTextSchema,
     businessGoal: businessTextSchema,
     confidence: z.number().min(0).max(1),
-    missingContextQuestions: z.array(businessTextSchema).max(3),
+    missingContextQuestions: z
+      .array(businessTextSchema)
+      .max(3)
+      .superRefine((questions, context) => {
+        if (new Set(questions).size !== questions.length) {
+          context.addIssue({
+            code: "custom",
+            message: "Chaque question de précision doit être unique.",
+          });
+        }
+        if (
+          questions.length > 0 &&
+          buildActionPlanClarificationMessage(questions).length >
+            maximumActionPlanBusinessTextCharacters
+        ) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Les questions de précision dépassent la longueur totale autorisée.",
+          });
+        }
+      }),
     contextSources: z
       .array(actionPlanContextSourceSchema)
       .max(10)
@@ -153,7 +179,6 @@ const actionPlanObjectSchema = z
       .optional(),
     steps: z
       .array(actionPlanStepSchema)
-      .min(1)
       .max(12)
       .superRefine((steps, context) => {
         const stepIds = new Set<string>();
@@ -179,7 +204,29 @@ const actionPlanObjectSchema = z
       }),
     finalUserMessageDraft: businessTextSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((plan, context) => {
+    if (
+      plan.missingContextQuestions.length === 0 &&
+      plan.steps.length === 0
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Un plan complet doit contenir au moins une étape.",
+        path: ["steps"],
+      });
+    }
+  });
+
+export function buildActionPlanClarificationMessage(
+  questions: readonly string[],
+) {
+  return questions.length === 1
+    ? `J’ai besoin d’une précision avant de préparer le plan : ${questions[0]}`
+    : `J’ai besoin de précisions avant de préparer le plan : ${questions
+        .map((question, index) => `${index + 1}. ${question}`)
+        .join(" ")}`;
+}
 
 export const actionPlanSchema = z.preprocess(
   (rawPlan, context) => {
@@ -260,13 +307,16 @@ export const actionPlanProposalSchema = z
         path: ["modelReference"],
       });
     }
+    const requiresClarification =
+      proposal.plan.missingContextQuestions.length > 0;
     if (
-      ["approved", "executed"].includes(proposal.approvalStatus) &&
-      proposal.plan.missingContextQuestions.length > 0
+      (requiresClarification && proposal.approvalStatus !== "draft") ||
+      (!requiresClarification && proposal.approvalStatus === "draft")
     ) {
       context.addIssue({
         code: "custom",
-        message: "Un plan incomplet ne peut pas être approuvé.",
+        message:
+          "Seul un plan incomplet peut rester en brouillon de clarification.",
         path: ["approvalStatus"],
       });
     }

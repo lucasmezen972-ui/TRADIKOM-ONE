@@ -41,6 +41,318 @@ afterEach(async () => {
 });
 
 describe("service des plans Conversation", () => {
+  it("demande une précision durable sans préparer ni exécuter d'action", async () => {
+    const context = await createTenantContext(
+      "plan-clarification-owner@example.com",
+    );
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      { ...ingressFixture(context.tenantId), text: "Aide-moi." },
+    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("Aucun transport externe attendu."));
+    const providerExecuteSpy = vi
+      .spyOn(strictMockCapabilityProvider, "execute")
+      .mockRejectedValue(new Error("Aucun fournisseur ne doit être engagé."));
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      async generate(generationContext: ActionPlanGenerationContext) {
+        const generated = await baseGenerator.generate({
+          ...generationContext,
+          sourceText: "Préparer une relance commerciale pour ce client.",
+        });
+        return {
+          ...generated,
+          plan: {
+            ...generated.plan,
+            missingContextQuestions: ["Quel client faut-il relancer ?"],
+            finalUserMessageDraft: "Le plan est prêt.",
+          },
+        };
+      },
+    };
+    const input = {
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+      sourceMessageId: source.messageId,
+    };
+
+    const draft = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      input,
+      { generator },
+    );
+    const replay = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      input,
+      { generator },
+    );
+
+    expect(draft).toMatchObject({
+      tenantId: context.tenantId,
+      threadId: source.threadId,
+      sourceMessageId: source.messageId,
+      generationSource: "deterministic_mock",
+      approvalStatus: "draft",
+      approvalId: undefined,
+      idempotentReplay: false,
+      steps: [],
+      policyReceipt: undefined,
+      mission: undefined,
+      plan: {
+        missingContextQuestions: [
+          "Quel client faut-il relancer ?",
+        ],
+        steps: [],
+        finalUserMessageDraft:
+          "J’ai besoin d’une précision avant de préparer le plan : Quel client faut-il relancer ?",
+      },
+    });
+    expect(replay).toMatchObject({
+      id: draft.id,
+      approvalStatus: "draft",
+      planFingerprint: draft.planFingerprint,
+      idempotentReplay: true,
+      steps: [],
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(providerExecuteSpy).not.toHaveBeenCalled();
+
+    const evidence = await context.db.query<{
+      plans: number;
+      steps: number;
+      approvals: number;
+      receipts: number;
+      workflows: number;
+      events: number;
+      results: number;
+      planMessages: number;
+      audits: number;
+    }>(
+      `select
+         (select count(*)::int from conversation_action_plans
+          where tenant_id = $1 and id = $2) as plans,
+         (select count(*)::int from conversation_action_plan_steps
+          where tenant_id = $1 and plan_id = $2) as steps,
+         (select count(*)::int from approvals
+          where tenant_id = $1 and target_type = 'conversation_action_plan'
+            and target_id = $2) as approvals,
+         (select count(*)::int from conversation_action_plan_policy_receipts
+          where tenant_id = $1 and plan_id = $2) as receipts,
+         (select count(*)::int from workflow_runs
+          where tenant_id = $1 and workflow_key = $3) as workflows,
+         (select count(*)::int from domain_events
+          where tenant_id = $1 and idempotency_key = $4) as events,
+         (select count(*)::int from conversation_messages
+          where tenant_id = $1 and thread_id = $5 and kind = 'result') as results,
+         (select count(*)::int from conversation_messages
+          where tenant_id = $1 and thread_id = $5 and kind = 'plan')
+          as "planMessages",
+         (select count(*)::int from audit_logs
+          where tenant_id = $1 and target_type = 'conversation_action_plan'
+            and target_id = $2 and action = 'conversation.plan_created') as audits`,
+      [
+        context.tenantId,
+        draft.id,
+        `conversation_plan:${draft.id}`,
+        `conversation.plan.execute:${draft.id}`,
+        source.threadId,
+      ],
+    );
+    expect(evidence.rows[0]).toEqual({
+      plans: 1,
+      steps: 0,
+      approvals: 0,
+      receipts: 0,
+      workflows: 0,
+      events: 0,
+      results: 0,
+      planMessages: 1,
+      audits: 1,
+    });
+    await expectThreadStatus(
+      context.db,
+      context.tenantId,
+      source.threadId,
+      "open",
+    );
+
+    const proposalMessage = await context.db.query<{ textContent: string }>(
+      `select text_content as "textContent" from conversation_messages
+       where tenant_id = $1 and thread_id = $2 and kind = 'plan'`,
+      [context.tenantId, source.threadId],
+    );
+    expect(proposalMessage.rows).toEqual([
+      { textContent: draft.plan.finalUserMessageDraft },
+    ]);
+    const audit = await context.db.query<{ safeMetadata: string }>(
+      `select safe_metadata as "safeMetadata" from audit_logs
+       where tenant_id = $1 and target_type = 'conversation_action_plan'
+         and target_id = $2 and action = 'conversation.plan_created'`,
+      [context.tenantId, draft.id],
+    );
+    expect(audit.rows).toHaveLength(1);
+    expect(audit.rows[0]?.safeMetadata).not.toContain("Aide-moi");
+    expect(audit.rows[0]?.safeMetadata).not.toContain(
+      "Quel client faut-il relancer",
+    );
+    expect(JSON.parse(audit.rows[0]?.safeMetadata ?? "null")).toEqual({
+      threadId: source.threadId,
+      sourceMessageId: source.messageId,
+      schemaVersion: 1,
+      approvalMode: "clarification_required",
+      clarificationQuestionCount: 1,
+      capabilityCount: 0,
+      contextSourceCount: 0,
+      contextWasTruncated: false,
+      executionEnvironment: "not_started",
+      estimatedExternalCost: 0,
+    });
+
+    await expect(
+      decideConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        {
+          planId: draft.id,
+          decision: "approved",
+          reason: "Tentative prématurée.",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+    await expect(
+      reviseConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        { planId: draft.id, taskTitle: "Relancer le contact" },
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_decision_conflict" });
+    await expect(
+      executeConversationActionPlan(
+        context.db,
+        context.userId,
+        context.tenantId,
+        draft.id,
+      ),
+    ).rejects.toMatchObject({
+      code: "orchestrator_execution_not_approved",
+    });
+
+    const otherTenant = await createSecondUserAndTenant(
+      context.db,
+      "plan-clarification-other@example.com",
+    );
+    await expect(
+      getConversationActionPlan(
+        context.db,
+        otherTenant.userId,
+        otherTenant.tenantId,
+        draft.id,
+      ),
+    ).rejects.toMatchObject({ code: "orchestrator_plan_not_found" });
+
+    const answerOccurredAt = "2026-07-30T10:01:00.000Z";
+    const answer = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      {
+        ...ingressFixture(context.tenantId),
+        threadId: source.threadId,
+        externalMessageId: `answer_${context.tenantId}`,
+        idempotencyKey: `ingress:web:answer:${context.tenantId}`,
+        correlationId: `correlation_answer_${context.tenantId}`,
+        text: "Préparer une relance commerciale et une tâche de suivi.",
+        occurredAt: answerOccurredAt,
+      },
+    );
+    const completed = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: answer.messageId,
+      },
+    );
+
+    expect(completed).toMatchObject({
+      threadId: source.threadId,
+      sourceMessageId: answer.messageId,
+      approvalStatus: "awaiting_approval",
+      steps: [
+        { capability: "crm.contacts.search", status: "planned" },
+        { capability: "project.task.create", status: "planned" },
+      ],
+    });
+    expect(completed.id).not.toBe(draft.id);
+    expect(completed.approvalId).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(providerExecuteSpy).not.toHaveBeenCalled();
+    await expectThreadStatus(
+      context.db,
+      context.tenantId,
+      source.threadId,
+      "awaiting_validation",
+    );
+  });
+
+  it("normalise trois questions bornées dans un seul message durable", async () => {
+    const context = await createTenantContext(
+      "plan-three-questions-owner@example.com",
+    );
+    const source = await ingestConversationMessage(
+      context.db,
+      context.userId,
+      { ...ingressFixture(context.tenantId), text: "Aide-moi davantage." },
+    );
+    const questions = [
+      `A${"a".repeat(498)}?`,
+      `B${"b".repeat(498)}?`,
+      `C${"c".repeat(498)}?`,
+    ];
+    const baseGenerator = createDeterministicActionPlanGenerator();
+    const generator = {
+      async generate(generationContext: ActionPlanGenerationContext) {
+        const generated = await baseGenerator.generate({
+          ...generationContext,
+          sourceText: "Préparer une relance commerciale pour ce client.",
+        });
+        return {
+          ...generated,
+          plan: {
+            ...generated.plan,
+            missingContextQuestions: questions,
+          },
+        };
+      },
+    };
+
+    const draft = await createConversationActionPlan(
+      context.db,
+      context.userId,
+      {
+        tenantId: context.tenantId,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      },
+      { generator },
+    );
+
+    expect(draft.approvalStatus).toBe("draft");
+    expect(draft.steps).toEqual([]);
+    expect(draft.plan.steps).toEqual([]);
+    expect(draft.plan.finalUserMessageDraft.length).toBeLessThanOrEqual(2_000);
+    for (const question of questions) {
+      expect(draft.plan.finalUserMessageDraft).toContain(question);
+    }
+  });
+
   it("crée une seule proposition immuable et la rejoue sans fournisseur", async () => {
     const context = await createTenantContext("plan-owner@example.com");
     const source = await ingestConversationMessage(
@@ -176,7 +488,7 @@ describe("service des plans Conversation", () => {
     expect(audits.rows).toHaveLength(1);
     expect(audits.rows[0]?.action).toBe("conversation.plan_created");
     expect(audits.rows[0]?.safe_metadata).not.toContain(
-      "Texte client confidentiel",
+      "Préparer une relance commerciale pour ce contact",
     );
     expect(audits.rows[0]?.safe_metadata).not.toContain("Relancer le contact");
   });
@@ -2720,7 +3032,7 @@ function ingressFixture(tenantId: string) {
     idempotencyKey: `ingress:web:${tenantId}`,
     correlationId: `correlation_${tenantId}`,
     routeTrace: [],
-    text: "Texte client confidentiel à ne jamais placer dans l'audit.",
+    text: "Préparer une relance commerciale pour ce contact.",
     attachments: [],
     occurredAt,
   };

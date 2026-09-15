@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  createPlan: vi.fn(),
   decidePlan: vi.fn(),
   revisePlan: vi.fn(),
   redirect: vi.fn(),
@@ -29,12 +30,14 @@ vi.mock("@/lib/session", () => ({
 
 vi.mock("@/modules/channels", () => ({
   getConversationChannelServices: async () => ({
+    createPlan: mocks.createPlan,
     decidePlan: mocks.decidePlan,
     revisePlan: mocks.revisePlan,
   }),
 }));
 
 import {
+  createConversationPlanAction,
   decideConversationPlanAction,
   reviseConversationPlanAction,
 } from "../src/app/(app)/conversation/actions";
@@ -45,6 +48,50 @@ afterEach(() => {
 });
 
 describe("actions serveur Conversation", () => {
+  it("redirige un brouillon incomplet vers la demande de précision", async () => {
+    mocks.createPlan.mockResolvedValue({
+      id: "plan_clarification",
+      threadId: "thread_clarification",
+      approvalStatus: "draft",
+    });
+    const formData = creationForm();
+
+    await createConversationPlanAction(formData);
+
+    expect(mocks.createPlan).toHaveBeenCalledWith(
+      "user_decision_test",
+      "tenant_decision_test",
+      "thread_submitted",
+      "message_source_submitted",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/conversation");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/conversation?fil=thread_clarification&plan=clarification&plan_id=plan_clarification",
+    );
+  });
+
+  it("redirige un plan complet vers le reçu de création", async () => {
+    mocks.createPlan.mockResolvedValue({
+      id: "plan_ready",
+      threadId: "thread_ready",
+      approvalStatus: "awaiting_approval",
+    });
+    const formData = creationForm();
+
+    await createConversationPlanAction(formData);
+
+    expect(mocks.createPlan).toHaveBeenCalledWith(
+      "user_decision_test",
+      "tenant_decision_test",
+      "thread_submitted",
+      "message_source_submitted",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/conversation");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/conversation?fil=thread_ready&plan=cree&plan_id=plan_ready",
+    );
+  });
+
   it("refuse une décision malformée sans appeler le service ni rediriger", async () => {
     const logger = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const formData = decisionForm("approved-ish");
@@ -108,6 +155,13 @@ describe("actions serveur Conversation", () => {
     );
   });
 });
+
+function creationForm() {
+  const formData = new FormData();
+  formData.set("threadId", "thread_submitted");
+  formData.set("sourceMessageId", "message_source_submitted");
+  return formData;
+}
 
 function decisionForm(decision: string) {
   const formData = new FormData();

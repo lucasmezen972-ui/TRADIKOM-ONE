@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveConversationPlanReceipt } from "../src/modules/orchestrator";
+import {
+  planReceiptMessage,
+  resolveConversationPlanReceipt,
+} from "../src/modules/orchestrator";
 
 describe("reçu durable d’un plan Conversation", () => {
   it("refuse un reçu sans identifiant exact ou avec un état incohérent", () => {
@@ -28,7 +31,18 @@ describe("reçu durable d’un plan Conversation", () => {
     ).toBeNull();
   });
 
-  it("reconnaît uniquement les cinq états durables correspondants", () => {
+  it("reconnaît uniquement les six états durables correspondants", () => {
+    expect(
+      resolveConversationPlanReceipt("clarification", "plan_clarification", {
+        id: "plan_clarification",
+        approvalStatus: "draft",
+        plan: {
+          missingContextQuestions: [
+            "Quel résultat métier souhaitez-vous obtenir ?",
+          ],
+        },
+      }),
+    ).toBe("clarification");
     expect(
       resolveConversationPlanReceipt("cree", "plan_created", {
         id: "plan_created",
@@ -61,6 +75,64 @@ describe("reçu durable d’un plan Conversation", () => {
         mission: { status: "succeeded" },
       }),
     ).toBe("executed");
+  });
+
+  it("n’atteste une clarification que pour le brouillon exact, sans mission ni parent", () => {
+    const draft = {
+      id: "plan_clarification",
+      approvalStatus: "draft" as const,
+      plan: {
+        missingContextQuestions: [
+          "Quel résultat métier souhaitez-vous obtenir ?",
+        ],
+      },
+    };
+
+    expect(
+      resolveConversationPlanReceipt("clarification", undefined, draft),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt(
+        "clarification",
+        "plan_different",
+        draft,
+      ),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt(
+        "clarification",
+        "plan_clarification",
+        undefined,
+      ),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("clarification", "plan_clarification", {
+        ...draft,
+        plan: { missingContextQuestions: [] },
+      }),
+    ).toBeNull();
+    expect(
+      resolveConversationPlanReceipt("clarification", "plan_clarification", {
+        ...draft,
+        supersedesPlanId: "plan_previous",
+      }),
+    ).toBeNull();
+
+    for (const status of ["running", "failed", "succeeded"] as const) {
+      expect(
+        resolveConversationPlanReceipt(
+          "clarification",
+          "plan_clarification",
+          { ...draft, mission: { status } },
+        ),
+      ).toBeNull();
+    }
+  });
+
+  it("explique qu’une clarification n’a produit aucune action", () => {
+    expect(planReceiptMessage("clarification")).toBe(
+      "Une précision est nécessaire avant de préparer ce plan. Aucune action n’a été exécutée.",
+    );
   });
 
   it("n’atteste une révision que si son parent durable est identifié", () => {

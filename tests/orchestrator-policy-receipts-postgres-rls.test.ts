@@ -547,7 +547,8 @@ async function seedConversationContext(
        text_content, adapter_key, external_message_id, idempotency_key,
        correlation_id, occurred_at, created_at
      ) values (
-       $1, $2, $3, $4, 'inbound', 'text', 'received', 'Préparer', 'web-chat',
+       $1, $2, $3, $4, 'inbound', 'text', 'received',
+       'Préparer une relance client', 'web-chat',
        $5, $6, $7, $8, $8
      )`,
     [

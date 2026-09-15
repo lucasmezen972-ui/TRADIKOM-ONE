@@ -61,7 +61,11 @@ export async function createConversationPlanAction(formData: FormData) {
   );
   revalidatePath("/conversation");
   redirect(
-    conversationPlanRedirect(result.threadId, "cree", result.id),
+    conversationPlanRedirect(
+      result.threadId,
+      result.approvalStatus === "draft" ? "clarification" : "cree",
+      result.id,
+    ),
   );
 }
 
@@ -188,7 +192,13 @@ function requiredConfirmation(formData: FormData, key: string): true {
 
 function conversationPlanRedirect(
   threadId: string,
-  receipt: "cree" | "revised" | "approved" | "rejected" | "executed",
+  receipt:
+    | "clarification"
+    | "cree"
+    | "revised"
+    | "approved"
+    | "rejected"
+    | "executed",
   planId: string,
 ) {
   const params = new URLSearchParams({

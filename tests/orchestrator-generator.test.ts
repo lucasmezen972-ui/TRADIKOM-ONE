@@ -14,7 +14,10 @@ describe("générateur de plan OS-1", () => {
       tenantId: "tenant_generator_1",
       threadId: "thread_generator_1",
       sourceMessageId: "message_generator_1",
-      sourceText: "Mon code secret est CLIENT-SENSIBLE.",
+      sourceText: "Préparer une relance pour le client.",
+      contextSources: [
+        externalContextSource("Mon code secret est CLIENT-SENSIBLE."),
+      ],
     };
     const first = await generator.generate(context);
     const second = await generator.generate(context);
@@ -22,13 +25,140 @@ describe("générateur de plan OS-1", () => {
     expect(first).toEqual(second);
     expect(first.generationSource).toBe("deterministic_mock");
     expect(actionPlanSchema.parse(first.plan)).toMatchObject({
-      contextSources: [],
+      contextSources: [
+        expect.objectContaining({
+          sourceId: "attachment_generator_guard",
+          sourceIntegrity: "verified",
+        }),
+      ],
       steps: expect.arrayContaining([
         expect.objectContaining({ capability: "crm.contacts.search" }),
       ]),
     });
     expect(JSON.stringify(first)).not.toContain("CLIENT-SENSIBLE");
     expect(first).not.toHaveProperty("execution");
+  });
+
+  it("demande une précision stable avant tout plan pour une demande manifestement vague", async () => {
+    const generator = createDeterministicActionPlanGenerator();
+    const context = {
+      tenantId: "tenant_generator_clarification",
+      threadId: "thread_generator_clarification",
+      sourceMessageId: "message_generator_clarification",
+      sourceText: "Aide-moi.",
+    };
+
+    const first = await generator.generate(context);
+    const replay = await generator.generate(context);
+    const plan = actionPlanSchema.parse(first.plan);
+
+    expect(first).toEqual(replay);
+    expect(first.generationSource).toBe("deterministic_mock");
+    expect(plan).toMatchObject({
+      intent: "Clarifier la demande",
+      businessGoal:
+        "Comprendre le résultat métier attendu avant de préparer des actions.",
+      confidence: 0.2,
+      missingContextQuestions: [
+        "Quel résultat métier souhaitez-vous obtenir ?",
+      ],
+      riskSummary:
+        "Aucune action ne sera préparée ni exécutée avant votre réponse.",
+      estimatedCost: { amount: 0, currency: "EUR" },
+      steps: [],
+      finalUserMessageDraft:
+        "J’ai besoin d’une précision avant de préparer le plan : quel résultat métier souhaitez-vous obtenir ?",
+    });
+    expect(JSON.stringify(first)).not.toContain("Aide-moi");
+    expect(first).not.toHaveProperty("execution");
+  });
+
+  it("ne pose aucune question quand le résultat métier est explicite", async () => {
+    const generated = await createDeterministicActionPlanGenerator().generate({
+      tenantId: "tenant_generator_explicit",
+      threadId: "thread_generator_explicit",
+      sourceMessageId: "message_generator_explicit",
+      sourceText:
+        "Retrouve le contact puis prépare une tâche de relance commerciale.",
+    });
+
+    expect(actionPlanSchema.parse(generated.plan)).toMatchObject({
+      intent: "Préparer une relance commerciale",
+      missingContextQuestions: [],
+    });
+  });
+
+  it.each([
+    "Oui.",
+    "OK",
+    "J’ai besoin d’aide",
+    "Aide-moi s’il te plaît",
+    "Peux-tu m’aider ?",
+    "Et ensuite ?",
+    "Comment ?",
+    "Je ne comprends pas",
+    "Vas-y",
+    "Coucou",
+    "Ne relance surtout pas ce client.",
+    "Qu’est-ce qu’une relance client ?",
+    "Le client a déjà été relancé.",
+    "Le crédit du client est bloqué.",
+    "Préparer une tâche pour ne pas relancer le client.",
+    "Préparer une tâche mais pas une relance client.",
+    "Préparer une tâche qui ne relance aucun client.",
+    "Préparer une tâche pour arrêter de relancer le client.",
+    "Préparer une tâche autre qu’une relance client.",
+    "Relance du client interdite par le contrat.",
+    "Recherche du contact déjà terminée.",
+    "Prépare une note expliquant pourquoi aucune relance client ne doit être faite.",
+    "Retrouve le contact concerné.",
+    "Préparer une tâche pour sauvegarder la base.",
+    "Préparer un suivi médical.",
+    "Créer un rappel vaccinal.",
+    "Créer une tâche et ne relancer personne.",
+    "Créer une tâche en excluant toute relance client.",
+    "Créer une tâche pour le client.",
+    "Préparer une tâche du client.",
+    "Préparer un suivi du commercial.",
+  ])("redemande le résultat après une réponse insuffisante : %s", async (text) => {
+    const generated = await createDeterministicActionPlanGenerator().generate({
+      tenantId: "tenant_generator_short_answer",
+      threadId: "thread_generator_short_answer",
+      sourceMessageId: `message_generator_${text.length}`,
+      sourceText: text,
+    });
+
+    expect(actionPlanSchema.parse(generated.plan)).toMatchObject({
+      intent: "Clarifier la demande",
+      missingContextQuestions: [
+        "Quel résultat métier souhaitez-vous obtenir ?",
+      ],
+      steps: [],
+    });
+  });
+
+  it.each([
+    "Préparer une relance pour le client.",
+    "Crée une tâche de suivi client.",
+    "Relance ce prospect demain.",
+    "Je souhaite préparer un rappel client.",
+    "Préparer une relance sans effet externe.",
+    "Préparer une relance quand le client n’a pas encore répondu.",
+    "Préparer une relance commerciale et une tâche de suivi.",
+    "Peux-tu préparer une relance client ?",
+    "Pourriez-vous créer une tâche de relance commerciale ?",
+  ])("reconnaît une demande d’action explicite : %s", async (text) => {
+    const generated = await createDeterministicActionPlanGenerator().generate({
+      tenantId: "tenant_generator_supported_intent",
+      threadId: "thread_generator_supported_intent",
+      sourceMessageId: `message_generator_supported_${text.length}`,
+      sourceText: text,
+    });
+
+    expect(actionPlanSchema.parse(generated.plan)).toMatchObject({
+      intent: "Préparer une relance commerciale",
+      missingContextQuestions: [],
+    });
   });
 
   it("refuse une source courte recopiée malgré la casse, les accents et la ponctuation", () => {

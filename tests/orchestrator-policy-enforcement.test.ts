@@ -784,7 +784,7 @@ function ingressFixture(tenantId: string) {
     idempotencyKey: `ingress:web:${tenantId}`,
     correlationId: `correlation_${tenantId}`,
     routeTrace: [],
-    text: "Contenu client confidentiel exclu des preuves de policy.",
+    text: "Préparer une relance pour ce client.",
     attachments: [],
     occurredAt,
   };

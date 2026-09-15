@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-15T04:32:00.000Z",
+  "updatedAt": "2026-09-15T06:27:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "75c74424d19e31432f8621d08920eda26f436958",
-  "publishedHeadObserved": "75c74424d19e31432f8621d08920eda26f436958",
-  "status": "os5_immutable_plan_revision_and_rls_fix_published_ci_proven_human_meta_sms_pending",
+  "lastCommit": "eca626411264364f8d98c5695e85f9e24748782b",
+  "publishedHeadObserved": "eca626411264364f8d98c5695e85f9e24748782b",
+  "status": "os5_conversation_clarification_draft_locally_validated_ready_to_publish_human_meta_sms_parallel",
   "currentPhase": "OS-5",
-  "currentObjective": "La tranche applicative Modifier avant validation, la migration RLS 0115 et sa preuve corrigée sont publiées dans 75c7442. La continuité 34927229359 et la CI 34927229378 sont entièrement vertes : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 930 tests PostgreSQL inclus, build de production et 20/20 Playwright. Les messages et livraisons internes restent réservés au système; la reprise des livraisons ordinaires et l'isolation cross-tenant sont préservées. Aucun fournisseur réel, réseau, secret Meta, Graph, message externe, fusion, déploiement ou dépense n'a été déclenché. La prochaine reprise doit relire la page 48 et sélectionner la première lacune conversation-first encore non terminée.",
+  "currentObjective": "Prouver et publier la tranche conversation-first qui conserve une demande réellement ambiguë comme brouillon durable, pose au plus trois questions de précision dans le fil et ne crée aucune validation ni exécution avant une réponse exploitable. Le checkpoint SMS Meta reste humain et parallèle.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -19,23 +19,23 @@
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "10-12 Architecture cible, Conversation Hub canonique, preuves et RLS",
-        "15-18 Orchestration bornée, plan structuré, validation humaine et sécurité applicative",
+        "15-18 Orchestration bornée, questions de contexte, plan structuré et mission durable",
         "22 PostgreSQL, modèle tenant-first et politiques RLS",
-        "24 Cartes de validation avec actions confirmer, modifier et annuler",
+        "24 UX conversationnelle française, décisions lisibles et travail en cours",
         "31-33 Definition of Done, reprise et critères de progression",
-        "35-38 Conséquences, données sensibles et évaluation adversariale",
-        "43-44 Premier parcours démontrable et preuves visibles dans Conversation",
+        "35-38 Simulation, données sensibles et entrées externes non fiables",
+        "43-44 Abstraction du générateur, sorties structurées et évaluations adversariales",
         "46 Règles absolues de dérive",
         "48 Ordre exact de la prochaine exécution",
-        "64-68 Gouvernance, périmètre, documentation et handoff",
+        "64-68 Runtime provider borné et WebChat de référence",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Dans la carte de validation de Conversation, permettre à un décideur autorisé de modifier un plan encore en attente sans muter son instantané historique. La modification crée une nouvelle révision immuable, tenant-scoped et durable; elle annule ou remplace atomiquement le plan précédent, régénère ses clés d'idempotence, repasse par la validation du catalogue et de la policy, puis exige une nouvelle approbation avant toute exécution. Aucun reçu de policy, provider, fetch ou effet métier ne peut être produit pour l'ancien plan remplacé.",
-      "evidenceExpected": "Preuve obtenue : schéma, repository et service de révision avec lien durable entre versions, contrôle membership/rôle et transaction atomique; RLS système-only, idempotence et concurrence couvertes; rejet cross-tenant et des plans déjà décidés; ancien plan et anciennes étapes inexécutables sans reçu, nouvelle révision approuvable puis exécutable indépendamment en tradikom_mock. L'audit ne contient ni le titre métier saisi ni contenu sensible. Le WebChat français expose Modifier et le parcours desktop/mobile couvre l'état durable sans débordement. La CI 34927229378 confirme le chemin PostgreSQL exact 120 vers 121, 174 fichiers et 930/930 tests, le build et 20/20 Playwright; la continuité 34927229359 confirme le PDF canonique et la north star."
+      "requirement": "Quand le contexte d'une demande ne permet pas encore un plan complet, l'orchestrateur ne doit ni exécuter, ni demander une validation, ni échouer par une erreur générique. Il doit conserver un brouillon durable tenant-scoped, poser dans la Conversation au plus trois questions françaises réellement nécessaires et laisser l'utilisateur répondre par le canal normal. Le brouillon incomplet reste non validable et inexécutable; une réponse suffisamment précise produit ensuite un plan distinct qui repasse par catalogue, policy et validation unique.",
+      "evidenceExpected": "Le générateur mock déterministe distingue une demande manifestement ambiguë d'une demande exploitable; le service valide malgré tout schéma, coût, capacités, scopes et sécurité, puis persiste sous RLS le brouillon sans étape exécutable et projette une question idempotente dans le fil avec un audit limité aux métadonnées sûres. Aucun approval, reçu de policy, workflow, événement, résultat, provider ou fetch n'existe pour le brouillon. L'interface française affiche Précision requise, les questions et l'action attendue sans bouton de validation, modification ou exécution; après une réponse, un nouveau plan awaiting_approval est préparé. Tests unitaires, intégration, sécurité, rejeu, cross-tenant, PostgreSQL/RLS existant et Playwright desktop/mobile doivent être verts."
     }
   },
-  "nextAction": "Relire directement la page 48 et les pages métier/techniques indiquées par MASTER_PROMPT_REFERENCE, puis sélectionner la première lacune conversation-first réellement non terminée. Actualiser masterPrompt.alignment avant tout nouveau code. Le SMS Meta reste un checkpoint humain parallèle et aucune clé ne passe par le chat, les logs ou Git.",
-  "nextFile": "docs/MASTER_PROMPT_REFERENCE.md",
+  "nextAction": "Publier strictement en fast-forward sans tmp, puis exiger la CI PostgreSQL/RLS, le build et le parcours Playwright desktop/mobile. Après preuve verte, reprendre l'audit de la première lacune conversationnelle OS-5 encore non terminée, sans CRM, Kanban, dashboard secondaire, fournisseur réel ni secret.",
+  "nextFile": "tests/e2e/vertical.spec.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -552,7 +552,14 @@
     "CI 34925372084 : audit, migrations, sauvegarde/restauration, lint, TypeScript et test PostgreSQL exact 120 vers 121 verts; 929 tests sur 930; unique échec sur une ancienne assertion attendant une erreur alors que la source interne masquée produit correctement zéro insertion; build et Playwright sautés",
     "correction locale de preuve : les INSERT SELECT adversariaux de pièce jointe et route exigent rowCount zéro puis une requête système confirme zéro ligne persistée; ESLint ciblé, TypeScript, test local ignoré sans DATABASE_URL et diff check verts",
     "publication fast-forward de 75c74424d19e31432f8621d08920eda26f436958 sans tmp; continuité 34927229359 verte",
-    "CI 34927229378 entièrement verte : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 930 tests PostgreSQL inclus, build production et 20/20 Playwright; PR 11 OPEN DRAFT MERGEABLE/CLEAN"
+    "CI 34927229378 entièrement verte : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 930 tests PostgreSQL inclus, build production et 20/20 Playwright; PR 11 OPEN DRAFT MERGEABLE/CLEAN",
+    "run 2026-09-15T04:37Z : lecture des cinq documents de continuité depuis la copie Developer; PDF canonique résolu dans Downloads, SHA-256 exact, 71 pages, sans JavaScript ni chiffrement; pages cœur 3-7, 31-33, 46, 48, 69-71 et pages candidates 10-12, 15-18, 22-24, 35-38, 43-44, 64-68 relues directement; pages 48 et 69 contrôlées en rendu",
+    "brouillon de clarification Conversation implémenté : classification déterministe positive ancrée de bout en bout, maximum trois questions françaises, contrat de longueur partagé, plan draft sans étape, validation, reçu, workflow, événement, résultat, provider ou fetch, message canonique idempotent et audit sans contenu",
+    "interface Conversation française : état Précision requise, questions visibles cassables sur mobile et consigne adaptée au droit d'écriture, aucune action de validation, modification ou exécution; réponse explicite dans le même fil puis nouveau plan distinct en attente de validation",
+    "revues indépendantes finales : faux positifs négatifs, contradictoires, déclaratifs et hors domaine, suffixes non consommés, dépassement cumulé des questions, débordement mobile, consigne lecture seule et ordre interrogatif poli détectés puis corrigés; aucun défaut P0-P2 restant",
+    "tests ciblés finaux 8 fichiers/136 tests verts; suite exhaustive 160 fichiers/949 tests verts et 14 fichiers/33 tests ignorés sans services PostgreSQL locaux, soit 174 fichiers/982 tests sans échec",
+    "ESLint, TypeScript, build production factice, audit high, continuity-check et diff check verts; zéro high/critical, trois avis modérés, ready sans erreur ni avertissement; PostgreSQL/RLS et Playwright réservés à la CI",
+    "GitHub avant publication : head eca6264, CI 34929281688 et continuité 34929281680 vertes; PR 11 OPEN DRAFT MERGEABLE/CLEAN"
   ],
   "lastValidation": [
     {
@@ -2182,6 +2189,46 @@
     {
       "command": "PR #11 après correctif RLS 0115",
       "status": "open_draft_mergeable_clean_head_75c7442_checks_green_no_merge_deploy_graph_secret_token_message_or_spend"
+    },
+    {
+      "command": "PDF maître et continuity-check local avant clarification conversationnelle",
+      "status": "passed_source_downloads_sha256_bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5_71_pages_core_and_candidate_pages_directly_read_pages_48_and_69_visually_checked_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "brouillon durable de clarification Conversation et revue indépendante",
+      "status": "passed_local_draft_zero_executable_steps_zero_approval_policy_receipt_workflow_event_result_provider_fetch_idempotent_message_safe_audit_fail_closed_intent_max_three_questions_shared_length_contract_no_remaining_reported_p1_p2"
+    },
+    {
+      "command": "matrice ciblée finale de clarification",
+      "status": "passed_7_files_103_tests_zero_failures_plus_plan_revision_migration_1_file_12_tests_zero_failures"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, build production factice et git diff --check avant publication",
+      "status": "passed_zero_lint_type_build_or_diff_errors_full_regression_and_ci_postgres_rls_playwright_pending"
+    },
+    {
+      "command": "CI 34929281688 et continuité 34929281680 sur eca626411264364f8d98c5695e85f9e24748782b",
+      "status": "passed_previous_head_audit_migrations_db_verify_backup_restore_lint_typecheck_174_files_930_tests_postgres_build_20_of_20_playwright_ready_sha256_exact_71_pages_pr_open_draft_mergeable_clean"
+    },
+    {
+      "command": "clarification Conversation, grammaire positive et revues indépendantes finales",
+      "status": "passed_local_end_to_end_grammar_vague_negative_informational_contradictory_out_of_domain_closed_polite_explicit_question_supported_zero_side_effects_idempotent_tenant_scoped_mobile_and_read_only_no_remaining_p0_p2"
+    },
+    {
+      "command": "matrice ciblée finale de clarification après tous les correctifs",
+      "status": "passed_8_files_136_tests_zero_failures"
+    },
+    {
+      "command": "vitest exhaustif mono-worker final",
+      "status": "passed_160_files_14_skipped_949_tests_33_skipped_982_total_zero_failures_in_736_60_seconds"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, build production factice, audit high, continuity-check et git diff --check finaux",
+      "status": "passed_zero_lint_type_build_or_diff_errors_zero_high_critical_three_moderate_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "PR #11 avant publication de la clarification",
+      "status": "open_draft_mergeable_clean_head_eca6264_previous_ci_and_continuity_green_new_postgres_rls_playwright_proof_pending"
     }
   ],
   "humanBlockers": [

@@ -46,7 +46,7 @@ export function resolveConversationPlanProviderPreference(
   );
 }
 
-export function validateActionPlan(
+export function validateActionPlanProposal(
   input: ActionPlan,
   context: {
     role: Role;
@@ -61,12 +61,6 @@ export function validateActionPlan(
     );
   }
   const plan = actionPlanSchema.parse(input);
-  if (plan.missingContextQuestions.length > 0) {
-    throw new OrchestratorError(
-      "orchestrator_plan_incomplete",
-      "Le plan nécessite encore une précision métier.",
-    );
-  }
   if (plan.estimatedCost && plan.estimatedCost.amount > 0) {
     throw new OrchestratorError(
       "orchestrator_external_cost_forbidden",
@@ -115,6 +109,7 @@ export function validateActionPlan(
   );
   return {
     plan,
+    requiresClarification: plan.missingContextQuestions.length > 0,
     executionEnvironment: "mock" as const,
     estimatedExternalCost: 0,
     providerKey: conversationActionPlanProviderAllowlist[0],
@@ -133,4 +128,22 @@ export function validateActionPlan(
       environment: capability.executionEnvironment,
     })),
   };
+}
+
+export function validateActionPlan(
+  input: ActionPlan,
+  context: {
+    role: Role;
+    grantedScopes: string[];
+    catalog?: MockCapabilityDefinition[];
+  },
+) {
+  const validated = validateActionPlanProposal(input, context);
+  if (validated.requiresClarification) {
+    throw new OrchestratorError(
+      "orchestrator_plan_incomplete",
+      "Le plan nécessite encore une précision métier.",
+    );
+  }
+  return validated;
 }
