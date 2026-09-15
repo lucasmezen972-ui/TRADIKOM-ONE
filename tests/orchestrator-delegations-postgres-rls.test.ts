@@ -110,6 +110,43 @@ describeIfPostgres("délégations Conversation et RLS PostgreSQL", () => {
     const restrictedPool = new Pool({ connectionString: restricted.databaseUrl });
     restrictedPools.push(restrictedPool);
 
+    const rlsPolicy = await ownerPool.query<{
+      relrowsecurity: boolean;
+      cmd: string;
+      with_check: string | null;
+    }>(
+      `select tables.relrowsecurity, policies.cmd, policies.with_check
+       from pg_class tables
+       join pg_namespace namespaces on namespaces.oid = tables.relnamespace
+       join pg_policies policies
+         on policies.schemaname = namespaces.nspname
+        and policies.tablename = tables.relname
+       where namespaces.nspname = 'public'
+         and tables.relname = 'conversation_action_plan_delegations'
+         and policies.policyname = 'conversation_action_plan_delegations_insert'`,
+    );
+    expect(rlsPolicy.rows).toEqual([
+      {
+        relrowsecurity: true,
+        cmd: "INSERT",
+        with_check: expect.stringMatching(/app_is_system/i),
+      },
+    ]);
+
+    await expect(
+      withTenantContext(
+        restrictedPool,
+        fixtureA.tenantId,
+        fixtureA.ownerId,
+        async (client) => {
+          await client.query("set local row_security = off");
+          return client.query(
+            "select id from conversation_action_plan_delegations",
+          );
+        },
+      ),
+    ).rejects.toThrow(/row-level security|row security policy/i);
+
     const visibleA = await withTenantContext(
       restrictedPool,
       fixtureA.tenantId,
@@ -170,7 +207,9 @@ describeIfPostgres("délégations Conversation et RLS PostgreSQL", () => {
             ],
           ),
       ),
-    ).rejects.toThrow(/row-level security|violates/i);
+    ).rejects.toThrow(
+      /conversation_action_plan_delegation_plan_invalid|row-level security|violates/i,
+    );
 
     const updated = await withTenantContext(
       restrictedPool,

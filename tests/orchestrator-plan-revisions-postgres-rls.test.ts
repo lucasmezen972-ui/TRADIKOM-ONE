@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { Pool, type PoolClient } from "pg";
 import { pgPoolAsSqlClient, type SqlClient } from "../src/db/client";
@@ -111,8 +111,11 @@ describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
         attachments: [],
         occurredAt,
       });
-      const plan = await createConversationActionPlan(db, user.id, {
+      // Le service courant dépend de tables postérieures à la migration 120.
+      // Cette fixture reste volontairement bornée au schéma historique testé.
+      const planId = await seedHistoricalCanonicalPlanProjection(pool, {
         tenantId: tenant.id,
+        userId: user.id,
         threadId: source.threadId,
         sourceMessageId: source.messageId,
       });
@@ -128,7 +131,7 @@ describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
             and source.id = $2
           where proposal.tenant_id = $1
             and proposal.idempotency_key = $3`,
-        [tenant.id, source.messageId, `orchestrator:${plan.id}:proposal`],
+        [tenant.id, source.messageId, `orchestrator:${planId}:proposal`],
       );
       expect(projection.rows).toHaveLength(1);
       await pool.query(
@@ -1377,6 +1380,94 @@ async function withTemporaryPostgresDatabase(
     await adminPool.query(`drop database if exists ${databaseIdentifier}`);
     await adminPool.end();
   }
+}
+
+async function seedHistoricalCanonicalPlanProjection(
+  pool: Pool,
+  input: {
+    tenantId: string;
+    userId: string;
+    threadId: string;
+    sourceMessageId: string;
+  },
+) {
+  const tenantFingerprint = createHash("sha256")
+    .update(input.tenantId)
+    .digest("hex")
+    .slice(0, 32);
+  const planId = `conversation_action_plan_${randomUUID().replaceAll("-", "")}`;
+  const participantId = `orchestrator_participant_${tenantFingerprint}`;
+  const identityId = `orchestrator_identity_${tenantFingerprint}`;
+  const proposalText = "Préparer une relance commerciale sans effet externe.";
+  const planJson = JSON.stringify({ finalUserMessageDraft: proposalText });
+
+  await pool.query(
+    `insert into conversation_participants (
+       id, tenant_id, role, display_name, created_at, updated_at
+     ) values ($1, $2, 'system', 'TRADIKOM ONE', $3, $3)`,
+    [participantId, input.tenantId, occurredAt],
+  );
+  await pool.query(
+    `insert into conversation_channel_identities (
+       id, tenant_id, participant_id, channel_kind, adapter_key,
+       external_subject_id, display_name, role, state, created_at, updated_at
+     ) values (
+       $1, $2, $3, 'test', 'orchestrator-mock',
+       'tradikom-one-orchestrator', 'TRADIKOM ONE', 'system', 'active',
+       $4, $4
+     )`,
+    [identityId, input.tenantId, participantId, occurredAt],
+  );
+  await pool.query(
+    `insert into conversation_action_plans (
+       id, tenant_id, thread_id, source_message_id, schema_version,
+       generation_source, model_reference, approval_status, intent,
+       business_goal, confidence, risk_summary, estimated_cost_minor,
+       estimated_cost_currency, plan_json, plan_fingerprint, created_by,
+       created_at, updated_at, decided_by, decided_at, decision_reason,
+       supersedes_plan_id, revision_request_fingerprint
+     ) values (
+       $1, $2, $3, $4, 1, 'deterministic_mock', null, 'awaiting_approval',
+       'Préparer une relance', 'Assurer un suivi durable', 0.95,
+       'Aucun effet externe', 0, 'EUR', $5, $6, $7, $8, $8,
+       null, null, null, null, null
+     )`,
+    [
+      planId,
+      input.tenantId,
+      input.threadId,
+      input.sourceMessageId,
+      planJson,
+      createHash("sha256").update(planJson).digest("hex"),
+      input.userId,
+      occurredAt,
+    ],
+  );
+  await pool.query(
+    `insert into conversation_messages (
+       id, tenant_id, thread_id, channel_identity_id, direction, kind,
+       status, text_content, adapter_key, external_message_id,
+       idempotency_key, correlation_id, causation_id, safe_error_code,
+       occurred_at, created_at
+     ) values (
+       $1, $2, $3, $4, 'internal', 'plan', 'received', $5,
+       'orchestrator-mock', $6, $7, $8, $9, null, $10, $10
+     )`,
+    [
+      `conversation_message_${randomUUID().replaceAll("-", "")}`,
+      input.tenantId,
+      input.threadId,
+      identityId,
+      proposalText,
+      `${planId}:proposal`,
+      `orchestrator:${planId}:proposal`,
+      `correlation_upgrade_${randomUUID().replaceAll("-", "")}`,
+      input.sourceMessageId,
+      occurredAt,
+    ],
+  );
+
+  return planId;
 }
 
 async function readBackendPid(pool: Pool) {
