@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-15T06:27:00.000Z",
+  "updatedAt": "2026-09-15T07:42:00.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "eca626411264364f8d98c5695e85f9e24748782b",
-  "publishedHeadObserved": "eca626411264364f8d98c5695e85f9e24748782b",
-  "status": "os5_conversation_clarification_draft_locally_validated_ready_to_publish_human_meta_sms_parallel",
+  "lastCommit": "c60bb2728072db399022b65458305a3655e2d287",
+  "publishedHeadObserved": "c60bb2728072db399022b65458305a3655e2d287",
+  "status": "os5_conversation_clarification_published_ci_proven_human_meta_sms_parallel",
   "currentPhase": "OS-5",
-  "currentObjective": "Prouver et publier la tranche conversation-first qui conserve une demande réellement ambiguë comme brouillon durable, pose au plus trois questions de précision dans le fil et ne crée aucune validation ni exécution avant une réponse exploitable. Le checkpoint SMS Meta reste humain et parallèle.",
+  "currentObjective": "Clore la tranche conversation-first prouvée qui conserve une demande réellement ambiguë comme brouillon durable, tout en reconnaissant une demande commerciale explicite accompagnée d'un média sans confondre la notice interne du canal avec l'intention utilisateur. Le checkpoint SMS Meta reste humain et parallèle.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -34,8 +34,8 @@
       "evidenceExpected": "Le générateur mock déterministe distingue une demande manifestement ambiguë d'une demande exploitable; le service valide malgré tout schéma, coût, capacités, scopes et sécurité, puis persiste sous RLS le brouillon sans étape exécutable et projette une question idempotente dans le fil avec un audit limité aux métadonnées sûres. Aucun approval, reçu de policy, workflow, événement, résultat, provider ou fetch n'existe pour le brouillon. L'interface française affiche Précision requise, les questions et l'action attendue sans bouton de validation, modification ou exécution; après une réponse, un nouveau plan awaiting_approval est préparé. Tests unitaires, intégration, sécurité, rejeu, cross-tenant, PostgreSQL/RLS existant et Playwright desktop/mobile doivent être verts."
     }
   },
-  "nextAction": "Publier strictement en fast-forward sans tmp, puis exiger la CI PostgreSQL/RLS, le build et le parcours Playwright desktop/mobile. Après preuve verte, reprendre l'audit de la première lacune conversationnelle OS-5 encore non terminée, sans CRM, Kanban, dashboard secondaire, fournisseur réel ni secret.",
-  "nextFile": "tests/e2e/vertical.spec.ts",
+  "nextAction": "Relire les pages 17-18, 24, 48 et 68-69, puis auditer sans coder si le signal humain durable déléguer est bien la première lacune conversationnelle OS-5 encore non terminée. Ne sélectionner ni CRM, Kanban, dashboard secondaire, fournisseur réel, secret ni OS-6.",
+  "nextFile": "docs/MASTER_PROMPT_REFERENCE.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -559,7 +559,13 @@
     "revues indépendantes finales : faux positifs négatifs, contradictoires, déclaratifs et hors domaine, suffixes non consommés, dépassement cumulé des questions, débordement mobile, consigne lecture seule et ordre interrogatif poli détectés puis corrigés; aucun défaut P0-P2 restant",
     "tests ciblés finaux 8 fichiers/136 tests verts; suite exhaustive 160 fichiers/949 tests verts et 14 fichiers/33 tests ignorés sans services PostgreSQL locaux, soit 174 fichiers/982 tests sans échec",
     "ESLint, TypeScript, build production factice, audit high, continuity-check et diff check verts; zéro high/critical, trois avis modérés, ready sans erreur ni avertissement; PostgreSQL/RLS et Playwright réservés à la CI",
-    "GitHub avant publication : head eca6264, CI 34929281688 et continuité 34929281680 vertes; PR 11 OPEN DRAFT MERGEABLE/CLEAN"
+    "GitHub avant publication : head eca6264, CI 34929281688 et continuité 34929281680 vertes; PR 11 OPEN DRAFT MERGEABLE/CLEAN",
+    "publication fast-forward de la clarification dans b42a5a91f9b256bdf8c829eb2eac7bfcb5303bec sans tmp; continuité 34937201371 verte",
+    "diagnostic CI 34937201415 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers/982 tests PostgreSQL et build verts; 19/20 Playwright, seul le média à légende vague produit correctement un brouillon alors que l'ancien scénario attendait un plan",
+    "correctif applicatif média : retrait borné uniquement des notices terminales canoniques Meta, Twilio, Teams et Slack avant classification; notice seule et tout suffixe arbitraire restent en clarification; le message média conserve ses sources externes vérifiées",
+    "preuves locales du correctif : 2 fichiers/86 tests ciblés verts, dont 56 tests générateur; ESLint ciblé, TypeScript, diff check et continuity-check verts; deux revues indépendantes sans P0-P2",
+    "publication fast-forward du correctif c60bb2728072db399022b65458305a3655e2d287 sans tmp; continuité 34940747751 verte",
+    "CI 34940747745 entièrement verte sur c60bb27 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers/988 tests PostgreSQL inclus, build Next.js 16.3.4 et 20/20 Playwright"
   ],
   "lastValidation": [
     {
@@ -2229,6 +2235,26 @@
     {
       "command": "PR #11 avant publication de la clarification",
       "status": "open_draft_mergeable_clean_head_eca6264_previous_ci_and_continuity_green_new_postgres_rls_playwright_proof_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34937201371 sur b42a5a91f9b256bdf8c829eb2eac7bfcb5303bec",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34937201415 sur b42a5a91f9b256bdf8c829eb2eac7bfcb5303bec",
+      "status": "failed_only_media_caption_playwright_expectation_after_audit_migrations_db_verify_backup_restore_lint_typecheck_174_files_982_postgres_tests_and_build_passed_19_of_20_playwright"
+    },
+    {
+      "command": "correctif des notices canoniques de pièces jointes et tests ciblés",
+      "status": "passed_2_files_86_tests_generator_56_tests_eslint_typecheck_diff_continuity_two_independent_reviews_no_p0_p2"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34940747751 sur c60bb2728072db399022b65458305a3655e2d287",
+      "status": "passed_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34940747745 sur c60bb2728072db399022b65458305a3655e2d287",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_174_files_988_postgres_tests_build_next_16_3_4_and_20_of_20_playwright"
     }
   ],
   "humanBlockers": [

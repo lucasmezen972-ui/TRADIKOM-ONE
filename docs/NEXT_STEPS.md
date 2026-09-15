@@ -1,18 +1,19 @@
 # Étapes suivantes TRADIKOM ONE OS
 
-## Situation actuelle — 15 septembre 2026, 06:27 UTC
+## Situation actuelle — 15 septembre 2026, 07:42 UTC
 
-- La tranche « Précision requise » est implémentée et validée localement dans la copie stable. Une demande vague, négative, informative ou hors du domaine commercial reste un brouillon durable sans étape exécutable. Une demande d'action commerciale complète, y compris formulée comme un ordre interrogatif poli, prépare le plan mock existant; la grammaire positive doit consommer toute la demande.
+- La tranche « Précision requise » est livrée, publiée et prouvée par la CI autoritative. Une demande vague, négative, informative ou hors du domaine commercial reste un brouillon durable sans étape exécutable. Une demande d'action commerciale complète, y compris formulée comme un ordre interrogatif poli, prépare le plan mock existant; la grammaire positive doit consommer toute la demande.
 - Le brouillon contient au plus trois questions françaises uniques dont le message final est borné par un contrat partagé à 2 000 caractères. Il ne crée ni validation, reçu de policy, workflow, événement, résultat, tâche, provider ou `fetch`. Il ne peut être ni approuvé, ni modifié, ni exécuté.
 - Conversation affiche les questions sans coût, étapes ou boutons de décision. Les mots très longs ne débordent pas sur mobile et la consigne tient compte du droit d'écriture. Une réponse exploitable dans le même fil prépare un nouveau plan distinct `awaiting_approval`.
-- Preuves locales finales : 8 fichiers/136 tests ciblés verts; suite exhaustive 160 fichiers/949 tests verts et 14 fichiers/33 tests ignorés faute des services PostgreSQL locaux, soit 174 fichiers/982 tests sans échec; ESLint, TypeScript, build production factice, audit high, continuity-check et diff check verts. La revue indépendante ne trouve plus de défaut P0-P2. PostgreSQL/RLS et Playwright ne sont pas revendiqués avant la CI.
-- État honnête : livré et validé localement = oui; publié et prouvé CI = pas encore pour cette tranche; réel connecté = aucun; sandbox = aucune; mock = générateur déterministe et `tradikom_mock`; bloqué humain = SMS Meta puis confirmation distincte au moment exact; hors périmètre = Graph, message externe, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+- Le premier run publié `34937201415` a validé audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers/982 tests PostgreSQL et le build, puis 19/20 Playwright. L'unique échec a révélé qu'une notice interne ajoutée à une légende média empêchait toute demande explicite d'être reconnue. Le correctif `c60bb2728072db399022b65458305a3655e2d287` retire uniquement les notices terminales canoniques Meta, Twilio, Teams et Slack avant classification; une notice seule ou suivie d'un texte arbitraire reste en clarification et le contexte média vérifié demeure attaché au plan.
+- Preuves finales : 2 fichiers/86 tests ciblés verts après le correctif, ESLint ciblé, TypeScript, diff check et continuity-check verts; deux revues indépendantes sans P0-P2. La continuité `34940747751` et la CI `34940747745` sont entièrement vertes : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers/988 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright.
+- État honnête : livré, publié et prouvé CI = oui; réel connecté = aucun; sandbox = aucune; mock = générateur déterministe et `tradikom_mock`; bloqué humain = SMS Meta puis confirmation distincte au moment exact; hors périmètre = Graph, message externe, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
-## Prochaine action exacte — 15 septembre 2026, 06:27 UTC
+## Prochaine action exacte — 15 septembre 2026, 07:42 UTC
 
-1. Publier strictement en fast-forward sur `codex/tradikom-one-os`, sans inclure `tmp/`, puis relever les identifiants des nouveaux runs.
-2. Exiger la CI PostgreSQL/RLS, la suite exhaustive, le build et 20/20 Playwright avant de classer la tranche prouvée; corriger tout échec réel sans contourner la sécurité.
-3. Après preuve verte, relire les pages 17-18, 24, 48 et 68-69 et traiter la première lacune conversationnelle suivante : le signal humain durable « déléguer » encore absent du WebChat, uniquement si l'audit confirme qu'il précède toute autre lacune non terminée. Avant tout code, réécrire `masterPrompt.alignment`; aucun CRM, Kanban, dashboard secondaire ou fournisseur réel ne doit être sélectionné.
+1. Relire directement les pages 17-18, 24, 48 et 68-69 et confronter le WebChat au signal humain durable « déléguer ».
+2. Auditer d'abord si ce signal est bien la première lacune conversationnelle non terminée de l'ordre page 48. Si ce n'est pas le cas, retenir la première lacune antérieure prouvée par le code et les tests.
+3. Avant tout nouveau code, réécrire `masterPrompt.alignment` avec les pages, l'exigence et la preuve attendue. Aucun CRM, Kanban, dashboard secondaire, fournisseur réel, secret ou OS-6 ne doit être sélectionné.
 
 ### Checkpoint humain parallèle — inchangé
 
