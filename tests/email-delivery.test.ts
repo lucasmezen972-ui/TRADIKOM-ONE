@@ -5,6 +5,7 @@ import {
   createConsoleEmailProvider,
   createTestEmailProvider,
   type EmailKind,
+  type EmailProvider,
   type TestEmailProvider,
 } from "../src/modules/email";
 
@@ -117,6 +118,50 @@ describe("auth and invitation email delivery", () => {
       delivery_attempts: 1,
     });
     expect(row.rows[0]?.token_hash).not.toBe(token);
+  });
+
+  it("enregistre une livraison Resend réussie sans conserver l'adresse", async () => {
+    const db = await createMemoryDb();
+    opened.push(db);
+    const provider: EmailProvider = {
+      name: "resend",
+      async send() {
+        return {
+          status: "sent",
+          provider: "resend",
+          messageId: "provider_invitation_delivery",
+        };
+      },
+    };
+    const services = createServices(db, {
+      emailProvider: provider,
+      appUrl: "https://app.tradikom.test",
+      revealAuthLinks: false,
+    });
+    const { owner, tenant } = await createTenantFixture(
+      services,
+      "resend-provider",
+    );
+
+    const invitation = await services.createInvitation(owner.id, tenant.id, {
+      email: "adresse-privee@example.test",
+      role: "manager",
+    });
+
+    const rows = await db.query<Record<string, unknown>>(
+      "select * from email_provider_deliveries where tenant_id = $1",
+      [tenant.id],
+    );
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0]).toMatchObject({
+      source_id: invitation.id,
+      provider: "resend",
+      provider_message_id: "provider_invitation_delivery",
+      status: "sent",
+    });
+    expect(JSON.stringify(rows.rows)).not.toContain(
+      "adresse-privee@example.test",
+    );
   });
 
   it("resends with a replacement token and invalidates the previous link", async () => {

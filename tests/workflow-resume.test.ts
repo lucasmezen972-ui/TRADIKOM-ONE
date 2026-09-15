@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
-import { toJson } from "../src/lib/security";
+import { safeJson, toJson } from "../src/lib/security";
 import {
   approveWorkflowRun,
   cancelWorkflowRun,
+  executeWorkflowDefinition,
   executeLeadFollowUpWorkflow,
   leadFollowUpWorkflow,
   requestManualWorkflowRetry,
@@ -241,6 +242,166 @@ describe("workflow resume", () => {
         "Relance retry",
       ]),
     ).toBe(1);
+  });
+
+  it("rend une reprise épuisée durablement échouée puis relançable", async () => {
+    const { db } = await setup();
+    const tenantId = "tenant_resume_exhausted";
+    const ownerId = "user_resume_exhausted";
+    const targetContactId = "contact_resume_exhausted_target";
+    await seedTenant(db, {
+      tenantId,
+      ownerId,
+      workflowDefinition: workflowDefinitionSchema.parse({
+        ...leadFollowUpWorkflow,
+        version: 8,
+        actions: [
+          { type: "wait_for_duration", input: { durationMs: 0 } },
+          {
+            type: "update_contact",
+            input: { contactId: targetContactId, status: "Qualifie" },
+          },
+        ],
+      }),
+    });
+    await seedLead(db, {
+      tenantId,
+      contactId: "contact_resume_exhausted_source",
+      leadId: "lead_resume_exhausted",
+      ownerId,
+    });
+
+    const runId = await executeLeadFollowUpWorkflow(db, {
+      tenantId,
+      leadId: "lead_resume_exhausted",
+      contactId: "contact_resume_exhausted_source",
+      ownerId,
+      source: "website",
+      correlationId: "corr_resume_exhausted",
+    });
+    const workerNow = new Date("2999-01-01T00:00:00.000Z");
+
+    const firstAttempt = await processPendingDomainEvents(db, {
+      now: workerNow,
+      maxAttempts: 2,
+      baseBackoffMs: 0,
+    });
+    expect(firstAttempt.retried).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("waiting");
+
+    const terminalAttempt = await processPendingDomainEvents(db, {
+      now: workerNow,
+      maxAttempts: 2,
+      baseBackoffMs: 0,
+    });
+    expect(terminalAttempt.failed).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("failed");
+
+    const terminalStep = await db.query<{
+      status: string;
+      safe_metadata: string;
+      attempts: number;
+    }>(
+      `select status, safe_metadata, attempts
+       from workflow_run_steps
+       where tenant_id = $1 and workflow_run_id = $2 and action_name = $3
+       order by created_at desc
+       limit 1`,
+      [tenantId, runId, "workflow.resume"],
+    );
+    expect(terminalStep.rows[0]).toMatchObject({
+      status: "failed",
+      attempts: 2,
+    });
+    expect(
+      safeJson<Record<string, unknown>>(
+        terminalStep.rows[0]?.safe_metadata,
+        {},
+      ),
+    ).toMatchObject({
+      actionIndex: 1,
+      failureClassification: "max_attempts_exceeded",
+    });
+
+    await seedContact(db, {
+      tenantId,
+      contactId: targetContactId,
+      ownerId,
+    });
+    await requestManualWorkflowRetry(db, ownerId, tenantId, {
+      runId: runId ?? "",
+    });
+    const recovered = await processPendingDomainEvents(db, {
+      now: workerNow,
+    });
+
+    expect(recovered.succeeded).toBe(1);
+    expect(await loadRunStatus(db, tenantId)).toBe("succeeded");
+    expect(await loadContactStatus(db, tenantId, targetContactId)).toBe(
+      "Qualifie",
+    );
+  });
+
+  it("refuse une mission conversationnelle directe sans reçu avant toute écriture", async () => {
+    const { db } = await setup();
+    const tenantId = "tenant_resume_snapshot";
+    const ownerId = "user_resume_snapshot";
+    await seedTenant(db, {
+      tenantId,
+      ownerId,
+      workflowDefinition: leadFollowUpWorkflow,
+    });
+    const definition = workflowDefinitionSchema.parse({
+      key: "conversation_plan:plan_snapshot",
+      version: 1,
+      trigger: "conversation.plan.execute",
+      active: true,
+      conditions: [],
+      actions: [
+        {
+          type: "mock_search_contact",
+          input: {
+            planStepId: "retrouver_contact",
+            capabilityInput: { query: "Contact de démonstration" },
+          },
+          idempotencyKey: "plan_snapshot:retrouver_contact",
+        },
+        {
+          type: "mock_create_task",
+          input: {
+            planStepId: "preparer_tache",
+            capabilityInput: { title: "Relancer le contact" },
+          },
+          idempotencyKey: "plan_snapshot:preparer_tache",
+        },
+      ],
+      retryPolicy: { maxAttempts: 3, backoffMs: 0 },
+      timeoutMs: 30_000,
+      approvalPolicy: "no_approval_required",
+    });
+
+    await expect(
+      executeWorkflowDefinition(db, definition, {
+        id: "event_plan_snapshot",
+        tenantId,
+        actorId: ownerId,
+        type: definition.trigger,
+        payload: { planId: "plan_snapshot" },
+        correlationId: "corr_plan_snapshot",
+        causationId: "message_plan_snapshot",
+        idempotencyKey: "conversation.plan.execute:plan_snapshot",
+      }),
+    ).rejects.toMatchObject({ code: "orchestrator_policy_receipt_invalid" });
+
+    expect(
+      await countRows(db, "domain_events", "tenant_id = $1", [tenantId]),
+    ).toBe(0);
+    expect(
+      await countRows(db, "workflow_runs", "tenant_id = $1", [tenantId]),
+    ).toBe(0);
+    expect(
+      await countRows(db, "workflow_run_steps", "tenant_id = $1", [tenantId]),
+    ).toBe(0);
   });
 });
 

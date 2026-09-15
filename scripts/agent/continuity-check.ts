@@ -1,172 +1,271 @@
-/**
- * Vérifie que l'état de reprise de l'agent est présent, cohérent et frais,
- * puis écrit `docs/DRIFT_REPORT.md`.
- *
- * Le rapport est écrit **dans tous les cas**, y compris en échec : un contrôle
- * qui ne laisse aucune trace quand il échoue n'aide personne à la reprise.
- */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
-const requiredFiles = [
+const REQUIRED_FILES = [
   "docs/AGENT_STATE.json",
   "docs/WORKLOG.md",
   "docs/NEXT_STEPS.md",
-  "docs/RESUME_PROMPT.md",
+  "docs/DRIFT_REPORT.md",
   "docs/ROADMAP_TRADIKOM_ONE_OS.md",
   "docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md",
-];
+  "docs/RESUME_PROMPT.md",
+  "docs/MASTER_PROMPT_REFERENCE.md",
+] as const;
 
-/**
- * Au-delà de cette fenêtre, l'état déclaré n'est plus une source fiable pour
- * reprendre : il décrit un dépôt qui a probablement bougé depuis.
- */
-const stalenessDays = 30;
+const MASTER_PROMPT_SHA256 =
+  "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5";
+const MASTER_PROMPT_PAGE_COUNT = 71;
+const MASTER_PROMPT_CORE_PAGES = [
+  3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71,
+] as const;
 
-const driftReportPath = "docs/DRIFT_REPORT.md";
+type AgentState = {
+  version?: number;
+  updatedAt?: string;
+  northStar?: string;
+  branch?: string;
+  status?: string;
+  currentPhase?: string;
+  nextAction?: string;
+  nextFile?: string;
+  lastValidation?: Array<{ command?: string; status?: string }>;
+  masterPrompt?: {
+    source?: string;
+    sha256?: string;
+    pageCount?: number;
+    mandatoryPages?: number[];
+    alignment?: {
+      pagesConsulted?: number[];
+      sections?: string[];
+      requirement?: string;
+      evidenceExpected?: string;
+    };
+  };
+};
 
-type Report = {
+export type ContinuityResult = {
   checkedAt: string;
   status: "ready" | "blocked";
   missing: string[];
-  problems: string[];
-  state: {
-    phase?: string;
-    branch?: string;
-    lastCommit?: string;
-    updatedAt?: string;
-    ageDays?: number;
-    nextTask?: string;
-  };
+  errors: string[];
+  warnings: string[];
   nextInstruction: string;
 };
 
-function main() {
-  const missing = requiredFiles.filter((file) => !existsSync(file));
-  const problems: string[] = [];
-  const state: Report["state"] = {};
+export function checkContinuity(
+  root = process.cwd(),
+  now = new Date(),
+): ContinuityResult {
+  const missing = REQUIRED_FILES.filter(
+    (file) => !existsSync(resolve(root, file)),
+  );
+  const errors: string[] = [];
+  const warnings: string[] = [];
 
-  if (!missing.includes("docs/AGENT_STATE.json")) {
-    inspectAgentState(problems, state);
+  if (missing.length > 0) {
+    return {
+      checkedAt: now.toISOString(),
+      status: "blocked",
+      missing: [...missing],
+      errors: ["Les fichiers de continuité obligatoires sont incomplets."],
+      warnings,
+      nextInstruction: "Créer les fichiers manquants avant de poursuivre le code.",
+    };
   }
 
-  if (!missing.includes("docs/NEXT_STEPS.md")) {
-    const nextSteps = readFileSync("docs/NEXT_STEPS.md", "utf8");
-    if (!nextSteps.includes("## Action immédiate")) {
-      problems.push(
-        "docs/NEXT_STEPS.md ne contient pas de section « Action immédiate » : une liste sans première action n'est pas un point de reprise.",
+  const state = parseState(root, errors);
+  if (state) {
+    if (state.version !== 1) {
+      errors.push("AGENT_STATE.json doit utiliser la version 1 du contrat.");
+    }
+    if (!state.northStar?.toLowerCase().includes("conversation")) {
+      errors.push("La north star conversation-first est absente de l'état agent.");
+    }
+    if (!state.branch?.trim()) {
+      errors.push("La branche active n'est pas renseignée.");
+    }
+    if (!state.currentPhase?.trim()) {
+      errors.push("La phase active n'est pas renseignée.");
+    }
+    if (!state.nextAction || state.nextAction.trim().length < 20) {
+      errors.push("La prochaine action doit être concrète et exploitable.");
+    }
+    if (!state.nextFile?.trim()) {
+      errors.push("Le prochain fichier à modifier n'est pas renseigné.");
+    }
+    if (!Array.isArray(state.lastValidation)) {
+      errors.push("Les validations déjà exécutées doivent être listées.");
+    }
+    validateMasterPromptState(state, errors, warnings);
+
+    const updatedAt = state.updatedAt ? new Date(state.updatedAt) : null;
+    if (!updatedAt || Number.isNaN(updatedAt.getTime())) {
+      errors.push("La date de mise à jour de l'état est invalide.");
+    } else {
+      const ageDays = (now.getTime() - updatedAt.getTime()) / 86_400_000;
+      if (ageDays > 14) {
+        errors.push("L'état de reprise a plus de quatorze jours.");
+      } else if (ageDays > 7) {
+        warnings.push("L'état de reprise a plus de sept jours.");
+      }
+    }
+
+    const ciBranch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME;
+    if (ciBranch && state.branch && ciBranch !== state.branch) {
+      warnings.push(
+        `La branche CI (${ciBranch}) diffère de la branche d'état (${state.branch}).`,
       );
     }
   }
 
-  const blocked = missing.length > 0 || problems.length > 0;
-  const report: Report = {
-    checkedAt: new Date().toISOString(),
-    status: blocked ? "blocked" : "ready",
-    missing,
-    problems,
-    state,
-    nextInstruction: blocked
-      ? "Corriger les points ci-dessus avant d'écrire du code : l'état de reprise n'est pas exploitable."
-      : "Lire docs/AGENT_STATE.json puis reprendre la première tâche incomplète de docs/NEXT_STEPS.md.",
-  };
-
-  writeReport(report);
-
-  for (const file of missing) {
-    process.stderr.write(`Fichier de continuité manquant : ${file}\n`);
-  }
-  for (const problem of problems) {
-    process.stderr.write(`${problem}\n`);
-  }
-
-  if (blocked) {
-    process.exit(1);
-  }
-
-  process.stdout.write(
-    `Continuité vérifiée — phase ${state.phase ?? "inconnue"}, état à jour depuis ${state.ageDays ?? "?"} jour(s).\n`,
+  const driftReport = readFileSync(
+    resolve(root, "docs/DRIFT_REPORT.md"),
+    "utf8",
   );
+  if (!/impact north star/i.test(driftReport)) {
+    errors.push("DRIFT_REPORT.md doit contenir une section Impact north star.");
+  }
+  if (!/## Alignement prompt maître/i.test(driftReport)) {
+    errors.push(
+      "DRIFT_REPORT.md doit contenir une section Alignement prompt maître.",
+    );
+  } else if (!/pages?\s+\d+/i.test(driftReport)) {
+    errors.push("DRIFT_REPORT.md doit citer les pages du prompt maître.");
+  }
+
+  const nextSteps = readFileSync(
+    resolve(root, "docs/NEXT_STEPS.md"),
+    "utf8",
+  );
+  if (!/prochaine action concrète/i.test(nextSteps)) {
+    errors.push("NEXT_STEPS.md ne désigne pas la prochaine action concrète.");
+  }
+  if (!/## Référence prompt maître/i.test(nextSteps)) {
+    errors.push(
+      "NEXT_STEPS.md doit relier la prochaine action au prompt maître.",
+    );
+  } else if (!/pages?\s+\d+/i.test(nextSteps)) {
+    errors.push("NEXT_STEPS.md doit citer les pages qui imposent la suite.");
+  }
+
+  const masterPromptReference = readFileSync(
+    resolve(root, "docs/MASTER_PROMPT_REFERENCE.md"),
+    "utf8",
+  );
+  if (
+    !masterPromptReference.includes(MASTER_PROMPT_SHA256) ||
+    !masterPromptReference.includes(`nombre de pages : \`${MASTER_PROMPT_PAGE_COUNT}\``)
+  ) {
+    errors.push(
+      "La référence du prompt maître ne correspond pas au PDF canonique de 71 pages.",
+    );
+  }
+  for (const requiredSection of [
+    "## Boucle obligatoire de chaque automation",
+    "## Carte des pages",
+    "## Contrat de preuve",
+  ]) {
+    if (!masterPromptReference.includes(requiredSection)) {
+      errors.push(`MASTER_PROMPT_REFERENCE.md doit contenir ${requiredSection}.`);
+    }
+  }
+
+  return {
+    checkedAt: now.toISOString(),
+    status: errors.length === 0 ? "ready" : "blocked",
+    missing: [],
+    errors,
+    warnings,
+    nextInstruction:
+      errors.length === 0
+        ? "Relire les pages obligatoires du prompt maître puis reprendre la première tâche non terminée de la page 48."
+        : "Corriger l'état de continuité avant de poursuivre le code.",
+  };
 }
 
-function inspectAgentState(problems: string[], state: Report["state"]) {
-  let parsed: Record<string, unknown>;
+function validateMasterPromptState(
+  state: AgentState,
+  errors: string[],
+  warnings: string[],
+) {
+  const masterPrompt = state.masterPrompt;
+  if (!masterPrompt) {
+    errors.push("AGENT_STATE.json doit référencer le prompt maître canonique.");
+    return;
+  }
+  if (masterPrompt.sha256 !== MASTER_PROMPT_SHA256) {
+    errors.push("L'empreinte du prompt maître dans AGENT_STATE.json est invalide.");
+  }
+  if (masterPrompt.pageCount !== MASTER_PROMPT_PAGE_COUNT) {
+    errors.push("AGENT_STATE.json doit déclarer les 71 pages du prompt maître.");
+  }
+  const mandatoryPages = new Set(masterPrompt.mandatoryPages ?? []);
+  if (MASTER_PROMPT_CORE_PAGES.some((page) => !mandatoryPages.has(page))) {
+    errors.push("Les pages cœur du prompt maître ne sont pas toutes obligatoires.");
+  }
+
+  const alignment = masterPrompt.alignment;
+  if (!alignment?.pagesConsulted?.length) {
+    errors.push("L'état doit lister les pages du prompt maître consultées.");
+  } else if (
+    alignment.pagesConsulted.some(
+      (page) => !Number.isInteger(page) || page < 1 || page > 71,
+    )
+  ) {
+    errors.push("Les pages consultées du prompt maître sont invalides.");
+  }
+  if (!alignment?.sections?.length) {
+    errors.push("L'état doit lister les sections du prompt maître appliquées.");
+  }
+  if (!alignment?.requirement || alignment.requirement.trim().length < 20) {
+    errors.push("L'exigence active du prompt maître doit être explicite.");
+  }
+  if (
+    !alignment?.evidenceExpected ||
+    alignment.evidenceExpected.trim().length < 20
+  ) {
+    errors.push("La preuve attendue pour l'exigence active doit être explicite.");
+  }
+
+  const source = process.env.TRADIKOM_MASTER_PROMPT_PATH || masterPrompt.source;
+  if (!source?.trim()) {
+    errors.push("Le chemin du PDF canonique n'est pas renseigné.");
+    return;
+  }
+  if (!existsSync(source)) {
+    warnings.push(
+      "Le PDF canonique n'est pas disponible dans cet environnement; l'automation locale doit bloquer toute nouvelle sélection de tâche.",
+    );
+    return;
+  }
+  const sourceHash = createHash("sha256")
+    .update(readFileSync(source))
+    .digest("hex");
+  if (sourceHash !== MASTER_PROMPT_SHA256) {
+    errors.push("Le PDF canonique a changé ou son empreinte est invalide.");
+  }
+}
+
+function parseState(root: string, errors: string[]) {
   try {
-    parsed = JSON.parse(readFileSync("docs/AGENT_STATE.json", "utf8")) as Record<
-      string,
-      unknown
-    >;
-  } catch (error) {
-    problems.push(
-      `docs/AGENT_STATE.json illisible : ${error instanceof Error ? error.message : "JSON invalide"}.`,
-    );
-    return;
-  }
-
-  state.phase = asString(parsed.phase);
-  state.branch = asString(parsed.branch);
-  state.lastCommit = asString(parsed.lastCommit);
-  state.updatedAt = asString(parsed.updatedAt);
-  state.nextTask = asString(parsed.nextTask);
-
-  // La dérive qui compte : un état de reprise qui ne parle plus de conversation
-  // décrit un projet qui a quitté sa north star sans le dire.
-  const northStar = asString(parsed.northStar);
-  if (!northStar || !northStar.toLowerCase().includes("conversation")) {
-    problems.push(
-      "Dérive de north star : l'objectif conversationnel a disparu de docs/AGENT_STATE.json.",
-    );
-  }
-
-  if (!state.nextTask) {
-    problems.push(
-      "docs/AGENT_STATE.json ne déclare aucune `nextTask` : rien à reprendre.",
-    );
-  }
-
-  const ageDays = computeAgeDays(state.updatedAt);
-  if (ageDays === null) {
-    problems.push(
-      "docs/AGENT_STATE.json ne porte pas d'`updatedAt` exploitable : impossible de juger si l'état est obsolète.",
-    );
-    return;
-  }
-
-  state.ageDays = ageDays;
-  if (ageDays > stalenessDays) {
-    problems.push(
-      `État obsolète : docs/AGENT_STATE.json n'a pas bougé depuis ${ageDays} jours (seuil ${stalenessDays}).`,
-    );
+    return JSON.parse(
+      readFileSync(resolve(root, "docs/AGENT_STATE.json"), "utf8"),
+    ) as AgentState;
+  } catch {
+    errors.push("AGENT_STATE.json n'est pas un JSON valide.");
+    return null;
   }
 }
 
-function computeAgeDays(updatedAt: string | undefined): number | null {
-  if (!updatedAt) return null;
-  const timestamp = Date.parse(updatedAt);
-  if (Number.isNaN(timestamp)) return null;
-  const elapsed = Date.now() - timestamp;
-  // Un état daté du futur n'est pas obsolète, il est faux — mais le signaler
-  // comme tel relève de la revue humaine, pas de ce contrôle.
-  return Math.max(0, Math.floor(elapsed / 86_400_000));
+function run() {
+  const result = checkContinuity();
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  if (result.status === "blocked") process.exitCode = 1;
 }
 
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function writeReport(report: Report) {
-  mkdirSync(path.dirname(driftReportPath), { recursive: true });
-  const body = [
-    "# Drift report",
-    "",
-    "Généré par `pnpm agent:continuity-check`. Ne pas éditer à la main.",
-    "",
-    "```json",
-    JSON.stringify(report, null, 2),
-    "```",
-    "",
-  ].join("\n");
-  writeFileSync(driftReportPath, body);
-}
-
-main();
+const entrypoint = process.argv[1]
+  ? pathToFileURL(resolve(process.argv[1])).href
+  : null;
+if (entrypoint === import.meta.url) run();

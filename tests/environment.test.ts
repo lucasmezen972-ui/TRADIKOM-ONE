@@ -152,4 +152,13 @@ describe("environment validation", () => {
       }),
     ).toThrowError(/EMAIL_PROVIDER, FEATURE_LIVE_INTEGRATIONS/);
   });
+
+  it("refuse aussi explicitement le provider console en production", () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        EMAIL_PROVIDER: "console",
+      }),
+    ).toThrowError(/EMAIL_PROVIDER/);
+  });
 });

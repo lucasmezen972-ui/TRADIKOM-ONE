@@ -6,6 +6,7 @@ import { AuthError } from "@/modules/auth";
 import { ConnectorError } from "@/modules/connectors";
 import { CrmError } from "@/modules/crm";
 import { EmailSuppressionError } from "@/modules/email-suppression";
+import { OrchestratorError } from "@/modules/orchestrator/errors";
 import { RateLimitError } from "@/modules/rate-limit";
 import { TenantError } from "@/modules/tenants";
 import { WorkflowError } from "@/modules/workflows";
@@ -13,6 +14,7 @@ import { BusinessBrainError } from "@/modules/business-brain";
 import { StrategicAdvisorError } from "@/modules/strategic-advisor";
 import { AutonomousMarketingError } from "@/modules/autonomous-marketing";
 import { WebsiteAiError } from "@/modules/website-ai";
+import { WhatsAppMetaActivationAuthorizationError } from "@/modules/channels/whatsapp-meta-activation-authorization-errors";
 
 export type PublicError = {
   code: string;
@@ -47,6 +49,7 @@ export function toPublicError(error: unknown): PublicError {
   if (error instanceof EmailSuppressionError) {
     return mapEmailSuppressionError(error);
   }
+  if (error instanceof OrchestratorError) return mapOrchestratorError(error);
   if (error instanceof WorkflowError) return mapWorkflowError(error);
   if (error instanceof BusinessBrainError) return mapBusinessBrainError(error);
   if (error instanceof StrategicAdvisorError) return mapStrategicAdvisorError(error);
@@ -54,6 +57,9 @@ export function toPublicError(error: unknown): PublicError {
     return mapAutonomousMarketingError(error);
   }
   if (error instanceof WebsiteAiError) return mapWebsiteAiError(error);
+  if (error instanceof WhatsAppMetaActivationAuthorizationError) {
+    return mapWhatsAppMetaActivationAuthorizationError(error);
+  }
 
   if (error instanceof ZodError) {
     return {
@@ -70,6 +76,87 @@ export function toPublicError(error: unknown): PublicError {
     message: "Une erreur est survenue. Réessayez plus tard.",
     status: 500,
   };
+}
+
+function mapOrchestratorError(error: OrchestratorError): PublicError {
+  if (
+    error.code === "orchestrator_source_message_not_found" ||
+    error.code === "orchestrator_plan_not_found" ||
+    error.code === "orchestrator_approval_not_found"
+  ) {
+    return publicError(
+      error.code,
+      "conversation_plan",
+      "Le plan ou son message source est introuvable.",
+      404,
+    );
+  }
+  if (
+    error.code === "orchestrator_permission_denied" ||
+    error.code === "orchestrator_scope_missing" ||
+    error.code === "orchestrator_external_cost_forbidden"
+  ) {
+    return publicError(
+      error.code,
+      "authorization",
+      "Cette action n’est pas autorisée.",
+      403,
+    );
+  }
+  if (
+    error.code === "orchestrator_source_message_invalid" ||
+    error.code === "orchestrator_source_context_invalid"
+  ) {
+    return publicError(
+      error.code,
+      "validation",
+      "Le contexte de ce message ne peut pas être utilisé.",
+      400,
+    );
+  }
+  if (error.code === "orchestrator_generated_plan_unsafe") {
+    return publicError(
+      error.code,
+      "conversation_plan",
+      "Le plan n’a pas pu être préparé en toute sécurité.",
+      409,
+    );
+  }
+  return publicError(
+    error.code,
+    "conversation_plan",
+    "Le plan a changé ou ne peut pas être poursuivi dans cet état.",
+    409,
+  );
+}
+
+function mapWhatsAppMetaActivationAuthorizationError(
+  error: WhatsAppMetaActivationAuthorizationError,
+): PublicError {
+  if (
+    error.code === "channel_provider_activation_authorization_access_denied"
+  ) {
+    return publicError(
+      error.code,
+      "authorization",
+      "Vous n’avez pas le droit de gérer l’autorisation d’essai Meta.",
+      403,
+    );
+  }
+  if (error.code === "channel_provider_activation_authorization_not_found") {
+    return publicError(
+      error.code,
+      "channel_activation",
+      "Cette autorisation d’essai Meta est introuvable.",
+      404,
+    );
+  }
+  return publicError(
+    error.code,
+    "channel_activation",
+    "L’autorisation d’essai Meta ne peut pas être modifiée dans cet état.",
+    409,
+  );
 }
 
 function mapAuthError(error: AuthError): PublicError {

@@ -55,6 +55,8 @@ import {
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 import {
   deliverInvitationEmail,
+  recordAuthorizedResendDelivery,
+  type EmailDeliveryOutcome,
   type EmailProvider,
 } from "@/modules/email";
 
@@ -257,13 +259,22 @@ export async function createInvitation(
     tenantId,
     invitationId,
   });
+  const deliveryAttemptedAt = nowIso();
   await updateInvitationDelivery(db, {
     tenantId,
     invitationId,
     status: delivery.outcome.status,
     provider: delivery.outcome.provider,
-    attemptedAt: nowIso(),
+    attemptedAt: deliveryAttemptedAt,
     errorCode: delivery.outcome.errorCode,
+  });
+  await recordResendDeliveryIfSent(db, {
+    tenantId,
+    actorId: userId,
+    invitationId,
+    recipient: email,
+    outcome: delivery.outcome,
+    occurredAt: deliveryAttemptedAt,
   });
   await recordSuppressionOnPermanentFailure(db, tenantId, email, delivery.outcome);
   await recordAuditLog(db, {
@@ -343,13 +354,22 @@ export async function resendInvitation(
     tenantId,
     invitationId,
   });
+  const deliveryAttemptedAt = nowIso();
   await updateInvitationDelivery(db, {
     tenantId,
     invitationId,
     status: delivery.outcome.status,
     provider: delivery.outcome.provider,
-    attemptedAt: nowIso(),
+    attemptedAt: deliveryAttemptedAt,
     errorCode: delivery.outcome.errorCode,
+  });
+  await recordResendDeliveryIfSent(db, {
+    tenantId,
+    actorId: userId,
+    invitationId,
+    recipient: invitation.email,
+    outcome: delivery.outcome,
+    occurredAt: deliveryAttemptedAt,
   });
   await recordSuppressionOnPermanentFailure(
     db,
@@ -379,6 +399,35 @@ export async function resendInvitation(
       ? { developmentLink: delivery.link }
       : {}),
   };
+}
+
+async function recordResendDeliveryIfSent(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    actorId: string;
+    invitationId: string;
+    recipient: string;
+    outcome: EmailDeliveryOutcome;
+    occurredAt: string;
+  },
+) {
+  if (
+    input.outcome.provider !== "resend" ||
+    input.outcome.status !== "sent" ||
+    !input.outcome.messageId
+  ) {
+    return;
+  }
+
+  await recordAuthorizedResendDelivery(db, {
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    invitationId: input.invitationId,
+    recipient: input.recipient,
+    providerMessageId: input.outcome.messageId,
+    occurredAt: input.occurredAt,
+  });
 }
 
 export async function acceptInvitation(

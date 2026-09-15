@@ -214,6 +214,8 @@ export const workflowRuns = pgTable("workflow_runs", {
   summary: text("summary").notNull(),
   error: text("error"),
   retryCount: integer("retry_count").notNull().default(0),
+  definitionSnapshot: text("definition_snapshot"),
+  definitionVersion: integer("definition_version"),
   createdAt: text("created_at").notNull(),
 });
 

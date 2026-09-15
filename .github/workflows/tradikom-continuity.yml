@@ -1,4 +1,4 @@
-name: Tradikom One Continuity Check
+name: Continuité TRADIKOM ONE
 
 permissions:
   contents: read
@@ -6,41 +6,47 @@ permissions:
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "17 * * * *"
   pull_request:
     branches:
       - main
 
 jobs:
   continuity:
-    name: Continuity state
+    name: Vérifier la continuité et la north star
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11.7.0
 
-      - uses: actions/setup-node@v4
+      - name: Installer Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - name: Installer les dépendances figées
+        run: pnpm install --frozen-lockfile
 
-      - name: Verify continuity state
+      - name: Contrôler l'état de reprise
         run: pnpm agent:continuity-check
 
-      # Le rapport est produit meme quand la verification echoue : c'est
-      # justement dans ce cas qu'on a besoin de le lire.
-      - name: Upload continuity state
+      - name: Publier l'état de continuité
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tradikom-continuity-state
+          name: tradikom-continuity-${{ github.run_attempt }}
           path: |
             docs/AGENT_STATE.json
+            docs/WORKLOG.md
             docs/NEXT_STEPS.md
             docs/DRIFT_REPORT.md
-            docs/WORKLOG.md
+            docs/ROADMAP_TRADIKOM_ONE_OS.md
+            docs/MASTER_PROMPT_REFERENCE.md
+          if-no-files-found: error
+          retention-days: 14
