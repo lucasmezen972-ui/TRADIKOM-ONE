@@ -71,6 +71,127 @@ afterEach(async () => {
 });
 
 describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
+  it("classe une livraison interne créée entre les migrations 120 et 121", async () => {
+    await withTemporaryPostgresDatabase(async (pool) => {
+      const db = pgPoolAsSqlClient(pool);
+      await migrate(db, {
+        enableRls: true,
+        targetMigrationId: "120_os5_orchestrator_internal_namespace_rls",
+      });
+      const services = createServices(db);
+      const user = await services.registerUser({
+        name: "Responsable upgrade namespace",
+        email: `plan-revision-upgrade-${randomUUID()}@example.test`,
+        password: "Password!1",
+      });
+      const tenant = await services.createTenant(user.id, {
+        name: `Organisation upgrade namespace ${randomUUID()}`,
+        category: "Services",
+      });
+      const source = await ingestConversationMessage(db, user.id, {
+        tenantId: tenant.id,
+        channelIdentity: {
+          id: `identity_upgrade_${randomUUID().replaceAll("-", "")}`,
+          tenantId: tenant.id,
+          participantId: `participant_upgrade_${randomUUID().replaceAll("-", "")}`,
+          channelKind: "web",
+          adapterKey: "web-chat",
+          externalSubjectId: `member_upgrade_${randomUUID().replaceAll("-", "")}`,
+          displayName: "Membre de démonstration",
+          role: "member",
+          state: "active",
+          createdAt: occurredAt,
+          updatedAt: occurredAt,
+        },
+        externalMessageId: `external_upgrade_${randomUUID()}`,
+        idempotencyKey: `ingress:upgrade:${randomUUID()}`,
+        correlationId: `correlation_upgrade_${randomUUID()}`,
+        routeTrace: [],
+        text: "Préparer une relance sans effet externe.",
+        attachments: [],
+        occurredAt,
+      });
+      const plan = await createConversationActionPlan(db, user.id, {
+        tenantId: tenant.id,
+        threadId: source.threadId,
+        sourceMessageId: source.messageId,
+      });
+      const projection = await pool.query<{
+        message_id: string;
+        ordinary_identity_id: string;
+      }>(
+        `select proposal.id as message_id,
+                source.channel_identity_id as ordinary_identity_id
+           from conversation_messages proposal
+           join conversation_messages source
+             on source.tenant_id = proposal.tenant_id
+            and source.id = $2
+          where proposal.tenant_id = $1
+            and proposal.idempotency_key = $3`,
+        [tenant.id, source.messageId, `orchestrator:${plan.id}:proposal`],
+      );
+      expect(projection.rows).toHaveLength(1);
+      await pool.query(
+        `insert into channel_provider_endpoints (
+           id, tenant_id, provider, external_account_id,
+           destination_fingerprint, status, created_by, created_at, updated_at
+         ) values ($1, $2, 'whatsapp_twilio', $3, $4, 'active', $5, $6, $6)`,
+        [
+          "endpoint_upgrade_internal_target",
+          tenant.id,
+          "twilio_upgrade_internal_target",
+          "a".repeat(64),
+          user.id,
+          occurredAt,
+        ],
+      );
+      await pool.query(
+        `insert into channel_provider_deliveries (
+           id, tenant_id, provider, endpoint_id, message_id,
+           channel_identity_id, idempotency_key, request_fingerprint,
+           status, external_message_id, failure_classification,
+           safe_error_code, retryable, attempts, max_attempts,
+           next_attempt_at, last_attempted_at, lease_id, lease_expires_at,
+           created_by, created_at, updated_at, activation_authorization_id
+         ) values (
+           $1, $2, 'whatsapp_twilio', $3, $4, $5, $6, $7,
+           'reserved', null, null, null, null, 0, 3, $9, null, null, null,
+           $8, $9, $9, null
+         )`,
+        [
+          "delivery_upgrade_internal_target",
+          tenant.id,
+          "endpoint_upgrade_internal_target",
+          projection.rows[0]!.message_id,
+          projection.rows[0]!.ordinary_identity_id,
+          "delivery:upgrade:internal-target",
+          "b".repeat(64),
+          user.id,
+          occurredAt,
+        ],
+      );
+
+      await migrate(db, { enableRls: true });
+      const classification = await pool.query<{
+        internal_conversation_target: boolean;
+      }>(
+        `select internal_conversation_target
+           from channel_provider_deliveries
+          where id = 'delivery_upgrade_internal_target'`,
+      );
+      expect(classification.rows).toEqual([
+        { internal_conversation_target: true },
+      ]);
+      await expect(
+        pool.query(
+          `update channel_provider_deliveries
+              set internal_conversation_target = false
+            where id = 'delivery_upgrade_internal_target'`,
+        ),
+      ).rejects.toThrow(/channel_provider_delivery_identity_immutable/i);
+    });
+  });
+
   it("sérialise deux connexions, borne le lignage au tenant et bloque les écritures directes", async () => {
     if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
     const primaryPool = new Pool({ connectionString: databaseUrl, max: 1 });
@@ -357,9 +478,12 @@ describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
     );
     const protectedMessage = await primaryPool.query<{
       id: string;
-      channel_identity_id: string;
+      internal_channel_identity_id: string;
+      ordinary_channel_identity_id: string;
     }>(
-      `select proposal.id, source.channel_identity_id
+      `select proposal.id,
+              proposal.channel_identity_id as internal_channel_identity_id,
+              source.channel_identity_id as ordinary_channel_identity_id
          from conversation_action_plans plan
          join conversation_messages proposal
            on proposal.tenant_id = plan.tenant_id
@@ -373,7 +497,10 @@ describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
     );
     expect(protectedMessage.rows).toHaveLength(1);
     const protectedMessageId = protectedMessage.rows[0]!.id;
-    const ordinaryIdentityId = protectedMessage.rows[0]!.channel_identity_id;
+    const internalIdentityId =
+      protectedMessage.rows[0]!.internal_channel_identity_id;
+    const ordinaryIdentityId =
+      protectedMessage.rows[0]!.ordinary_channel_identity_id;
     const twilioEndpointId = `endpoint_twilio_${fixtureA.unique}`;
     const metaEndpointId = `endpoint_meta_${fixtureA.unique}`;
     await primaryPool.query(
@@ -547,6 +674,114 @@ describeIfPostgres("révisions de plans Conversation sur PostgreSQL", () => {
         revisionId,
       ],
     );
+
+    const internalMessageDeliveryId =
+      `delivery_internal_message_${fixtureA.unique}`;
+    const internalIdentityDeliveryId =
+      `delivery_internal_identity_${fixtureA.unique}`;
+    await primaryPool.query(
+      `insert into channel_provider_deliveries (
+         id, tenant_id, provider, endpoint_id, message_id,
+         channel_identity_id, idempotency_key, request_fingerprint,
+         status, external_message_id, failure_classification,
+         safe_error_code, retryable, attempts, max_attempts,
+         next_attempt_at, last_attempted_at, lease_id, lease_expires_at,
+         created_by, created_at, updated_at, activation_authorization_id
+       ) values
+         ($1, $3, 'whatsapp_twilio', $4, $5, $6, $7, $8,
+          'reserved', null, null, null, null, 0, 3, $10, null, null, null,
+          $9, $10, $10, null),
+         ($2, $3, 'whatsapp_meta', $11, $12, $13, $14, $15,
+          'reserved', null, null, null, null, 0, 3, $10, null, null, null,
+          $9, $10, $10, null)`,
+      [
+        internalMessageDeliveryId,
+        internalIdentityDeliveryId,
+        fixtureA.tenantId,
+        twilioEndpointId,
+        protectedMessageId,
+        ordinaryIdentityId,
+        `delivery:internal-message:${fixtureA.unique}`,
+        "8".repeat(64),
+        fixtureA.userId,
+        occurredAt,
+        metaEndpointId,
+        metaOutboundMessageId,
+        internalIdentityId,
+        `delivery:internal-identity:${fixtureA.unique}`,
+        "9".repeat(64),
+      ],
+    );
+    const internalDeliveryClassifications = await primaryPool.query<{
+      id: string;
+      internal_conversation_target: boolean;
+    }>(
+      `select id, internal_conversation_target
+         from channel_provider_deliveries
+        where id in ($1, $2)
+        order by id`,
+      [internalMessageDeliveryId, internalIdentityDeliveryId],
+    );
+    expect(internalDeliveryClassifications.rows).toEqual(
+      [
+        {
+          id: internalMessageDeliveryId,
+          internal_conversation_target: true,
+        },
+        {
+          id: internalIdentityDeliveryId,
+          internal_conversation_target: true,
+        },
+      ].sort((left, right) => left.id.localeCompare(right.id)),
+    );
+
+    const hiddenInternalDeliveries = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      hiddenUser.id,
+      (client) =>
+        client.query<{ id: string }>(
+          `select id from channel_provider_deliveries
+            where id in ($1, $2) order by id`,
+          [internalMessageDeliveryId, internalIdentityDeliveryId],
+        ),
+    );
+    expect(hiddenInternalDeliveries.rows).toEqual([]);
+    const blockedInternalDeliveryUpdate = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      hiddenUser.id,
+      (client) =>
+        client.query<{ id: string }>(
+          `update channel_provider_deliveries
+              set updated_at = updated_at
+            where id in ($1, $2)
+            returning id`,
+          [internalMessageDeliveryId, internalIdentityDeliveryId],
+        ),
+    );
+    expect(blockedInternalDeliveryUpdate.rows).toEqual([]);
+    const blockedInternalDeliveryDelete = await withTenantContext(
+      restrictedPool,
+      fixtureA.tenantId,
+      hiddenUser.id,
+      (client) =>
+        client.query<{ id: string }>(
+          `delete from channel_provider_deliveries
+            where id in ($1, $2)
+            returning id`,
+          [internalMessageDeliveryId, internalIdentityDeliveryId],
+        ),
+    );
+    expect(blockedInternalDeliveryDelete.rows).toEqual([]);
+    await expect(
+      primaryPool.query(
+        `update channel_provider_deliveries
+            set internal_conversation_target = false
+          where id = $1`,
+        [internalMessageDeliveryId],
+      ),
+    ).rejects.toThrow(/channel_provider_delivery_identity_immutable/i);
 
     const outboundRlsWrites = await withTenantContext(
       restrictedPool,
@@ -1104,6 +1339,27 @@ async function createPlanFixture(
     tenantId: tenant.id,
     planId: plan.id,
   };
+}
+
+async function withTemporaryPostgresDatabase(
+  run: (pool: Pool) => Promise<void>,
+) {
+  if (!databaseUrl) throw new Error("DATABASE_URL est requis.");
+  const adminPool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const databaseName =
+    `plan_revision_upgrade_${randomUUID().replaceAll("-", "")}`;
+  const databaseIdentifier = quoteIdentifier(databaseName);
+  await adminPool.query(`create database ${databaseIdentifier}`);
+  const targetUrl = new URL(databaseUrl);
+  targetUrl.pathname = `/${databaseName}`;
+  const targetPool = new Pool({ connectionString: targetUrl.toString(), max: 2 });
+  try {
+    await run(targetPool);
+  } finally {
+    await targetPool.end();
+    await adminPool.query(`drop database if exists ${databaseIdentifier}`);
+    await adminPool.end();
+  }
 }
 
 async function readBackendPid(pool: Pool) {

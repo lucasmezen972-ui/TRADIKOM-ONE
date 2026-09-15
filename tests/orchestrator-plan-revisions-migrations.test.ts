@@ -39,7 +39,7 @@ describe("migration des révisions de plans Conversation", () => {
       "119_os5_conversation_action_plan_revisions",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "120_os5_orchestrator_internal_namespace_rls",
+      "121_os5_orchestrator_namespace_read_delivery_rls",
     );
   });
 
@@ -89,6 +89,61 @@ describe("migration des révisions de plans Conversation", () => {
     expect(mirror).not.toMatch(/security\s+definer/i);
   });
 
+  it("garde le correctif de lecture interne et de reprise provider dans un miroir exact", () => {
+    const runtime = readFileSync(
+      new URL("../src/lib/db.ts", import.meta.url),
+      "utf8",
+    );
+    const mirror = readFileSync(
+      new URL(
+        "../src/db/migrations/0115_os5_orchestrator_namespace_read_delivery_rls.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const runtimeSql = extractSqlTemplate(
+      runtime,
+      "os5OrchestratorNamespaceReadDeliveryRlsMigrationSql",
+    );
+    const deliveryUpdate = mirror.slice(
+      mirror.indexOf(
+        "create policy channel_provider_deliveries_internal_conversation_update",
+      ),
+      mirror.indexOf(
+        "drop policy if exists channel_provider_deliveries_internal_conversation_delete",
+      ),
+    );
+
+    expect(runtimeSql.trim()).toBe(mirror.trim());
+    expect(mirror).toContain(
+      "conversation_messages as restrictive for select to public",
+    );
+    expect(mirror).toContain("idempotency_key !~ '^orchestrator:'");
+    expect(mirror).toContain("adapter_key <> 'orchestrator-mock'");
+    expect(mirror).toContain(
+      "channel_identity_id !~ '^orchestrator_identity_'",
+    );
+    expect(mirror).toContain(
+      "add column if not exists internal_conversation_target boolean",
+    );
+    expect(mirror).toContain(
+      "create or replace function classify_channel_provider_delivery_target()",
+    );
+    expect(mirror).toContain(
+      "before insert on channel_provider_deliveries",
+    );
+    expect(mirror).toContain(
+      "new.internal_conversation_target <>\n       old.internal_conversation_target",
+    );
+    expect(mirror).toContain(
+      "channel_provider_deliveries as restrictive for select to public",
+    );
+    expect(deliveryUpdate).toContain("or not internal_conversation_target");
+    expect(deliveryUpdate).not.toContain("is_internal_conversation_message");
+    expect(mirror.match(/security invoker/gi)).toHaveLength(2);
+    expect(mirror).not.toMatch(/security\s+definer/i);
+  });
+
   it("accepte les projections internes canoniques lors d'une mise à niveau", async () => {
     const db = await createMemoryDb();
     opened.push(db);
@@ -126,18 +181,90 @@ describe("migration des révisions de plans Conversation", () => {
       attachments: [],
       occurredAt,
     });
-    await createConversationActionPlan(db, user.id, {
+    const plan = await createConversationActionPlan(db, user.id, {
       tenantId: tenant.id,
       threadId: source.threadId,
       sourceMessageId: source.messageId,
     });
 
+    await expect(
+      migrate(db, {
+        enableRls: true,
+        targetMigrationId: "120_os5_orchestrator_internal_namespace_rls",
+      }),
+    ).resolves.toBeUndefined();
+    const canonicalProjection = await db.query<{
+      message_id: string;
+      ordinary_identity_id: string;
+    }>(
+      `select proposal.id as message_id,
+              source.channel_identity_id as ordinary_identity_id
+         from conversation_messages proposal
+         join conversation_messages source
+           on source.tenant_id = proposal.tenant_id
+          and source.id = $2
+        where proposal.tenant_id = $1
+          and proposal.idempotency_key = $3`,
+      [tenant.id, source.messageId, `orchestrator:${plan.id}:proposal`],
+    );
+    expect(canonicalProjection.rows).toHaveLength(1);
+    await db.query(
+      `insert into channel_provider_endpoints (
+         id, tenant_id, provider, external_account_id,
+         destination_fingerprint, status, created_by, created_at, updated_at
+       ) values (
+         'endpoint_migration_internal_target', $1, 'whatsapp_twilio',
+         'twilio_migration_internal_target', $2, 'active', $3, $4, $4
+       )`,
+      [tenant.id, "a".repeat(64), user.id, occurredAt],
+    );
+    await db.query(
+      `insert into channel_provider_deliveries (
+         id, tenant_id, provider, endpoint_id, message_id,
+         channel_identity_id, idempotency_key, request_fingerprint,
+         status, external_message_id, failure_classification,
+         safe_error_code, retryable, attempts, max_attempts,
+         next_attempt_at, last_attempted_at, lease_id, lease_expires_at,
+         created_by, created_at, updated_at, activation_authorization_id
+       ) values (
+         'delivery_migration_internal_target', $1, 'whatsapp_twilio',
+         'endpoint_migration_internal_target', $2, $3,
+         'delivery:migration:internal-target', $4, 'reserved', null, null,
+         null, null, 0, 3, $6, null, null, null, $5, $6, $6, null
+       )`,
+      [
+        tenant.id,
+        canonicalProjection.rows[0]!.message_id,
+        canonicalProjection.rows[0]!.ordinary_identity_id,
+        "b".repeat(64),
+        user.id,
+        occurredAt,
+      ],
+    );
+
     await expect(migrate(db, { enableRls: true })).resolves.toBeUndefined();
     const applied = await db.query<{ id: string }>(
       `select id from schema_migrations
-       where id = '120_os5_orchestrator_internal_namespace_rls'`,
+       where id in (
+         '120_os5_orchestrator_internal_namespace_rls',
+         '121_os5_orchestrator_namespace_read_delivery_rls'
+       )
+       order by id`,
     );
-    expect(applied.rows).toHaveLength(1);
+    expect(applied.rows).toEqual([
+      { id: "120_os5_orchestrator_internal_namespace_rls" },
+      { id: "121_os5_orchestrator_namespace_read_delivery_rls" },
+    ]);
+    const classifiedDelivery = await db.query<{
+      internal_conversation_target: boolean;
+    }>(
+      `select internal_conversation_target
+         from channel_provider_deliveries
+        where id = 'delivery_migration_internal_target'`,
+    );
+    expect(classifiedDelivery.rows).toEqual([
+      { internal_conversation_target: true },
+    ]);
   });
 
   it("accepte les livraisons WhatsApp historiques non réservées lors d'une mise à niveau", async () => {

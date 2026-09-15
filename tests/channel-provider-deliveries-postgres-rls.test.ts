@@ -56,6 +56,36 @@ describeIfPostgres("RLS PostgreSQL des reprises WhatsApp", () => {
     );
     expect(visibleA.rows).toEqual([{ id: fixtureA.deliveryId }]);
 
+    await expect(
+      withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
+        client.query(
+          `insert into channel_provider_deliveries (
+             id, tenant_id, provider, endpoint_id, message_id,
+             channel_identity_id, idempotency_key, request_fingerprint,
+             status, external_message_id, failure_classification,
+             safe_error_code, retryable, attempts, max_attempts,
+             next_attempt_at, last_attempted_at, lease_id, lease_expires_at,
+             created_by, created_at, updated_at, activation_authorization_id
+           ) values (
+             $1, $2, 'whatsapp_twilio', $3, $4, $5, $6, $7,
+             'reserved', null, null, null, null, 0, 3, $9, null, null, null,
+             $8, $9, $9, null
+           )`,
+          [
+            `delivery_rls_cross_${randomUUID()}`,
+            fixtureB.tenantId,
+            fixtureB.endpointId,
+            fixtureB.messageId,
+            fixtureB.identityId,
+            `delivery-rls-cross-${randomUUID()}`,
+            "f".repeat(64),
+            fixtureB.userId,
+            timestamp,
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/i);
+
     await withTenantContext(restrictedPool, fixtureA.tenantId, (client) =>
       client.query(
         `insert into channel_provider_delivery_events (
@@ -267,7 +297,14 @@ async function seedTenantDelivery(
     occurredAt: timestamp,
     maxAttempts: 3,
   });
-  return { tenantId: tenant.id, deliveryId };
+  return {
+    tenantId: tenant.id,
+    userId: owner.id,
+    endpointId: endpoint.endpointId,
+    messageId,
+    identityId,
+    deliveryId,
+  };
 }
 
 async function createRestrictedRole(ownerPool: Pool) {

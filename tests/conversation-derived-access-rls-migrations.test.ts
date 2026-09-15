@@ -28,7 +28,7 @@ describe("migration RLS des objets dérivés de Conversation", () => {
       "119_os5_conversation_action_plan_revisions",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "120_os5_orchestrator_internal_namespace_rls",
+      "121_os5_orchestrator_namespace_read_delivery_rls",
     );
   });
 

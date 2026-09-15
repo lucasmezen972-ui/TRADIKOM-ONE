@@ -1,30 +1,30 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint applicatif — 14 septembre 2026, 22:39 UTC
+## Checkpoint applicatif — 14 septembre 2026, 23:25 UTC
 
 - Seule la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` a été utilisée; `tmp/` reste intact, non suivi et hors index. Le PDF canonique est confirmé à 71 pages et au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
 - L'action visible « Modifier » crée maintenant une révision durable et immuable d'un plan Conversation encore en attente. Le remplacement annule atomiquement l'ancien plan, ses étapes et son approbation, régénère la clé d'idempotence, revalide catalogue et policy, puis impose une nouvelle approbation avant toute exécution. L'ancien plan ne peut produire ni reçu, workflow, provider, audit d'exécution ni effet métier.
 - La frontière serveur verrouille le plan puis le membership et le rôle décideur dans la même transaction. Les rejeux convergent vers la révision courante, la concurrence ne produit qu'un successeur et la profondeur de lignée est bornée. L'audit n'enregistre ni le titre saisi ni contenu métier sensible.
-- Le namespace interne de l'orchestrateur est réservé à l'identité canonique exacte. Trente politiques RLS restrictives et des fonctions `SECURITY INVOKER` protègent participants, identités, messages, pièces jointes, sauts, livraisons, secrets, bindings et médias. Une migration depuis des livraisons Twilio/Meta ordinaires est prouvée sans les requalifier comme internes; l'identité d'un message est immuable après insertion.
-- Preuves locales : matrice ciblée 9 fichiers verts et 2 ignorés, 76 tests verts et 2 ignorés sans PostgreSQL; suite exhaustive mono-worker 160 fichiers verts et 14 ignorés, 896 tests verts et 32 ignorés sur 928. Le cas A→B→C a d'abord échoué puis prouve maintenant que tout rejeu ancestral retourne la feuille courante. Un run parallèle saturé a été abandonné; ses sept fichiers signalés passent 7/7 et 10/10 isolément, puis toute la suite passe en série. Lint, TypeScript, build production factice, audit high et diff check sont verts; trois avis modérés, zéro high/critical. Deux revues indépendantes finales ne trouvent aucun défaut P1/P2. La publication et la CI autoritative PostgreSQL/RLS avec 20/20 Playwright restent requises avant la classification « prouvé CI ».
+- Le namespace interne de l'orchestrateur est réservé à l'identité canonique exacte. Trente-deux politiques RLS restrictives et des fonctions `SECURITY INVOKER` protègent participants, identités, messages, pièces jointes, sauts, livraisons, secrets, bindings et médias, y compris la lecture des messages et livraisons internes. L'identité d'un message et la classification interne d'une livraison sont immuables après insertion.
+- Le commit applicatif `55fece0` est publié et la continuité `34922145838` est verte. La CI `34922145782` a validé migrations, sauvegarde/restauration, lint et TypeScript puis a trouvé deux écarts RLS PostgreSQL sur 928 tests. La migration additive 0115 masque désormais le message interne à tout acteur non système et permet la reprise tenant-scoped d'une livraison ordinaire grâce à une classification immuable calculée depuis le message ou l'identité, rétro-remplie au passage 120 vers 121, sans desserrer son insertion. Les 17 fichiers de migration et 66 tests passent; le ciblage RLS passe 1 fichier/12 tests et ignore 2 fichiers/3 tests PostgreSQL faute de base locale. Les scénarios PostgreSQL éphémères adversariaux passent et une revue indépendante ne trouve aucun P1/P2. Lint, TypeScript, build factice, audit high, continuity-check et diff check sont verts. La publication de 0115 et sa CI autoritative restent requises avant la classification « prouvé CI ».
 
 ## Alignement prompt maître — révision immuable des plans Conversation
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 24, 31-33, 43-44, 46, 48, 68-71 | Continuer l'ordre conversation-first par une action « Modifier » visible, durable, approuvable et démontrable selon la Definition of Done | Nouvelle lignée immuable, annulation atomique, nouvelle approbation, interface française et parcours desktop/mobile jusqu'à l'exécution `tradikom_mock`; suite exhaustive et build locaux verts | Publication puis CI autoritative et 20/20 Playwright encore requis |
-| 10-18, 22, 35-38, 69-71 | Préserver tenant/RLS, idempotence, concurrence, contrôle du rôle, audit sans contenu et absence d'effet sur le plan remplacé | Contraintes tenant-first, triggers, 30 policies restrictives, identité canonique exacte, identité de message immuable, rejet cross-tenant et plans décidés, aucune preuve d'exécution sur l'ancien plan | Les tests PostgreSQL sont écrits mais 32 tests restent ignorés localement faute de `DATABASE_URL`; la CI doit les exécuter |
+| 3-7, 24, 31-33, 43-44, 46, 48, 68-71 | Continuer l'ordre conversation-first par une action « Modifier » visible, durable, approuvable et démontrable selon la Definition of Done | Nouvelle lignée immuable, annulation atomique, nouvelle approbation, interface française et parcours desktop/mobile jusqu'à l'exécution `tradikom_mock`; commit applicatif publié et continuité verte | CI autoritative complète et 20/20 Playwright encore requis sur le correctif 0115 |
+| 10-18, 22, 35-38, 69-71 | Préserver tenant/RLS, idempotence, concurrence, contrôle du rôle, audit sans contenu et absence d'effet sur le plan remplacé | Contraintes tenant-first, triggers, 32 policies restrictives dont SELECT des messages et livraisons internes, identité canonique exacte, classification interne immuable issue du message ou de l'identité, rejet cross-tenant et plans décidés, aucune preuve d'exécution sur l'ancien plan | Deux échecs CI reproduits sont corrigés localement et les scénarios adversariaux PostgreSQL passent; la nouvelle CI doit prouver les 928 tests |
 | 64-71 | Garder fournisseurs et effets explicitement bornés et distinguer honnêtement les états | Exécution uniquement via `tradikom_mock`; aucun transport réel, `fetch`, secret, Graph, message externe, fusion, déploiement ou dépense | Meta réel reste bloqué humainement par le SMS puis une autorisation distincte au moment exact |
 
 ## Classification de la tranche courante
 
-- Livré localement : révision immuable, interface « Modifier », lignée durable, protections RLS et tests de régression provider.
+- Livré et publié : révision immuable, interface « Modifier » et lignée durable. Livré localement : correctif RLS 0115 et preuves de migration.
 - Réel connecté : aucun fournisseur, modèle ou transport.
 - Sandbox : aucune configurée ou appelée.
 - Mock : générateur déterministe serveur et capacités `tradikom_mock`, sans réseau fournisseur.
 - Bloqué humain : SMS Meta saisi directement dans la console officielle, puis inventaire en lecture seule et confirmation distincte avant tout token persistant ou appel Graph.
 - Hors périmètre : Graph, message réel, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
-- Écarts restants : publication fast-forward, CI PostgreSQL/RLS et 20/20 Playwright; trois avis modérés de dépendances sans high/critical.
+- Écarts restants : publication fast-forward de 0115, CI PostgreSQL/RLS et 20/20 Playwright; trois avis modérés de dépendances sans high/critical.
 
 ## Checkpoint applicatif — 11 septembre 2026, 07:34 UTC
 
