@@ -1,40 +1,39 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-15T07:42:00.000Z",
+  "updatedAt": "2026-09-15T10:09:33.000Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "c60bb2728072db399022b65458305a3655e2d287",
-  "publishedHeadObserved": "c60bb2728072db399022b65458305a3655e2d287",
-  "status": "os5_conversation_clarification_published_ci_proven_human_meta_sms_parallel",
+  "lastCommit": "a9daf552bb88210fc3804657a4147dbd6dcf044f",
+  "publishedHeadObserved": "a9daf552bb88210fc3804657a4147dbd6dcf044f",
+  "status": "os5_conversation_plan_delegation_published_ci_proven_human_meta_sms_parallel",
   "currentPhase": "OS-5",
-  "currentObjective": "Clore la tranche conversation-first prouvée qui conserve une demande réellement ambiguë comme brouillon durable, tout en reconnaissant une demande commerciale explicite accompagnée d'un média sans confondre la notice interne du canal avec l'intention utilisateur. Le checkpoint SMS Meta reste humain et parallèle.",
+  "currentObjective": "Clore la tranche conversation-first qui transfère durablement la validation d'un plan exact encore en attente au destinataire courant, avec réassignation explicite, preuve append-only, idempotence, isolation tenant/RLS, reçu français corroboré et zéro effet externe. Le checkpoint SMS Meta reste humain et parallèle.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
     "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 15, 16, 17, 18, 22, 24, 31, 32, 33, 35, 36, 37, 38, 43, 44, 46, 48, 64, 65, 66, 67, 68, 69, 70, 71],
+      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 17, 18, 22, 24, 31, 32, 33, 35, 36, 37, 38, 46, 48, 68, 69, 70, 71],
       "sections": [
         "0-4 Mandat, north star, anti-dérive et continuité",
         "10-12 Architecture cible, Conversation Hub canonique, preuves et RLS",
-        "15-18 Orchestration bornée, questions de contexte, plan structuré et mission durable",
+        "17-18 Plan structuré, validation humaine et signaux durables confirmer, annuler, modifier ou déléguer",
         "22 PostgreSQL, modèle tenant-first et politiques RLS",
         "24 UX conversationnelle française, décisions lisibles et travail en cours",
         "31-33 Definition of Done, reprise et critères de progression",
         "35-38 Simulation, données sensibles et entrées externes non fiables",
-        "43-44 Abstraction du générateur, sorties structurées et évaluations adversariales",
         "46 Règles absolues de dérive",
         "48 Ordre exact de la prochaine exécution",
-        "64-68 Runtime provider borné et WebChat de référence",
+        "68 WebChat de référence avec plans, confirmation, modification, annulation et travail en cours",
         "69-71 Matrice de tests et auto-contrôle final"
       ],
-      "requirement": "Quand le contexte d'une demande ne permet pas encore un plan complet, l'orchestrateur ne doit ni exécuter, ni demander une validation, ni échouer par une erreur générique. Il doit conserver un brouillon durable tenant-scoped, poser dans la Conversation au plus trois questions françaises réellement nécessaires et laisser l'utilisateur répondre par le canal normal. Le brouillon incomplet reste non validable et inexécutable; une réponse suffisamment précise produit ensuite un plan distinct qui repasse par catalogue, policy et validation unique.",
-      "evidenceExpected": "Le générateur mock déterministe distingue une demande manifestement ambiguë d'une demande exploitable; le service valide malgré tout schéma, coût, capacités, scopes et sécurité, puis persiste sous RLS le brouillon sans étape exécutable et projette une question idempotente dans le fil avec un audit limité aux métadonnées sûres. Aucun approval, reçu de policy, workflow, événement, résultat, provider ou fetch n'existe pour le brouillon. L'interface française affiche Précision requise, les questions et l'action attendue sans bouton de validation, modification ou exécution; après une réponse, un nouveau plan awaiting_approval est préparé. Tests unitaires, intégration, sécurité, rejeu, cross-tenant, PostgreSQL/RLS existant et Playwright desktop/mobile doivent être verts."
+      "requirement": "Depuis la Conversation, un owner, administrator ou manager autorisé doit pouvoir déléguer la validation d'une version exacte de plan encore awaiting_approval à un autre membre décisionnaire qui a accès au fil. La délégation transfère réellement et côté serveur le droit de confirmer, annuler ou modifier ce plan; elle reste visible en français, durable, tenant-scoped, append-only, idempotente et réassignable explicitement sans lancer de mission, workflow, fournisseur ou action externe.",
+      "evidenceExpected": "Une délégation immuable lie tenant, plan, approval, délégant, destinataire, séquence et empreinte de rejeu sous RLS. Le service verrouille plan et memberships, refuse cross-tenant, cible inéligible ou sans accès au fil, borne les réassignations et audite uniquement des identifiants et métadonnées sûres. Tant que la délégation courante existe, seul son destinataire peut confirmer, annuler ou modifier; owner et administrator récupèrent la main par une nouvelle délégation explicite, jamais par contournement silencieux. La carte Conversation propose uniquement les membres admissibles, affiche le responsable courant et son rôle, et un reçu partageable corrobore la délégation courante sans contenu sensible. Aucun reçu de policy, mission, workflow, événement, résultat, provider, fetch, Graph ou envoi n'est créé. Tests de schéma, service, rejeu/concurrence, isolation tenant, PostgreSQL/RLS, actions, reçu et Playwright desktop/mobile doivent être verts."
     }
   },
-  "nextAction": "Relire les pages 17-18, 24, 48 et 68-69, puis auditer sans coder si le signal humain durable déléguer est bien la première lacune conversationnelle OS-5 encore non terminée. Ne sélectionner ni CRM, Kanban, dashboard secondaire, fournisseur réel, secret ni OS-6.",
+  "nextAction": "Relire directement la page 48 et la carte de docs/MASTER_PROMPT_REFERENCE.md, puis sélectionner la première lacune conversation-first réellement non terminée après le signal déléguer. Actualiser masterPrompt.alignment avant tout nouveau code. Ne sélectionner ni CRM, Kanban, dashboard secondaire, fournisseur réel, secret ni OS-6.",
   "nextFile": "docs/MASTER_PROMPT_REFERENCE.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -565,7 +564,21 @@
     "correctif applicatif média : retrait borné uniquement des notices terminales canoniques Meta, Twilio, Teams et Slack avant classification; notice seule et tout suffixe arbitraire restent en clarification; le message média conserve ses sources externes vérifiées",
     "preuves locales du correctif : 2 fichiers/86 tests ciblés verts, dont 56 tests générateur; ESLint ciblé, TypeScript, diff check et continuity-check verts; deux revues indépendantes sans P0-P2",
     "publication fast-forward du correctif c60bb2728072db399022b65458305a3655e2d287 sans tmp; continuité 34940747751 verte",
-    "CI 34940747745 entièrement verte sur c60bb27 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers/988 tests PostgreSQL inclus, build Next.js 16.3.4 et 20/20 Playwright"
+    "CI 34940747745 entièrement verte sur c60bb27 : audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 174 fichiers/988 tests PostgreSQL inclus, build Next.js 16.3.4 et 20/20 Playwright",
+    "run 2026-09-15 : copie Developer uniquement; tmp préservé; PDF canonique SHA-256 exact et 71 pages; pages cœur et pages de délégation relues directement, pages 48 et 69 contrôlées en rendu",
+    "migrations SQL 0116/0117 et runtime 122/123 pour les délégations append-only, tenant-first, immuables et protégées par RLS",
+    "délégation Conversation de bout en bout : verrouillage du plan, de l'approbation et des memberships; destinataire courant seul autorisé à décider ou modifier; récupération owner/administrator uniquement par réassignation explicite",
+    "interface française et reçu corroboré : responsable courant, rôle, membres admissibles et historique borné, sans contenu sensible",
+    "preuves locales finales : 5 fichiers verts et 1 PostgreSQL ignoré, 58 tests verts et 2 ignorés; suite exhaustive 162 fichiers verts et 15 ignorés, 971 tests verts et 35 ignorés",
+    "pnpm lint, pnpm typecheck, build Next.js 16.3.4, audit high, continuity-check et git diff --check verts; trois avis modérés, zéro high/critical",
+    "publication fast-forward du commit fonctionnel 88eeb4277a34d98186aa419a2efc3266e0bcfbd6 sans tmp",
+    "diagnostic CI 34948833959 : migrations, db:verify, sauvegarde/restauration, lint et TypeScript verts; 1004 tests sur 1006 réussis; deux défauts de preuve PostgreSQL isolés sans défaut runtime connu",
+    "corrections de preuve PostgreSQL publiées dans 654c546ae16b5604ed1a79a2eebd3f8fb8c16222 : fixture historique bornée à la migration 120 et preuve RLS restricted-role explicite",
+    "continuité 34951720710 verte sur 654c546, SHA-256 exact, 71 pages, zéro erreur et zéro avertissement",
+    "CI 34951720779 : 177 fichiers/1006 tests PostgreSQL et build Next.js 16.3.4 verts; 19/20 Playwright, unique échec typographique du libellé lecture seule alors que les droits et l'état durable étaient corrects",
+    "correction française minimale publiée dans a9daf552bb88210fc3804657a4147dbd6dcf044f : apostrophe typographique du message lecture seule; ESLint ciblé, TypeScript, diff check et continuity-check locaux verts",
+    "tentatives Playwright Conversation locales non probantes : démarrage production sans PostgreSQL local puis session de démo PGlite non établie; aucune conclusion fonctionnelle tirée, preuve réservée à la CI autoritative",
+    "continuité 34953928580 et CI 34953928584 entièrement vertes sur a9daf55 : SHA-256 exact, 71 pages, zéro erreur ou avertissement de continuité, audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 177 fichiers/1006 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright"
   ],
   "lastValidation": [
     {
@@ -2255,6 +2268,50 @@
     {
       "command": "CI 34940747745 sur c60bb2728072db399022b65458305a3655e2d287",
       "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_174_files_988_postgres_tests_build_next_16_3_4_and_20_of_20_playwright"
+    },
+    {
+      "command": "PDF maître et continuity-check avant délégation de validation",
+      "status": "passed_source_downloads_sha256_exact_71_pages_core_and_delegation_pages_directly_read_pages_48_and_69_visually_checked_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "matrice ciblée finale de délégation",
+      "status": "passed_5_files_1_postgres_file_skipped_58_tests_2_postgres_tests_skipped_zero_failures"
+    },
+    {
+      "command": "vitest exhaustif mono-worker de délégation",
+      "status": "passed_162_files_15_skipped_971_tests_35_skipped_zero_failures_in_756_34_seconds"
+    },
+    {
+      "command": "pnpm lint, pnpm typecheck, build production factice, audit high, continuity-check et git diff --check avant publication",
+      "status": "passed_zero_lint_type_build_or_diff_errors_zero_high_critical_three_moderate_ready_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34948833959 sur 88eeb4277a34d98186aa419a2efc3266e0bcfbd6",
+      "status": "failed_only_two_postgres_proof_defects_175_of_177_files_1004_of_1006_tests_passed_migrations_db_verify_backup_restore_lint_typecheck_passed_build_playwright_skipped"
+    },
+    {
+      "command": "corrections des preuves PostgreSQL dans 654c546ae16b5604ed1a79a2eebd3f8fb8c16222",
+      "status": "passed_historical_migration_120_fixture_and_explicit_restricted_role_rls_proof_targeted_tests_eslint_typecheck_diff_check"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34951720710 sur 654c546ae16b5604ed1a79a2eebd3f8fb8c16222",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34951720779 sur 654c546ae16b5604ed1a79a2eebd3f8fb8c16222",
+      "status": "failed_only_read_only_apostrophe_playwright_expectation_after_177_files_1006_postgres_tests_and_build_next_16_3_4_passed_19_of_20_playwright_permissions_and_state_confirmed_correct_by_trace"
+    },
+    {
+      "command": "correctif typographique lecture seule a9daf552bb88210fc3804657a4147dbd6dcf044f",
+      "status": "passed_french_curly_apostrophe_eslint_targeted_typecheck_diff_check_continuity_local_ci_reproof_pending"
+    },
+    {
+      "command": "Continuité TRADIKOM ONE 34953928580 sur a9daf552bb88210fc3804657a4147dbd6dcf044f",
+      "status": "passed_ready_sha256_exact_71_pages_zero_errors_zero_warnings"
+    },
+    {
+      "command": "CI 34953928584 sur a9daf552bb88210fc3804657a4147dbd6dcf044f",
+      "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_177_files_1006_postgres_tests_build_next_16_3_4_and_20_of_20_playwright_in_55_3_seconds"
     }
   ],
   "humanBlockers": [

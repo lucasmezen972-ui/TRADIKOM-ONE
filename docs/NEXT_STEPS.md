@@ -1,19 +1,20 @@
 # Étapes suivantes TRADIKOM ONE OS
 
-## Situation actuelle — 15 septembre 2026, 07:42 UTC
+## Situation actuelle — 15 septembre 2026, 10:09 UTC
 
-- La tranche « Précision requise » est livrée, publiée et prouvée par la CI autoritative. Une demande vague, négative, informative ou hors du domaine commercial reste un brouillon durable sans étape exécutable. Une demande d'action commerciale complète, y compris formulée comme un ordre interrogatif poli, prépare le plan mock existant; la grammaire positive doit consommer toute la demande.
-- Le brouillon contient au plus trois questions françaises uniques dont le message final est borné par un contrat partagé à 2 000 caractères. Il ne crée ni validation, reçu de policy, workflow, événement, résultat, tâche, provider ou `fetch`. Il ne peut être ni approuvé, ni modifié, ni exécuté.
-- Conversation affiche les questions sans coût, étapes ou boutons de décision. Les mots très longs ne débordent pas sur mobile et la consigne tient compte du droit d'écriture. Une réponse exploitable dans le même fil prépare un nouveau plan distinct `awaiting_approval`.
-- Le premier run publié `34937201415` a validé audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers/982 tests PostgreSQL et le build, puis 19/20 Playwright. L'unique échec a révélé qu'une notice interne ajoutée à une légende média empêchait toute demande explicite d'être reconnue. Le correctif `c60bb2728072db399022b65458305a3655e2d287` retire uniquement les notices terminales canoniques Meta, Twilio, Teams et Slack avant classification; une notice seule ou suivie d'un texte arbitraire reste en clarification et le contexte média vérifié demeure attaché au plan.
-- Preuves finales : 2 fichiers/86 tests ciblés verts après le correctif, ESLint ciblé, TypeScript, diff check et continuity-check verts; deux revues indépendantes sans P0-P2. La continuité `34940747751` et la CI `34940747745` sont entièrement vertes : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers/988 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright.
-- État honnête : livré, publié et prouvé CI = oui; réel connecté = aucun; sandbox = aucune; mock = générateur déterministe et `tradikom_mock`; bloqué humain = SMS Meta puis confirmation distincte au moment exact; hors périmètre = Graph, message externe, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
+- La délégation durable de validation est livrée dans `88eeb427`, ses preuves PostgreSQL sont fiabilisées dans `654c546` et le libellé français lecture seule est harmonisé dans `a9daf55`. Une délégation lie exactement tenant, plan, approbation, empreinte du plan, délégant, destinataire, rôles observés, séquence et empreinte d'idempotence.
+- Le serveur verrouille plan, approbation et memberships. Le destinataire courant est seul autorisé à approuver, refuser ou modifier le plan; propriétaire et administrateur récupèrent la main uniquement par une réassignation explicite. Les rejeux historiques, cibles inéligibles, accès insuffisants, cross-tenant et courses concurrentes échouent fermé.
+- Conversation affiche en français le responsable courant, son rôle, les membres admissibles et un reçu corroboré. L'historique append-only est borné à 32 délégations et l'audit ne contient ni courriel, contenu métier, identifiant fournisseur ni clé brute.
+- La délégation ne crée aucun reçu de policy supplémentaire, mission, workflow, événement d'exécution, résultat, provider, `fetch`, Graph ou message externe.
+- Preuves locales : 58 tests ciblés verts et 2 PostgreSQL ignorés; suite exhaustive 971 tests verts et 35 ignorés; lint, TypeScript, build production, audit high, continuity-check et diff check verts. La première CI a trouvé deux défauts de preuve PostgreSQL, corrigés dans `654c546`.
+- La CI `34951720779` a ensuite validé 177 fichiers/1 006 tests PostgreSQL et le build Next.js 16.3.4, puis 19/20 Playwright. La trace confirme que le rôle lecture seule, le tenant, la délégation et l'absence d'actions sont corrects; seule l'apostrophe droite rendue ne correspondait pas au libellé français attendu. Le correctif minimal `a9daf55` est publié. La continuité `34953928580` et la CI `34953928584` sont entièrement vertes : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 177 fichiers/1 006 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright en 55,3 secondes.
+- État honnête : livré, publié et prouvé CI = oui; réel connecté = aucun; sandbox = aucune; mock = générateur déterministe et `tradikom_mock`; bloqué humain = SMS Meta puis autorisation distincte au moment exact; hors périmètre = Graph, message externe, fusion, déploiement, dépense, CRM, Kanban, dashboard secondaire et OS-6.
 
-## Prochaine action exacte — 15 septembre 2026, 07:42 UTC
+## Prochaine action exacte — 15 septembre 2026, 10:09 UTC
 
-1. Relire directement les pages 17-18, 24, 48 et 68-69 et confronter le WebChat au signal humain durable « déléguer ».
-2. Auditer d'abord si ce signal est bien la première lacune conversationnelle non terminée de l'ordre page 48. Si ce n'est pas le cas, retenir la première lacune antérieure prouvée par le code et les tests.
-3. Avant tout nouveau code, réécrire `masterPrompt.alignment` avec les pages, l'exigence et la preuve attendue. Aucun CRM, Kanban, dashboard secondaire, fournisseur réel, secret ou OS-6 ne doit être sélectionné.
+1. Relire directement la page 48 et la carte de `docs/MASTER_PROMPT_REFERENCE.md`, puis identifier la première lacune conversation-first réellement non terminée après « déléguer ».
+2. Relire les pages métier et techniques de cette tâche, puis actualiser `masterPrompt.alignment` avant tout code.
+3. Livrer la prochaine tranche jusqu'à une preuve utilisable sans sélectionner CRM, Kanban, dashboard secondaire, fournisseur réel, secret ou OS-6.
 
 ### Checkpoint humain parallèle — inchangé
 

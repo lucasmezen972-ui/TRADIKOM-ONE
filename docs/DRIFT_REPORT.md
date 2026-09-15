@@ -1,31 +1,31 @@
 # Rapport de dérive — TRADIKOM ONE OS
 
-## Checkpoint applicatif — 15 septembre 2026, 07:42 UTC
+## Checkpoint applicatif — 15 septembre 2026, 10:09 UTC
 
 - Seule la copie stable `/Users/TRADIKOM/Developer/TRADIKOM-ONE` a été utilisée; `tmp/` reste intact, non suivi et hors index. Le PDF canonique est confirmé à 71 pages, sans JavaScript ni chiffrement, et au SHA-256 `bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5`.
-- Le commit `b42a5a91f9b256bdf8c829eb2eac7bfcb5303bec` livre le brouillon durable « Précision requise » pour toute demande qui ne démontre pas encore une intention d'action commerciale supportée. Une à trois questions françaises sont persistées avec zéro étape; aucun approval, reçu de policy, workflow, événement, résultat, tâche, provider ou `fetch` n'est créé. La réponse claire suivante produit un nouveau plan distinct et l'ancien brouillon reste immuable et inexécutable.
-- La première CI `34937201415` a validé audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers et 988 tests PostgreSQL ainsi que le build, puis a terminé à 19/20 Playwright. L'échec a révélé une vraie lacune applicative : l'ingress Meta ajoute à la légende média la notice canonique « Document WhatsApp en attente d'import sécurisé. », ce qui empêchait une demande explicite accompagnée d'un média vérifié d'être reconnue.
-- Le correctif `c60bb2728072db399022b65458305a3655e2d287` retire avant reconnaissance uniquement une notice terminale canonique émise par Meta, Twilio, Teams ou Slack. Une notice seule reste une clarification et un suffixe libre ajouté après la notice empêche son retrait; la demande restante doit toujours satisfaire entièrement l'allowlist positive fermée. Le message et le contexte média vérifié conservent leurs mêmes identifiants et leur isolation tenant.
-- Conversation affiche en français l'état de clarification sans coût, étape ni bouton d'action. Les mots longs restent cassables sur mobile et la consigne tient compte du droit d'écriture. Le parcours média utilise désormais une vraie demande explicite et prouve que l'ajout de la notice Meta ne détruit plus l'intention commerciale.
-- Les revues indépendantes finales ne trouvent aucun défaut P0-P2. La continuité `34940747751` est verte et la CI autoritative `34940747745` est entièrement verte : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 174 fichiers/988 tests PostgreSQL, build de production Next.js 16.3.4 et 20/20 Playwright.
+- Le commit `88eeb4277a34d98186aa419a2efc3266e0bcfbd6` livre le signal humain durable « déléguer » depuis Conversation. Une preuve append-only lie tenant, plan et approbation exacts, empreinte du plan, délégant, destinataire, rôles observés, séquence et empreinte d'idempotence; l'historique est borné à 32.
+- Le serveur verrouille le plan, l'approbation et les memberships. Seul le destinataire courant peut approuver, refuser ou modifier; propriétaire et administrateur récupèrent la main uniquement par une réassignation explicite. Cross-tenant, cibles inéligibles ou sans accès, rejeux historiques et courses concurrentes échouent fermé.
+- Conversation affiche en français le responsable courant, son rôle, les membres admissibles et un reçu corroboré. L'audit exclut courriel, contenu métier, identifiant fournisseur et clé brute. La délégation ne crée aucun reçu de policy supplémentaire, mission, workflow, événement, résultat, provider, `fetch`, Graph ou message externe.
+- La CI `34948833959` a isolé deux défauts de preuve PostgreSQL, corrigés dans `654c546ae16b5604ed1a79a2eebd3f8fb8c16222` sans changement runtime : fixture historique réellement bornée à la migration 120 et preuve RLS explicite avec rôle restreint. La CI suivante `34951720779` valide 177 fichiers/1 006 tests PostgreSQL et le build Next.js 16.3.4, puis termine à 19/20 Playwright.
+- L'artefact Playwright confirme que l'observateur est dans le bon tenant, voit le fil et la délégation, et ne dispose d'aucune action sensible. L'unique échec était typographique : l'entité HTML rendait une apostrophe droite alors que le contrat français attendait l'apostrophe courbe. Le correctif minimal `a9daf552bb88210fc3804657a4147dbd6dcf044f` est publié. La continuité `34953928580` et la CI `34953928584` sont entièrement vertes : audit, migrations, `db:verify`, sauvegarde/restauration, lint, TypeScript, 177 fichiers/1 006 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright en 55,3 secondes.
 
-## Alignement prompt maître — clarification conversationnelle durable
+## Alignement prompt maître — délégation durable de validation
 
 | Pages relues | Exigence | Preuve obtenue | Écarts restants |
 | --- | --- | --- | --- |
-| 3-7, 17, 24, 31-33, 46, 48, 68-71 | Poser des questions seulement quand le contexte manque réellement, rester conversation-first et fournir un état français démontrable selon la Definition of Done | Brouillon durable « Précision requise », une à trois questions, ordre interrogatif explicite reconnu, réponse dans le fil puis plan distinct; CI `34940747745` avec 174 fichiers/988 tests et 20/20 Playwright | Aucun écart connu pour cette tranche; le prochain signal « déléguer » doit être audité contre l'ordre exact de la page 48 avant tout code |
-| 10-12, 15-18, 22, 35-38, 43-44 | Valider schéma, capacités, permissions, coût et risque avant toute action; préserver tenant, idempotence et audit sans contenu | Validation avant normalisation, état `draft` fermé, zéro étape et zéro effet; rejeu, cross-tenant, restricted-role et suite PostgreSQL/RLS autoritative verts | Aucun écart tenant/RLS connu pour cette tranche |
-| 64-69 | Garder le WebChat comme référence sans clé, rendre les états honnêtes et couvrir provider, sécurité, média et accessibilité | Interface française sans action prématurée; notices terminales Meta/Twilio/Teams/Slack reconnues sans élargir l'allowlist; plan suivant en `tradikom_mock`; aucune requête Meta; build et 20/20 Playwright verts | Réel connecté = aucun; sandbox = aucune; Meta réel reste bloqué humainement |
+| 3-7, 17-18, 24, 31-33, 46, 48, 68-71 | Rendre le signal « déléguer » visible, durable et réellement autoritatif depuis Conversation | Délégation exacte et append-only, responsable courant visible en français, formulaire borné et reçu corroboré; tests service, actions, reçu et parcours desktop/mobile; CI `34953928584` verte avec 20/20 Playwright | Aucun écart connu pour cette tranche; la prochaine lacune doit être resélectionnée depuis la page 48 |
+| 10-12, 22, 35-38 | Préserver tenant/RLS, idempotence, immutabilité, autorisations serveur et audit sans contenu sensible | Migrations 0116/0117 et runtime 122/123; verrous sur plan, approbation et memberships; écritures système uniquement; lecture héritée du fil; cible et rejeu cross-tenant refusés; 177 fichiers/1 006 tests PostgreSQL verts dans `34953928584` | Aucun écart tenant/RLS connu après la preuve PostgreSQL autoritative |
+| 69-71 | Prouver permissions, courses, rejeu, zéro effet externe et parcours complet | Suite locale exhaustive, tests PostgreSQL restricted-role, build autoritatif et 20/20 Playwright en 55,3 secondes; trace du run précédent confirmant l'absence d'actions pour l'observateur | Réel connecté = aucun; Meta reste un checkpoint humain parallèle |
 
 ## Classification de la tranche courante
 
-- Livré, publié et prouvé CI : clarification durable dans `b42a5a9`, correction des demandes média dans `c60bb27`, continuité `34940747751` et CI `34940747745` entièrement vertes.
+- Livré, publié et prouvé CI : délégation durable dans `88eeb427`, preuves PostgreSQL dans `654c546`, correction française dans `a9daf55`, continuité `34953928580` et CI `34953928584` entièrement vertes.
 - Réel connecté : aucun fournisseur, modèle ou transport.
 - Sandbox : aucune configurée ou appelée.
 - Mock : générateur déterministe serveur et capacités `tradikom_mock`, sans réseau fournisseur.
 - Bloqué humain : SMS Meta saisi directement dans la console officielle, puis confirmation distincte au moment exact avant tout token persistant, appel Graph ou message réel.
 - Hors périmètre : Graph, message externe, endpoint public, fusion, déploiement, DNS, dépense, CRM, Kanban, dashboard secondaire et OS-6.
-- Écarts restants : aucun connu pour la tranche; trois avis de dépendances modérés, sans high/critical, restent suivis. La prochaine action est de relire les pages 17-18, 24, 48 et 68-69 puis d'auditer le signal humain durable « déléguer » avant toute nouvelle implémentation.
+- Écarts restants : aucun connu pour la tranche; trois avis de dépendances modérés, sans high/critical, restent suivis. La prochaine lacune doit être sélectionnée depuis la page 48.
 
 ## Checkpoint applicatif — 15 septembre 2026, 04:32 UTC
 
