@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T11:05:00.955Z",
+  "updatedAt": "2026-10-30T11:39:13.902Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "4e08facdd18ee898764b7d5fcecec34b8e5c177f",
-  "publishedHeadObserved": "4e08facdd18ee898764b7d5fcecec34b8e5c177f",
-  "status": "free_remote_colab_started_computer_connection_unavailable",
+  "lastCommit": "0c84f609d27f3043cb5e1d3c25a2a7cac8fb62b3",
+  "publishedHeadObserved": "0c84f609d27f3043cb5e1d3c25a2a7cac8fb62b3",
+  "status": "security_dependencies_patched_native_targeted_passed_codespaces_full_recipe_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Recette distante sans dépense additionnelle, GitHub Actions ni installation du dépôt sur le Mac. Reprendre la machine Colab gratuite avant de conclure sur la validation native.",
+  "currentObjective": "Exécuter gratuitement la recette native du dépôt hors du Mac et sans GitHub Actions, après correction des dépendances signalées par l'audit.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -54,13 +54,13 @@
       "evidenceExpected": "Tests de régression sur provenance, redirection autoritative et refus; validation isolée en mémoire, lint et analyse syntaxique avec outils existants. Conserver la suite PostgreSQL/RLS, build et Playwright comme non exécutée sur ce nouveau lot."
     }
   },
-  "nextAction": "Rétablir la connexion à l'ordinateur, reprendre le scratchpad Colab existant et lire la fin de install-lockfile avant de relancer quoi que ce soit. Le dépôt distant est épinglé sur 4e08facdd18ee898764b7d5fcecec34b8e5c177f. Lancer ensuite les contrôles natifs dans ce runtime avec une base jetable ; aucune dépense ni session Vercel Sandbox n'est autorisée. Terminer la connexion GitHub uniquement après choix du compte par l'opérateur, suspendre la planification Actions existante, puis rétablir la base Supabase.",
+  "nextAction": "Dans le Codespace de validation déjà créé, récupérer le nouveau commit GitHub exact, détacher le checkout sur ce SHA et lancer scripts/verify-isolated.sh avec Node22/pnpm11.7, PostgreSQL17 jetable et aucun fournisseur réel. Lire tous les résultats, corriger les échecs, conserver les preuves puis arrêter le Codespace. Aucun budget payant n'est autorisé.",
   "nextFile": "scripts/verify-isolated.sh",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
-    "schedule": "Toutes les heures à la minute 17",
-    "currentSessionStatus": "Aucun lancement. Suspendre le workflow historique planifié depuis GitHub authentifié avant toute reprise ; [skip ci] ne désactive pas une planification."
+    "schedule": "Désactivée manuellement; ancienne planification conservée seulement dans l'historique du dépôt.",
+    "currentSessionStatus": "Workflow tradikom-continuity.yml désactivé manuellement depuis GitHub le 30 octobre 2026, bannière de désactivation relue. Aucun workflow lancé pour ces commits."
   },
   "commandsRun": [
     "git status --short --branch",
@@ -2370,14 +2370,40 @@
     {
       "command": "Recette Linux complète et fournisseurs réels",
       "status": "not_run_pending_human_account_access_and_remote_runner_budget"
+    },
+    {
+      "command": "Dépendances corrigées : pnpm lint et pnpm typecheck natifs Node22",
+      "status": "passed"
+    },
+    {
+      "command": "pnpm exec vitest run OpenAI + goal-watch-access",
+      "status": "passed_23_native_tests"
+    },
+    {
+      "command": "SDK Teams2.0.14 et MSAL7.1.0 réellement résolu, transport seul en double, fetch/sockets bloqués",
+      "status": "passed_10_native_tests_no_network"
+    },
+    {
+      "command": "pnpm audit --prod --json après correction",
+      "status": "passed_zero_advisories_no_ignored_ghsas"
+    },
+    {
+      "command": "Build natif sur baseline0c84f609 avant mise à jour des dépendances",
+      "status": "passed_baseline_only_updated_build_pending"
+    },
+    {
+      "command": "GitHub UI : suspension tradikom-continuity.yml, lecture de la bannière",
+      "status": "verified_disabled"
+    },
+    {
+      "command": "Codespaces : garde de dépense nulle, création2cœurs sans prébuild, UID1000/Node22/Docker",
+      "status": "verified_tools_ready_full_recipe_pending"
     }
   ],
   "humanBlockers": [
-    "Connexion GitHub nécessaire dans le navigateur pour poursuivre la console Vercel; connexion Supabase également requise",
     "Rétablissement administratif du projet Supabase dans la console officielle",
-    "Budget explicite du runner Vercel avant toute session de calcul potentiellement facturée",
     "Consentements, secrets serveur et implémentations autoritatives requis avant fournisseur ou génération réels",
-    "Toute dépense, fusion, production et modification DNS restent distinctes"
+    "Toute dépense, fusion, production ou modification DNS reste distincte et non autorisée par cette recette gratuite"
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2404,13 +2430,16 @@
       "runtimeValidated": false
     },
     "validation": {
-      "runner": "Vercel Sandbox envisagé, non lancé",
-      "requiresBudgetConfirmation": true,
-      "proposedTimeoutMinutes": 20,
-      "proposedVcpus": 2,
+      "runner": "Codespaces personnel dans le quota inclus, 2 cœurs, garde de dépense nulle vérifiée",
+      "state": "created_tools_ready_recipe_not_started",
+      "nodeVersion": "22.23.4",
+      "dockerVersion": "29.9.2-2",
+      "osUserId": 1000,
+      "additionalSpendAuthorized": 0,
+      "requiresBudgetConfirmation": false,
       "publicPorts": [],
-      "persistent": false,
-      "githubActions": false
+      "githubActions": false,
+      "prebuild": false
     }
   },
   "completedPreparation": [
@@ -2454,5 +2483,44 @@
     "blocker": "Connexion à l'ordinateur indisponible après démarrage de l'installation. Aucune preuve de fin ou de tests verts.",
     "subscriptionsOrCreditsPurchased": false,
     "vercelSandboxCreated": false
+  },
+  "nativeValidationCheckpoint": {
+    "baselineSha": "0c84f609d27f3043cb5e1d3c25a2a7cac8fb62b3",
+    "productionAuditBefore": {
+      "low": 1,
+      "moderate": 16,
+      "high": 20,
+      "critical": 4
+    },
+    "productionAuditAfter": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "ignoredAdvisories": [],
+    "lint": "passed_with_updated_dependencies",
+    "typecheck": "passed_with_updated_dependencies",
+    "targetedTests": {
+      "goalWatchAccess": 3,
+      "openaiGenerator": 20,
+      "teamsMsalCompatibility": 10
+    },
+    "baselineBuild": "passed_on_0c84f609_before_dependency_updates",
+    "fullVitest": "initial_run_interrupted_for_dependency_remediation_no_green_claim",
+    "postgresRls": "pending_codespaces_recipe",
+    "backupRestore": "pending_codespaces_recipe",
+    "updatedBuild": "pending_codespaces_recipe",
+    "playwright": "pending_codespaces_recipe",
+    "continuity": {
+      "status": "ready",
+      "errors": 0,
+      "warnings": [
+        "PDF canonique absent dans cet environnement distant; aucune nouvelle lecture du PDF n'est revendiquée."
+      ]
+    },
+    "suppliersActivated": false,
+    "macCloneOrInstall": false
   }
 }

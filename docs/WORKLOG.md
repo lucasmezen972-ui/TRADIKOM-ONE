@@ -1434,3 +1434,17 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 ## 2026-10-30 — Essai de recette distante gratuite
 
 La demande utilisateur fixe la dépense additionnelle à 0 $. Aucun runner Vercel payant n'est créé. Colab CPU standard a fourni un Linux avec Node 22.23.4 ; la sonde réseau, le clone public au SHA `4e08facdd18ee898764b7d5fcecec34b8e5c177f` et pnpm 11.7.0 ont réussi. L'installation du lockfile a démarré, mais la connexion à l'ordinateur est devenue indisponible avant sa relecture finale. Aucun résultat natif, PostgreSQL/RLS, build ou E2E n'est ajouté aux preuves. Aucun clone ou installation du dépôt sur le Mac, aucun GitHub Actions, achat ou abonnement. Reprise dans le scratchpad Colab ouvert après rétablissement de la connexion.
+
+
+## 2026-10-30 — Reprise distante gratuite et correctifs de dépendances
+
+Cette section remplace les anciennes instructions de reprise : aucune dépense additionnelle n'est autorisée. GitHub est accessible sur le bon compte et le workflow planifié `tradikom-continuity.yml` a été désactivé manuellement, bannière relue. Aucun GitHub Actions n'a été lancé.
+
+Un Codespace de validation de deux cœurs a été créé dans le quota inclus, après vérification d'une garde de dépense nulle. Il dispose d'un utilisateur OS non-root (UID1000), de Node22.23.4 et de Docker29.9.2-2. Aucun prébuild ou port public n'est configuré. La recette complète n'a pas encore démarré : récupérer le nouveau SHA GitHub exact et exécuter `scripts/verify-isolated.sh`, conserver les preuves puis arrêter l'environnement.
+
+Le runtime distant Work Mode a installé le lockfile du dépôt sans utiliser le Mac. Sur les dépendances mises à jour : lint et typecheck complets verts; 23 tests natifs OpenAI/accès objectifs et 10 tests de compatibilité Teams/MSAL verts. L'audit `--prod` passe de 41 avis (4 critiques) à zéro, sans avis ignoré. Voir [DEPENDENCY_SECURITY.md](./DEPENDENCY_SECURITY.md) pour les versions et limites de l'override MSAL.
+
+Le build natif est vert sur la baseline `0c84f609`, avant ces mises à jour. Le build des dépendances corrigées, Vitest exhaustif, PostgreSQL/RLS, la restauration et Playwright restent à exécuter dans Codespaces. La première suite Vitest exhaustive a été interrompue pour corriger les dépendances; elle n'est pas présentée comme verte. Le contrôle de continuité retourne `ready` avec l'avertissement explicite que le PDF canonique n'est pas disponible dans ce runtime distant.
+
+Le premier essai Colab reste un historique non vérifié jusqu'à sa fin d'installation; il est remplacé pour la suite par ce Codespace. Supabase reste inactif et distinct de la base jetable. Aucun fournisseur métier n'est activé, aucun déploiement ou achat n'est effectué.
+

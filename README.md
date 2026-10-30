@@ -137,9 +137,11 @@ Les dernières CI historiques vertes de la base `24d688f` sont `34956617933` et 
 
 ### Limites actuelles
 
+- L'audit de production du lot de dépendances corrigées ne signale aucun avis, sans exception masquée : voir [DEPENDENCY_SECURITY.md](docs/DEPENDENCY_SECURITY.md). La recette complète du nouveau SHA reste en cours de préparation dans Codespaces.
+
 - Un adaptateur OpenAI structuré est préparé et testé avec doubles, mais reste non raccordé au runtime : voir [préparation modèle](docs/OPENAI_CONVERSATION_PREPARATION.md).
 - La recette Linux distante sans GitHub Actions est préparée dans [CLOUD_VALIDATION.md](docs/CLOUD_VALIDATION.md). Le projet Vercel est configuré mais aucun déploiement n'est publié.
-- Aucun fournisseur réel ni sandbox n'a été connecté ou appelé dans la session du 30 octobre 2026.
+- Les fournisseurs métier restent désactivés. Des environnements de validation distants sont utilisés sans déploiement ni trafic réel.
 - Une préparation d'adaptateur et un test avec doubles ne constituent pas une activation fournisseur.
 - Le générateur des plans Conversation est déterministe. L'abstraction historique `OpenAiProvider` utilise elle aussi le fallback déterministe : ses sorties conservent désormais `provider: "deterministic"` et `model: "template-v1"`. Un flag et une clé ne sont pas une preuve d'appel à un modèle.
 - Les étapes de stockage objet, d'antivirus, d'OCR/transcription, de configuration des fournisseurs et de recette production restent ouvertes.
@@ -160,7 +162,7 @@ La prochaine recette complète doit être exécutée dans un environnement autor
 
 ## Stack actuelle
 
-- Next.js `16.3.4` App Router
+- Next.js `16.4.1` App Router
 - React `19.2.4`
 - TypeScript `5`
 - Tailwind CSS `4`
@@ -168,7 +170,7 @@ La prochaine recette complète doit être exécutée dans un environnement autor
 - Drizzle ORM `0.45.2`
 - PGlite `0.5.4` pour la démonstration locale bornée
 - OpenAI SDK `6.46.0` derrière abstraction et feature flag
-- Zod `4.4.3`
+- Zod `4.6.6`
 - Vitest `4.1.10`
 - Playwright `1.61.1`
 

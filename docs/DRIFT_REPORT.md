@@ -495,3 +495,8 @@ Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les messages en
 - Limites : les contrôles isolés ne sont pas Vitest natif ni PostgreSQL/RLS/build/Playwright. L'adaptateur n'est pas raccordé et son modèle n'est jamais appelé. Aucun objectif ou planning créé. OS-5 réel et OS-6 à OS-8 restent ouverts.
 - Infrastructure préparée : Vercel Node22 protégé, aucune préversion publiée; base et connexions opérateur non prêtes. Aucun coût de runner n'est engagé sans budget explicite.
 - Prochaine action : terminer les accès et le budget puis exécuter la recette isolée sur le SHA choisi; ne pas fusionner ou produire une fausse déclaration de fin.
+
+
+## 30 octobre 2026 — Recette gratuite et chaîne de dépendances
+
+La demande actuelle autorise un coût additionnel nul, aucun Actions et aucune installation sur le Mac. Le travail reste la validation de la Conversation et de ses frontières, sans nouvelle fonctionnalité métier. GitHub est rétabli, le workflow historique est désactivé et un Codespace de test a été créé dans le quota inclus avec garde financière vérifiée. L'audit production passe de41 à0 sans exception masquée. Les vrais tests Vitest ciblés (23+10), lint et typecheck sont verts. Le build de la baseline est vert; aucune preuve du build corrigé, de Vitest exhaustif, PostgreSQL/RLS ou Playwright n'est anticipée. Le PDF canonique reste absent de ce runtime : aucune nouvelle lecture n'est inventée. Les fournisseurs, OS-6 à OS-8 et la production restent ouverts.

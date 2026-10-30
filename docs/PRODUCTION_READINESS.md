@@ -80,3 +80,8 @@ La validation Zod demarre avant le runtime et retourne uniquement les noms de va
 Les chemins applicatifs des objectifs internes sont durcis et un adaptateur modèle autonome est préparé. Ces changements n'activent aucun fournisseur ni suivi programmé. Le projet Vercel est configuré en Node22 avec protection conservée, sans déploiement. La recette isolée Linux/PostgreSQL17 est décrite dans `docs/CLOUD_VALIDATION.md`.
 
 Les contrôles ciblés en mémoire ne lèvent aucune case de la checklist avant trafic. La base applicative, les accès opérateur et le budget du runner doivent être confirmés; les politiques RLS et limites d'évaluation des objectifs restent à auditer. Garder la PR en brouillon tant que la recette complète du nouveau SHA n'est pas exécutée.
+
+
+## Dépendances et validation distante du 30 octobre 2026
+
+Les dépendances corrigées donnent zéro avis dans l'audit de production sans ignoreGhsas. Un override MSAL7.1.0 limité au SDK Teams est couvert par10 tests natifs sans réseau; cela ne constitue pas une certification de Microsoft ni une validation OAuth/identité managée en production. Lint, typecheck et23 tests natifs OpenAI/accès objectifs passent. La recette exhaustive du nouveau SHA dans Codespaces, dont PostgreSQL/RLS, restauration, build corrigé et Playwright, reste obligatoire. La base applicative Supabase et les fournisseurs réels ne sont pas rétablis par ces contrôles. La PR reste en brouillon.
