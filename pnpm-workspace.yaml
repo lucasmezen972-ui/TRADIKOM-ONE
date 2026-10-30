@@ -2,6 +2,9 @@ packages:
   - "."
 
 overrides:
+  # Chargeur Drizzle : transformations TypeScript vérifiées hors réseau.
+  "@esbuild-kit/core-utils>esbuild": "0.25.12"
+  "vite": "8.1.6"
   # GHSA-xcx6-jx8p-x3h5 : correctif MSAL ; contrat Teams vérifié sans réseau.
   "@microsoft/teams.apps>@azure/msal-node": "7.1.0"
   "brace-expansion@1": "1.1.21"

@@ -29,6 +29,12 @@ Le test `tests/teams-sdk-compatibility.test.ts` résout MSAL depuis Teams lui-m�
 
 Limites : aucune authentification Azure, découverte/JWKS Microsoft, acquisition de jeton d'identité managée ou connexion de production n'est prouvée. Les canaux réels restent désactivés. Surveiller une version Teams qui déclare une version MSAL corrigée, puis retirer cet override seulement après les mêmes contrôles.
 
+## Dernier correctif des outils de développement
+
+L'audit complet, incluant le développement, avait encore9 avis (1 élevé,7 modérés,1 faible). Vitest passe de4.1.10 à4.1.12, Vite est verrouillé à8.1.6, et l'override limité `@esbuild-kit/core-utils>esbuild` à0.25.12 remplace le moteur vulnérable du chargeur Drizzle. L'audit complet retourne désormais **zéro avis**, sans exception masquée.
+
+Cet override esbuild dépasse la plage déclarée par core-utils. Un smoke hors ligne a vérifié la résolution réelle depuis Drizzle vers0.25.12, les transformations CJS/ESM, leur exécution, les sourcemaps et le rejet de TypeScript invalide : vert, zéro tentative réseau, sans injection ni cache disque. Le SDK Teams conserve ses10 tests verts sous Vitest4.1.12. La recette exhaustive est à rejouer sur le nouveau commit exact; les résultats de879ef66 ne lui sont pas attribués.
+
 ## Validation réalisée et restante
 
 Sur le lot corrigé, Node22.23.4 et pnpm11.7.0 : lint global, typecheck global,23 tests natifs OpenAI/accès objectifs,10 tests natifs SDK et audit de production passent. Le build de la baseline0c84f609 est vert avant la mise à jour des dépendances. La suite exhaustive, PostgreSQL/RLS, sauvegarde/restauration, build corrigé et Playwright restent à exécuter sur le SHA publié exact dans le Codespace de validation.
