@@ -60,3 +60,16 @@ Ces contrôles isolés utilisent des composants préinstallés et des doubles ; 
 ## Avant production
 
 Rétablir la base, vérifier le rôle applicatif restreint et les secrets dans les consoles officielles, puis effectuer la recette sur le SHA choisi. Les fournisseurs, le stockage, le worker et toute programmation d'objectifs doivent être configurés et autorisés explicitement. Examiner les objectifs internes existants avant toute activation de maintenance. Aucune fusion ou mise en production n'est déduite de ce document.
+
+## Essai gratuit du 30 octobre 2026 — reprise requise
+
+La demande actuelle fixe un budget additionnel de **0 $**. Aucun Vercel Sandbox, achat de crédit ou abonnement n'a été lancé. Les outils Vercel ne donnent pas ici le solde de crédits permettant de garantir une exécution sans facturation.
+
+Un scratchpad Google Colab existant, sans copie Drive ni montage Drive, a obtenu un runtime CPU standard Linux : 2 CPU, 12,67 Go de RAM, Node.js 22.23.4. La sonde distante et l'accès Git public ont réussi. Le clone distant a été relu au SHA `4e08facdd18ee898764b7d5fcecec34b8e5c177f` et l'installation de pnpm 11.7.0 s'est terminée avec le code 0.
+
+L'installation du lockfile a démarré, puis la connexion à l'ordinateur est devenue indisponible. Sa fin, les tests natifs, PostgreSQL/RLS, le build et Playwright restent **non vérifiés**. Reprendre le scratchpad ouvert et lire sa sortie avant de relancer une installation. Le script Docker du dépôt n'a pas été exécuté ; Docker et PostgreSQL étaient absents lors de la sonde Colab. Prévoir une base jetable adaptée au runner avant les vérifications PostgreSQL et restauration.
+
+- Scratchpad à reprendre : https://colab.research.google.com/notebooks/empty.ipynb#scrollTo=lIYdn1woOS1n
+- Documentation officielle : https://research.google.com/colaboratory/faq.html
+
+Les ressources gratuites sont limitées et peuvent être interrompues. Ne pas ouvrir de tunnel, de port public, de service permanent, de montage Drive ou d'option payante pour ce travail. Une reconnexion GitHub reste en attente du choix de compte par l'opérateur.

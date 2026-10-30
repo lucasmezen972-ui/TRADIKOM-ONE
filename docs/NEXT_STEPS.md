@@ -1,3 +1,7 @@
+## Reprise prioritaire — recette gratuite, 30 octobre 2026
+
+Budget additionnel autorisé : 0 $. Le scratchpad Colab ouvert dispose d'un Linux distant et du clone épinglé sur `4e08fac`. La sonde, le clone et pnpm ont réussi ; la fin de l'installation du lockfile n'est pas observable depuis la coupure de connexion à l'ordinateur. Reprendre cette sortie avant toute nouvelle exécution. Aucun test natif supplémentaire n'est revendiqué. Voir [CLOUD_VALIDATION.md](./CLOUD_VALIDATION.md).
+
 # Étapes suivantes TRADIKOM ONE OS
 
 ## Checkpoint du 30 octobre 2026 — environnement et frontières préparés

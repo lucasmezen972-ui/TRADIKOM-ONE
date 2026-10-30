@@ -1429,3 +1429,8 @@ Correction de continuité : le mandat utilisateur de poursuivre le chantier et l
 - Contrôles exécutés sans fichiers : 13 vérifications SQL en mémoire SQLite3.51, 8 cas de schémas avec Zod embarqué Next.js, 20 callbacks de scénarios modèle avec transport et matchers adaptés; analyse syntaxique TS5.9.3, lint ESLint9.39.4 des six fichiers et bash -n sans diagnostic.
 - Limites conservées : aucun Vitest natif, typecheck global, PostgreSQL/RLS, build ou Playwright de ce lot. Le SDK réel n'a pas été appelé. RLS/atomicité/concurrence Goal Watch restent à terminer. Le produit complet reste non livré et la PR reste en brouillon.
 - Reprise : connexions opérateur et budget du runner, puis recette exacte du SHA GitHub. Aucune fusion ou mise en production.
+
+
+## 2026-10-30 — Essai de recette distante gratuite
+
+La demande utilisateur fixe la dépense additionnelle à 0 $. Aucun runner Vercel payant n'est créé. Colab CPU standard a fourni un Linux avec Node 22.23.4 ; la sonde réseau, le clone public au SHA `4e08facdd18ee898764b7d5fcecec34b8e5c177f` et pnpm 11.7.0 ont réussi. L'installation du lockfile a démarré, mais la connexion à l'ordinateur est devenue indisponible avant sa relecture finale. Aucun résultat natif, PostgreSQL/RLS, build ou E2E n'est ajouté aux preuves. Aucun clone ou installation du dépôt sur le Mac, aucun GitHub Actions, achat ou abonnement. Reprise dans le scratchpad Colab ouvert après rétablissement de la connexion.

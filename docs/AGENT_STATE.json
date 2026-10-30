@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T10:50:48.521Z",
+  "updatedAt": "2026-10-30T11:05:00.955Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "e65c26216576230fc97dc08b64d2cfa532fc4921",
-  "publishedHeadObserved": "e65c26216576230fc97dc08b64d2cfa532fc4921",
-  "status": "prepared_cloud_validation_and_model_transport_human_access_budget_pending",
+  "lastCommit": "4e08facdd18ee898764b7d5fcecec34b8e5c177f",
+  "publishedHeadObserved": "4e08facdd18ee898764b7d5fcecec34b8e5c177f",
+  "status": "free_remote_colab_started_computer_connection_unavailable",
   "currentPhase": "OS-5",
-  "currentObjective": "Finaliser par GitHub et les consoles disponibles : fermer la fuite applicative des objectifs privés, préparer un transport IA structuré à autorisation explicite et une recette Linux distante sans Actions ni stockage de dépôt sur le Mac.",
+  "currentObjective": "Recette distante sans dépense additionnelle, GitHub Actions ni installation du dépôt sur le Mac. Reprendre la machine Colab gratuite avant de conclure sur la validation native.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -54,7 +54,7 @@
       "evidenceExpected": "Tests de régression sur provenance, redirection autoritative et refus; validation isolée en mémoire, lint et analyse syntaxique avec outils existants. Conserver la suite PostgreSQL/RLS, build et Playwright comme non exécutée sur ce nouveau lot."
     }
   },
-  "nextAction": "Après connexion GitHub, suspendre la planification historique Actions, puis rétablir l'accès Supabase et confirmer le budget du runner distant. Relire le SHA GitHub exact et exécuter scripts/verify-isolated.sh dans un Linux jetable autorisé, jamais sur le Mac ni contre une base existante. Ne raccorder l'IA qu'après implémentation et preuve des réservations d'autorisation/coût/audit.",
+  "nextAction": "Rétablir la connexion à l'ordinateur, reprendre le scratchpad Colab existant et lire la fin de install-lockfile avant de relancer quoi que ce soit. Le dépôt distant est épinglé sur 4e08facdd18ee898764b7d5fcecec34b8e5c177f. Lancer ensuite les contrôles natifs dans ce runtime avec une base jetable ; aucune dépense ni session Vercel Sandbox n'est autorisée. Terminer la connexion GitHub uniquement après choix du compte par l'opérateur, suspendre la planification Actions existante, puis rétablir la base Supabase.",
   "nextFile": "scripts/verify-isolated.sh",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2426,5 +2426,33 @@
     "Autorisation de modèle, réservation budgétaire durable et audit serveur à implémenter et prouver avant activation IA",
     "Base applicative et authentifications opérateur à rétablir",
     "Fournisseur réel, stockage, expérience mobile cible, marketplace et recette production non finalisés"
-  ]
+  ],
+  "remoteValidationBudget": {
+    "maximumAdditionalSpend": 0,
+    "currency": "USD",
+    "authorization": "Demande utilisateur du 30 octobre 2026 : essayer gratuitement.",
+    "paidRunnerAuthorized": false
+  },
+  "freeRemoteAttempt": {
+    "provider": "Google Colab",
+    "notebook": "https://colab.research.google.com/notebooks/empty.ipynb#scrollTo=lIYdn1woOS1n",
+    "scratchpad": true,
+    "driveMounted": false,
+    "hardware": "CPU standard, 2 CPU, RAM 12.67 GB",
+    "node": "22.23.4",
+    "sha": "4e08facdd18ee898764b7d5fcecec34b8e5c177f",
+    "verified": [
+      "Sonde Linux exécutée",
+      "Accès Git public réussi et SHA observé",
+      "Clone distant terminé avec HEAD exact",
+      "Installation distante pnpm@11.7.0 terminée"
+    ],
+    "unverified": [
+      "Fin de pnpm install --frozen-lockfile",
+      "Tous les nouveaux contrôles natifs, PostgreSQL/RLS, build et Playwright"
+    ],
+    "blocker": "Connexion à l'ordinateur indisponible après démarrage de l'installation. Aucune preuve de fin ou de tests verts.",
+    "subscriptionsOrCreditsPurchased": false,
+    "vercelSandboxCreated": false
+  }
 }
