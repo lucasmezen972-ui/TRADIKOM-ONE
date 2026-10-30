@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb } from "../src/lib/db";
+import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import {
   getConversationThread,
@@ -222,6 +222,145 @@ describe("Goal and Watch Engine", () => {
     );
     expect(Number(messages.rows[0]?.count)).toBe(1);
   });
+  it("rejoue une clé historique exacte sans modifier la dernière observation", async () => {
+    const { context, threadId, goal } = await createDurabilityFixture("history");
+    const first = await evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:history:first", observedAt: firstEvaluationAt,
+    });
+    await insertContact(context.db, context.tenantId);
+    const second = await evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:history:second", observedAt: "2026-08-20T14:00:00Z",
+    });
+    const replay = await evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:history:first", observedAt: firstEvaluationAt,
+    });
+    expect(replay).toMatchObject({
+      state: "pending", idempotentReplay: true, reportMessageId: first.reportMessageId,
+    });
+    expect(second.state).toBe("met");
+    expect(await durabilityCounts(context)).toEqual({ reports: 2, evaluations: 2 });
+    expect((await getGoalWatch(context.db, context.userId, context.tenantId, goal.goalId))
+      .latestEvaluation?.evaluationKey).toBe("goal-watch:history:second");
+    expect((await getConversationThread(context.db, context.userId, context.tenantId, threadId))
+      .messages.at(-1)?.id).toBe(second.reportMessageId);
+
+    await expect(evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:history:first", observedAt: "2026-08-20T15:00:00Z",
+    })).rejects.toMatchObject({ code: "goal_watch_evaluation_conflict" });
+    expect(await durabilityCounts(context)).toEqual({ reports: 2, evaluations: 2 });
+  });
+
+  it("refuse les observations antérieures ou égales avant tout rapport", async () => {
+    const { context, goal } = await createDurabilityFixture("out-of-order");
+    await evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:ordering:latest", observedAt: "2026-08-20T14:00:00Z",
+    });
+    await insertContact(context.db, context.tenantId);
+    for (const [suffix, observedAt] of [
+      ["older", firstEvaluationAt],
+      ["equal", "2026-08-20T16:00:00+02:00"],
+    ]) {
+      await expect(evaluateGoalWatch(context.db, "system_goal_watch", {
+        tenantId: context.tenantId, goalId: goal.goalId,
+        evaluationKey: `goal-watch:ordering:${suffix}`, observedAt,
+      })).rejects.toMatchObject({ code: "goal_watch_evaluation_conflict" });
+    }
+    expect(await durabilityCounts(context)).toEqual({ reports: 1, evaluations: 1 });
+  });
+
+  it("garde l’ordre observedAt lorsque les dates d’écriture d’audit divergent", async () => {
+    const { context, goal } = await createDurabilityFixture("audit-order");
+    await evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:order:first", observedAt: firstEvaluationAt,
+    });
+    await context.db.query(
+      `update audit_logs set created_at = '2099-01-01T00:00:00Z'
+       where tenant_id = $1 and action = 'goal_watch.evaluated'`,
+      [context.tenantId],
+    );
+    await evaluateGoalWatch(context.db, "system_goal_watch", {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:order:second", observedAt: "2026-08-20T14:00:00Z",
+    });
+    expect((await getGoalWatch(context.db, context.userId, context.tenantId, goal.goalId))
+      .latestEvaluation?.evaluationKey).toBe("goal-watch:order:second");
+  });
+
+  it("annule le rapport et ses écritures annexes si la preuve d’évaluation échoue", async () => {
+    const { context, goal, threadId } = await createDurabilityFixture("rollback");
+    const failingDb: DbClient & { transaction: TestDb["transaction"] } = {
+      query: (sql, params) => context.db.query(sql, params),
+      transaction: (callback) => context.db.transaction((transaction) => {
+        const query = transaction.query.bind(transaction);
+        transaction.query = (sql, params, options) => {
+          if (sql.startsWith("insert into audit_logs") && params?.[3] === "goal_watch.evaluated") {
+            throw new Error("Goal Watch audit fixture failure");
+          }
+          return query(sql, params, options);
+        };
+        return callback(transaction);
+      }),
+    };
+    const input = {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:rollback:first", observedAt: firstEvaluationAt,
+    };
+    await expect(evaluateGoalWatch(failingDb, "system_goal_watch", input))
+      .rejects.toThrow("Goal Watch audit fixture failure");
+    expect(await durabilityCounts(context)).toEqual({ reports: 0, evaluations: 0 });
+    const thread = await getConversationThread(context.db, context.userId, context.tenantId, threadId);
+    expect(thread.messages).toHaveLength(1);
+    const identities = await context.db.query<{ count: number }>(
+      `select count(*)::int as count from conversation_channel_identities
+       where tenant_id = $1 and adapter_key = 'goal-watch'`, [context.tenantId],
+    );
+    expect(identities.rows[0]?.count).toBe(0);
+    await expect(evaluateGoalWatch(context.db, "system_goal_watch", input))
+      .resolves.toMatchObject({ idempotentReplay: false, reported: true });
+    expect(await durabilityCounts(context)).toEqual({ reports: 1, evaluations: 1 });
+  });
+
+  it("sérialise les évaluations concurrentes sur la connexion PGlite", async () => {
+    const { context, goal } = await createDurabilityFixture("concurrent");
+    const input = {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:concurrent:first", observedAt: firstEvaluationAt,
+    };
+    const results = await Promise.all([
+      evaluateGoalWatch(context.db, "system_goal_watch", input),
+      evaluateGoalWatch(context.db, "system_goal_watch", input),
+    ]);
+    expect(results.map((result) => result.idempotentReplay).sort()).toEqual([false, true]);
+    expect(results[0].reportMessageId).toBe(results[1].reportMessageId);
+    expect(await durabilityCounts(context)).toEqual({ reports: 1, evaluations: 1 });
+  });
+
+  it("refuse aussi un rejeu historique lorsque le fil est archivé", async () => {
+    const { context, goal, threadId } = await createDurabilityFixture("archived");
+    const input = {
+      tenantId: context.tenantId, goalId: goal.goalId,
+      evaluationKey: "goal-watch:archived:first", observedAt: firstEvaluationAt,
+    };
+    await evaluateGoalWatch(context.db, "system_goal_watch", input);
+    await context.db.query(
+      "update conversation_threads set status = 'archived' where tenant_id = $1 and id = $2",
+      [context.tenantId, threadId],
+    );
+    for (const evaluation of [input, {
+      ...input, evaluationKey: "goal-watch:archived:next", observedAt: "2026-08-20T14:00:00Z",
+    }]) {
+      await expect(evaluateGoalWatch(context.db, "system_goal_watch", evaluation))
+        .rejects.toMatchObject({ code: "goal_watch_thread_unavailable" });
+    }
+    expect(await durabilityCounts(context)).toEqual({ reports: 1, evaluations: 1 });
+  });
+
 });
 
 type TestDb = Awaited<ReturnType<typeof createMemoryDb>>;
@@ -231,6 +370,28 @@ type TenantContext = {
   userId: string;
   tenantId: string;
 };
+
+async function createDurabilityFixture(name: string) {
+  const context = await createTenantContext(`goal-watch-${name}@example.test`);
+  const threadId = await createConversation(context);
+  const goal = await createGoalWatch(context.db, context.userId, context.tenantId, {
+    threadId, title: "Objectif de durabilité", signal: "contacts", operator: "gte",
+    target: 1, cadenceMinutes: 60,
+  });
+  return { context, threadId, goal };
+}
+
+async function durabilityCounts(context: TenantContext) {
+  const result = await context.db.query<{ reports: number; evaluations: number }>(
+    `select
+       (select count(*)::int from conversation_messages
+        where tenant_id = $1 and adapter_key = 'goal-watch') as reports,
+       (select count(*)::int from audit_logs
+        where tenant_id = $1 and action = 'goal_watch.evaluated') as evaluations`,
+    [context.tenantId],
+  );
+  return result.rows[0];
+}
 
 async function createTenantContext(email: string): Promise<TenantContext> {
   const db = await createMemoryDb();

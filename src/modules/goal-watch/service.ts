@@ -16,13 +16,14 @@ import {
 } from "@/modules/business-brain/repository";
 import {
   findAccessibleConversationThreadRow,
-  findConversationThreadRow,
+  lockConversationThreadRow,
 } from "@/modules/conversation-hub/repository";
 import { ingestSystemConversationMessage } from "@/modules/conversation-hub/service";
 import { GoalWatchError } from "@/modules/goal-watch/errors";
 import {
   GOAL_WATCH_SOURCE_REF,
   findActiveGoalWatchEntry,
+  findGoalWatchEvaluationAuditsByKey,
   findLatestGoalWatchEvaluationAudit,
   listActiveGoalWatchEntries,
 } from "@/modules/goal-watch/repository";
@@ -37,6 +38,7 @@ import {
   type GoalWatchSignal,
   type GoalWatchState,
 } from "@/modules/goal-watch/schemas";
+import { withGoalWatchEvaluationTransaction } from "@/modules/goal-watch/transactions";
 import { assertTenantAccess } from "@/modules/tenants";
 
 const goalWatchWriteRoles: Role[] = [
@@ -206,11 +208,14 @@ export async function evaluateGoalWatch(
   }
   const parsed = evaluateGoalWatchInputSchema.parse(input);
 
-  const snapshot = await withSystemDbTransaction(db, async (transaction) => {
+  return withGoalWatchEvaluationTransaction(db, async (transaction) => {
+    // Serialize every evaluation for this goal until both its report and audit
+    // commit. All reads below use the same transaction and connection.
     const entry = await findActiveGoalWatchEntry(
       transaction,
       parsed.tenantId,
       parsed.goalId,
+      true,
     );
     if (!entry) {
       throw new GoalWatchError(
@@ -219,7 +224,7 @@ export async function evaluateGoalWatch(
       );
     }
     const config = parseGoalConfig(entry);
-    const thread = await findConversationThreadRow(
+    const thread = await lockConversationThreadRow(
       transaction,
       parsed.tenantId,
       config.threadId,
@@ -236,13 +241,43 @@ export async function evaluateGoalWatch(
         "La conversation liée à cet objectif est archivée.",
       );
     }
+    const replay = await readEvaluationByKey(
+      transaction,
+      parsed.tenantId,
+      parsed.goalId,
+      parsed.evaluationKey,
+    );
+    if (replay) {
+      if (Date.parse(replay.observedAt) !== Date.parse(parsed.observedAt)) {
+        throw new GoalWatchError(
+          "goal_watch_evaluation_conflict",
+          "Cette clé de surveillance appartient à une autre observation.",
+        );
+      }
+      return {
+        tenantId: parsed.tenantId,
+        goalId: parsed.goalId,
+        evaluationKey: parsed.evaluationKey,
+        observedAt: replay.observedAt,
+        state: replay.state,
+        reported: replay.reported,
+        reportMessageId: replay.reportMessageId,
+        idempotentReplay: true,
+      };
+    }
     const previous = await readLatestEvaluation(
       transaction,
       parsed.tenantId,
       parsed.goalId,
     );
-    if (previous?.evaluationKey === parsed.evaluationKey) {
-      return { entry, config, previous, replay: true as const };
+    if (
+      previous &&
+      Date.parse(previous.observedAt) >= Date.parse(parsed.observedAt)
+    ) {
+      throw new GoalWatchError(
+        "goal_watch_evaluation_conflict",
+        "Une évaluation de même date ou plus récente existe déjà pour cet objectif.",
+      );
     }
 
     const signals = await getBusinessBrainSignals(transaction, parsed.tenantId);
@@ -254,74 +289,22 @@ export async function evaluateGoalWatch(
     }
     const value = signalValue(signals, config.signal);
     const state = evaluateState(config, value);
-    return {
-      entry,
-      config,
-      previous,
-      value,
-      state,
-      replay: false as const,
-    };
-  });
-
-  if (snapshot.replay) {
-    return {
-      tenantId: parsed.tenantId,
-      goalId: parsed.goalId,
-      evaluationKey: parsed.evaluationKey,
-      observedAt: snapshot.previous.observedAt,
-      state: snapshot.previous.state,
-      reported: snapshot.previous.reported,
-      reportMessageId: snapshot.previous.reportMessageId,
-      idempotentReplay: true,
-    };
-  }
-
-  const shouldReport =
-    !snapshot.previous || snapshot.previous.state !== snapshot.state;
-  const report = shouldReport
-    ? await reportGoalWatchState(db, systemActorId, {
-        entry: snapshot.entry,
-        config: snapshot.config,
-        previous: snapshot.previous,
-        state: snapshot.state,
-        value: snapshot.value,
-        observedAt: parsed.observedAt,
-      })
-    : null;
-
-  return withSystemDbTransaction(db, async (transaction) => {
-    const latestNow = await readLatestEvaluation(
-      transaction,
-      parsed.tenantId,
-      parsed.goalId,
-    );
-    if (latestNow?.evaluationKey === parsed.evaluationKey) {
-      return {
-        tenantId: parsed.tenantId,
-        goalId: parsed.goalId,
-        evaluationKey: parsed.evaluationKey,
-        observedAt: latestNow.observedAt,
-        state: latestNow.state,
-        reported: latestNow.reported,
-        reportMessageId: latestNow.reportMessageId,
-        idempotentReplay: true,
-      };
-    }
-    if (
-      latestNow &&
-      Date.parse(latestNow.observedAt) > Date.parse(parsed.observedAt)
-    ) {
-      throw new GoalWatchError(
-        "goal_watch_evaluation_conflict",
-        "Une évaluation plus récente existe déjà pour cet objectif.",
-      );
-    }
+    const shouldReport = !previous || previous.state !== state;
+    const report = shouldReport
+      ? await reportGoalWatchState(transaction, systemActorId, {
+          entry,
+          config,
+          previous,
+          state,
+          value,
+          observedAt: parsed.observedAt,
+        })
+      : null;
 
     const auditMetadata: GoalWatchEvaluationAudit = {
       schemaVersion: 1,
-      signal: snapshot.config.signal,
-      state: snapshot.state,
+      signal: config.signal,
+      state,
       evaluationKey: parsed.evaluationKey,
       observedAt: parsed.observedAt,
       reported: shouldReport,
@@ -341,7 +324,7 @@ export async function evaluateGoalWatch(
       goalId: parsed.goalId,
       evaluationKey: parsed.evaluationKey,
       observedAt: parsed.observedAt,
-      state: snapshot.state,
+      state,
       reported: shouldReport,
       reportMessageId: report?.messageId ?? null,
       idempotentReplay: false,
@@ -463,14 +446,35 @@ async function readLatestEvaluation(
   tenantId: string,
   goalId: string,
 ): Promise<GoalWatchEvaluationAudit | null> {
-  const row = await findLatestGoalWatchEvaluationAudit(db, tenantId, goalId);
-  if (!row) return null;
   try {
+    const row = await findLatestGoalWatchEvaluationAudit(db, tenantId, goalId);
+    if (!row) return null;
     return goalWatchEvaluationAuditSchema.parse(JSON.parse(row.safe_metadata));
   } catch {
     throw new GoalWatchError(
       "goal_watch_state_corrupted",
       "La dernière preuve de surveillance est invalide.",
+    );
+  }
+}
+
+async function readEvaluationByKey(
+  db: DbClient,
+  tenantId: string,
+  goalId: string,
+  evaluationKey: string,
+): Promise<GoalWatchEvaluationAudit | null> {
+  try {
+    const rows = await findGoalWatchEvaluationAuditsByKey(
+      db, tenantId, goalId, evaluationKey,
+    );
+    if (rows.length > 1) throw new Error("Duplicate Goal Watch evaluation key.");
+    if (!rows[0]) return null;
+    return goalWatchEvaluationAuditSchema.parse(JSON.parse(rows[0].safe_metadata));
+  } catch {
+    throw new GoalWatchError(
+      "goal_watch_state_corrupted",
+      "La preuve de surveillance demandée est invalide.",
     );
   }
 }

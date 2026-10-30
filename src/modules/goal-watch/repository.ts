@@ -12,6 +12,7 @@ export async function findActiveGoalWatchEntry(
   db: DbClient,
   tenantId: string,
   goalId: string,
+  lock = false,
 ) {
   const result = await db.query<BusinessBrainEntryRow>(
     `select *
@@ -21,7 +22,7 @@ export async function findActiveGoalWatchEntry(
        and domain = 'objectives'
        and source_ref = $3
        and status = 'active'
-     limit 1`,
+     limit 1${lock ? " for update" : ""}`,
     [tenantId, goalId, GOAL_WATCH_SOURCE_REF],
   );
   return result.rows[0] ?? null;
@@ -56,9 +57,32 @@ export async function findLatestGoalWatchEvaluationAudit(
        and target_type = 'goal_watch'
        and target_id = $2
        and action = 'goal_watch.evaluated'
-     order by created_at desc, id desc
+     order by (safe_metadata::jsonb ->> 'observedAt')::timestamptz desc,
+              created_at desc, id desc
      limit 1`,
     [tenantId, goalId],
   );
   return result.rows[0] ?? null;
+}
+
+export async function findGoalWatchEvaluationAuditsByKey(
+  db: DbClient,
+  tenantId: string,
+  goalId: string,
+  evaluationKey: string,
+) {
+  // Search all history for this key; the limit only detects contradictory
+  // duplicate records and does not limit the history searched.
+  const result = await db.query<GoalWatchEvaluationAuditRow>(
+    `select safe_metadata, created_at
+     from audit_logs
+     where tenant_id = $1
+       and target_type = 'goal_watch'
+       and target_id = $2
+       and action = 'goal_watch.evaluated'
+       and safe_metadata::jsonb ->> 'evaluationKey' = $3
+     limit 2`,
+    [tenantId, goalId, evaluationKey],
+  );
+  return result.rows;
 }

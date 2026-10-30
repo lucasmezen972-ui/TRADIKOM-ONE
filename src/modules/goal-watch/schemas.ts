@@ -7,7 +7,25 @@ const boundedIdentifierSchema = z
   .max(160)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
 
-const timestampSchema = z.string().datetime({ offset: true });
+// Goal Watch compares instants with Date.parse (milliseconds) and PostgreSQL.
+// Both observations and persisted proofs must satisfy the same contract.
+const timestampSchema = z
+  .string()
+  .datetime({ offset: true })
+  .refine(
+    (value) => !/\.\d{4}/.test(value),
+    "La précision d’un horodatage Goal Watch est limitée à trois décimales.",
+  )
+  .refine(
+    (value) => {
+      const offset = /[+-](\d{2}):?(\d{2})$/.exec(value);
+      return (
+        (!offset || Number(offset[1]) <= 15) &&
+        Number.isFinite(Date.parse(value))
+      );
+    },
+    "L’horodatage Goal Watch doit être comparable avec un décalage inférieur à 16 heures.",
+  );
 
 export const goalWatchSignalSchema = z.enum([
   "contacts",
