@@ -1,5 +1,15 @@
 # Preparation production
 
+## État vérifié — 30 octobre 2026
+
+Le lot de dépendances et de durabilité Goal Watch est vérifié, sans GitHub Actions ni installation sur le Mac. L'audit complet retourne **zéro avis**. La suite exhaustive de la base `69a0660` passe **1 048 tests dans 181 fichiers**. Le correctif final `fa3b391` passe **52 tests ciblés**, dont deux PostgreSQL réels, ainsi que lint, typecheck, build et **20 scénarios Playwright**.
+
+Ces deux périmètres sont distincts : la suite exhaustive n'a pas été rejouée après le correctif Goal Watch. Le reçu de sa recette ciblée retourne le code zéro sur son SHA exact. Le conteneur PostgreSQL jetable est supprimé et le Codespace a été arrêté, confirmation GitHub relue.
+
+La PR reste en brouillon, sans fusion ou déploiement. Supabase demeure inactif. Les intégrations réelles, le parcours de consentement et d'arrêt des objectifs, la voix/documents et l'installation tierce minimale restent à finaliser. **TRADIKOM ONE n'est pas déclaré terminé.**
+
+Preuves : [validation](./VALIDATION_2026-10-30.md), [état de livraison](./DELIVERY_STATUS.md) et [recette distante](./CLOUD_VALIDATION.md). Les états datés plus anciens ci-dessous sont historiques.
+
 ## Architecture d'exploitation
 
 - PostgreSQL 17 est obligatoire en production.
@@ -68,3 +78,19 @@ La validation Zod demarre avant le runtime et retourne uniquement les noms de va
 - Il n'existe pas de marketplace publique de connecteurs.
 - Les operations de plusieurs formats autoritatifs ne sont pas fusionnees.
 - Le fournisseur OpenAI reste optionnel et desactive sans configuration explicite.
+
+## Préparation supplémentaire du 30 octobre 2026
+
+Les chemins applicatifs des objectifs internes sont durcis et un adaptateur modèle autonome est préparé. Ces changements n'activent aucun fournisseur ni suivi programmé. Le projet Vercel est configuré en Node22 avec protection conservée, sans déploiement. La recette isolée Linux/PostgreSQL17 est décrite dans `docs/CLOUD_VALIDATION.md`.
+
+Les contrôles ciblés en mémoire ne lèvent aucune case de la checklist avant trafic. La base applicative, les accès opérateur et le budget du runner doivent être confirmés; les politiques RLS et limites d'évaluation des objectifs restent à auditer. Garder la PR en brouillon tant que la recette complète du nouveau SHA n'est pas exécutée.
+
+
+## Dépendances et validation distante du 30 octobre 2026
+
+Les dépendances corrigées donnent zéro avis dans l'audit de production sans ignoreGhsas. Un override MSAL7.1.0 limité au SDK Teams est couvert par10 tests natifs sans réseau; cela ne constitue pas une certification de Microsoft ni une validation OAuth/identité managée en production. Lint, typecheck et23 tests natifs OpenAI/accès objectifs passent. La recette exhaustive du nouveau SHA dans Codespaces, dont PostgreSQL/RLS, restauration, build corrigé et Playwright, reste obligatoire. La base applicative Supabase et les fournisseurs réels ne sont pas rétablis par ces contrôles. La PR reste en brouillon.
+
+
+## Portée de la recette finale du 30 octobre
+
+La recette de fa3b391fdc80b7a477a929af038e32aa3c17096b est verte dans un runner jetable : voir VALIDATION_2026-10-30.md. Elle ne valide pas la base Supabase inactive, les secrets de production, les fournisseurs réels, le worker exploité ou les sauvegardes de production. Les cases d'exploitation restent à vérifier avant trafic. Aucune fusion ni mise en production.

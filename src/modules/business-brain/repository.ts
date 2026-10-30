@@ -138,7 +138,8 @@ export async function findActiveBusinessBrainEntry(
   const result = await db.query<BusinessBrainEntryRow>(
     `select *
      from business_brain_entries
-     where tenant_id = $1 and id = $2 and status = 'active'`,
+     where tenant_id = $1 and id = $2 and status = 'active'
+       and source_ref is distinct from 'goal-watch:v1'`,
     [tenantId, entryId],
   );
   return result.rows[0] ?? null;
@@ -154,6 +155,7 @@ export async function supersedeBusinessBrainEntry(
     `update business_brain_entries
      set status = 'superseded', updated_at = $3
      where tenant_id = $1 and id = $2 and status = 'active'
+       and source_ref is distinct from 'goal-watch:v1'
      returning id`,
     [tenantId, entryId, now],
   );
@@ -170,6 +172,7 @@ export async function archiveBusinessBrainEntry(
     `update business_brain_entries
      set status = 'archived', updated_at = $3
      where tenant_id = $1 and id = $2 and status = 'active'
+       and source_ref is distinct from 'goal-watch:v1'
      returning id`,
     [tenantId, entryId, now],
   );
@@ -184,6 +187,7 @@ export async function listActiveBusinessBrainEntries(
     `select *
      from business_brain_entries
      where tenant_id = $1 and status = 'active'
+       and source_ref is distinct from 'goal-watch:v1'
      order by domain asc, updated_at desc, id asc`,
     [tenantId],
   );
@@ -201,6 +205,7 @@ export async function listActiveBusinessBrainEvidence(
        on entries.tenant_id = evidence.tenant_id
       and entries.id = evidence.entry_id
      where evidence.tenant_id = $1 and entries.status = 'active'
+       and entries.source_ref is distinct from 'goal-watch:v1'
      order by evidence.captured_at desc, evidence.id asc`,
     [tenantId],
   );

@@ -58,3 +58,23 @@ export async function listAuditLogRows(
 
   return result.rows;
 }
+
+export async function listAuditLogRowsByActionAndTarget(
+  db: DbClient,
+  input: {
+    tenantId: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+  },
+) {
+  const result = await db.query<AuditLogRow>(
+    `select *
+     from audit_logs
+     where tenant_id = $1 and action = $2
+       and target_type = $3 and target_id = $4
+     order by created_at asc, id asc`,
+    [input.tenantId, input.action, input.targetType, input.targetId],
+  );
+  return result.rows;
+}

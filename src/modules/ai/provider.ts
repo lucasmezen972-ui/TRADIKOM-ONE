@@ -70,13 +70,7 @@ export class OpenAiProvider implements AiProvider {
   }
 
   async enrichBusinessTwin(input: OnboardingInput) {
-    const fallback = await new DeterministicAiProvider().enrichBusinessTwin(input);
-    return aiGenerationResultSchema.parse({
-      ...fallback,
-      provider: "openai",
-      model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
-      usage: { fallback: true },
-    });
+    return new DeterministicAiProvider().enrichBusinessTwin(input);
   }
 
   async generateFaqs(input: OnboardingInput) {
