@@ -14,7 +14,10 @@ import {
   type BusinessBrainEntryRow,
   type BusinessBrainSignalRow,
 } from "@/modules/business-brain/repository";
-import { findConversationThreadRow } from "@/modules/conversation-hub/repository";
+import {
+  findAccessibleConversationThreadRow,
+  findConversationThreadRow,
+} from "@/modules/conversation-hub/repository";
 import { ingestSystemConversationMessage } from "@/modules/conversation-hub/service";
 import { GoalWatchError } from "@/modules/goal-watch/errors";
 import {
@@ -71,9 +74,10 @@ export async function createGoalWatch(
       tenantId,
       goalWatchWriteRoles,
     );
-    const thread = await findConversationThreadRow(
+    const thread = await findAccessibleConversationThreadRow(
       transaction,
       tenantId,
+      userId,
       parsed.threadId,
     );
     if (!thread) {
@@ -160,6 +164,18 @@ export async function getGoalWatch(
       );
     }
     const config = parseGoalConfig(entry);
+    const thread = await findAccessibleConversationThreadRow(
+      transaction,
+      tenantId,
+      userId,
+      config.threadId,
+    );
+    if (!thread) {
+      throw new GoalWatchError(
+        "goal_watch_not_found",
+        "Objectif permanent introuvable.",
+      );
+    }
     const latest = await readLatestEvaluation(transaction, tenantId, goalId);
     return mapGoalWatch(
       entry.id,

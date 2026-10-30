@@ -42,7 +42,14 @@ const businessBrainContentSchema = z.object({
   details: z.string().trim().max(5000).default(""),
   confidence: z.coerce.number().int().min(0).max(100).default(80),
   sourceType: businessBrainSourceSchema.default("manual"),
-  sourceRef: z.string().trim().max(500).optional(),
+  sourceRef: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => value !== "goal-watch:v1", {
+      message: "Cette référence est réservée au suivi d’objectifs.",
+    })
+    .optional(),
   evidenceType: businessBrainEvidenceTypeSchema.default("observation"),
   evidenceSummary: z.string().trim().min(5).max(500),
 });

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T05:09:42.984Z",
+  "updatedAt": "2026-10-30T10:50:48.521Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "24d688fd644d7e641580e76ba7ffbf5efc29af22",
-  "publishedHeadObserved": "24d688fd644d7e641580e76ba7ffbf5efc29af22",
-  "status": "published_targeted_checks_passed_full_validation_pending_no_actions",
+  "lastCommit": "e65c26216576230fc97dc08b64d2cfa532fc4921",
+  "publishedHeadObserved": "e65c26216576230fc97dc08b64d2cfa532fc4921",
+  "status": "prepared_cloud_validation_and_model_transport_human_access_budget_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Corriger les preuves utilisateur trompeuses : provenance IA déterministe et reprise Conversation vers le fil autoritatif, sans faux reçu piloté par URL. Travailler par API GitHub, sans clone/dépendances sur le Mac et sans GitHub Actions.",
+  "currentObjective": "Finaliser par GitHub et les consoles disponibles : fermer la fuite applicative des objectifs privés, préparer un transport IA structuré à autorisation explicite et une recette Linux distante sans Actions ni stockage de dépôt sur le Mac.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -54,12 +54,13 @@
       "evidenceExpected": "Tests de régression sur provenance, redirection autoritative et refus; validation isolée en mémoire, lint et analyse syntaxique avec outils existants. Conserver la suite PostgreSQL/RLS, build et Playwright comme non exécutée sur ce nouveau lot."
     }
   },
-  "nextAction": "Vérifier les correctifs distants et obtenir une recette complète sur un environnement autorisé disposant déjà des dépendances, de PostgreSQL et d'un navigateur, sans lancer GitHub Actions ni installer le dépôt sur le Mac. Le checkpoint fournisseur Meta reste distinct et non validé.",
-  "nextFile": "docs/PRODUCTION_READINESS.md",
+  "nextAction": "Après connexion GitHub, suspendre la planification historique Actions, puis rétablir l'accès Supabase et confirmer le budget du runner distant. Relire le SHA GitHub exact et exécuter scripts/verify-isolated.sh dans un Linux jetable autorisé, jamais sur le Mac ni contre une base existante. Ne raccorder l'IA qu'après implémentation et preuve des réservations d'autorisation/coût/audit.",
+  "nextFile": "scripts/verify-isolated.sh",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
-    "schedule": "Toutes les heures à la minute 17"
+    "schedule": "Toutes les heures à la minute 17",
+    "currentSessionStatus": "Aucun lancement. Suspendre le workflow historique planifié depuis GitHub authentifié avant toute reprise ; [skip ci] ne désactive pas une planification."
   },
   "commandsRun": [
     "git status --short --branch",
@@ -2345,16 +2346,38 @@
     {
       "command": "ESLint 9.39.4 / règles Next.js préinstallées en mémoire, cinq fichiers et fragment service",
       "status": "passed_zero_errors_zero_warnings_not_repository_wide_lint"
+    },
+    {
+      "command": "13 vérifications SQL en mémoire sur les requêtes candidates avec SQLite 3.51.0",
+      "status": "passed_targeted_query_semantics_only_postgres_rls_not_run"
+    },
+    {
+      "command": "8 cas de schémas création/révision des références internes avec Zod embarqué Next.js",
+      "status": "passed_reserved_ref_denied_manual_refs_preserved_not_native_dependency_suite"
+    },
+    {
+      "command": "20 callbacks de scénarios du générateur modèle en mémoire",
+      "status": "passed_with_real_generator_schemas_and_capability_helpers_mock_transport_adapted_matchers_next_bundled_zod_no_network"
+    },
+    {
+      "command": "Analyse syntaxique TypeScript 5.9.3 et ESLint 9.39.4 ciblés sur six fichiers source/tests; bash -n recette isolée",
+      "status": "passed_zero_diagnostics_no_files_written_no_dependency_install"
+    },
+    {
+      "command": "Vercel projet créé puis relu, Node22 et protection",
+      "status": "verified_no_deployment_no_sandbox_created"
+    },
+    {
+      "command": "Recette Linux complète et fournisseurs réels",
+      "status": "not_run_pending_human_account_access_and_remote_runner_budget"
     }
   ],
   "humanBlockers": [
-    "Authentification du fournisseur réel non confirmée dans cette session; le dernier checkpoint SMS Meta de septembre est historique et doit être revérifié dans la console officielle",
-    "Confirmation au moment exact avant toute création d'un token Meta persistant, puis stockage uniquement via références de gestionnaire de secrets sans exposition au modèle",
-    "Mise à disposition d'une application, d'un WABA, d'un Phone Number ID et d'un endpoint HTTPS contrôlé dans la console officielle",
-    "Autorisation explicite distincte avant toute requête Graph réelle, activation ou message de preuve Meta",
-    "Toute dépense, ressource payante ou dépassement de quota",
-    "Fusion, déploiement de production et changement DNS réel",
-    "Recette exhaustive dans un environnement déjà équipé et autorisé, sans GitHub Actions ni installation sur le Mac"
+    "Connexion GitHub nécessaire dans le navigateur pour poursuivre la console Vercel; connexion Supabase également requise",
+    "Rétablissement administratif du projet Supabase dans la console officielle",
+    "Budget explicite du runner Vercel avant toute session de calcul potentiellement facturée",
+    "Consentements, secrets serveur et implémentations autoritatives requis avant fournisseur ou génération réels",
+    "Toute dépense, fusion, production et modification DNS restent distinctes"
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2364,5 +2387,44 @@
     "reason": "Demande explicite de Lucas le 30 octobre 2026 : éviter le stockage sur le Mac et aucune minute GitHub Actions disponible.",
     "commitMarker": "[skip ci]",
     "validation": "Contrôles ciblés en mémoire avec outils déjà installés; ne pas déduire une validation exhaustive des anciennes CI."
-  }
+  },
+  "infrastructure": {
+    "vercel": {
+      "projectId": "prj_O2ELIL9DNsaEvTdikMzVlXC0mFsM",
+      "teamId": "team_eOj0znuFk29qlFsws8LfLC9W",
+      "nodeVersion": "22.x",
+      "deploymentProtection": "SSO standard conservé",
+      "automaticPreviews": false,
+      "published": false
+    },
+    "database": {
+      "provider": "Supabase",
+      "projectRef": "iwngumaqdjiglhfekgug",
+      "status": "inactive",
+      "runtimeValidated": false
+    },
+    "validation": {
+      "runner": "Vercel Sandbox envisagé, non lancé",
+      "requiresBudgetConfirmation": true,
+      "proposedTimeoutMinutes": 20,
+      "proposedVcpus": 2,
+      "publicPorts": [],
+      "persistent": false,
+      "githubActions": false
+    }
+  },
+  "completedPreparation": [
+    "Projet Vercel créé et configuré avec Node22, protection conservée, aucun déploiement",
+    "Contrôles applicatifs d'accès au fil pour create/get Goal Watch",
+    "Entrées et preuves goal-watch:v1 réservées au module spécialisé; création/révision génériques refusées",
+    "Transport OpenAI autonome préparé avec autorisation/budget/audit obligatoires, non raccordé",
+    "Recette Linux/Docker PostgreSQL17 préparée sans base existante, Mac, Actions, port public ou programmation"
+  ],
+  "remainingGaps": [
+    "Suite native Vitest, typecheck global, PostgreSQL/RLS, build et Playwright de ce lot non exécutés",
+    "Politiques RLS et atomicité/concurrence de Goal Watch inchangées; OS-6 non livré",
+    "Autorisation de modèle, réservation budgétaire durable et audit serveur à implémenter et prouver avant activation IA",
+    "Base applicative et authentifications opérateur à rétablir",
+    "Fournisseur réel, stockage, expérience mobile cible, marketplace et recette production non finalisés"
+  ]
 }

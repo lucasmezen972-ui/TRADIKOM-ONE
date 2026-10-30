@@ -485,3 +485,13 @@ Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les messages en
 - Écart restant : la Definition of Done exhaustive n'est pas revendiquée. Suite Vitest complète, PostgreSQL/RLS, migrations, build et Playwright n'ont pas été exécutés sur ce lot.
 - Contrainte utilisateur actuelle : API GitHub uniquement pour les modifications, pas de clone/dépendances sur le Mac, pas de GitHub Actions. `[skip ci]` évite les déclenchements de ce commit; aucun contrôle de sécurité ou partage n'est modifié.
 - Réel connecté/sandbox : aucun nouveau fournisseur. Mock : transports/services du banc isolé et runtime mock existant. Bloqué : recette exhaustive autorisée et authentification/configuration du fournisseur réel. PR en brouillon; aucune fusion, production, dépense ou nouvelle programmation.
+
+## Préparation environnement et frontières — 30 octobre 2026
+
+- Alignement prompt maître : les exigences déjà relues de vérité des états, sécurité, validation et reprise servent cette tranche; aucune nouvelle lecture paginée n'est revendiquée.
+- North Star impact : empêcher une fuite d'objectif privé, préparer une génération structurée dont les autorisations et coûts restent contrôlés, rendre la recette complète exécutable hors du Mac et sans Actions.
+- Modifications : trois fichiers d'accès/mémoire, trois fichiers de tests/adaptateur, une recette Linux et les documents de reprise. Aucun nouveau silo métier ou schéma.
+- Preuve ciblée : 13 cas SQL SQLite en mémoire, 8 cas de schéma, 20 callbacks de scénarios modèle avec doubles; analyse syntaxique/lint et bash -n sans diagnostic.
+- Limites : les contrôles isolés ne sont pas Vitest natif ni PostgreSQL/RLS/build/Playwright. L'adaptateur n'est pas raccordé et son modèle n'est jamais appelé. Aucun objectif ou planning créé. OS-5 réel et OS-6 à OS-8 restent ouverts.
+- Infrastructure préparée : Vercel Node22 protégé, aucune préversion publiée; base et connexions opérateur non prêtes. Aucun coût de runner n'est engagé sans budget explicite.
+- Prochaine action : terminer les accès et le budget puis exécuter la recette isolée sur le SHA choisi; ne pas fusionner ou produire une fausse déclaration de fin.

@@ -74,3 +74,9 @@ La validation Zod demarre avant le runtime et retourne uniquement les noms de va
 - Il n'existe pas de marketplace publique de connecteurs.
 - Les operations de plusieurs formats autoritatifs ne sont pas fusionnees.
 - Le fournisseur OpenAI reste optionnel et desactive sans configuration explicite.
+
+## Préparation supplémentaire du 30 octobre 2026
+
+Les chemins applicatifs des objectifs internes sont durcis et un adaptateur modèle autonome est préparé. Ces changements n'activent aucun fournisseur ni suivi programmé. Le projet Vercel est configuré en Node22 avec protection conservée, sans déploiement. La recette isolée Linux/PostgreSQL17 est décrite dans `docs/CLOUD_VALIDATION.md`.
+
+Les contrôles ciblés en mémoire ne lèvent aucune case de la checklist avant trafic. La base applicative, les accès opérateur et le budget du runner doivent être confirmés; les politiques RLS et limites d'évaluation des objectifs restent à auditer. Garder la PR en brouillon tant que la recette complète du nouveau SHA n'est pas exécutée.

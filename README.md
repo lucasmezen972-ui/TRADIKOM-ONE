@@ -137,6 +137,8 @@ Les dernières CI historiques vertes de la base `24d688f` sont `34956617933` et 
 
 ### Limites actuelles
 
+- Un adaptateur OpenAI structuré est préparé et testé avec doubles, mais reste non raccordé au runtime : voir [préparation modèle](docs/OPENAI_CONVERSATION_PREPARATION.md).
+- La recette Linux distante sans GitHub Actions est préparée dans [CLOUD_VALIDATION.md](docs/CLOUD_VALIDATION.md). Le projet Vercel est configuré mais aucun déploiement n'est publié.
 - Aucun fournisseur réel ni sandbox n'a été connecté ou appelé dans la session du 30 octobre 2026.
 - Une préparation d'adaptateur et un test avec doubles ne constituent pas une activation fournisseur.
 - Le générateur des plans Conversation est déterministe. L'abstraction historique `OpenAiProvider` utilise elle aussi le fallback déterministe : ses sorties conservent désormais `provider: "deterministic"` et `model: "template-v1"`. Un flag et une clé ne sont pas une preuve d'appel à un modèle.

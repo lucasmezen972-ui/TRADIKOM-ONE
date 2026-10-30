@@ -1,5 +1,22 @@
 # Étapes suivantes TRADIKOM ONE OS
 
+## Checkpoint du 30 octobre 2026 — environnement et frontières préparés
+
+Cette section remplace les anciennes consignes de reprise pour l'action immédiate.
+
+- Projet Vercel `tradikom-one` créé, Node.js 22 et protection standard conservée; préversions automatiques désactivées. Aucun déploiement ni session Sandbox lancé.
+- Le projet Supabase est inactif et attend une intervention de l'opérateur dans sa console. Les navigateurs demandent une reconnexion; aucun secret ni nouveau token n'a été saisi.
+- Les objectifs `goal-watch:v1` héritent désormais du contrôle applicatif d'accès à leur fil pour création/lecture. Les lectures, preuves et mutations génériques Business Brain les excluent; les schémas génériques refusent cette référence réservée. Les objectifs manuels ordinaires sont conservés.
+- Ces changements ne ferment pas les limites distinctes RLS, atomicité, concurrence et pagination de Goal Watch. Aucun suivi, cron ou objectif n'est créé; OS-6 reste non livré.
+- Le transport modèle OpenAI est préparé dans un module autonome, sans export ni raccord runtime. Configuration, autorisation authentifiée, consentement de transfert, réservation de coût et audit sont obligatoires. Le runtime reste déterministe.
+- Preuves ciblées : 13 cas SQL réels sur SQLite en mémoire, 8 cas de schémas avec Zod embarqué Next.js, 20 callbacks de scénarios modèle avec transport double et matchers adaptés; lint/analyse syntaxique des six fichiers ciblés et `bash -n` verts. Rien de cela ne constitue une recette native complète.
+- La recette `scripts/verify-isolated.sh` est prête pour un Linux jetable avec PostgreSQL17/Docker et navigateur. Elle refuse le Mac, un moteur Docker distant et une base existante. Le runner reste non lancé tant que l'accès et le budget ne sont pas confirmés. Voir `docs/CLOUD_VALIDATION.md`.
+- Aucun clone/install sur le Mac, Actions, fournisseur réel, message, clé, achat, fusion ou production. Les détails des comptes restent hors du dépôt.
+
+### Action immédiate
+
+L'opérateur termine les connexions officielles et confirme le budget autorisé du runner. Ensuite, relire le SHA GitHub exact et exécuter la recette isolée sur ce SHA, sans Actions ni base de production. Maintenir la PR en brouillon; ne pas sélectionner le modèle dans le runtime avant les implémentations et preuves d'autorisation/coût/audit.
+
 ## Mise à jour du 30 octobre 2026 — travail distant et preuves honnêtes
 
 Cette section est le checkpoint actuel. Les sections datées plus anciennes ci-dessous restent un historique et ne remplacent pas les consignes actuelles de Lucas.
