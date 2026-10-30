@@ -6,6 +6,7 @@ import {
 import { evaluateGoalWatch } from "../src/modules/goal-watch/service";
 
 const acceptedTimestamps = [
+  "0001-01-01T00:00:00Z",
   "2026-08-20T13:00:00Z",
   "2026-08-20T13:00:00.1Z",
   "2026-08-20T13:00:00.12Z",
@@ -20,6 +21,7 @@ const acceptedTimestamps = [
 ];
 
 const rejectedTimestamps = [
+  "0000-01-01T00:00:00.000Z",
   "2026-08-20T13:00:00.1234Z",
   "2026-08-20T13:00:00.123456Z",
   "2026-08-20T13:00:00.123456789Z",

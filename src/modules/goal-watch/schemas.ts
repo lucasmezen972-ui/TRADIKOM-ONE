@@ -13,6 +13,10 @@ const timestampSchema = z
   .string()
   .datetime({ offset: true })
   .refine(
+    (value) => !value.startsWith("0000-"),
+    "L’année d’un horodatage Goal Watch doit être supérieure ou égale à 0001.",
+  )
+  .refine(
     (value) => !/\.\d{4}/.test(value),
     "La précision d’un horodatage Goal Watch est limitée à trois décimales.",
   )
