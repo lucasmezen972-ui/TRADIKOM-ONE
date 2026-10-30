@@ -122,62 +122,43 @@ Une mission doit pouvoir :
 
 ## État actuel du dépôt
 
-Le dépôt contient déjà une base solide et testée pour construire cette vision :
+La branche `codex/tradikom-one-os`, proposée dans la PR #11, contient :
 
-- comptes, organisations, memberships et rôles ;
-- sessions sécurisées, révocables et tenant-scoped ;
-- PostgreSQL, migrations, relations composites et RLS ;
-- Business Twin et Business Brain avec preuves et versions ;
-- CRM, contacts, opportunités, activités et pipeline ;
-- site public versionné par snapshots immuables ;
-- workflows durables et worker ;
-- imports et exports encadrés ;
-- connecteurs bornés et cœur OAuth sécurisé ;
-- API Intelligence et contrats de fournisseurs contrôlés ;
-- moteurs de conseil, marketing, site, vente, réputation, concurrence et finance ;
-- centre de pilotage et centre d’approbation ;
-- journal d’audit ;
-- fournisseur email HTTP Resend configurable ;
-- gestion d’images avec validation binaire ;
-- messages WhatsApp prêts à envoyer par lien `wa.me` ;
-- suppression de compte RGPD ;
-- tests unitaires, intégration, PostgreSQL/RLS et Playwright.
+- un Conversation Hub canonique, un chat web et un canal de test avec identité, provenance, déduplication et prévention des boucles ;
+- des plans structurés, une validation unique, la modification et la délégation durable de la décision ;
+- deux capacités génériques `tradikom_mock`, des missions multi-étapes, la reprise idempotente et des preuves auditables ;
+- les adaptateurs préparés WhatsApp/Twilio, WhatsApp/Meta, Teams, Slack et email, avec vérification des signatures et refus tant que la configuration et les autorisations manquent ;
+- les comptes, organisations, rôles, sessions révocables, PostgreSQL, migrations, relations tenant-composées et RLS ;
+- le Business Twin, le Business Brain, les modules métier et les publications de sites par snapshots immuables ;
+- les accès contrôlés aux pièces jointes, la classification des fils et l'héritage des droits jusqu'aux objets dérivés ;
+- des tests unitaires, d'intégration, PostgreSQL/RLS et Playwright.
 
-### Important : limites actuelles
+Les dernières CI historiques vertes de la base `24d688f` sont `34956617933` et `34956617809`. Elles ne valident pas les modifications ultérieures. Le détail des preuves et limites est conservé dans `docs/AGENT_STATE.json` et `docs/NEXT_STEPS.md`.
 
-Le produit n’est pas encore le système conversationnel omnicanal décrit ci-dessus.
+### Limites actuelles
 
-- Le module WhatsApp actuel prépare un message et ouvre `wa.me` ; il ne reçoit pas encore les messages WhatsApp dans un Conversation Hub.
-- Il n’existe pas encore de fil canonique partagé entre WhatsApp, Teams, Slack et le web.
-- Aucun connecteur n’exécute d’appel externe réel : le seul appel HTTP sortant de tout `src/` est le fournisseur email Resend, désactivé par défaut. Les autres sont simulés, en lecture seule, catalogués ou désactivés.
-- Les véritables connecteurs OAuth nécessitent encore leur configuration fournisseur et leurs tests de contrat.
-- **Aucun moteur « IA » n’appelle un modèle.** Les quatorze modules concernés sont des moteurs de règles déterministes. `OpenAiProvider` (`src/modules/ai/provider.ts`) délègue intégralement au fournisseur déterministe tout en étiquetant sa sortie `provider: "openai"` — défaut connu, hérité de la Phase 2, corrigé en priorité (voir `docs/AUDIT_TRADIKOM_ONE_OS_ENTRY.md`).
-- Les actions de production sensibles ne doivent pas être présentées comme exécutées lorsqu’elles sont seulement préparées ou simulées.
-- Le stockage d’images local doit être remplacé par un stockage objet persistant avant un déploiement serverless complet.
-- La checklist de production reste la source de vérité pour les éléments non finalisés.
+- Aucun fournisseur réel ni sandbox n'a été connecté ou appelé dans la session du 30 octobre 2026.
+- Une préparation d'adaptateur et un test avec doubles ne constituent pas une activation fournisseur.
+- Le générateur des plans Conversation est déterministe. L'abstraction historique `OpenAiProvider` utilise elle aussi le fallback déterministe : ses sorties conservent désormais `provider: "deterministic"` et `model: "template-v1"`. Un flag et une clé ne sont pas une preuve d'appel à un modèle.
+- Les étapes de stockage objet, d'antivirus, d'OCR/transcription, de configuration des fournisseurs et de recette production restent ouvertes.
+- La roadmap conserve OS-5 bloqué sur le fournisseur réel, puis OS-6 à OS-8 non livrés comme produit complet. Les modules préparatoires existants ne suffisent pas à déclarer ces phases terminées.
+- La checklist `docs/PRODUCTION_READINESS.md` reste obligatoire avant tout trafic réel.
 
-## Tranche prioritaire suivante
+## Travail sur GitHub sans GitHub Actions
 
-La prochaine vertical slice doit prouver le cœur architectural de TRADIKOM ONE OS :
+Depuis le 30 octobre 2026, à la demande de Lucas, les modifications sont réalisées par les API GitHub : pas de clone du dépôt ni d'installation de dépendances sur le Mac. Aucun workflow GitHub Actions n'est lancé pour ce travail. Les commits portent `[skip ci]` afin d'éviter les déclenchements `push` et `pull_request`.
 
-1. schéma canonique des conversations ;
-2. identité omnicanale sécurisée ;
-3. messages et livraisons idempotentes ;
-4. prévention des boucles de réplication ;
-5. Web Chat réel ;
-6. interface commune d’adaptateurs de canaux ;
-7. adaptateur de test complet ;
-8. structures WhatsApp Cloud API, Teams et Slack derrière feature flags ;
-9. plan d’action structuré utilisant au moins deux capacités ;
-10. validation unique depuis un autre canal ;
-11. exécution contrôlée ou simulée clairement étiquetée ;
-12. audit, RLS, tests PostgreSQL et Playwright.
+Les contrôles ciblés peuvent utiliser en mémoire les outils déjà installés. Ils doivent indiquer leurs doubles, les versions d'outils et leurs limites. Une analyse syntaxique ne constitue pas un typecheck complet ; des scénarios isolés ne remplacent pas les tests PostgreSQL/RLS, le build et les parcours navigateur. Une ancienne CI verte n'est jamais attribuée au nouveau commit.
 
-Le critère de réussite n’est pas l’ajout d’une nouvelle page : c’est la capacité à commencer une mission sur un canal, la poursuivre sur un autre et conserver le même contexte, les mêmes droits et le même plan.
+## Prochaine validation
+
+La reprise d'une mission utilise les identifiants du plan relu et autorisé côté serveur. Le paramètre d'URL `reprise=demandee` ne produit plus de reçu de réussite : la carte affiche l'état durable de la mission.
+
+La prochaine recette complète doit être exécutée dans un environnement autorisé disposant déjà du dépôt, des dépendances, de PostgreSQL et d'un navigateur, sans GitHub Actions ni installation sur le Mac. La PR reste en brouillon tant que ces preuves manquent. Le fournisseur réel reste une étape distincte : son authentification, ses secrets, son consentement et ses autorisations doivent être vérifiés au moment de l'activation.
 
 ## Stack actuelle
 
-- Next.js `16.2.11` App Router
+- Next.js `16.3.4` App Router
 - React `19.2.4`
 - TypeScript `5`
 - Tailwind CSS `4`

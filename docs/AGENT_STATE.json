@@ -1,40 +1,61 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-15T10:09:33.000Z",
+  "updatedAt": "2026-10-30T05:09:42.984Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "a9daf552bb88210fc3804657a4147dbd6dcf044f",
-  "publishedHeadObserved": "a9daf552bb88210fc3804657a4147dbd6dcf044f",
-  "status": "os5_conversation_plan_delegation_published_ci_proven_human_meta_sms_parallel",
+  "lastCommit": "24d688fd644d7e641580e76ba7ffbf5efc29af22",
+  "publishedHeadObserved": "24d688fd644d7e641580e76ba7ffbf5efc29af22",
+  "status": "published_targeted_checks_passed_full_validation_pending_no_actions",
   "currentPhase": "OS-5",
-  "currentObjective": "Clore la tranche conversation-first qui transfère durablement la validation d'un plan exact encore en attente au destinataire courant, avec réassignation explicite, preuve append-only, idempotence, isolation tenant/RLS, reçu français corroboré et zéro effet externe. Le checkpoint SMS Meta reste humain et parallèle.",
+  "currentObjective": "Corriger les preuves utilisateur trompeuses : provenance IA déterministe et reprise Conversation vers le fil autoritatif, sans faux reçu piloté par URL. Travailler par API GitHub, sans clone/dépendances sur le Mac et sans GitHub Actions.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
     "pageCount": 71,
-    "mandatoryPages": [3, 4, 5, 6, 7, 31, 32, 33, 46, 48, 69, 70, 71],
+    "mandatoryPages": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      31,
+      32,
+      33,
+      46,
+      48,
+      69,
+      70,
+      71
+    ],
     "alignment": {
-      "pagesConsulted": [3, 4, 5, 6, 7, 10, 11, 12, 17, 18, 22, 24, 31, 32, 33, 35, 36, 37, 38, 46, 48, 68, 69, 70, 71],
-      "sections": [
-        "0-4 Mandat, north star, anti-dérive et continuité",
-        "10-12 Architecture cible, Conversation Hub canonique, preuves et RLS",
-        "17-18 Plan structuré, validation humaine et signaux durables confirmer, annuler, modifier ou déléguer",
-        "22 PostgreSQL, modèle tenant-first et politiques RLS",
-        "24 UX conversationnelle française, décisions lisibles et travail en cours",
-        "31-33 Definition of Done, reprise et critères de progression",
-        "35-38 Simulation, données sensibles et entrées externes non fiables",
-        "46 Règles absolues de dérive",
-        "48 Ordre exact de la prochaine exécution",
-        "68 WebChat de référence avec plans, confirmation, modification, annulation et travail en cours",
-        "69-71 Matrice de tests et auto-contrôle final"
+      "pagesConsulted": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        31,
+        32,
+        33,
+        46,
+        47,
+        48,
+        69,
+        70,
+        71
       ],
-      "requirement": "Depuis la Conversation, un owner, administrator ou manager autorisé doit pouvoir déléguer la validation d'une version exacte de plan encore awaiting_approval à un autre membre décisionnaire qui a accès au fil. La délégation transfère réellement et côté serveur le droit de confirmer, annuler ou modifier ce plan; elle reste visible en français, durable, tenant-scoped, append-only, idempotente et réassignable explicitement sans lancer de mission, workflow, fournisseur ou action externe.",
-      "evidenceExpected": "Une délégation immuable lie tenant, plan, approval, délégant, destinataire, séquence et empreinte de rejeu sous RLS. Le service verrouille plan et memberships, refuse cross-tenant, cible inéligible ou sans accès au fil, borne les réassignations et audite uniquement des identifiants et métadonnées sûres. Tant que la délégation courante existe, seul son destinataire peut confirmer, annuler ou modifier; owner et administrator récupèrent la main par une nouvelle délégation explicite, jamais par contournement silencieux. La carte Conversation propose uniquement les membres admissibles, affiche le responsable courant et son rôle, et un reçu partageable corrobore la délégation courante sans contenu sensible. Aucun reçu de policy, mission, workflow, événement, résultat, provider, fetch, Graph ou envoi n'est créé. Tests de schéma, service, rejeu/concurrence, isolation tenant, PostgreSQL/RLS, actions, reçu et Playwright desktop/mobile doivent être verts."
+      "sections": [
+        "Mandat, vérité des états et autonomie encadrée",
+        "Definition of Done, preuves et reprise",
+        "Conversation-first, anti-dérive et limites de validation"
+      ],
+      "requirement": "Ne pas attribuer à OpenAI une sortie déterministe et ne pas présenter une reprise comme confirmée depuis un paramètre d'URL. Les identifiants de retour proviennent du plan autorisé côté serveur. Respecter la demande actuelle : modifications directement sur GitHub, sans clone ni installation sur le Mac, aucun lancement GitHub Actions.",
+      "evidenceExpected": "Tests de régression sur provenance, redirection autoritative et refus; validation isolée en mémoire, lint et analyse syntaxique avec outils existants. Conserver la suite PostgreSQL/RLS, build et Playwright comme non exécutée sur ce nouveau lot."
     }
   },
-  "nextAction": "Relire directement la page 48 et la carte de docs/MASTER_PROMPT_REFERENCE.md, puis sélectionner la première lacune conversation-first réellement non terminée après le signal déléguer. Actualiser masterPrompt.alignment avant tout nouveau code. Ne sélectionner ni CRM, Kanban, dashboard secondaire, fournisseur réel, secret ni OS-6.",
-  "nextFile": "docs/MASTER_PROMPT_REFERENCE.md",
+  "nextAction": "Vérifier les correctifs distants et obtenir une recette complète sur un environnement autorisé disposant déjà des dépendances, de PostgreSQL et d'un navigateur, sans lancer GitHub Actions ni installer le dépôt sur le Mac. Le checkpoint fournisseur Meta reste distinct et non validé.",
+  "nextFile": "docs/PRODUCTION_READINESS.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -2312,14 +2333,36 @@
     {
       "command": "CI 34953928584 sur a9daf552bb88210fc3804657a4147dbd6dcf044f",
       "status": "passed_audit_migrations_db_verify_backup_restore_lint_typecheck_177_files_1006_postgres_tests_build_next_16_3_4_and_20_of_20_playwright_in_55_3_seconds"
+    },
+    {
+      "command": "16 scénarios ciblés exécutés en mémoire avec TypeScript 5.9.3, doubles SDK/services et Zod embarqué par Next.js",
+      "status": "passed_6_provider_3_action_7_service_cases_before_after_regressions_reproduced_no_network_no_files"
+    },
+    {
+      "command": "Suite complète Vitest, PostgreSQL/RLS, build et Playwright du lot du 30 octobre 2026",
+      "status": "not_run_user_requires_no_github_actions_no_clone_or_dependency_install"
+    },
+    {
+      "command": "ESLint 9.39.4 / règles Next.js préinstallées en mémoire, cinq fichiers et fragment service",
+      "status": "passed_zero_errors_zero_warnings_not_repository_wide_lint"
     }
   ],
   "humanBlockers": [
-    "Saisie par l'utilisateur du code SMS à six chiffres directement dans l'onglet Meta for Developers ouvert; le code ne doit pas être transmis dans le chat",
+    "Authentification du fournisseur réel non confirmée dans cette session; le dernier checkpoint SMS Meta de septembre est historique et doit être revérifié dans la console officielle",
     "Confirmation au moment exact avant toute création d'un token Meta persistant, puis stockage uniquement via références de gestionnaire de secrets sans exposition au modèle",
     "Mise à disposition d'une application, d'un WABA, d'un Phone Number ID et d'un endpoint HTTPS contrôlé dans la console officielle",
     "Autorisation explicite distincte avant toute requête Graph réelle, activation ou message de preuve Meta",
     "Toute dépense, ressource payante ou dépassement de quota",
-    "Fusion, déploiement de production et changement DNS réel"
-  ]
+    "Fusion, déploiement de production et changement DNS réel",
+    "Recette exhaustive dans un environnement déjà équipé et autorisé, sans GitHub Actions ni installation sur le Mac"
+  ],
+  "executionConstraints": {
+    "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
+    "localClone": false,
+    "localDependencyInstall": false,
+    "githubActions": false,
+    "reason": "Demande explicite de Lucas le 30 octobre 2026 : éviter le stockage sur le Mac et aucune minute GitHub Actions disponible.",
+    "commitMarker": "[skip ci]",
+    "validation": "Contrôles ciblés en mémoire avec outils déjà installés; ne pas déduire une validation exhaustive des anciennes CI."
+  }
 }

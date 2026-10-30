@@ -2316,8 +2316,16 @@ describe("service des plans Conversation", () => {
       context.tenantId,
       plan.id,
     );
-    expect(firstSignal).toEqual({ idempotentReplay: false });
-    expect(replayedSignal).toEqual({ idempotentReplay: true });
+    expect(firstSignal).toEqual({
+      idempotentReplay: false,
+      threadId: source.threadId,
+      planId: plan.id,
+    });
+    expect(replayedSignal).toEqual({
+      idempotentReplay: true,
+      threadId: source.threadId,
+      planId: plan.id,
+    });
     const resumeEvent = await context.db.query<{ id: string }>(
       `select id from domain_events
        where tenant_id = $1 and event_type = 'workflow.resume'

@@ -164,14 +164,11 @@ export async function executeConversationPlanAction(formData: FormData) {
 export async function retryConversationPlanAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
-  const threadId = text(formData, "threadId");
-  await safeServerAction("conversation.plan_retry", () =>
+  const result = await safeServerAction("conversation.plan_retry", () =>
     services.retryPlan(user.id, tenant.id, text(formData, "planId")),
   );
   revalidatePath("/conversation");
-  redirect(
-    `/conversation?fil=${encodeURIComponent(threadId)}&reprise=demandee`,
-  );
+  redirect(`/conversation?fil=${encodeURIComponent(result.threadId)}`);
 }
 
 export async function authorizeMetaWhatsAppTrialAction(formData: FormData) {

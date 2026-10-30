@@ -1,5 +1,11 @@
 # Preparation production
 
+## Statut de recette au 30 octobre 2026
+
+Le lot de provenance IA et de reprise Conversation est contrôlé uniquement par scénarios isolés en mémoire, analyse syntaxique et lint ciblé. La suite complète Vitest, PostgreSQL/RLS, le build et Playwright ne sont pas exécutés sur ce lot. Les CI historiques de la base `24d688f` ne valident pas ces nouvelles modifications.
+
+À la demande de Lucas, les modifications passent directement par les API GitHub, sans clone ni installation de dépendances sur le Mac et sans GitHub Actions. La PR reste en brouillon et les cases ci-dessous restent ouvertes jusqu'à une recette complète sur un environnement autorisé déjà équipé. Aucune dérogation de production n'est déduite de l'absence de minutes Actions.
+
 ## Architecture d'exploitation
 
 - PostgreSQL 17 est obligatoire en production.

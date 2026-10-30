@@ -1,5 +1,22 @@
 # Étapes suivantes TRADIKOM ONE OS
 
+## Mise à jour du 30 octobre 2026 — travail distant et preuves honnêtes
+
+Cette section est le checkpoint actuel. Les sections datées plus anciennes ci-dessous restent un historique et ne remplacent pas les consignes actuelles de Lucas.
+
+- Source de travail : API GitHub, branche `codex/tradikom-one-os`, base observée `24d688fd644d7e641580e76ba7ffbf5efc29af22`. Aucun clone ni installation de dépendances sur le Mac. Aucun lancement GitHub Actions; commits marqués `[skip ci]`.
+- Correction IA : le fallback de `OpenAiProvider.enrichBusinessTwin` conserve sa provenance déterministe, son vrai modèle de template et ses métadonnées. Aucun appel à un modèle n'est ajouté.
+- Correction Conversation : la reprise renvoie les identifiants du plan autorisé, la redirection ignore le fil fourni par le formulaire et la page ne confirme plus une reprise depuis un simple paramètre d'URL.
+- Tests versionnés : six cas de provenance IA; deux cas de redirection autoritative et un refus d'action; attentes du service adaptées au résultat enrichi.
+- Vérifications exécutées en mémoire : six callbacks de tests IA, trois scénarios d'action et sept de service. Les tests reproduisent deux défauts de provenance et deux mauvaises redirections avant correction, puis passent après correction.
+- Limites du banc isolé : SDK OpenAI et services remplacés par des doubles sans réseau; Zod embarqué par le Next.js déjà installé. TypeScript 5.9.3 pour l'analyse syntaxique; ESLint 9.39.4 et règles Next.js préinstallées pour cinq fichiers et le fragment de service, sans erreur ni avertissement. Aucun typecheck global revendiqué.
+- Non exécutés sur ce lot : suite complète Vitest, PostgreSQL/RLS, migrations, build, Playwright et recette production. Les anciennes CI de la base ne constituent pas une preuve pour ce nouveau lot.
+- Fournisseurs : aucun compte, token, Graph, envoi, stockage objet réel ou endpoint public n'est activé par ce travail. Le dernier checkpoint SMS Meta est historique et n'a pas été revérifié dans cette session.
+
+### Prochaine action exacte
+
+Exécuter la matrice complète d'`AGENTS.md` dans un environnement déjà équipé et autorisé, sans GitHub Actions ni installation sur le Mac; conserver la PR en brouillon tant que cette recette manque. Vérifier ensuite le checkpoint fournisseur avec l'utilisateur au moment précis de l'authentification et de l'activation. OS-6 à OS-8 et la production ne sont pas déclarés terminés.
+
 ## Situation actuelle — 15 septembre 2026, 10:09 UTC
 
 - La délégation durable de validation est livrée dans `88eeb427`, ses preuves PostgreSQL sont fiabilisées dans `654c546` et le libellé français lecture seule est harmonisé dans `a9daf55`. Une délégation lie exactement tenant, plan, approbation, empreinte du plan, délégant, destinataire, rôles observés, séquence et empreinte d'idempotence.

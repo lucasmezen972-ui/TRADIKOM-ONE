@@ -1515,7 +1515,7 @@ export async function requestConversationActionPlanRetry(
   tenantId: string,
   planId: string,
 ) {
-  const runId = await withTenantDbTransaction(
+  const retryContext = await withTenantDbTransaction(
     db,
     tenantId,
     userId,
@@ -1546,12 +1546,23 @@ export async function requestConversationActionPlanRetry(
           "La mission durable à reprendre est introuvable.",
         );
       }
-      return run.id;
+      return {
+        runId: run.id,
+        threadId: plan.thread_id,
+        planId: plan.id,
+      };
     },
   );
 
   try {
-    return await requestManualWorkflowRetry(db, userId, tenantId, { runId });
+    const result = await requestManualWorkflowRetry(db, userId, tenantId, {
+      runId: retryContext.runId,
+    });
+    return {
+      ...result,
+      threadId: retryContext.threadId,
+      planId: retryContext.planId,
+    };
   } catch (error) {
     if (
       error instanceof WorkflowError &&

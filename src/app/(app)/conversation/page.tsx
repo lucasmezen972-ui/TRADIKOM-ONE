@@ -57,7 +57,6 @@ type ConversationPageProps = {
       | "executed";
     plan_id?: string;
     delegation_id?: string;
-    reprise?: "demandee";
     meta_essai?: "autorise" | "revoque";
   }>;
 };
@@ -164,13 +163,6 @@ export default async function ConversationPage({
           className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-950"
         >
           {planReceiptMessage(planReceipt)}
-        </div>
-      ) : null}
-
-      {params.reprise === "demandee" ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-          Reprise demandée une seule fois. Le worker continuera la mission sans
-          rejouer une étape déjà réussie.
         </div>
       ) : null}
 

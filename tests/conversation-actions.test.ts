@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   decidePlan: vi.fn(),
   delegatePlan: vi.fn(),
   revisePlan: vi.fn(),
+  retryPlan: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -35,6 +36,7 @@ vi.mock("@/modules/channels", () => ({
     decidePlan: mocks.decidePlan,
     delegatePlan: mocks.delegatePlan,
     revisePlan: mocks.revisePlan,
+    retryPlan: mocks.retryPlan,
   }),
 }));
 
@@ -43,6 +45,7 @@ import {
   decideConversationPlanAction,
   delegateConversationPlanAction,
   reviseConversationPlanAction,
+  retryConversationPlanAction,
 } from "../src/app/(app)/conversation/actions";
 
 afterEach(() => {
@@ -51,6 +54,45 @@ afterEach(() => {
 });
 
 describe("actions serveur Conversation", () => {
+  it.each([false, true])(
+    "redirige la reprise vers le fil autoritatif, rejeu=%s",
+    async (idempotentReplay) => {
+      mocks.retryPlan.mockResolvedValue({
+        idempotentReplay,
+        threadId: "thread_retry_authoritative",
+        planId: "plan_retry_authoritative",
+      });
+      const formData = new FormData();
+      formData.set("threadId", "thread_forged_ignored");
+      formData.set("planId", "plan_submitted");
+
+      await retryConversationPlanAction(formData);
+
+      expect(mocks.retryPlan).toHaveBeenCalledExactlyOnceWith(
+        "user_decision_test",
+        "tenant_decision_test",
+        "plan_submitted",
+      );
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/conversation");
+      expect(mocks.redirect).toHaveBeenCalledExactlyOnceWith(
+        "/conversation?fil=thread_retry_authoritative",
+      );
+    },
+  );
+
+  it("ne confirme pas une reprise refusée par le service", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.retryPlan.mockRejectedValue(new Error("Accès refusé"));
+    const formData = new FormData();
+    formData.set("threadId", "thread_forged_ignored");
+    formData.set("planId", "plan_submitted");
+
+    await expect(retryConversationPlanAction(formData)).rejects.toBeDefined();
+
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
   it("redirige un brouillon incomplet vers la demande de précision", async () => {
     mocks.createPlan.mockResolvedValue({
       id: "plan_clarification",
