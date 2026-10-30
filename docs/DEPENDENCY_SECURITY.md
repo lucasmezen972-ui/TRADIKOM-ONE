@@ -33,13 +33,15 @@ Limites : aucune authentification Azure, découverte/JWKS Microsoft, acquisition
 
 L'audit complet, incluant le développement, avait encore9 avis (1 élevé,7 modérés,1 faible). Vitest passe de4.1.10 à4.1.12, Vite est verrouillé à8.1.6, et l'override limité `@esbuild-kit/core-utils>esbuild` à0.25.12 remplace le moteur vulnérable du chargeur Drizzle. L'audit complet retourne désormais **zéro avis**, sans exception masquée.
 
-Cet override esbuild dépasse la plage déclarée par core-utils. Un smoke hors ligne a vérifié la résolution réelle depuis Drizzle vers0.25.12, les transformations CJS/ESM, leur exécution, les sourcemaps et le rejet de TypeScript invalide : vert, zéro tentative réseau, sans injection ni cache disque. Le SDK Teams conserve ses10 tests verts sous Vitest4.1.12. La recette exhaustive est à rejouer sur le nouveau commit exact; les résultats de879ef66 ne lui sont pas attribués.
+Cet override esbuild dépasse la plage déclarée par core-utils. Un smoke hors ligne a vérifié la résolution réelle depuis Drizzle vers0.25.12, les transformations CJS/ESM, leur exécution, les sourcemaps et le rejet de TypeScript invalide : vert, zéro tentative réseau, sans injection ni cache disque. Le SDK Teams conserve ses10 tests verts sous Vitest4.1.12. La suite exhaustive de la base69a0660 et la recette ciblée du source final sont distinguées ci-dessous ; aucun résultat de879ef66 ne leur est attribué.
 
-## Validation réalisée et restante
+## Validation finale
 
-Sur le lot corrigé, Node22.23.4 et pnpm11.7.0 : lint global, typecheck global,23 tests natifs OpenAI/accès objectifs,10 tests natifs SDK et audit de production passent. Le build de la baseline0c84f609 est vert avant la mise à jour des dépendances. La suite exhaustive, PostgreSQL/RLS, sauvegarde/restauration, build corrigé et Playwright restent à exécuter sur le SHA publié exact dans le Codespace de validation.
+Sur le source fa3b391fdc80b7a477a929af038e32aa3c17096b, l'audit complet production et développement retourne zéro avis. Installation gelée, lint, typecheck, 52 tests Goal Watch avec PostgreSQL, build Next.js 16.4.1 et 20 scénarios Playwright réussissent. La suite exhaustive de la base 69a0660 passe 1 048 tests ; elle n'a pas été rejouée après le correctif Goal Watch.
 
-Aucun GitHub Actions, appel fournisseur réel, déploiement ou dépense additionnelle n'est lancé. Aucun code ou node_modules n'est installé sur le Mac. Les anciens résultats verts ne sont pas attribués à ce lot.
+Les 23 tests natifs OpenAI/accès objectifs, dix tests natifs Teams/MSAL et le smoke de résolution Drizzle/esbuild ont aussi été récoltés dans la session. Les limites d'authentification de production des overrides demeurent.
+
+Le Codespace est arrêté ; aucun fournisseur réel, GitHub Actions, achat ou déploiement. Voir VALIDATION_2026-10-30.md pour les SHA, périmètres et traces.
 
 ## Sources officielles
 

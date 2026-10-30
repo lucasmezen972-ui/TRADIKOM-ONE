@@ -500,3 +500,12 @@ Le coffre Meta, l'enveloppe officielle, les statuts, leurs lots, les messages en
 ## 30 octobre 2026 — Recette gratuite et chaîne de dépendances
 
 La demande actuelle autorise un coût additionnel nul, aucun Actions et aucune installation sur le Mac. Le travail reste la validation de la Conversation et de ses frontières, sans nouvelle fonctionnalité métier. GitHub est rétabli, le workflow historique est désactivé et un Codespace de test a été créé dans le quota inclus avec garde financière vérifiée. L'audit production passe de41 à0 sans exception masquée. Les vrais tests Vitest ciblés (23+10), lint et typecheck sont verts. Le build de la baseline est vert; aucune preuve du build corrigé, de Vitest exhaustif, PostgreSQL/RLS ou Playwright n'est anticipée. Le PDF canonique reste absent de ce runtime : aucune nouvelle lecture n'est inventée. Les fournisseurs, OS-6 à OS-8 et la production restent ouverts.
+
+
+## Checkpoint vérifié du 30 octobre 2026
+
+Le lot corrige la chaîne de dépendances et la durabilité Goal Watch sans élargir les effets autorisés. La base 69a0660 passe 1 048 tests ; le correctif fa3b391 passe 52 tests ciblés, build et 20 scénarios navigateur, avec lint/typecheck/audit complets verts. Ces périmètres restent distincts.
+
+Le Codespace est arrêté et la base jetable supprimée. La revue des écarts distingue désormais moteur d'objectifs corrigé et parcours complet non livré, interface responsive présente et voix/documents manquants, catalogue privé présent et installation tierce encore preview_only.
+
+Aucun fournisseur réel, programmation, fusion ou déploiement n'est activé. La recette ne déclare pas OS-5 à OS-8 terminés. Références actuelles : VALIDATION_2026-10-30.md, DELIVERY_STATUS.md et AGENT_STATE.json.

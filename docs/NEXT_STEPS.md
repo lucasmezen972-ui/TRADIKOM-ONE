@@ -1,3 +1,19 @@
+# Prochaine tranche — état du 30 octobre 2026
+
+Le lot de dépendances et de durabilité Goal Watch est vérifié et le Codespace arrêté. Voir [VALIDATION_2026-10-30.md](./VALIDATION_2026-10-30.md) pour les preuves et [DELIVERY_STATUS.md](./DELIVERY_STATUS.md) pour les écarts.
+
+1. Relire les pages obligatoires du prompt maître canonique avant une nouvelle sélection autonome.
+2. Finaliser RLS, sélection équitable et parcours Conversation des objectifs avec consentement/arrêt, sans activer de programmation.
+3. Préparer la composition fournisseur réelle, puis obtenir les accès et consentements avant sa preuve aller-retour.
+4. Rétablir administrativement Supabase avant exploitation ; conserver des bases jetables séparées pour les tests.
+5. Finaliser voix/documents et installation tierce minimale, puis effectuer une recette d'exploitation avant toute production.
+
+Les fournisseurs réels, une dépense, une fusion, une mise en production ou un objectif récurrent ne sont pas déduits de la recette gratuite.
+
+## Historique des tranches antérieures
+
+Les états de validation ci-dessous décrivent leur date et leur commit ; ils ne remplacent pas le checkpoint actuel.
+
 ## Recette gratuite et dépendances corrigées — 30 octobre 2026
 
 Cette section remplace les anciennes instructions de reprise : aucune dépense additionnelle n'est autorisée. GitHub est accessible sur le bon compte et le workflow planifié `tradikom-continuity.yml` a été désactivé manuellement, bannière relue. Aucun GitHub Actions n'a été lancé.

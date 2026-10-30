@@ -1448,3 +1448,14 @@ Le build natif est vert sur la baseline `0c84f609`, avant ces mises à jour. Le 
 
 Le premier essai Colab reste un historique non vérifié jusqu'à sa fin d'installation; il est remplacé pour la suite par ce Codespace. Supabase reste inactif et distinct de la base jetable. Aucun fournisseur métier n'est activé, aucun déploiement ou achat n'est effectué.
 
+
+
+## 2026-10-30 — Dépendances et durabilité vérifiées sans Actions
+
+Audit complet ramené à zéro avis, sans exceptions masquées. Next.js 16.4.1 et correctifs des SDK/transitives/outils de test. Les dix tests natifs Teams/MSAL et le smoke Drizzle/esbuild passent sans fournisseur réel.
+
+La base 69a06604c033ba35670578fd97581a8292799838 passe 181 fichiers et 1 048 tests. Son build est ensuite interrompu avec le code 143. Le correctif Goal Watch fa3b391fdc80b7a477a929af038e32aa3c17096b est validé séparément : 52 tests ciblés dont deux PostgreSQL, lint, typecheck, installation gelée, audit complet, migrations/vérification/restauration, build et 20 scénarios Playwright ; reçu final zéro. La suite exhaustive n'a pas été rejouée après cette tranche.
+
+Rapport et audit deviennent atomiques ; verrous objectif/fil, rejeu historique et dates bornées. Les revues ont corrigé précision, offset, année zéro et snapshot du test. Aucune migration ou activation de maintenance.
+
+Le PostgreSQL jetable est supprimé et le Codespace arrêté, confirmation GitHub relue. Aucun Actions, clone ou node_modules sur le Mac, achat, envoi réel, fusion ou déploiement. Le produit reste partiel ; voir DELIVERY_STATUS.md et VALIDATION_2026-10-30.md.

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T11:39:13.902Z",
+  "updatedAt": "2026-10-30T13:09:26.252Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "0c84f609d27f3043cb5e1d3c25a2a7cac8fb62b3",
-  "publishedHeadObserved": "0c84f609d27f3043cb5e1d3c25a2a7cac8fb62b3",
-  "status": "security_dependencies_patched_native_targeted_passed_codespaces_full_recipe_pending",
+  "lastCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+  "publishedHeadObserved": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+  "status": "dependency_security_and_goal_watch_durability_verified_production_pending",
   "currentPhase": "OS-5",
-  "currentObjective": "Exécuter gratuitement la recette native du dépôt hors du Mac et sans GitHub Actions, après correction des dépendances signalées par l'audit.",
+  "currentObjective": "Finaliser le parcours d'objectifs, sa RLS et le consentement/arrêt, puis préparer les intégrations réelles sans activation implicite.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -51,11 +51,11 @@
         "Conversation-first, anti-dérive et limites de validation"
       ],
       "requirement": "Ne pas attribuer à OpenAI une sortie déterministe et ne pas présenter une reprise comme confirmée depuis un paramètre d'URL. Les identifiants de retour proviennent du plan autorisé côté serveur. Respecter la demande actuelle : modifications directement sur GitHub, sans clone ni installation sur le Mac, aucun lancement GitHub Actions.",
-      "evidenceExpected": "Tests de régression sur provenance, redirection autoritative et refus; validation isolée en mémoire, lint et analyse syntaxique avec outils existants. Conserver la suite PostgreSQL/RLS, build et Playwright comme non exécutée sur ce nouveau lot."
+      "evidenceExpected": "Conserver les preuves épinglées au source : baseline69a0660 exhaustive, correctiffa3b391 ciblé52 tests+build/Playwright. PDF absent du runner distant explicitement signalé ; relire le canon avant la prochaine tranche."
     }
   },
-  "nextAction": "Dans le Codespace de validation déjà créé, récupérer le nouveau commit GitHub exact, détacher le checkout sur ce SHA et lancer scripts/verify-isolated.sh avec Node22/pnpm11.7, PostgreSQL17 jetable et aucun fournisseur réel. Lire tous les résultats, corriger les échecs, conserver les preuves puis arrêter le Codespace. Aucun budget payant n'est autorisé.",
-  "nextFile": "scripts/verify-isolated.sh",
+  "nextAction": "Relire les pages obligatoires du prompt maître canonique. Reprendre les écarts de DELIVERY_STATUS.md, en priorité RLS Goal Watch, sélection équitable et parcours Conversation avec consentement/arrêt. La base Supabase et les fournisseurs réels exigent leurs accès opérateur avant exploitation. Aucun budget payant, Actions ou programmation n'est autorisé.",
+  "nextFile": "src/modules/goal-watch/service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -2398,12 +2398,24 @@
     {
       "command": "Codespaces : garde de dépense nulle, création2cœurs sans prébuild, UID1000/Node22/Docker",
       "status": "verified_tools_ready_full_recipe_pending"
+    },
+    {
+      "command": "Recette gratuite exacte69a0660, Node22/pnpm11.7/PostgreSQL17",
+      "status": "passed_full_vitest_181_files_1048_tests_migrations_schema_restore_lint_typecheck_build_compiled_then_terminated_exit143_playwright_not_run"
+    },
+    {
+      "command": "Recette ciblée finalefa3b391fdc80b7a477a929af038e32aa3c17096b",
+      "status": "passed_frozen_install_full_audit_zero_migrations_schema_restore_lint_typecheck_4_files_52_tests_including_2_postgres_build_20_playwright_ready_0_errors_1_pdf_warning_git_clean_exit0"
+    },
+    {
+      "command": "Fin du runner de validation",
+      "status": "verified_no_postgres_containers_remaining_and_codespace_stopped_github_banner_read"
     }
   ],
   "humanBlockers": [
-    "Rétablissement administratif du projet Supabase dans la console officielle",
-    "Consentements, secrets serveur et implémentations autoritatives requis avant fournisseur ou génération réels",
-    "Toute dépense, fusion, production ou modification DNS reste distincte et non autorisée par cette recette gratuite"
+    "Rétablissement administratif du projet Supabase dans sa console officielle",
+    "Authentifications, références de secrets et consentements bornés avant fournisseurs réels",
+    "Toute dépense, programmation récurrente, fusion ou production reste distincte de cette recette gratuite"
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2412,7 +2424,9 @@
     "githubActions": false,
     "reason": "Demande explicite de Lucas le 30 octobre 2026 : éviter le stockage sur le Mac et aucune minute GitHub Actions disponible.",
     "commitMarker": "[skip ci]",
-    "validation": "Contrôles ciblés en mémoire avec outils déjà installés; ne pas déduire une validation exhaustive des anciennes CI."
+    "validation": "Suite exhaustive de la base69a0660 :181 fichiers/1048 tests ; correctif finalfa3b391 :52 tests ciblés dont2 PostgreSQL, contrôles globaux, build et20 Playwright. Périmètres distincts.",
+    "macCloneOrInstall": false,
+    "remoteClone": true
   },
   "infrastructure": {
     "vercel": {
@@ -2431,7 +2445,7 @@
     },
     "validation": {
       "runner": "Codespaces personnel dans le quota inclus, 2 cœurs, garde de dépense nulle vérifiée",
-      "state": "created_tools_ready_recipe_not_started",
+      "state": "targeted_recipe_passed_runner_stopped_verified",
       "nodeVersion": "22.23.4",
       "dockerVersion": "29.9.2-2",
       "osUserId": 1000,
@@ -2439,7 +2453,12 @@
       "requiresBudgetConfirmation": false,
       "publicPorts": [],
       "githubActions": false,
-      "prebuild": false
+      "prebuild": false,
+      "recipeSha": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+      "runnerName": "grim-spooky-phantasm-69756wwgw9v734v5",
+      "stopped": true,
+      "stopVerified": true,
+      "postgresTestContainersRemaining": 0
     }
   },
   "completedPreparation": [
@@ -2447,14 +2466,17 @@
     "Contrôles applicatifs d'accès au fil pour create/get Goal Watch",
     "Entrées et preuves goal-watch:v1 réservées au module spécialisé; création/révision génériques refusées",
     "Transport OpenAI autonome préparé avec autorisation/budget/audit obligatoires, non raccordé",
-    "Recette Linux/Docker PostgreSQL17 préparée sans base existante, Mac, Actions, port public ou programmation"
+    "Recette Linux/Docker PostgreSQL17 préparée sans base existante, Mac, Actions, port public ou programmation",
+    "Dépendances production et développement corrigées sans exception d'audit",
+    "Rapport/audit Goal Watch atomiques, verrous et rejeu historique validés, dates bornées",
+    "Recette ciblée finale Node22/PostgreSQL17, build et20 Playwright verts; Codespace arrêté"
   ],
   "remainingGaps": [
-    "Suite native Vitest, typecheck global, PostgreSQL/RLS, build et Playwright de ce lot non exécutés",
-    "Politiques RLS et atomicité/concurrence de Goal Watch inchangées; OS-6 non livré",
-    "Autorisation de modèle, réservation budgétaire durable et audit serveur à implémenter et prouver avant activation IA",
-    "Base applicative et authentifications opérateur à rétablir",
-    "Fournisseur réel, stockage, expérience mobile cible, marketplace et recette production non finalisés"
+    "RLS Goal Watch spécialisée, sélection équitable/pagination, parcours Conversation et consentement/arrêt restent à finaliser",
+    "Composition serveur fournisseur réelle et preuve aller-retour non livrées ; authentifications et consentements opérateur nécessaires",
+    "Base applicative Supabase inactive ; exploitation et production non validées",
+    "OS-7 responsive partiel : voix et parcours documentaire mobile complet manquants",
+    "OS-8 installation tierce minimale encore preview_only et désactivée"
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 0,
@@ -2508,19 +2530,70 @@
       "teamsMsalCompatibility": 10
     },
     "baselineBuild": "passed_on_0c84f609_before_dependency_updates",
-    "fullVitest": "initial_run_interrupted_for_dependency_remediation_no_green_claim",
-    "postgresRls": "pending_codespaces_recipe",
-    "backupRestore": "pending_codespaces_recipe",
-    "updatedBuild": "pending_codespaces_recipe",
-    "playwright": "pending_codespaces_recipe",
+    "fullVitest": "passed_baseline69a0660_181_files_1048_tests_not_rerun_after_goal_watch_changes",
+    "postgresRls": "baseline_native_rls_passed_and_2_goal_watch_durability_postgres_tests_passed_specialized_goal_watch_rls_not_delivered",
+    "backupRestore": "passed_on_fa3b391",
+    "updatedBuild": "passed_next_16.4.1_on_fa3b391",
+    "playwright": "passed_20_of_20_on_fa3b391",
     "continuity": {
+      "checkedAt": "2026-10-30T13:02:57.804Z",
       "status": "ready",
       "errors": 0,
       "warnings": [
-        "PDF canonique absent dans cet environnement distant; aucune nouvelle lecture du PDF n'est revendiquée."
+        "PDF canonique absent du runtime distant; aucune nouvelle lecture de pages revendiquée."
       ]
     },
     "suppliersActivated": false,
-    "macCloneOrInstall": false
+    "macCloneOrInstall": false,
+    "validatedSourceCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+    "allDependenciesAuditAfter": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "baselineFullSuite": {
+      "files": 181,
+      "tests": 1048,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 2317.95
+    },
+    "goalWatchTests": {
+      "files": 4,
+      "tests": 52,
+      "failed": 0,
+      "skipped": 0,
+      "service": 9,
+      "access": 3,
+      "timestamps": 38,
+      "postgresDurability": 2
+    },
+    "finalRecipeExitCode": 0,
+    "runnerStopped": true
+  },
+  "goalWatchDurability": {
+    "sourceCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+    "status": "verified_targeted_recipe",
+    "tests": {
+      "files": 4,
+      "tests": 52,
+      "failed": 0,
+      "skipped": 0,
+      "service": 9,
+      "access": 3,
+      "timestamps": 38,
+      "postgresDurability": 2
+    },
+    "build": "passed",
+    "playwright": 20,
+    "activation": false,
+    "remaining": [
+      "specialized_rls",
+      "fair_selection_pagination",
+      "conversation_consent_stop",
+      "independent_unique_evaluation_constraint"
+    ]
   }
 }

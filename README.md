@@ -1,5 +1,16 @@
 # TRADIKOM ONE
 
+## État vérifié — 30 octobre 2026
+
+Le lot de dépendances et de durabilité Goal Watch est vérifié, sans GitHub Actions ni installation sur le Mac. L'audit complet retourne **zéro avis**. La suite exhaustive de la base `69a0660` passe **1 048 tests dans 181 fichiers**. Le correctif final `fa3b391` passe **52 tests ciblés**, dont deux PostgreSQL réels, ainsi que lint, typecheck, build et **20 scénarios Playwright**.
+
+Ces deux périmètres sont distincts : la suite exhaustive n'a pas été rejouée après le correctif Goal Watch. Le reçu de sa recette ciblée retourne le code zéro sur son SHA exact. Le conteneur PostgreSQL jetable est supprimé et le Codespace a été arrêté, confirmation GitHub relue.
+
+La PR reste en brouillon, sans fusion ou déploiement. Supabase demeure inactif. Les intégrations réelles, le parcours de consentement et d'arrêt des objectifs, la voix/documents et l'installation tierce minimale restent à finaliser. **TRADIKOM ONE n'est pas déclaré terminé.**
+
+Preuves : [validation](docs/VALIDATION_2026-10-30.md), [état de livraison](docs/DELIVERY_STATUS.md) et [recette distante](docs/CLOUD_VALIDATION.md). Les états datés plus anciens ci-dessous sont historiques.
+
+
 > **Transformer toute la complexité d’une entreprise en une conversation simple, continue, sûre et orientée résultats.**
 
 TRADIKOM ONE est conçu pour devenir le **système d’exploitation conversationnel de l’entreprise**.
