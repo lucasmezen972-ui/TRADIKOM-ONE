@@ -1,5 +1,11 @@
 # TRADIKOM ONE
 
+## Correctif CSV déployé — recette hébergée à reprendre
+
+Le source `d3f7a2a` attend les quatre lectures de référence sur la connexion de transaction, au lieu de les superposer. Régression rouge avant correction ; dix tests ciblés verts ensuite, dont un rôle réellement limité. Lint, TypeScript, continuité et build Vercel du SHA exact passent. Préversion protégée READY, schéma134 conservé, health HTTP200/database=ok.
+
+La nouvelle recette CSV est bloquée avant connexion par la confiance du navigateur cloud envers son proxy TLS. Aucun import hébergé nouveau, aucune disparition de warning en usage réel ou nouvelle suite exhaustive ne sont revendiqués. IA désactivée et budgets nuls. [Preuves et reprise](docs/CSV_QUERY_SERIALIZATION_2026-11-03.md).
+
 ## Préversion : scénario CRM guidé
 
 Conversation conserve une proposition durable, à relire puis confirmer ou refuser. La confirmation crée une vraie tâche CRM et sa preuve ; un rejeu ne duplique pas la tâche. Le refus ne crée rien. Confidentialité sous rôle limité et rollback en cas d’échec d’audit sont couverts localement.

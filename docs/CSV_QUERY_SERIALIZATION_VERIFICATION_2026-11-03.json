@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-03",
+  "sourceCommit": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
+  "deployment": {
+    "id": "dpl_AseSRQa24RLsBvE4BtEUpa1xbWnp",
+    "state": "READY",
+    "environment": "preview",
+    "target": null,
+    "withLatestCommit": false,
+    "canonicalAliasVerified": true,
+    "protectionUnchanged": true
+  },
+  "change": "four tenant-filtered reference reads awaited in sequence on the import transaction connection",
+  "tests": {
+    "redBeforeFix": {
+      "csvLifecycleFailed": 1,
+      "referenceTestsFailed": 2
+    },
+    "green": {
+      "csvAndReferencesPassed": 5,
+      "publicErrorsPassed": 4,
+      "restrictedRoleRuntimePassed": 1,
+      "totalPassed": 10
+    },
+    "lint": "passed",
+    "typecheck": "passed",
+    "fullSuite": "not_rerun; prior1116/37 refers to the previous app source",
+    "runtime": "Node24 threads, one worker",
+    "abortedAttempts": "default workers and a Node22 attempt stalled; broader interrupted runs not counted"
+  },
+  "health": {
+    "http": 200,
+    "database": "ok",
+    "timestamp": "2026-11-03T15:37:17.037Z"
+  },
+  "hostedCsvRecipe": {
+    "status": "blocked_before_login_not_proven",
+    "failure": "cloud_chromium_proxy_ca_not_trusted",
+    "directBrowserResult": {
+      "passed": false,
+      "failedStage": "protected_preview",
+      "failureReason": "net::ERR_CERT_AUTHORITY_INVALID",
+      "failurePath": "blank"
+    },
+    "secureBrowserFallback": "Vercel native sign-in wall; no sign-in or credential entry attempted",
+    "certificateChecksDisabled": false,
+    "warningAbsentInRealImportProven": false
+  },
+  "preservation": {
+    "schema": 134,
+    "personalActiveOwner": 1,
+    "contacts": 1,
+    "tasks": 1,
+    "newTestSessions": 0,
+    "disposableAccounts": 0,
+    "newHostedBusinessDataCreated": false
+  },
+  "ai": {
+    "modelEnabled": false,
+    "generationEnabled": false,
+    "globalBudgetMicroUsd": 0,
+    "tenantBudgetMicroUsd": 0,
+    "paidCalls": 0
+  },
+  "cleanup": {
+    "temporaryShareRevoked": true,
+    "privateRecipeAccessRemoved": true,
+    "personalCredentialsPreserved": true
+  }
+}

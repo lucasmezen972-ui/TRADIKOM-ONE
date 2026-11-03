@@ -14,12 +14,12 @@ if (origin !== config.expectedOrigin) throw new Error("canonical_origin_mismatch
 const proxyUrl = process.env.HTTPS_PROXY ? new URL(process.env.HTTPS_PROXY) : null;
 const proxy = proxyUrl ? { server: proxyUrl.origin, username: decodeURIComponent(proxyUrl.username), password: decodeURIComponent(proxyUrl.password) } : undefined;
 const browser = await chromium.launch({ executablePath: config.chromiumPath, proxy, args: config.chromiumArgs ?? ["--no-sandbox", "--disable-dev-shm-usage"] });
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, ignoreHTTPSErrors: false });
 page.setDefaultTimeout(45000);
 const check = expect.configure({ timeout: 45000 });
-const proof = { sourceCommit: config.sourceCommit, runId: config.runId, hosted: true, newAccounts: 0, steps: [] };
+const proof = { sourceCommit: config.sourceCommit, runId: config.runId, hosted: true, transport: "direct_browser", ignoreHTTPSErrors: false, newAccounts: 0, steps: [] };
 let signedIn = false;
-let stage = "login";
+let stage = "protected_preview";
 const name = `Contact Démo CSV ${config.runId}`;
 const filename = `recette-csv-${config.runId}.csv`;
 const csv = `nom,email,telephone\nContact Démo Guidée 20261103-1404-guided,demo-guided-20261103-1404-guided@example.test,\n${name},csv-check-${config.runId}@example.test,\n`;
@@ -41,7 +41,9 @@ async function preview() {
   await metric("Invalides", 0);
 }
 try {
-  await page.goto(url);
+  const response = await page.goto(url);
+  proof.initialHttp = response?.status();
+  stage = "login";
   await hydrated();
   const form = page.locator('form[action="/api/auth/login"]');
   await form.getByPlaceholder("Email professionnel").fill(email);
@@ -100,8 +102,9 @@ try {
   proof.passed = false;
   proof.failedStage = stage;
   proof.errorName = error.name;
+  proof.failureReason = error.message.match(/net::[A-Z_]+/)?.[0] ?? "browser_assertion_or_navigation_failed";
   proof.failurePath = new URL(page.url()).pathname;
-  console.log(JSON.stringify({ stage, passed: false, error: error.name }));
+  console.log(JSON.stringify({ stage, passed: false, error: error.name, reason: proof.failureReason }));
   process.exitCode = 1;
 } finally {
   if (signedIn) {
