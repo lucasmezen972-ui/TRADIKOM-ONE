@@ -25,6 +25,7 @@ describe("migrations du Conversation Hub", () => {
         "121_os5_orchestrator_namespace_read_delivery_rls",
         "122_os5_conversation_action_plan_delegations",
         "123_os5_conversation_action_plan_delegations_rls",
+        "124_runtime_function_search_path",
       ]),
     );
 

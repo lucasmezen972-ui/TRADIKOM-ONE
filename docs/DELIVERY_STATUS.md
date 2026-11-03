@@ -1,3 +1,13 @@
+## Durcissement SQL vérifié — 2 novembre 2026 (Martinique)
+
+La migration 124 fixe le search_path de 26 fonctions à pg_catalog, public, pg_temp. Un test reproduit le masquage de pg_class par une table temporaire : le contrôle système était faussé avant correction et refuse cette tentative après mise à niveau. Les définitions, privilèges et rôles ne sont pas élargis.
+
+Le correctif est publié dans a146281 puis appliqué à Supabase. Contrôles réels : 124 migrations, 26 chemins fixés et analyseur de sécurité sans alerte. Recette de restauration/migration/rejeu sous tradikom_owner sur PostgreSQL 17.5 embarqué réussie. Lint, typecheck et build réussis avec configuration factice, sans accès à la base réelle.
+
+Tests natifs : lot service/sécurité de 11 tests, lot migrations/sécurité de 21 tests, lot configuration/authentification/isolation/transactions/accès aux objectifs de 72 tests, tous verts. Ces lots se recouvrent : ne pas additionner leurs nombres. La première tentative exhaustive a exposé quatre attentes de dernière migration restées sur 122/123 ; elles sont mises à jour pour 124 et le lot des migrations repasse. La suite exhaustive a été interrompue après ce diagnostic ; aucune suite exhaustive ou recette Playwright nouvelle n'est revendiquée.
+
+Vercel : projet présent, aucun déploiement et aucune variable configurée. Les accès PostgreSQL runtime, la clé de chiffrement et les accès fournisseurs restent à provisionner dans un gestionnaire de secrets. Le raccord OpenAI/Meta, la gestion de consentement/arrêt et la RLS fine des objectifs, les documents/voix et l'installation tierce réelle restent incomplets. Ne pas déclarer le produit livré. Le budget additionnel reste nul ; aucune création de credential, activation de fournisseur, émission de message, dépense, fusion ou production effectuée par cette tranche.
+
 ## Mise à niveau Supabase réalisée — 2 novembre 2026 (Martinique)
 
 Le blocage de sauvegarde est levé gratuitement : export logique indépendant du schéma public applicatif, avec données, contraintes, index, fonctions, triggers, politiques et privilèges. Restauration vérifiée sur PostgreSQL 17.5 embarqué : 121 tables, 856 contraintes, 392 index, 109 politiques, 30 triggers, nombres de lignes et journal identiques. Les 120 tables métier étaient vides ; le journal contenait 66 lignes. Les réglages internes Supabase, fichiers Storage et secrets de connexion sont hors de ce périmètre.

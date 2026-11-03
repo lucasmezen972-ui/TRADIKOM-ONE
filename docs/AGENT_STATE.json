@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T01:57:34.310Z",
+  "updatedAt": "2026-11-03T02:14:37.597Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
   "publishedHeadObserved": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
-  "status": "supabase_active_application_schema_123_backup_restored_provider_runtime_pending",
+  "status": "supabase_schema_124_security_advisor_clear_application_incomplete",
   "currentPhase": "OS-5",
   "currentObjective": "Finaliser le parcours d'objectifs, sa RLS et le consentement/arrêt, puis préparer les intégrations réelles sans activation implicite.",
   "masterPrompt": {
@@ -54,7 +54,7 @@
       "evidenceExpected": "Conserver les preuves épinglées au source : baseline69a0660 exhaustive, correctiffa3b391 ciblé52 tests+build/Playwright. PDF absent du runner distant explicitement signalé ; relire le canon avant la prochaine tranche."
     }
   },
-  "nextAction": "Base Supabase réactivée, sauvegarde logique restaurée et 123 migrations appliquées. Relire le prompt maître avant nouvelle sélection. Durcir les 26 fonctions search_path, terminer RLS fine et consentement/arrêt des objectifs, puis composer un parcours fournisseur réel autorisé. Le correctif des lots non échus est publié dans d175274, mais l'équité et les configurations invalides restent à traiter. Aucun budget payant, Actions, programmation, fusion ou production implicites.",
+  "nextAction": "Le durcissement SQL est livré et vérifié (migration 124, zéro alerte advisor). Les variables Vercel sont absentes et aucun déploiement n'existe. Finaliser le raccord serveur et les parcours incomplets de DELIVERY_STATUS.md, puis recette PostgreSQL complète et Playwright du candidat exact. Garder les services réels désactivés sans secrets, consentements et budget ; ne pas déclarer terminés les objectifs, multimodal ou connecteurs tiers.",
   "nextFile": "src/modules/goal-watch/service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2414,7 +2414,8 @@
   ],
   "humanBlockers": [
     "Authentifications, références de secrets et consentements bornés avant fournisseurs réels",
-    "Toute dépense, programmation récurrente, fusion ou production reste distincte de cette recette gratuite"
+    "Toute dépense, programmation récurrente, fusion ou production reste distincte de cette recette gratuite",
+    "Configuration Vercel absente : accès runtime PostgreSQL et fournisseurs à provisionner par références serveur, sans secrets dans le chat"
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2441,12 +2442,12 @@
       "projectRef": "iwngumaqdjiglhfekgug",
       "status": "ACTIVE_HEALTHY",
       "runtimeValidated": false,
-      "appliedMigrations": 123,
-      "lastMigration": "123_os5_conversation_action_plan_delegations_rls",
+      "appliedMigrations": 124,
+      "lastMigration": "124_runtime_function_search_path",
       "backupVerified": true,
       "backupScope": "public application schema; platform internals and role credentials excluded",
       "restorationEngine": "PGlite PostgreSQL 17.5",
-      "postUpgradeSecurityWarnings": 26
+      "postUpgradeSecurityWarnings": 0
     },
     "validation": {
       "runner": "Codespaces personnel dans le quota inclus, 2 cœurs, garde de dépense nulle vérifiée",
@@ -2479,7 +2480,7 @@
   "remainingGaps": [
     "RLS Goal Watch spécialisée, sélection équitable/pagination, parcours Conversation et consentement/arrêt restent à finaliser",
     "Composition serveur fournisseur réelle et preuve aller-retour non livrées ; authentifications et consentements opérateur nécessaires",
-    "Base Supabase active et schéma à jour ; durcissement de 26 search_path, runtime et exploitation à valider",
+    "Supabase active, schéma 124 et analyseur sécurité sans alerte ; runtime web/worker et exploitation non validés",
     "OS-7 responsive partiel : voix et parcours documentaire mobile complet manquants",
     "OS-8 installation tierce minimale encore preview_only et désactivée"
   ],

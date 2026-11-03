@@ -25,10 +25,10 @@ describe("migration RLS des objets dérivés de Conversation", () => {
       "114_os5_conversation_derived_access_rls",
     );
     expect(getMigrationIds().at(-1)).toBe(
-      "122_os5_conversation_action_plan_delegations",
+      "124_runtime_function_search_path",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "123_os5_conversation_action_plan_delegations_rls",
+      "124_runtime_function_search_path",
     );
   });
 
