@@ -31,11 +31,11 @@ type Environment = Record<string, string | undefined>;
 type RequestRow = { id: string; context_fingerprint: string; status: "reserved" | "succeeded" | "failed"; generation_snapshot: string | null };
 
 export function getConversationModelReadiness(environment: Environment = process.env) {
-  const budget = integerBudget(environment.CONVERSATION_MODEL_BUDGET_MICRO_USD);
+  const { globalBudget, tenantBudget } = configuredBudgets(environment);
   const state = environment.FEATURE_CONVERSATION_MODEL !== "true" ? "disabled"
     : (environment.OPENAI_MODEL && environment.OPENAI_MODEL !== conversationModelName) ? "unsupported_model"
     : !environment.OPENAI_API_KEY?.trim() ? "missing_key"
-    : budget < conversationModelMaximumCostMicroUsd ? "missing_budget" : "ready";
+    : Math.min(globalBudget, tenantBudget) < conversationModelMaximumCostMicroUsd ? "missing_budget" : "ready";
   return { state, model: conversationModelName, maximumCostMicroUsd: conversationModelMaximumCostMicroUsd } as const;
 }
 
@@ -44,9 +44,7 @@ export async function createConversationModelPlan(db: DbClient, actorId: string,
   const parsed = createModelPlanInputSchema.parse(input);
   const environment = dependencies.environment ?? process.env;
   if (getConversationModelReadiness(environment).state !== "ready") throw new ConversationModelGenerationError("model_not_configured");
-  const globalBudget = integerBudget(environment.CONVERSATION_MODEL_BUDGET_MICRO_USD);
-  const tenantBudget = Math.min(globalBudget,
-    integerBudget(environment.CONVERSATION_MODEL_TENANT_BUDGET_MICRO_USD) || 100_000);
+  const { globalBudget, tenantBudget } = configuredBudgets(environment);
   const requestKeyHash = hashToken(JSON.stringify([tenantId, actorId, parsed.threadId, parsed.sourceMessageId, parsed.idempotencyKey]));
   const reservationId = `model_request_${requestKeyHash}`;
   const generator: ActionPlanGenerator = {
@@ -154,6 +152,14 @@ function parseModelSnapshot(raw: unknown): GeneratedActionPlan {
   } catch { throw new ConversationModelGenerationError("model_output_invalid"); }
 }
 function integerBudget(raw: string | undefined) { const n = Number(raw); return /^\d+$/.test(raw ?? "") && Number.isSafeInteger(n) && n >= 0 && n <= 1_000_000 ? n : 0; }
+function configuredBudgets(environment: Environment) {
+  const globalBudget = integerBudget(environment.CONVERSATION_MODEL_BUDGET_MICRO_USD);
+  // Only an omitted tenant cap gets the default. Explicit zero or malformed
+  // configuration must never silently authorize a nonzero allowance.
+  const rawTenantBudget = environment.CONVERSATION_MODEL_TENANT_BUDGET_MICRO_USD;
+  const tenantBudget = Math.min(globalBudget, rawTenantBudget === undefined ? 100_000 : integerBudget(rawTenantBudget));
+  return { globalBudget, tenantBudget };
+}
 function safeTokenCount(value: number | null) { return value !== null && Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000 ? value : null; }
 async function withModelTransaction<T>(db: DbClient, tenantId: string, actorId: string, callback: (transaction: DbClient) => Promise<T>): Promise<T> {
   const client = db as DbClient & { __transaction?: boolean; transaction?: PGlite["transaction"] };

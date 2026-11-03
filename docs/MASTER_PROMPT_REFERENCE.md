@@ -1,3 +1,9 @@
+## Copie canonique retrouvée — 3 novembre 2026
+
+Le fichier `Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf` est disponible dans les fichiers de Lucas, référence `libfile_87452c8e10f88191b16e89dede16aca9`. Copie matérialisée sur le cloud : empreinte SHA-256 exacte et 71 pages vérifiées. Pages réellement relues dans cette reprise : 3–7, 31–33, 46, 48 et 69–71 ; pages 48 et 69 également inspectées en rendu. Aucune lecture intégrale nouvelle n’est revendiquée.
+
+Pour le contrôle local, fournir le chemin matérialisé via `TRADIKOM_MASTER_PROMPT_PATH`. La copie du PDF reste hors du dépôt. Les consignes récentes de Lucas (cloud, aucune installation sur le Mac, aucun GitHub Actions, autorisations bornées) priment sur les anciennes procédures du PDF.
+
 # Référence canonique du prompt maître TRADIKOM ONE OS
 
 Ce document est un index de navigation et un contrat de continuité. Il ne remplace pas le PDF : en cas d'écart, le PDF canonique prévaut.

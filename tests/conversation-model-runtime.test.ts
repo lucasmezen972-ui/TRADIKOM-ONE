@@ -24,6 +24,34 @@ it("garde l'IA désactivée sans clé, consentement et budget dédiés", async (
   expect((await f.db.query("select * from conversation_model_budget_charges")).rows).toHaveLength(0);
 });
 
+it("refuse un plafond d’organisation nul, invalide ou insuffisant sans réservation ni appel", async () => {
+  const f = await fixture(); const transport = validTransport();
+  for (const budget of ["0", "", "invalid", "-1", "1.5", "25000usd", "1000001", "24999"]) {
+    const bounded = { ...environment, CONVERSATION_MODEL_TENANT_BUDGET_MICRO_USD: budget };
+    expect(getConversationModelReadiness(bounded).state, `budget=${budget}`).toBe("missing_budget");
+    await expect(createConversationModelPlan(f.db, f.user.id, f.tenant.id, f.input,
+      { environment: bounded, transport })).rejects.toMatchObject({ code: "model_not_configured" });
+  }
+  expect(transport.create).not.toHaveBeenCalled();
+  expect((await f.db.query("select * from conversation_model_budget_charges")).rows).toHaveLength(0);
+  expect((await f.db.query("select * from conversation_model_requests")).rows).toHaveLength(0);
+});
+
+it("applique le plafond d’organisation autorisé indépendamment du budget global", async () => {
+  const f = await fixture();
+  const transport: OpenAiPlanTransport = { create: vi.fn(async () => { throw new Error("fixture_provider_failure"); }) };
+  const bounded = { ...environment, CONVERSATION_MODEL_TENANT_BUDGET_MICRO_USD: "25000" };
+  expect(getConversationModelReadiness(environment).state).toBe("ready");
+  expect(getConversationModelReadiness(bounded).state).toBe("ready");
+  await expect(createConversationModelPlan(f.db, f.user.id, f.tenant.id, f.input,
+    { environment: bounded, transport })).rejects.toMatchObject({ code: "model_provider_unavailable" });
+  await expect(createConversationModelPlan(f.db, f.user.id, f.tenant.id,
+    { ...f.input, idempotencyKey: "model:tenant-budget-exhausted" },
+    { environment: bounded, transport })).rejects.toMatchObject({ code: "model_not_authorized" });
+  expect(transport.create).toHaveBeenCalledTimes(1);
+  expect((await f.db.query("select * from conversation_model_budget_charges")).rows).toHaveLength(1);
+});
+
 it("réserve un budget, conserve une preuve modèle et rejoue sans nouvelle facturation", async () => {
   const f = await fixture(); const transport = validTransport();
   const first = await createConversationModelPlan(f.db, f.user.id, f.tenant.id, f.input, { environment, transport });
