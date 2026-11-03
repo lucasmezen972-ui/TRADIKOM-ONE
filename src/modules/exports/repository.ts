@@ -81,6 +81,18 @@ export async function findExportJob(
   return result.rows[0] ?? null;
 }
 
+export async function lockExportJob(
+  db: DbClient,
+  tenantId: string,
+  exportId: string,
+) {
+  const result = await db.query<ExportJobRow>(
+    "select * from export_jobs where tenant_id = $1 and id = $2 for update",
+    [tenantId, exportId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function listExportJobs(db: DbClient, tenantId: string) {
   const result = await db.query<ExportJobRow>(
     `select * from export_jobs
@@ -168,7 +180,7 @@ export async function expireExportJob(
     `update export_jobs
         set status = 'expired', safe_content = null, content_encoding = null,
             updated_at = $1
-      where tenant_id = $2 and id = $3 and status = 'completed'`,
+      where tenant_id = $2 and id = $3 and status in ('queued', 'processing', 'completed')`,
     [input.now, input.tenantId, input.exportId],
   );
 }

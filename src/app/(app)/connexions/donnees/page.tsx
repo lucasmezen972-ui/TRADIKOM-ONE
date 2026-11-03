@@ -13,6 +13,7 @@ import {
 import {
   cancelUniversalExportAction,
   commitUniversalImportAction,
+  generateUniversalExportAction,
   rollbackUniversalImportAction,
 } from "@/app/actions";
 import { getServices } from "@/lib/services";
@@ -227,14 +228,24 @@ export default async function DataConnectionsPage({
             </p>
           ) : null}
           <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
+            {selectedExport.status === "queued" && exportWorkspace.canManage ? (
+              <form action={generateUniversalExportAction}>
+                <input type="hidden" name="exportId" value={selectedExport.id} />
+                <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                  <FileOutput size={16} aria-hidden />
+                  Générer le fichier
+                </button>
+              </form>
+            ) : null}
             {selectedExport.status === "completed" ? (
-              <Link
+              <a
                 href={`/api/exports/${encodeURIComponent(selectedExport.id)}`}
+                download
                 className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 <Download size={16} aria-hidden />
                 Télécharger le fichier
-              </Link>
+              </a>
             ) : null}
             {["queued", "processing", "completed"].includes(selectedExport.status) && exportWorkspace.canManage ? (
               <form action={cancelUniversalExportAction}>

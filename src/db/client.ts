@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { Pool, type PoolClient, type PoolConfig, type QueryResultRow } from "pg";
 import * as schema from "@/db/schema";
 
 export type SqlQueryResult<T = Record<string, unknown>> = {
@@ -39,13 +39,33 @@ export function getPgPool() {
   }
 
   if (!pool) {
-    pool = new Pool({
-      connectionString: databaseUrl,
-      max: Number(process.env.DATABASE_POOL_MAX ?? 10),
-    });
+    pool = new Pool(getPgPoolConfig(process.env));
   }
 
   return pool;
+}
+
+export function getPgPoolConfig(environment: Record<string, string | undefined>): PoolConfig {
+  const connectionString = environment.DATABASE_URL;
+  const base = {
+    connectionString,
+    max: Number(environment.DATABASE_POOL_MAX ?? 10),
+  };
+  if (!environment.DATABASE_SSL_CA) return base;
+  if (!connectionString) throw new Error("DATABASE_URL is required for PostgreSQL runtime.");
+  const url = new URL(connectionString);
+  const sslMode = url.searchParams.get("sslmode");
+  if ((sslMode && sslMode !== "verify-full") ||
+      ["ssl", "sslnegotiation", "sslcert", "sslkey", "sslrootcert", "uselibpqcompat"].some((key) => url.searchParams.has(key))) {
+    throw new Error("DATABASE_SSL_CA requires verify-full without conflicting URL TLS options.");
+  }
+  // node-postgres otherwise replaces the explicit TLS object with URL options.
+  url.searchParams.delete("sslmode");
+  return {
+    ...base,
+    connectionString: url.toString(),
+    ssl: { ca: environment.DATABASE_SSL_CA, rejectUnauthorized: true },
+  };
 }
 
 export async function closePgPool() {

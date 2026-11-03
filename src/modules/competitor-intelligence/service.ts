@@ -257,10 +257,8 @@ export async function generateCompetitorInsights(
     await assertTenantAccess(transaction, userId, tenantId, [
       ...competitorManageRoles,
     ]);
-    const [profiles, observations] = await Promise.all([
-      listCompetitorProfiles(transaction, tenantId),
-      listCompetitorObservations(transaction, tenantId),
-    ]);
+    const profiles = await listCompetitorProfiles(transaction, tenantId);
+    const observations = await listCompetitorObservations(transaction, tenantId);
     const activeNames = new Map(
       profiles
         .filter((profile) => profile.status === "active")

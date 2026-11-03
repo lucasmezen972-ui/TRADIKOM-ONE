@@ -1,0 +1,173 @@
+{
+  "source": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+  "deployment": "dpl_kSML4ukksxj4vzadWFHcvMyXsLpj",
+  "state": "READY",
+  "target": null,
+  "schema": 134,
+  "sourceBusinessTests": "c8817c6ec849ba6fb0e4705c8f8c0e37801b1073",
+  "testsRunning": false,
+  "exportCsv": {
+    "generation": "PASS",
+    "completedAudits": 1,
+    "rows": 3,
+    "bytes": 259,
+    "sha256": "54714450fc66b625cbaea00560c2c067ee0f43655050f82fe3430e6899b8faa8",
+    "headers": [
+      "Nom",
+      "E-mail",
+      "Statut"
+    ],
+    "allEmailsFictive": true,
+    "technicalIdsAbsent": true
+  },
+  "contactImportedStatus": {
+    "save": "PASS",
+    "reload": "PASS",
+    "sql": "PASS",
+    "status": "Importé",
+    "tag": "recette-release134"
+  },
+  "prefetchRed": {
+    "beforeReload": 6,
+    "afterReload": 7,
+    "explicitClick": false,
+    "fixedUiGreenPending": false
+  },
+  "migration135": "native_confirmation_expired_not_applied",
+  "preserved135Commit": "954ff25d23eeb5930c88e817620b7efec24bdb83",
+  "budgets": {
+    "global": 0,
+    "tenant": 0
+  },
+  "personalAccountAndSessionPreserved": true,
+  "nativeAnchorCandidate": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+  "nativeAnchorDeployment": "dpl_kSML4ukksxj4vzadWFHcvMyXsLpj",
+  "nativeAnchorState": "READY",
+  "prefetchInterim": {
+    "source": "86128622545ee762deb2582ac85981cc386e661d",
+    "color": "rgb(255,255,255)",
+    "background": "rgb(8,17,31)",
+    "auditBeforeDisplay": 7,
+    "auditAfterDisplay": 7,
+    "auditAfterReload": 7,
+    "auditAfterExplicitClick": 9,
+    "bytesIdentical": true
+  },
+  "nativeAnchorGreen": {
+    "beforeReload": 9,
+    "beforeExplicitClick": 9,
+    "afterExplicitClick": 10,
+    "afterReload": 10,
+    "downloadAttribute": true,
+    "color": "rgb(255,255,255)",
+    "background": "rgb(8,17,31)",
+    "bytes": 259,
+    "sha256": "54714450fc66b625cbaea00560c2c067ee0f43655050f82fe3430e6899b8faa8",
+    "screenshot": "docs/evidence/export-contrast-after-8612862.jpg",
+    "screenshotSource": "86128622545ee762deb2582ac85981cc386e661d",
+    "finalSourceDomAndSqlVerifiedSeparately": true
+  },
+  "exportJson": {
+    "job": "export_b46f4674f5564878ac0346cbdfc701fa",
+    "status": "PASS",
+    "bytes": 408,
+    "sha256": "2b17303c2813751140c17762791f75cf9d8cade835d85d42444c9f99b2868b1f",
+    "rows": 3,
+    "fields": [
+      "name",
+      "email",
+      "status"
+    ],
+    "allEmailsFictive": true
+  },
+  "exportXlsx": {
+    "job": "export_3b36fb1d841e4508afd9bb5eebae9ee0",
+    "status": "PASS",
+    "bytes": 6753,
+    "sha256": "95dd5d1791b990e3187c3a5d4c24537acbaed511ab5a0bc00422aaa2fc467044",
+    "dataRows": 3,
+    "headers": [
+      "Nom",
+      "E-mail",
+      "Statut"
+    ],
+    "formulaCells": 0,
+    "allEmailsFictive": true
+  },
+  "pdfRegression": {
+    "source": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+    "download": "PASS",
+    "bytes": 1484,
+    "sha256": "7f28bddd587614b04ca7d468613926b64a273e39d9475480862a898f61909513",
+    "extractedPhraseVisible": true,
+    "originalUploadSource": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
+    "newUploadOrExtractionNotRepeated": true
+  },
+  "goalRegression": {
+    "terminalStopped": true,
+    "noButtons": true
+  },
+  "aiUiDisabledVisible": true,
+  "dictationWithoutConsentEnabled": false,
+  "health": {
+    "ok": true,
+    "database": "ok",
+    "timestamp": "2026-11-03T20:11:32.651Z",
+    "subsequentTimestamp": "2026-11-03T21:09:37.419Z"
+  },
+  "runtimeLogs": {
+    "deployment": "dpl_kSML4ukksxj4vzadWFHcvMyXsLpj",
+    "since": "2026-11-03T19:55:53Z",
+    "until": "2026-11-03T20:13:14Z",
+    "levels": [
+      "error",
+      "warning",
+      "fatal"
+    ],
+    "groups": [],
+    "globalAbsenceNotInferred": true,
+    "additionalWindows": [
+      {
+        "since": "2026-11-03T20:13:14Z",
+        "until": "2026-11-03T20:33:07Z",
+        "groups": []
+      },
+      {
+        "since": "2026-11-03T20:33:07Z",
+        "until": "2026-11-03T21:19:52Z",
+        "groups": []
+      }
+    ]
+  },
+  "supabase": {
+    "schema": 134,
+    "privateSchemaAbsent": true,
+    "assets": 0,
+    "securityAdvisories": 0,
+    "personalOwnerPreserved": true,
+    "contacts": 3,
+    "originalTaskOpen": 1,
+    "recipeTaskDone": 1,
+    "oldDisposableUsersRemaining": 0
+  },
+  "recordedAt": "2026-11-03T21:24:43.151937+00:00",
+  "localTestProof": "docs/LOCAL_TEST_VERIFICATION_2026-11-03.json",
+  "localMobileProof": "docs/MOBILE_LOCAL_VERIFICATION_2026-11-03.json",
+  "wholeApplicationFinished": false,
+  "providerFinalRead": {
+    "latestDeploymentUnchanged": true,
+    "readyState": "READY",
+    "target": null,
+    "nodeVersion": "22.x",
+    "ssoProtection": {
+      "enabled": true,
+      "deploymentType": "all_except_custom_domains"
+    },
+    "schema": 134,
+    "privateSchemaAbsent": true,
+    "assets": 0,
+    "personalOwnerPreserved": true,
+    "contacts": 3,
+    "oldDisposableUsersRemaining": 0
+  }
+}

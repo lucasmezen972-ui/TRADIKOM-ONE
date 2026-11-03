@@ -1,6 +1,8 @@
 import type { DbClient } from "@/lib/db";
 import { id, safeJson, toJson } from "@/lib/security";
+import { executeGenericCapability } from "@/modules/connector-execution/runtime";
 import { queueWorkflowNotification } from "@/modules/notifications";
+import { assertConversationActionPlanWorkflowActionPolicy } from "@/modules/orchestrator/policy-enforcement";
 import { WorkflowError } from "@/modules/workflows/errors";
 import { queueWorkflowWebhook } from "@/modules/workflows/webhook";
 import type {
@@ -50,11 +52,27 @@ export const workflowActionRegistry: Record<
   call_webhook: callWebhookAction,
   wait_for_duration: waitForDurationAction,
   request_approval: requestApprovalAction,
+  mock_search_contact: mockConversationCapability(
+    "crm.contacts.search",
+    "Recherche de contact simulée et vérifiée.",
+  ),
+  mock_create_task: mockConversationCapability(
+    "project.task.create",
+    "Création de tâche simulée et vérifiée.",
+  ),
 };
 
 export async function executeWorkflowAction(
   context: WorkflowActionContext,
 ): Promise<WorkflowActionResult> {
+  await assertConversationActionPlanWorkflowActionPolicy(context.db, {
+    runId: context.runId,
+    definition: context.definition,
+    event: context.event,
+    action: context.action,
+    actionIndex: context.actionIndex,
+    actionIdempotencyKey: context.actionIdempotencyKey,
+  });
   const handler = workflowActionRegistry[context.action.type];
 
   if (!handler) {
@@ -65,6 +83,45 @@ export async function executeWorkflowAction(
   }
 
   return handler(context);
+}
+
+function mockConversationCapability(
+  capability: "crm.contacts.search" | "project.task.create",
+  summary: string,
+): WorkflowActionHandler {
+  return async ({
+    action,
+    event,
+    definition,
+    actionIdempotencyKey,
+  }) => {
+    const execution = await executeGenericCapability({
+      tenantId: event.tenantId,
+      capability,
+      environment: "mock",
+      input: action.input.capabilityInput,
+      idempotencyKey: actionIdempotencyKey,
+      maxAttempts: definition.retryPolicy.maxAttempts,
+    });
+    return {
+      status: "succeeded",
+      summary,
+      metadata: {
+        capability,
+        providerKey: execution.providerKey,
+        providerVersion: execution.providerVersion,
+        manifestVersion: execution.manifestVersion,
+        executionEnvironment: execution.environment,
+        planStepId: stringInput(action.input.planStepId, "unknown"),
+        attempts: execution.attempts,
+        output: execution.output,
+        evidence: execution.evidence,
+        compensation: execution.compensation,
+        externalSideEffect: execution.evidence.externalSideEffect,
+        inputStored: false,
+      },
+    };
+  };
 }
 
 async function createTaskAction({

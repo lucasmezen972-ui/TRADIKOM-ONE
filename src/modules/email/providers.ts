@@ -1,5 +1,4 @@
 import { hashToken } from "@/lib/security";
-import { createResendEmailProvider } from "@/modules/email/http-provider";
 import type {
   EmailDeliveryOutcome,
   EmailMessage,
@@ -79,24 +78,10 @@ export function createUnavailableEmailProvider(): EmailProvider {
 
 export function createRuntimeEmailProvider(): EmailProvider {
   const selected = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
-  const consoleAllowedInProduction =
-    process.env.ALLOW_CONSOLE_EMAIL_IN_PRODUCTION === "true";
-
-  if (selected === "resend") {
-    const apiKey = process.env.RESEND_API_KEY?.trim();
-    const from = process.env.EMAIL_FROM?.trim();
-    // La validation d'environnement exige déjà ces deux valeurs ; ce garde-fou
-    // évite d'envoyer une requête authentifiée avec une clé vide si la
-    // configuration a été contournée.
-    if (apiKey && from) {
-      return createResendEmailProvider({ apiKey, from });
-    }
-    return createUnavailableEmailProvider();
-  }
 
   if (
-    process.env.NODE_ENV !== "production" ||
-    (selected === "console" && consoleAllowedInProduction)
+    process.env.NODE_ENV !== "production" &&
+    (!selected || selected === "console")
   ) {
     return createConsoleEmailProvider();
   }

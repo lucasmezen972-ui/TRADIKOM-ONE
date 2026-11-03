@@ -1,0 +1,26 @@
+# Lectures de référence CSV sur une connexion de transaction
+
+Le correctif d3f7a2ac9cbe24c50d5197ae697cf26c90315da7 attend successivement les lectures contacts, entreprises, produits et étapes du pipeline. Les quatre requêtes et leur paramètre tenant_id sont conservés. Aucune migration, modification de droits ou changement de dépendance applicative.
+
+Défaut reproduit avant correction : le cycle CSV sous client refusant les chevauchements échoue ; les deux tests de références échouent aussi (chevauchement et lectures encore lancées après erreur). Après correction : cinq tests CSV/références passent, dont le cycle aperçu sans écriture, erreurs/doublons, finalisation/annulation, références métier et refus inter-entreprises. Quatre tests d’erreurs publiques passent aussi ; le test supplémentaire de découverte/lectures avec rôle réellement limité et contexte remis à zéro passe. Total ciblé : dix tests verts. Lint, TypeScript et continuité passent.
+
+Le runtime local fourni est Node24. Les workers par défaut et une tentative Node22 n’ont pas terminé leur démarrage ; les tests ciblés verts utilisent Node24 et un worker threads. Deux lancements plus larges interrompus ne sont pas comptés comme réussis. La suite exhaustive antérieure1116/37 ignorés concerne le source précédent ; aucune nouvelle suite exhaustive n’est revendiquée. Le build Vercel du SHA exact compile sous Node22 ; la recette native desktop ci-dessous complète cette preuve, sans répéter les tests locaux.
+
+## Recette native desktop réussie — 3 novembre 2026
+
+Le navigateur cloud natif a terminé l’authentification puis la recette sur le source inchangé `d3f7a2ac9cbe24c50d5197ae697cf26c90315da7`, déploiement `dpl_AseSRQa24RLsBvE4BtEUpa1xbWnp`. Le premier aperçu contient deux lignes : une valide, un doublon, aucune importée. SQL confirme avant finalisation qu’aucun nouveau contact n’existe. La finalisation importe exactement un contact fictif et le résultat persiste après rechargement (job `import_4c98ba2689dc4807a26afadda8e6659c`).
+
+Le second aperçu du même CSV contient deux doublons, aucune ligne valide et aucune importée. Sa finalisation importe zéro contact ; le résultat reste identique après rechargement (job `import_2f37800921b84b548aee69f61ef92b60`). SQL final : deux contacts, dont exactement un nouveau contact fictif `contact_9ce141e8070a425687106b18e65b9c91`, une seule tâche existante préservée ; deux jobs terminés et exactement deux audits import.preview_validated et deux import.completed associés aux jobs de recette. La page Contacts rechargée montre chaque contact une fois, avec la tâche CRM précédente conservée.
+
+La lecture MCP des journaux du déploiement exact est complétée sur la fenêtre du 3 novembre 2026, 16:52:44.284Z–17:12:44.284Z (12:52:44–13:12:44 Martinique), aux niveaux error/warning/fatal : aucun événement retrouvé. Aucun avertissement de requêtes concurrentes n’est observé sur cette recette et cette fenêtre ; aucune garantie globale d’absence d’avertissements n’est déduite.
+
+La session personnelle interactive et l’onglet Contacts restent ouverts pour Lucas, présent devant son ordinateur : aucune déconnexion n’est annoncée. Aucun compte ou schéma créé ; compte et Caraïbe Démo Services préservés. IA désactivée et budgets0/0. Cette recette est desktop : aucun nouveau parcours mobile sur ce SHA n’est revendiqué ; les anciennes preuves mobiles restent datées de df18aab. Les dix tests locaux, lint, TypeScript et build précédents n’ont pas été répétés ; aucune nouvelle suite exhaustive1116 n’est revendiquée. [Preuve bornée](CSV_QUERY_SERIALIZATION_VERIFICATION_2026-11-03.json).
+
+## Historique du premier blocage navigateur — checkpoint 39a3a0a
+
+Déploiement candidat : dpl_AseSRQa24RLsBvE4BtEUpa1xbWnp, READY, preview (target omis/null, withLatestCommit=false), protection SSO conservée. Alias canonique vers le SHA exact et health HTTP200/database=ok vérifiés. Health encore vérifié à15:37:17UTC (11:37:17Martinique). La première tentative de recette CSV était bloquée avant connexion : ERR_CERT_AUTHORITY_INVALID du proxy du navigateur de ce cloud. Les tentatives n’ont créé aucune session ou donnée hébergée. Le navigateur cloud séparé atteint la connexion native Vercel ; aucune authentification ou saisie d’identifiant n’a été tentée. Aucun contrôle TLS ou SSO n’a été affaibli. Une lecture de journaux sans erreur avant import ne prouve pas la disparition de l’avertissement en usage réel. Reprendre la recette uniquement après rétablissement d’un accès navigateur autorisé et de sa chaîne de confiance ; ne pas changer les mots de passe ou réutiliser les liens révoqués.
+
+IA désactivée, budgets0/0 et aucun appel payant autorisé. Compte personnel et Caraïbe Démo Services à conserver. Aucun nouveau compte créé ; l’import de recette utilise uniquement des contacts fictifs.
+
+SQL au checkpoint précédent : schéma134, propriétaire personnel actif, un contact et une tâche existants conservés, zéro session nouvelle ou ancien compte jetable. Lien de recette temporaire révoqué et absence vérifiée ; fichiers d’accès retirés, identifiants personnels privés conservés. [Preuve bornée](CSV_QUERY_SERIALIZATION_VERIFICATION_2026-11-03.json). Aucun nouveau déploiement n’est requis pour ce checkpoint documentaire.
+

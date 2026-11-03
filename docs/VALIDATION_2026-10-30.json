@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "date": "2026-10-30",
+  "validatedSourceCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+  "baseline": {
+    "sha": "69a06604c033ba35670578fd97581a8292799838",
+    "vitest": {
+      "files": 181,
+      "tests": 1048,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 2317.95
+    },
+    "migrations": "passed",
+    "schemaVerification": "passed",
+    "backupRestore": "passed",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "compiled_then_terminated_exit143",
+    "playwright": "not_run",
+    "overallExitCode": 143
+  },
+  "finalTargetedRecipe": {
+    "sha": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
+    "exitCode": 0,
+    "node": "22.23.4",
+    "pnpm": "11.7.0",
+    "postgres": "17",
+    "docker": "29.9.2-2",
+    "install": "frozen_lockfile_passed",
+    "audit": {
+      "production": 0,
+      "development": 0,
+      "ignoredAdvisories": []
+    },
+    "migrations": "passed",
+    "schemaVerification": "passed",
+    "backupRestore": "passed",
+    "lint": "passed_global",
+    "typecheck": "passed_global",
+    "targeted": {
+      "files": 4,
+      "tests": 52,
+      "failed": 0,
+      "skipped": 0,
+      "service": 9,
+      "access": 3,
+      "timestamps": 38,
+      "postgresDurability": 2
+    },
+    "build": "passed_next_16.4.1",
+    "playwright": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0
+    },
+    "continuity": {
+      "checkedAt": "2026-10-30T13:02:57.804Z",
+      "status": "ready",
+      "errors": 0,
+      "warnings": [
+        "PDF canonique absent du runtime distant; aucune nouvelle lecture de pages revendiquée."
+      ]
+    },
+    "gitDiff": "clean",
+    "postgresContainersAfter": "none",
+    "runnerStopped": true,
+    "runnerStopEvidence": "GitHub UI banner: Codespace \"grim spooky phantasm\" stopped."
+  },
+  "scope": "Baseline exhaustive distincte de la recette ciblée du correctif. Aucun total de tests uniques n'est calculé en additionnant ces suites.",
+  "githubActions": false,
+  "productionDeployed": false,
+  "realBusinessProvidersActivated": false,
+  "additionalSpendAuthorized": 0,
+  "currency": "USD"
+}

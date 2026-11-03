@@ -1,5 +1,11 @@
 # Resume State
 
+> État historique. Depuis le 29 juillet 2026, la source canonique de reprise est
+> `docs/AGENT_STATE.json`, complétée par `docs/WORKLOG.md`,
+> `docs/NEXT_STEPS.md` et `docs/DRIFT_REPORT.md`. La Phase 5 décrite ci-dessous
+> a été fusionnée par la PR #6; la phase active est OS-0 sur
+> `codex/tradikom-one-os`.
+
 Branch: `codex/phase-5-real-connectivity`
 
 Current Phase 5 checkpoint:

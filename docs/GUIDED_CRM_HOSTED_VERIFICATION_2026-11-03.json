@@ -1,0 +1,260 @@
+{
+  "date": "2026-11-03",
+  "deployment": {
+    "id": "dpl_GApDxUBWb2oKPQG5J2j8aBntB1oM",
+    "state": "READY",
+    "sourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+    "applicationSourceCommit": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
+    "target": null,
+    "environment": "preview",
+    "exactGitSha": true,
+    "withLatestCommit": false,
+    "canonicalUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
+    "protection": "SSO_all_except_custom_domains_unchanged"
+  },
+  "migration": {
+    "nativeConfirmation": "succeeded_on_user_authorized_retry",
+    "priorExpiredRequestNotReused": true,
+    "ids": [
+      "133_conversation_task_proposals",
+      "134_conversation_task_proposals_rls"
+    ],
+    "verification": {
+      "journal": 134,
+      "last_id": "134_conversation_task_proposals_rls",
+      "table": {
+        "owner": "tradikom_owner",
+        "rls": true,
+        "policies": 3,
+        "privileges": [
+          {
+            "role": "anon",
+            "select": false,
+            "insert": false,
+            "update": false,
+            "delete": false,
+            "truncate": false
+          },
+          {
+            "role": "authenticated",
+            "select": false,
+            "insert": false,
+            "update": false,
+            "delete": false,
+            "truncate": false
+          },
+          {
+            "role": "service_role",
+            "select": false,
+            "insert": false,
+            "update": false,
+            "delete": false,
+            "truncate": false
+          },
+          {
+            "role": "tradikom_app",
+            "select": true,
+            "insert": true,
+            "update": true,
+            "delete": true,
+            "truncate": false
+          },
+          {
+            "role": "tradikom_web_preview",
+            "select": true,
+            "insert": true,
+            "update": true,
+            "delete": true,
+            "truncate": false
+          }
+        ]
+      },
+      "function": {
+        "owner": "tradikom_owner",
+        "securityDefiner": false,
+        "config": [
+          "search_path=pg_catalog, public, pg_temp"
+        ]
+      },
+      "personal_owner": 1,
+      "proposal_count": 0
+    },
+    "securityAdvisories": 0
+  },
+  "sqlEvidence": {
+    "proposals": [
+      {
+        "id": "task_proposal_4a07363d7626958730135e1ad287c61695060e54752ba9e8c705366d31af6964",
+        "status": "rejected",
+        "taskId": null,
+        "reportMessageId": null,
+        "taskMatches": 0,
+        "reportMatches": 0
+      },
+      {
+        "id": "task_proposal_250fc4e53370e322857935ae3a629cbf7cab429f660040347ed320933410e8a7",
+        "status": "executed",
+        "taskId": "task_236b89ee83d6430ba2262272e53fbf6d",
+        "reportMessageId": "conversation_message_ed6e37282f66435e9530cfb6813864d1",
+        "taskMatches": 1,
+        "reportMatches": 1
+      }
+    ],
+    "audit": [
+      {
+        "action": "conversation.task_proposal.rejected",
+        "targetType": "conversation_task_proposal",
+        "targetId": "task_proposal_4a07363d7626958730135e1ad287c61695060e54752ba9e8c705366d31af6964"
+      },
+      {
+        "action": "conversation.task_proposal.prepared",
+        "targetType": "conversation_task_proposal",
+        "targetId": "task_proposal_4a07363d7626958730135e1ad287c61695060e54752ba9e8c705366d31af6964"
+      },
+      {
+        "action": "conversation.task_proposal.executed",
+        "targetType": "conversation_task_proposal",
+        "targetId": "task_proposal_250fc4e53370e322857935ae3a629cbf7cab429f660040347ed320933410e8a7"
+      },
+      {
+        "action": "conversation.native_task.created",
+        "targetType": "conversation_native_task_request",
+        "targetId": "c1e49e57dc4442331542f523aefdc0f3c7eb539d15d7606674bde53dda139f21"
+      },
+      {
+        "action": "conversation.task_proposal.prepared",
+        "targetType": "conversation_task_proposal",
+        "targetId": "task_proposal_250fc4e53370e322857935ae3a629cbf7cab429f660040347ed320933410e8a7"
+      }
+    ],
+    "taskCount": 1,
+    "personalOwner": 1
+  },
+  "inventory": {
+    "schema": 134,
+    "publicTables": 154,
+    "rlsTables": 134,
+    "runtime": {
+      "superuser": false,
+      "bypassRls": false,
+      "ownerMember": true
+    },
+    "newSessionRevocations": [
+      {
+        "createdAt": "2026-11-03T14:07:03.278Z",
+        "revoked": true
+      }
+    ],
+    "discardedFixturesRemaining": 0
+  },
+  "runtimeRole": {
+    "runtimeInheritsOwner": false,
+    "runtimeCanSetOwner": false,
+    "runtimeRlsBypass": false,
+    "runtimeSuperuser": false,
+    "personalActiveOwner": 1
+  },
+  "model": {
+    "keyConfiguredAsSensitivePreviewSecret": true,
+    "keyScope": "preview/codex/tradikom-one-os",
+    "conversationModelEnabled": false,
+    "genericAiGenerationEnabled": false,
+    "globalBudgetMicroUsd": 0,
+    "tenantBudgetMicroUsd": 0,
+    "paidCallsPerformed": 0,
+    "modelRoundTripProven": false,
+    "orchestratorPlans": "mock"
+  },
+  "limits": {
+    "remotePostgresSkippedTestsNotProven": true,
+    "remoteSqlSetRuntimeRole": "denied_by_provider_role_permissions_no_grant_or_bypass_attempted",
+    "runtimeLogObservation": "One pg@8.22.0 DeprecationWarning about overlapping queries on one client during CSV preview; recipe succeeded. Not a failed SQL statement; compatibility before pg9 remains to address.",
+    "platformRestoreProven": false,
+    "physicalMicrophoneProven": false,
+    "ocrClaimed": false,
+    "antivirusClaimed": false,
+    "production": false
+  },
+  "priorFullSuite": {
+    "passed": 1116,
+    "skipped": 37,
+    "failed": 0,
+    "filesPassed": 180,
+    "filesSkipped": 16,
+    "filesTotal": 196,
+    "appCodeUnchangedSinceFullSuite": true
+  },
+  "browser": {
+    "runId": "20261103-1404-guided",
+    "sourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+    "viewport": "390x844",
+    "hosted": true,
+    "steps": [
+      {
+        "stage": "dashboard_after_login",
+        "passed": true,
+        "independentLogin": true
+      },
+      {
+        "stage": "contact_import",
+        "passed": true,
+        "fictitiousContactsImported": 1
+      },
+      {
+        "stage": "prepare_proposal",
+        "passed": true,
+        "proposalReloaded": true,
+        "noTaskBeforeConfirmation": true
+      },
+      {
+        "stage": "confirm_and_replay",
+        "passed": true,
+        "replayHttp": 200,
+        "reportReloaded": true,
+        "crmTaskReloaded": true,
+        "visibleTaskCopies": 1
+      },
+      {
+        "stage": "reject_proposal",
+        "passed": true,
+        "refusalReloaded": true,
+        "refusedTaskAbsent": true
+      },
+      {
+        "stage": "responsive_reload",
+        "passed": true,
+        "mobileAndDesktop": true,
+        "routes": 3,
+        "reloads": true,
+        "horizontalOverflow": false
+      }
+    ],
+    "newAccounts": 0,
+    "accountAndCompanyPreserved": true,
+    "initialHttp": 200,
+    "contactId": "contact_6379b86099554f228922d6b281ae415b",
+    "approvedTitle": "Recette guidée — tâche confirmée 20261103-1404-guided",
+    "rejectedTitle": "Recette guidée — proposition refusée 20261103-1404-guided",
+    "proposalId": "task_proposal_250fc4e53370e322857935ae3a629cbf7cab429f660040347ed320933410e8a7",
+    "rejectedProposalId": "task_proposal_4a07363d7626958730135e1ad287c61695060e54752ba9e8c705366d31af6964",
+    "passed": true,
+    "testSessionLoggedOut": true,
+    "finishedAt": "2026-11-03T14:09:58.217Z"
+  },
+  "health": {
+    "status": 200,
+    "database": "ok",
+    "ok": true,
+    "checkedAt": "2026-11-03T14:11:33.191Z"
+  },
+  "cleanup": {
+    "temporaryAliasShareRevoked": true,
+    "temporaryExactDeploymentShareRevoked": true,
+    "privateRecipeAccessAndConfigRemoved": true,
+    "browserCookiesPersisted": false,
+    "personalCredentialsFilePreserved": true,
+    "personalAccountAndCompanyPreserved": true,
+    "ownTestSessionRevokedSqlVerified": true,
+    "otherSessionsUntouched": true
+  }
+}

@@ -7,6 +7,8 @@ import { defaultGarageOnboarding } from "../src/lib/generation";
 import { createServices } from "../src/lib/services";
 import { hashToken, id, nowIso, secureToken, toJson } from "../src/lib/security";
 import { createDatabaseRateLimiter } from "../src/modules/rate-limit";
+import { recordAuthorizedResendDelivery } from "../src/modules/email";
+import { tenantRlsCoverageGapsSql } from "../scripts/tenant-rls-coverage";
 
 const databaseUrl = process.env.DATABASE_URL;
 const describeIfPostgres = databaseUrl ? describe : describe.skip;
@@ -52,6 +54,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
       name: `Garage RLS B ${randomUUID()}`,
       category: "Garage automobile",
     });
+    const emailProvider = await insertEmailProviderTenantFixtures(
+      ownerDb,
+      tenantA.id,
+      tenantB.id,
+      ownerA.id,
+      ownerB.id,
+    );
     const contactAId = await insertContact(
       ownerDb,
       tenantA.id,
@@ -111,6 +120,13 @@ describeIfPostgres("PostgreSQL RLS", () => {
         ownerB.id,
       ],
     );
+    const conversation = await insertConversationTenantFixtures(
+      ownerDb,
+      tenantA.id,
+      tenantB.id,
+      ownerA.id,
+      ownerB.id,
+    );
     const apiIntelligence = await insertApiIntelligenceTenantFixtures(
       ownerDb,
       tenantA.id,
@@ -118,26 +134,9 @@ describeIfPostgres("PostgreSQL RLS", () => {
       ownerA.id,
     );
 
-    const policyGaps = await ownerPool.query<{ table_name: string }>(`
-      select columns.table_name
-      from information_schema.columns as columns
-      join pg_class as tables on tables.relname = columns.table_name
-      join pg_namespace as namespaces on namespaces.oid = tables.relnamespace
-      where columns.table_schema = 'public'
-        and columns.column_name = 'tenant_id'
-        and namespaces.nspname = 'public'
-        and (
-          not tables.relrowsecurity
-          or not exists (
-            select 1
-            from pg_policies as policies
-            where policies.schemaname = 'public'
-              and policies.tablename = columns.table_name
-              and policies.cmd = 'ALL'
-          )
-        )
-      order by columns.table_name
-    `);
+    const policyGaps = await ownerPool.query<{ table_name: string }>(
+      tenantRlsCoverageGapsSql,
+    );
     expect(policyGaps.rows).toEqual([]);
 
     const tenantIndexGaps = await ownerPool.query<{ table_name: string }>(`
@@ -193,6 +192,20 @@ describeIfPostgres("PostgreSQL RLS", () => {
     expect((await restrictedPool.query("select id from products")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from imports")).rows).toEqual([]);
     expect((await restrictedPool.query("select id from export_jobs")).rows).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from conversation_messages")).rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from conversation_action_plans"))
+        .rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from email_provider_deliveries"))
+        .rows,
+    ).toEqual([]);
+    expect(
+      (await restrictedPool.query("select id from email_provider_events")).rows,
+    ).toEqual([]);
 
     const attemptedSystemBypass = await withSystemAccessFlag(
       restrictedPool,
@@ -228,6 +241,113 @@ describeIfPostgres("PostgreSQL RLS", () => {
       async (client) => client.query<{ id: string }>("select id from export_jobs"),
     );
     expect(tenantAExports.rows).toEqual([{ id: exportAId }]);
+    const tenantAMessages = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) =>
+        client.query<{ id: string }>("select id from conversation_messages"),
+      ownerA.id,
+    );
+    expect(tenantAMessages.rows).toEqual([{ id: conversation.messageAId }]);
+    const tenantAPlans = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) =>
+        client.query<{ id: string }>("select id from conversation_action_plans"),
+      ownerA.id,
+    );
+    expect(tenantAPlans.rows).toEqual([{ id: conversation.planAId }]);
+    const tenantAEmailRows = await withTenantContext(
+      restrictedPool,
+      tenantA.id,
+      async (client) => ({
+        deliveries: (
+          await client.query<{ id: string }>(
+            "select id from email_provider_deliveries order by id",
+          )
+        ).rows,
+        events: (
+          await client.query<{ id: string }>(
+            "select id from email_provider_events order by id",
+          )
+        ).rows,
+      }),
+    );
+    expect(tenantAEmailRows).toEqual({
+      deliveries: [{ id: emailProvider.deliveryAId }],
+      events: [{ id: emailProvider.eventAId }],
+    });
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into conversation_thread_participants (
+             tenant_id, thread_id, channel_identity_id, joined_at
+           ) values ($1, $2, $3, $4)`,
+          [
+            tenantA.id,
+            conversation.threadAId,
+            conversation.identityBId,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key|row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into conversation_participants (
+             id, tenant_id, role, display_name, created_at, updated_at
+           ) values ($1, $2, 'customer', 'Interdit', $3, $3)`,
+          [id("conversation_participant"), tenantB.id, nowIso()],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into email_provider_events (
+             id, tenant_id, delivery_id, provider, external_event_id,
+             provider_message_id, event_type, delivery_status,
+             occurred_at, received_at
+           ) values ($1, $2, $3, 'resend', $4, $5, 'email.delivered',
+             'delivered', $6, $6)`,
+          [
+            id("email_event"),
+            tenantB.id,
+            emailProvider.deliveryBId,
+            `svix_cross_${randomUUID()}`,
+            emailProvider.providerMessageBId,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
+    await expect(
+      withTenantContext(restrictedPool, tenantA.id, async (client) =>
+        client.query(
+          `insert into conversation_action_plans (
+             id, tenant_id, thread_id, source_message_id, schema_version,
+             generation_source, approval_status, intent, business_goal,
+             confidence, risk_summary, estimated_cost_minor,
+             estimated_cost_currency, plan_json, plan_fingerprint, created_by,
+             created_at, updated_at
+           ) values (
+             $1, $2, $3, $4, 1, 'deterministic_mock', 'awaiting_approval',
+             'Interdit', 'Interdit', 1, 'Interdit', 0, 'EUR', '{}', $5,
+             $6, $7, $7
+           )`,
+          [
+            id("conversation_action_plan"),
+            tenantB.id,
+            conversation.threadBId,
+            conversation.messageBId,
+            "f".repeat(64),
+            ownerB.id,
+            nowIso(),
+          ],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security|violates/);
     await expect(
       withTenantContext(restrictedPool, tenantA.id, async (client) =>
         client.query(
@@ -2688,6 +2808,141 @@ async function insertContact(
   return contactId;
 }
 
+async function insertConversationTenantFixtures(
+  db: ReturnType<typeof pgPoolAsSqlClient>,
+  tenantAId: string,
+  tenantBId: string,
+  ownerAId: string,
+  ownerBId: string,
+) {
+  const now = nowIso();
+  const participantAId = id("conversation_participant_a");
+  const participantBId = id("conversation_participant_b");
+  const identityAId = id("conversation_identity_a");
+  const identityBId = id("conversation_identity_b");
+  const threadAId = id("conversation_thread_a");
+  const threadBId = id("conversation_thread_b");
+  const messageAId = id("conversation_message_a");
+  const messageBId = id("conversation_message_b");
+  const planAId = id("conversation_action_plan_a");
+  const planBId = id("conversation_action_plan_b");
+
+  await db.query(
+    `insert into conversation_participants (
+       id, tenant_id, role, display_name, created_at, updated_at
+     ) values
+       ($1, $2, 'customer', 'Cliente A', $3, $3),
+       ($4, $5, 'customer', 'Cliente B', $3, $3)`,
+    [participantAId, tenantAId, now, participantBId, tenantBId],
+  );
+  await db.query(
+    `insert into conversation_channel_identities (
+       id, tenant_id, participant_id, channel_kind, adapter_key,
+       external_subject_id, display_name, role, state, created_at, updated_at
+     ) values
+       ($1, $2, $3, 'test', 'canal-test', $4, 'Cliente A',
+         'customer', 'active', $5, $5),
+       ($6, $7, $8, 'test', 'canal-test', $9, 'Cliente B',
+         'customer', 'active', $5, $5)`,
+    [
+      identityAId,
+      tenantAId,
+      participantAId,
+      `visitor-${identityAId}`,
+      now,
+      identityBId,
+      tenantBId,
+      participantBId,
+      `visitor-${identityBId}`,
+    ],
+  );
+  await db.query(
+    `insert into conversation_threads (
+       id, tenant_id, status, subject, created_at, updated_at
+     ) values
+       ($1, $2, 'open', 'Conversation A', $3, $3),
+       ($4, $5, 'open', 'Conversation B', $3, $3)`,
+    [threadAId, tenantAId, now, threadBId, tenantBId],
+  );
+  await db.query(
+    `insert into conversation_thread_participants (
+       tenant_id, thread_id, channel_identity_id, joined_at
+     ) values ($1, $2, $3, $4), ($5, $6, $7, $4)`,
+    [
+      tenantAId,
+      threadAId,
+      identityAId,
+      now,
+      tenantBId,
+      threadBId,
+      identityBId,
+    ],
+  );
+  await db.query(
+    `insert into conversation_messages (
+       id, tenant_id, thread_id, channel_identity_id, direction, kind, status,
+       text_content, adapter_key, external_message_id, idempotency_key,
+       correlation_id, occurred_at, created_at
+     ) values
+       ($1, $2, $3, $4, 'inbound', 'text', 'received', 'Bonjour A',
+         'canal-test', $5, 'ingress:canal-test:shared', $6, $7, $7),
+       ($8, $9, $10, $11, 'inbound', 'text', 'received', 'Bonjour B',
+         'canal-test', $12, 'ingress:canal-test:shared', $13, $7, $7)`,
+    [
+      messageAId,
+      tenantAId,
+      threadAId,
+      identityAId,
+      `external-${messageAId}`,
+      `correlation-${messageAId}`,
+      now,
+      messageBId,
+      tenantBId,
+      threadBId,
+      identityBId,
+      `external-${messageBId}`,
+      `correlation-${messageBId}`,
+    ],
+  );
+
+  await db.query(
+    `insert into conversation_action_plans (
+       id, tenant_id, thread_id, source_message_id, schema_version,
+       generation_source, approval_status, intent, business_goal, confidence,
+       risk_summary, estimated_cost_minor, estimated_cost_currency, plan_json,
+       plan_fingerprint, created_by, created_at, updated_at
+     ) values
+       ($1, $2, $3, $4, 1, 'deterministic_mock', 'awaiting_approval',
+         'Plan A', 'Objectif A', 1, 'Risque A', 0, 'EUR', '{}', $5, $6, $7, $7),
+       ($8, $9, $10, $11, 1, 'deterministic_mock', 'awaiting_approval',
+         'Plan B', 'Objectif B', 1, 'Risque B', 0, 'EUR', '{}', $12, $13, $7, $7)`,
+    [
+      planAId,
+      tenantAId,
+      threadAId,
+      messageAId,
+      "a".repeat(64),
+      ownerAId,
+      now,
+      planBId,
+      tenantBId,
+      threadBId,
+      messageBId,
+      "b".repeat(64),
+      ownerBId,
+    ],
+  );
+
+  return {
+    identityBId,
+    messageAId,
+    messageBId,
+    planAId,
+    threadAId,
+    threadBId,
+  };
+}
+
 async function insertApiIntelligenceTenantFixtures(
   db: ReturnType<typeof pgPoolAsSqlClient>,
   tenantAId: string,
@@ -2991,6 +3246,89 @@ async function insertApiIntelligenceTenantFixtures(
   };
 }
 
+async function insertEmailProviderTenantFixtures(
+  db: ReturnType<typeof pgPoolAsSqlClient>,
+  tenantAId: string,
+  tenantBId: string,
+  ownerAId: string,
+  ownerBId: string,
+) {
+  const now = nowIso();
+  const invitationAId = id("invitation");
+  const invitationBId = id("invitation");
+  const recipientA = uniqueEmail("rls-email-provider-a");
+  const recipientB = uniqueEmail("rls-email-provider-b");
+  await db.query(
+    `insert into invitations (
+       id, tenant_id, email, role, status, token_hash, expires_at, created_at
+     ) values
+       ($1, $2, $3, 'manager', 'pending', $4, $5, $6),
+       ($7, $8, $9, 'manager', 'pending', $10, $5, $6)`,
+    [
+      invitationAId,
+      tenantAId,
+      recipientA,
+      hashToken(secureToken()),
+      "2027-01-01T00:00:00.000Z",
+      now,
+      invitationBId,
+      tenantBId,
+      recipientB,
+      hashToken(secureToken()),
+    ],
+  );
+  const providerMessageAId = `provider_${randomUUID()}`;
+  const providerMessageBId = `provider_${randomUUID()}`;
+  const deliveryA = await recordAuthorizedResendDelivery(db, {
+    tenantId: tenantAId,
+    actorId: ownerAId,
+    invitationId: invitationAId,
+    recipient: recipientA,
+    providerMessageId: providerMessageAId,
+    occurredAt: now,
+  });
+  const deliveryB = await recordAuthorizedResendDelivery(db, {
+    tenantId: tenantBId,
+    actorId: ownerBId,
+    invitationId: invitationBId,
+    recipient: recipientB,
+    providerMessageId: providerMessageBId,
+    occurredAt: now,
+  });
+  const eventAId = id("email_event");
+  const eventBId = id("email_event");
+  await db.query(
+    `insert into email_provider_events (
+       id, tenant_id, delivery_id, provider, external_event_id,
+       provider_message_id, event_type, delivery_status, occurred_at,
+       received_at
+     ) values
+       ($1, $2, $3, 'resend', $4, $5, 'email.sent', 'sent', $6, $6),
+       ($7, $8, $9, 'resend', $10, $11, 'email.sent', 'sent', $6, $6)`,
+    [
+      eventAId,
+      tenantAId,
+      deliveryA.deliveryId,
+      `svix_${randomUUID()}`,
+      providerMessageAId,
+      now,
+      eventBId,
+      tenantBId,
+      deliveryB.deliveryId,
+      `svix_${randomUUID()}`,
+      providerMessageBId,
+    ],
+  );
+
+  return {
+    deliveryAId: deliveryA.deliveryId,
+    deliveryBId: deliveryB.deliveryId,
+    eventAId,
+    eventBId,
+    providerMessageBId,
+  };
+}
+
 async function createRestrictedRole(ownerPool: Pool) {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required for restricted role creation.");
@@ -3025,12 +3363,16 @@ async function withTenantContext<T>(
   pool: Pool,
   tenantId: string,
   callback: (client: PoolClient) => Promise<T>,
+  actorId?: string,
 ) {
   const client = await pool.connect();
 
   try {
     await client.query("begin");
     await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+    if (actorId) {
+      await client.query("select set_config('app.actor_id', $1, true)", [actorId]);
+    }
     const result = await callback(client);
     await client.query("commit");
     return result;

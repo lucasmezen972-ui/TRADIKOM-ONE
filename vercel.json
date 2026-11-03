@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "codex/tradikom-one-os": false,
+      "codex/tradikom-one-schema135-candidate": false
+    }
+  }
+}

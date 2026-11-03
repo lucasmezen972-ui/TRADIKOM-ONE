@@ -125,6 +125,22 @@ export async function findMembershipRole(
   return result.rows[0]?.role ?? null;
 }
 
+export async function lockMembershipRole(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+) {
+  const result = await db.query<{ role: Role }>(
+    `select role
+     from memberships
+     where user_id = $1 and tenant_id = $2
+     for share`,
+    [userId, tenantId],
+  );
+
+  return result.rows[0]?.role ?? null;
+}
+
 export async function insertMembership(
   db: DbClient,
   input: {

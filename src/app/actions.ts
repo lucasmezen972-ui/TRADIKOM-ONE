@@ -1198,6 +1198,15 @@ export async function createUniversalExportAction(formData: FormData) {
   redirect(`/connexions/donnees?export=${encodeURIComponent(result.id)}`);
 }
 
+export async function generateUniversalExportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("export.generate", () =>
+    services.generateUniversalExport(user.id, tenant.id, text(formData, "exportId")),
+  );
+  revalidatePath("/connexions/donnees");
+}
+
 export async function cancelUniversalExportAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();

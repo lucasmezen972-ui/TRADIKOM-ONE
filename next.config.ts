@@ -28,7 +28,7 @@ export function getGlobalSecurityHeaders(
     { key: "X-Frame-Options", value: "DENY" },
     {
       key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=()",
+      value: "camera=(), microphone=(self), geolocation=()",
     },
     {
       key: "Content-Security-Policy",
@@ -48,7 +48,8 @@ export function getGlobalSecurityHeaders(
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
-  serverExternalPackages: ["@electric-sql/pglite"],
+  serverExternalPackages: ["@electric-sql/pglite", "pdfjs-dist"],
+  outputFileTracingIncludes: { "/conversation": ["./src/modules/conversation-hub/pdf-text-worker.mjs", "./node_modules/pdfjs-dist/**/*", "./node_modules/.pnpm/@napi-rs+canvas*/**/*"] },
   poweredByHeader: false,
   images: {
     remotePatterns: [

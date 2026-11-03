@@ -39,11 +39,10 @@ export async function getBusinessBrain(
   tenantId: string,
 ) {
   await assertTenantAccess(db, userId, tenantId);
-  const [rows, evidenceRows, rawSignals] = await Promise.all([
-    listActiveBusinessBrainEntries(db, tenantId),
-    listActiveBusinessBrainEvidence(db, tenantId),
-    getBusinessBrainSignals(db, tenantId),
-  ]);
+  // Generators can pass one transaction-owned PostgreSQL connection here.
+  const rows = await listActiveBusinessBrainEntries(db, tenantId);
+  const evidenceRows = await listActiveBusinessBrainEvidence(db, tenantId);
+  const rawSignals = await getBusinessBrainSignals(db, tenantId);
 
   if (!rawSignals) {
     throw new BusinessBrainError(

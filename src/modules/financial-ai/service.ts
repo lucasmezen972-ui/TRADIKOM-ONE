@@ -205,10 +205,8 @@ export async function generateFinancialAssessment(
         "Enregistrez d'abord une photographie financière déclarée.",
       );
     }
-    const [pipeline, brainEvidence] = await Promise.all([
-      getFinancialPipelineSignal(transaction, tenantId),
-      listFinancialBrainEvidence(transaction, tenantId),
-    ]);
+    const pipeline = await getFinancialPipelineSignal(transaction, tenantId);
+    const brainEvidence = await listFinancialBrainEvidence(transaction, tenantId);
     const candidate = buildFinancialAssessmentCandidate({
       snapshot,
       pipeline,

@@ -205,24 +205,23 @@ export async function loadImportReferenceData(
   db: DbClient,
   tenantId: string,
 ) {
-  const [contacts, companies, products, stages] = await Promise.all([
-    db.query<{ email: string }>(
-      "select email from contacts where tenant_id = $1",
-      [tenantId],
-    ),
-    db.query<{ name: string; domain: string | null }>(
-      "select name, domain from companies where tenant_id = $1",
-      [tenantId],
-    ),
-    db.query<{ sku: string }>(
-      "select sku from products where tenant_id = $1",
-      [tenantId],
-    ),
-    db.query<{ name: string }>(
-      "select name from pipeline_stages where tenant_id = $1",
-      [tenantId],
-    ),
-  ]);
+  // The import transaction owns one pg connection; keep its queries sequential.
+  const contacts = await db.query<{ email: string }>(
+    "select email from contacts where tenant_id = $1",
+    [tenantId],
+  );
+  const companies = await db.query<{ name: string; domain: string | null }>(
+    "select name, domain from companies where tenant_id = $1",
+    [tenantId],
+  );
+  const products = await db.query<{ sku: string }>(
+    "select sku from products where tenant_id = $1",
+    [tenantId],
+  );
+  const stages = await db.query<{ name: string }>(
+    "select name from pipeline_stages where tenant_id = $1",
+    [tenantId],
+  );
   return {
     contactEmails: new Set(contacts.rows.map((row) => row.email.toLowerCase())),
     companyNames: new Set(companies.rows.map((row) => row.name.toLowerCase())),

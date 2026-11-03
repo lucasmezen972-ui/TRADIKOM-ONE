@@ -1,20 +1,23 @@
 packages:
-- "."
+  - "."
 
 overrides:
+  # Chargeur Drizzle : transformations TypeScript vérifiées hors réseau.
+  "@esbuild-kit/core-utils>esbuild": "0.25.12"
+  "vite": "8.1.6"
+  # GHSA-xcx6-jx8p-x3h5 : correctif MSAL ; contrat Teams vérifié sans réseau.
+  "@microsoft/teams.apps>@azure/msal-node": "7.1.0"
+  "brace-expansion@1": "1.1.21"
+  "brace-expansion@2": "2.1.7"
+  "brace-expansion@5.0.7": "5.0.9"
+  "browserslist": "4.28.7"
   "exceljs>uuid": "11.1.1"
+  "nanoid@3.3.17": "3.3.18"
   "postcss": ">=8.5.18"
-  "sharp": ">=0.35.0"
+  "sharp": ">=0.35.5"
 
-# GHSA-mh99-v99m-4gvg (brace-expansion, DoS par expansion non bornée) : la seule
-# version corrigée (5.0.8) change l'API CJS et casse minimatch 3 (eslint, chaîne
-# exceljs>archiver). Les patterns glob de ces chaînes sont statiques (jamais issus
-# d'une entrée utilisateur), le risque DoS est donc inapplicable ici. À retirer dès
-# qu'un correctif rétroporté existe pour les majeures 1.x/2.x.
-auditConfig:
-  ignoreGhsas:
-  - GHSA-mh99-v99m-4gvg
-
+# Correctifs rétroportés conservant les API CJS des majeures 1.x et 2.x.
+# Aucun avis de sécurité masqué : les versions corrigées sont verrouillées.
 allowBuilds:
   esbuild: true
   sharp: true
