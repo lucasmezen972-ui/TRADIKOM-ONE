@@ -1,3 +1,21 @@
+# Prochaine action concrète — reprise du 3 novembre 2026
+
+Le correctif du plafond IA par organisation est publié dans `a0920cfa074c0168bc1161ce350629e02164b6b5`. Un plafond explicite nul, invalide ou insuffisant bloque la génération sans réservation ni appel ; le défaut de 0,10 USD ne vaut que si la variable est absente. Les 27 tests ciblés, lint et TypeScript passent. La suite exhaustive réussit : 1 110 tests verts, 37 ignorés ; build hébergé et recette personnelle mobile verts. Les tests PostgreSQL distants ignorés restent distincts.
+
+1. Reprendre la préparation OpenAI ci-dessous. Le candidat a0920cf est déjà déployé en preview : dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy READY, health et parcours personnel mobile vérifiés ; ne pas le redéployer sans nouveau changement utile.
+2. Pour le raccord OpenAI, vérifier d’abord une destination de secret durable et autorisée, puis préparer un remplacement contrôlé si l’ancienne clé est perdue. Ne jamais la demander dans le chat. La génération et les budgets global/organisation sont explicitement à false/0/0 dans la branche preview ; le plafond d’hébergement de 1 USD reste distinct d’un budget OpenAI.
+3. Préparer sauvegarde et restauration récentes avant upgrade Supabase ; la sonde réellement exécutée et ses limites sont dans SUPABASE_UPGRADE_2026-11-03.md. Aucun redémarrage ou upgrade ne découle de cette sonde.
+
+Les deux anciennes fixtures example.test ont été supprimées avec confirmation native, puis absence des utilisateurs/tenants/sessions vérifiée. Ne pas les recréer. Le compte personnel de Lucas et Caraïbe Démo Services sont conservés ; connexion indépendante mobile et rechargements dashboard/contacts/site/Conversation réussis.
+
+## Référence prompt maître — copie retrouvée
+
+Le PDF canonique est disponible dans les fichiers de Lucas, référence `libfile_87452c8e10f88191b16e89dede16aca9`. SHA-256 exact et 71 pages vérifiés ; pages 3–7, 31–33, 46, 48 et 69–71 relues, pages 48 et 69 inspectées en rendu. Matérialiser cette référence puis fournir TRADIKOM_MASTER_PROMPT_PATH au contrôle de continuité. Le contrôle de cette reprise est prêt, sans erreur ni avertissement. Les consignes actuelles de Lucas priment sur les anciennes procédures du PDF.
+
+## États antérieurs datés
+
+Les instructions ci-dessous sont historiques ; le checkpoint du 3 novembre les remplace lorsqu’elles divergent.
+
 # Prochaine tranche — état du 30 octobre 2026
 
 Le lot de dépendances et de durabilité Goal Watch est vérifié et le Codespace arrêté. Voir [VALIDATION_2026-10-30.md](./VALIDATION_2026-10-30.md) pour les preuves et [DELIVERY_STATUS.md](./DELIVERY_STATUS.md) pour les écarts.

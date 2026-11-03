@@ -1,3 +1,21 @@
+## Plafond IA corrigé et candidat vérifié — 3 novembre 2026
+
+Source applicatif `a0920cfa074c0168bc1161ce350629e02164b6b5`, [PR 11](https://github.com/lucasmezen972-ui/TRADIKOM-ONE/pull/11), préversion protégée `dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy` READY. Aucun changement de schéma ; Supabase reste à 132. Le correctif remplace le fallback implicite du plafond d’organisation : seule une variable absente donne le défaut de 0,10 USD. Zéro, valeur invalide ou plafond inférieur à une réservation bloque la génération avant tout débit ou appel fournisseur. Le readiness et le runtime utilisent la même lecture des deux plafonds.
+
+Preuves de cette reprise : régression rouge avant correction, 27 tests ciblés verts ; suite locale complète **1 110 tests verts, 37 ignorés, zéro échec**, 179 fichiers verts et 16 ignorés sur 195, 1 567,97 secondes. Les tests PostgreSQL distants ignorés ne sont pas présentés comme exécutés. Lint et TypeScript globaux verts. Vercel exécute corepack pnpm@11.7.0 build avec succès sur le SHA exact (machine Standard, build terminé en 26 s). Health du déploiement exact : HTTP 200/database=ok. Connexion indépendante mobile 390×844 au compte personnel puis dashboard/contacts/site/Conversation et rechargements verts, sans débordement ; la session de ce contrôle a été fermée par l’interface.
+
+Trois variables sont ajoutées à la seule branche preview, puis relues : génération modèle false, budgets global et organisation 0/0. Aucune clé n’est entrée, aucun appel IA payant ni message métier externe. Le coût final facturé de l’hébergement n’est pas confirmé ; aucun forfait ou add-on souscrit.
+
+Le nettoyage des deux anciennes fixtures example.test a réussi via confirmation native et gardes d’identité/membership : zéro utilisateur, tenant ou session jetable restant en SQL. Le compte personnel et Caraïbe Démo Services restent actifs ; ne jamais les nettoyer. Les temporaires locaux identifiés des seules fixtures ont été supprimés.
+
+Le PDF canonique a été retrouvé dans les fichiers de Lucas : référence libfile_87452c8e10f88191b16e89dede16aca9, SHA-256 exact et 71 pages vérifiés. Pages 3–7, 31–33, 46, 48 et 69–71 relues, pages 48/69 inspectées en rendu ; aucune nouvelle lecture intégrale revendiquée. Le contrôle de continuité repasse prêt, sans erreur ni avertissement, avec TRADIKOM_MASTER_PROMPT_PATH pointant vers la copie matérialisée hors dépôt.
+
+La sonde en lecture seule de [qualification Supabase](./SUPABASE_UPGRADE_2026-11-03.md) est versionnée et exécutée : aucun index/opérateur concerné par le changelog, aucun slot logique, aucune référence PGP dans les fonctions publiques. Cela ne prouve pas la restauration plateforme ou l’absence de données PGP historiques. Aucun upgrade ou redémarrage effectué.
+
+Restent : remplacement/transfert sécurisé de la clé perdue et budget IA distinct, aller-retour modèle réel, qualification des fournisseurs privés et préparation backup/restauration avant upgrade Supabase17.6. Les plans restent mock. La production n’est pas qualifiée ; aucune fusion ni GitHub Actions, aucune installation sur le Mac.
+
+Les sections ci-dessous sont datées et historiques ; ce checkpoint remplace leurs instructions contradictoires.
+
 ## Recette hébergée confirmée — 3 novembre 2026
 
 Le source `9022539246b091f3e64918b18a91c37768e97b31` est déployé en préversion protégée : `dpl_5gEdmyp1f7rVz43uFiviFYZMDupJ`, READY, target nul (preview), SHA vérifié auprès de Vercel. Le health du candidat exact répond HTTP 200, ok=true/database=ok à 07:08:30 UTC (03:08 Martinique). Ce checkpoint remplace les anciens états schéma124/non-déployé ci-dessous ; Supabase est au schéma132. L’analyseur sécurité consulté dans cette reprise renvoie zéro alerte.

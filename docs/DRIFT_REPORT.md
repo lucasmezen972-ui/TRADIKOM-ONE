@@ -1,3 +1,24 @@
+# Reprise vérifiée — 3 novembre 2026
+
+## Impact north star
+
+Le correctif `a0920cfa074c0168bc1161ce350629e02164b6b5` protège le coût des brouillons demandés depuis Conversation : un plafond par organisation nul ou invalide ne peut plus redevenir une allocation implicite. Il ne crée aucun module métier secondaire. Le parcours reste soumis au consentement et aux plafonds globaux, avec audit et idempotence conservés.
+
+## Alignement prompt maître — pages 3–7, 31–33, 46, 48 et 69–71
+
+La copie canonique a été retrouvée dans les fichiers de Lucas, empreinte exacte et 71 pages vérifiées ; ces pages ont été relues, et les pages 48/69 inspectées en rendu. Le contrôle de continuité repasse prêt, zéro erreur et avertissement. Les procédures anciennes du PDF ne remplacent pas les consignes actuelles : cloud, aucun GitHub Actions ni installation sur le Mac, aucune dépense IA implicite.
+
+## Preuves et limites actuelles
+
+- Régression reproduite avant correction ; 27 tests ciblés, lint et TypeScript réussis. Suite exhaustive/build/déploiement suivis dans DELIVERY_STATUS et AGENT_STATE avec leur résultat propre.
+- Préversion : génération IA désactivée et budgets global/organisation à zéro, valeurs relues dans Vercel sur la seule branche preview.
+- Deux fixtures example.test et leurs entreprises supprimées après confirmation native ; absence des utilisateurs/tenants/sessions vérifiée en SQL. Compte personnel préservé.
+- Connexion indépendante mobile au compte personnel, dashboard/contacts/site/Conversation et rechargements sans débordement vérifiés sur le candidat hébergé précédent. Ne pas les attribuer au nouveau déploiement avant sa recette.
+- Sonde Supabase en lecture seule exécutée : pas d’index/opérateur concerné, pas de slot logique ; aucune preuve de restauration plateforme ou de scan PGP historique déduite.
+- Le moteur de plans reste mock. Le modèle réel, les fournisseurs privés, le microphone physique et la production restent non qualifiés. Aucun appel payant ou message métier externe.
+
+Les sections ci-dessous décrivent leurs dates ; elles ne remplacent pas ce checkpoint.
+
 # Rapport de dérive — TRADIKOM ONE OS
 
 ## Checkpoint applicatif — 15 septembre 2026, 10:09 UTC

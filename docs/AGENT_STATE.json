@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
-  "publishedHeadObserved": "9022539246b091f3e64918b18a91c37768e97b31",
-  "status": "preview_hosted_pdf_verified_activation_incomplete",
+  "lastCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+  "publishedHeadObserved": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+  "status": "preview_budget_fix_hosted_recipe_passed_activation_incomplete",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -29,15 +29,33 @@
       71
     ],
     "alignment": {
-      "pagesConsulted": [],
-      "sections": [
-        "Exigences versionnées Goal Watch, RLS, Conversation et recette"
+      "pagesConsulted": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        31,
+        32,
+        33,
+        46,
+        48,
+        69,
+        70,
+        71
       ],
-      "requirement": "Consentement explicite, pause, arrêt terminal, isolation des fils et preuve auditée. PDF canonique non accessible sur ce runner, poursuite limitée aux exigences déjà versionnées.",
-      "evidenceExpected": "Tests lifecycle, refus sans consentement, arrêt/reprise concurrents, RLS en PostgreSQL 17, parcours navigateur et build du candidat."
-    }
+      "sections": [
+        "Gouvernance et coûts",
+        "Tranches verticales",
+        "Definition of Done",
+        "Matrice de tests et continuité"
+      ],
+      "requirement": "Un plafond de coût explicite ne doit jamais être remplacé par une autorisation implicite. Conserver séparation simulation/réel, isolation, audit et reprise vérifiable.",
+      "evidenceExpected": "Régression rouge puis verte, aucune réservation ni transport sous plafond nul/invalide, suite complète, build, préversion protégée et compte personnel éprouvé en mobile."
+    },
+    "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Ne pas reprendre depuis schéma124. Recette PDF mobile du candidat9022539 réussie. Préparer le transfert sécurisé OpenAI si un secret autorisé est encore disponible ; ne pas activer sans budget distinct. Préparer sauvegarde plateforme et compatibilité upgrade Supabase. Nettoyage des deux fixtures example.test uniquement par nouvelle confirmation native ; conserver impérativement Lucas/Caraïbe Démo Services.",
+  "nextAction": "Préparer une destination de secret durable et un remplacement contrôlé de la clé OpenAI perdue ; n’activer aucun appel sans budget API distinct. Lire SUPABASE_UPGRADE_2026-11-03.md pour préparer backup/restauration plateforme avant upgrade. Ne pas recréer les fixtures supprimées ; conserver Lucas/Caraïbe Démo Services. PDF maître disponible dans Library, empreinte vérifiée.",
   "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2397,10 +2415,14 @@
     {
       "command": "Fin du runner de validation",
       "status": "verified_no_postgres_containers_remaining_and_codespace_stopped_github_banner_read"
+    },
+    {
+      "command": "reprise3novembre : lint, TypeScript, tests modèle, suite exhaustive, build Vercel et recette personnelle mobile",
+      "status": "passed_lint_typecheck_targeted27_full1110_skipped37_build_hosted_ready_health200_mobile_four_routes_reload_logout_continuity_ready_zero_errors_warnings"
     }
   ],
   "humanBlockers": [
-    "OpenAI : clé créée dans le cloud et exclue de Git ; installation sécurisée Vercel et budget d’appels distinct restent nécessaires.",
+    "OpenAI : ancienne clé créée dans le cloud désormais inaccessible ; vérifier une destination de secret durable et un remplacement contrôlé, avec budget d’appels distinct avant activation. Préversion explicitement désactivée avec plafonds global/organisation à zéro.",
     "Planification des évaluations, Meta/SMS, email et OAuth propriétaires non activés ; consentements et authentifications distincts restent nécessaires.",
     "Moteur Supabase PostgreSQL 17.6 : préparer sauvegarde plateforme et fenêtre de mise à niveau 17.11.0.003 ou ultérieure, après contrôle des extensions/données PGP ; interruption attendue selon le fournisseur."
   ],
@@ -2424,15 +2446,15 @@
       "automaticPreviews": false,
       "published": true,
       "previewEnvironmentConfigured": true,
-      "environmentVariableCount": 11,
+      "environmentVariableCount": 14,
       "buildCostSettingsUpdate": "denied_by_vercel_permission",
       "appUrlConfigured": true,
-      "publishedSource": "9022539246b091f3e64918b18a91c37768e97b31",
-      "deploymentId": "dpl_5gEdmyp1f7rVz43uFiviFYZMDupJ",
+      "publishedSource": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+      "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
       "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
-      "currentCandidate": "9022539246b091f3e64918b18a91c37768e97b31",
+      "currentCandidate": "a0920cfa074c0168bc1161ce350629e02164b6b5",
       "candidateDeployed": true,
-      "lastHealth": "2026-11-03T07:08:30.960Z",
+      "lastHealth": "2026-11-03T11:16:16.303Z",
       "lastHealthHttpStatus": 200
     },
     "database": {
@@ -2493,9 +2515,8 @@
     "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
     "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
-    "PDF canonique absent de ce runner : aucune nouvelle lecture paginée revendiquée.",
     "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé.",
-    "Ancien workspace cloud devenu inaccessible : clé OpenAI et temporaires privés non récupérables depuis cette reprise ; ne pas prétendre les avoir transférés ou nettoyés."
+    "Ancienne clé OpenAI non récupérée. Le fichier privé du compte personnel a été récupéré séparément et sa connexion vérifiée ; les deux fixtures jetables et leurs temporaires identifiés sont nettoyés."
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 1,
@@ -2618,7 +2639,7 @@
     "sourceCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
     "lint": "passed",
     "typecheck": "passed",
-    "productionBuild": "passed_webpack_fixture_database_no_real_connection_inferred",
+    "productionBuild": "passed_hosted_corepack_pnpm11.7_build_exact_app_source",
     "playwright": {
       "passed": 4,
       "scope": "task CRM persisted; goal lifecycle; mobile dictation API fixture + real document upload/download; connector installation/revocation"
@@ -2640,18 +2661,40 @@
       "ignoredAdvisories": 0
     },
     "fullSuite": {
-      "passed": 1105,
+      "passed": 1110,
       "skipped": 37,
       "failed": 0,
-      "filesPassed": 178,
+      "filesPassed": 179,
       "filesSkipped": 16,
-      "filesTotal": 194,
-      "durationSeconds": 551,
-      "sourceCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe"
+      "filesTotal": 195,
+      "durationSeconds": 1567.97,
+      "sourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+      "scope": "local app code; remote PostgreSQL tests explicitly skipped"
     },
     "continuityCheck": {
-      "status": "blocked",
-      "reason": "canonical PDF unavailable; no consulted pages invented"
+      "status": "ready",
+      "canonicalPdf": "recovered_from_library_sha256_verified_71_pages",
+      "pagesRead": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        31,
+        32,
+        33,
+        46,
+        48,
+        69,
+        70,
+        71
+      ],
+      "pagesVisuallyReviewed": [
+        48,
+        69
+      ],
+      "errors": 0,
+      "warnings": 0
     },
     "remotePreview": {
       "sourceCommit": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
@@ -2682,9 +2725,31 @@
         "tenantId": "tenant_82a4bfd5699644cd8b15e58517c7f15d",
         "preserve": true,
         "activeOwnerSqlVerified": true,
-        "newIndependentLogin": "not_started_workspace_disappeared"
+        "newIndependentLogin": "passed_mobile390x844_dashboard_contacts_site_conversation_reloads",
+        "credentialsSource": "existing_private_file_verified_without_chat_or_log_exposure",
+        "latestVerifiedSource": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+        "testSessionLoggedOut": true
       },
-      "fixtureCleanup": "native_confirmation_expired_no_cleanup_claimed"
+      "fixtureCleanup": "native_confirmation_succeeded_sql_verified_no_disposable_users_tenants_or_sessions_personal_owner_preserved"
+    },
+    "tenantModelBudget": {
+      "sourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+      "redBeforeFix": true,
+      "targetedTestsPassed": 27,
+      "fullSuite": "passed_1110_37_skipped_179_files_16_skipped_195_total",
+      "build": "passed_hosted_exact_source",
+      "paidCalls": 0,
+      "previewConfiguration": {
+        "feature": false,
+        "globalMicroUsd": 0,
+        "tenantMicroUsd": 0,
+        "readbackVerified": true
+      },
+      "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
+      "deploymentState": "READY",
+      "healthHttp": 200,
+      "database": "ok",
+      "mobilePersonalRecipe": "passed_login_dashboard_contacts_site_conversation_reloads_no_overflow_test_session_logged_out"
     }
   }
 }

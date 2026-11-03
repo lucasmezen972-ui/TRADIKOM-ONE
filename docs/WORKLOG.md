@@ -1481,3 +1481,16 @@ Quatre parcours Playwright, lint, TypeScript et build de production réussis. PD
 La préversion existante `0dfa1f2` reste READY et son health répond HTTP 200/database=ok le 3 novembre à 04:47 UTC. Supabase est active au schéma 124 ; le lot 125–132 n’est pas appliqué car sa confirmation native a expiré, après deux expirations antérieures du lot 125/126. Aucun déploiement du candidat contre ce schéma incomplet. Le plafond de 1 USD est réservé à la préversion ; OpenAI nécessite sa clé et un budget distinct. Aucune programmation, fusion, production, GitHub Actions ou installation sur le Mac.
 
 Les sections antérieures décrivent leur date. Voir [PRODUCT_FINALIZATION_2026-11-03.md](./PRODUCT_FINALIZATION_2026-11-03.md) pour limites, activation et configuration.
+
+
+## 3 novembre 2026 — coûts IA bornés, recette personnelle et source retrouvée
+
+Le test de régression reproduit une génération déclarée prête avec plafond d’organisation nul. Le défaut venait d’un fallback sur 0,10 USD pour toute valeur convertie en zéro. Le fallback est désormais réservé à la variable absente ; le readiness et le runtime utilisent la même lecture des plafonds. Nul, invalide ou inférieur à une réservation : aucun débit ni appel. Le plafond valide est appliqué indépendamment du disponible global. Correctif publié dans a0920cfa074c0168bc1161ce350629e02164b6b5 ; 27 tests ciblés, lint et TypeScript verts. La suite exhaustive et le build sont consignés séparément une fois terminés.
+
+Les deux fixtures temporaires ont été supprimées par le dialogue natif Supabase avec contrôle exact des identités et memberships, puis absence des utilisateurs/tenants/sessions vérifiée. Le compte personnel reste propriétaire actif ; connexion indépendante depuis le fichier privé et parcours mobile avec rechargements réussis. Les états locaux des seules fixtures supprimées ont été nettoyés.
+
+La copie canonique du PDF maître a été retrouvée dans les fichiers de Lucas : empreinte exacte et 71 pages. Pages cœur 3–7, 31–33, 46, 48, 69–71 relues ; pages 48/69 inspectées en rendu. Continuité prête, zéro erreur/avertissement. Aucune nouvelle lecture intégrale revendiquée. Une sonde de compatibilité Supabase en lecture seule est conservée et réellement exécutée ; sauvegarde/restauration plateforme et données PGP historiques restent à qualifier. Aucune mise à niveau moteur.
+
+Trois variables propres à la branche preview ont été ajoutées et relues dans Vercel : génération IA désactivée, plafonds global et organisation à zéro. Aucune clé n’est entrée et aucun appel IA payant activé ; l’allocation de préversion ne vaut pas budget d’API. Les plans restent mock. Aucun GitHub Actions, Mac ou message métier externe.
+
+Résultat final de cette reprise : 1 110 tests verts, 37 ignorés, zéro échec, 179 fichiers verts/16 ignorés sur195, 1567,97secondes. Build Vercel du source applicatif a0920cf vert, déploiement dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy READY ; health200/databaseok et connexion indépendante mobile/4routes/rechargements sans débordement réussis. Déconnexion de la session de contrôle confirmée. Continuité prête, aucun avertissement. Les tests PostgreSQL distants ignorés restent non prouvés.
