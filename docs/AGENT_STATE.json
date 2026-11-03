@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
-  "publishedHeadObserved": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
-  "status": "guided_crm_candidate_native_migration_confirmation_expired",
+  "lastCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+  "publishedHeadObserved": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+  "status": "guided_crm_preview_hosted_verified_ai_disabled",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Scénario CRM guidé codé et validé localement ; suite complète1116 réussis/37 ignorés, build et deux parcours mobiles locaux verts ; appliquer133/134 uniquement après confirmation native valable. La précédente confirmation a expiré ; journal132 et absence de nouvelle table vérifiés. Aucun contournement ni déploiement contre132. Préserver le compte personnel et la préversion actuelle ; IA désactivée, budgets0/0. Détails dans GUIDED_CRM_SCENARIO_2026-11-03.md.",
+  "nextAction": "Conserver la préversion protégée df18aab et le compte personnel. Le scénario CRM guidé est vérifié en hébergé : confirmation/rejeu sans doublon, refus terminal, mobile et ordinateur, audit SQL et déconnexion. Migrations133/134 appliquées et vérifiées ; ne pas les rejouer. IA désactivée et budgets0/0. Traiter séparément le DeprecationWarning pg de requêtes concurrentes sur un client avant pg9 ; ne pas présenter les tests PostgreSQL distants ignorés, les plans mock, les fournisseurs privés ou la production comme validés.",
   "nextFile": "docs/GUIDED_CRM_SCENARIO_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2423,6 +2423,10 @@
     {
       "command": "OpenAI encrypted key setup and Vercel secret metadata/budget readback",
       "status": "verified_sensitive_preview_only_local0600_ignored_feature_flags_false_budgets0_no_inference_no_redeploy"
+    },
+    {
+      "command": "hosted guided CRM df18aab + independent SQL owner/RLS/audit readback",
+      "status": "passed_schema134_protected_preview_confirmation_replay_one_task_refusal_mobile_desktop_logout_ai0_budget0"
     }
   ],
   "humanBlockers": [
@@ -2453,23 +2457,23 @@
       "environmentVariableCount": 15,
       "buildCostSettingsUpdate": "denied_by_vercel_permission",
       "appUrlConfigured": true,
-      "publishedSource": "a0920cfa074c0168bc1161ce350629e02164b6b5",
-      "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
+      "publishedSource": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+      "deploymentId": "dpl_GApDxUBWb2oKPQG5J2j8aBntB1oM",
       "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
-      "currentCandidate": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
-      "candidateDeployed": false,
-      "lastHealth": "2026-11-03T12:40:54.019Z",
+      "currentCandidate": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+      "candidateDeployed": true,
+      "lastHealth": "2026-11-03T14:11:33.191Z",
       "lastHealthHttpStatus": 200,
       "openaiKeyConfigured": true,
-      "openaiKeyAvailableAfterNextDeployment": true
+      "openaiKeyAvailableAfterNextDeployment": false
     },
     "database": {
       "provider": "Supabase",
       "projectRef": "iwngumaqdjiglhfekgug",
       "status": "ACTIVE_HEALTHY",
       "runtimeValidated": true,
-      "appliedMigrations": 132,
-      "lastMigration": "132_github_public_connectors_rls",
+      "appliedMigrations": 134,
+      "lastMigration": "134_conversation_task_proposals_rls",
       "backupVerified": true,
       "backupScope": "public application schema; platform internals and role credentials excluded",
       "restorationEngine": "PGlite PostgreSQL 17.5",
@@ -2478,8 +2482,8 @@
       "runtimeIdentityCanSetOwner": false,
       "runtimeIdentityVaultAccess": false,
       "candidateMigrations": "133–134",
-      "candidateApplied": false,
-      "confirmationStatus": "expired_no_application",
+      "candidateApplied": true,
+      "confirmationStatus": "native_success_on_explicit_resume",
       "engineVersion": "17.11",
       "providerUpgradeRecommended": "17.11.0.003 or later",
       "publicLtreeIndexes": 0,
@@ -2493,7 +2497,7 @@
       "backupRestoredTables": 153,
       "backupRestoredRows": 215,
       "applicationRowsPreserved": true,
-      "rlsTables": 133,
+      "rlsTables": 134,
       "clientTlsVerifyFull": true,
       "poolerBackendSslObserved": false,
       "platformRestoreProven": false
@@ -2533,7 +2537,8 @@
     "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
     "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
-    "Supabase17.11.0.011 qualifié sur le parcours personnel ; restauration de plateforme non prouvée. Le client utilise verify-full/rejectUnauthorized=true ; segment interne pooler/base observé sans TLS, aucune garantie bout en bout revendiquée."
+    "Supabase17.11.0.011 qualifié sur le parcours personnel ; restauration de plateforme non prouvée. Le client utilise verify-full/rejectUnauthorized=true ; segment interne pooler/base observé sans TLS, aucune garantie bout en bout revendiquée.",
+    "Avertissement pg8.22 : lectures de référence CSV concurrentes sur un même client ; recette réussie, sérialisation à traiter avant pg9. La sonde SQL distante SET ROLE runtime est refusée au connecteur ; aucun droit ajouté pour la contourner."
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 1,
@@ -2653,10 +2658,10 @@
     ]
   },
   "currentValidation": {
-    "sourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+    "sourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
     "lint": "passed",
     "typecheck": "passed",
-    "productionBuild": "passed_hosted_corepack_pnpm11.7_build_exact_app_source",
+    "productionBuild": "passed_hosted_preview_exact_df18aab",
     "playwright": {
       "passed": 4,
       "scope": "task CRM persisted; goal lifecycle; mobile dictation API fixture + real document upload/download; connector installation/revocation"
@@ -2714,14 +2719,14 @@
       "warnings": 0
     },
     "remotePreview": {
-      "sourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
-      "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
+      "sourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+      "deploymentId": "dpl_GApDxUBWb2oKPQG5J2j8aBntB1oM",
       "state": "READY",
-      "schema": 132,
+      "schema": 134,
       "healthHttp": 200,
       "database": "ok",
       "securityAdvisoryCount": 0,
-      "userAuthenticatedWorkflow": "passed_post_upgrade_independent_mobile_login_four_routes_reloads_logout",
+      "userAuthenticatedWorkflow": "passed_guided_crm_confirmation_replay_refusal_mobile_desktop_reloads_logout",
       "engine": "17.11"
     },
     "hostedRecipe": {
@@ -2794,9 +2799,11 @@
       "tenantBudgetMicroUsd": 0,
       "controlsReadbackVerified": true,
       "inferenceCalls": 0,
-      "redeploymentPerformed": false,
-      "availableAfterNextDeployment": true,
-      "oldLostKeyRevoked": false
+      "redeploymentPerformed": true,
+      "availableAfterNextDeployment": false,
+      "oldLostKeyRevoked": false,
+      "deployedSource": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+      "modelRoundTripProven": false
     },
     "applicationBackup": {
       "verifiedAt": "2026-11-03T12:27:20.029Z",
@@ -3024,10 +3031,16 @@
         "durationSeconds": 1740.65,
         "remotePostgresSkippedNotProven": true
       },
-      "providerMigration": "expired_not_applied_schema132",
-      "hostedRecipe": "not_run_candidate_not_deployed",
+      "providerMigration": "native_confirmation_succeeded_schema134_owner_rls_acl_verified",
+      "hostedRecipe": "passed_mobile390x844_desktop1440x900_confirmation_http_replay_single_task_refusal_reloads_sql_audit_logout",
       "modelCalls": 0,
-      "realBusinessMessages": 0
+      "realBusinessMessages": 0,
+      "publishedSourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a",
+      "deploymentId": "dpl_GApDxUBWb2oKPQG5J2j8aBntB1oM",
+      "hostedProof": "docs/GUIDED_CRM_HOSTED_VERIFICATION_2026-11-03.json",
+      "runtimeWarnings": [
+        "pg8.22 overlapping client queries deprecation observed during CSV preview; recipe succeeded"
+      ]
     }
   }
 }

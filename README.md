@@ -1,10 +1,12 @@
 # TRADIKOM ONE
 
-## Candidat : scénario CRM guidé
+## Préversion : scénario CRM guidé
 
-Le candidat ajoute une proposition durable dans Conversation, à relire puis confirmer ou refuser. La confirmation crée une vraie tâche CRM et sa preuve ; un rejeu ne duplique pas la tâche. Le refus ne crée rien. Les deux parcours mobiles locaux passent, avec confidentialité sous rôle limité et rollback en cas d’échec d’audit.
+Conversation conserve une proposition durable, à relire puis confirmer ou refuser. La confirmation crée une vraie tâche CRM et sa preuve ; un rejeu ne duplique pas la tâche. Le refus ne crée rien. Confidentialité sous rôle limité et rollback en cas d’échec d’audit sont couverts localement.
 
-**Pas encore en préversion** : la confirmation native des migrations133/134 a expiré ; la base reste132 et le déploiement actuel reste conservé. Ne pas publier ce candidat contre l’ancien schéma. IA désactivée et budgets nuls. [État et preuves du scénario](docs/GUIDED_CRM_SCENARIO_2026-11-03.md).
+**Préversion protégée vérifiée le 3 novembre 2026** : migrations133/134 appliquées avec confirmation native, zéro avis sécurité ; déploiement du SHA exact `df18aab` READY. Recette hébergée sur données fictives dans Caraïbe Démo Services : proposition/rechargement sans tâche avant confirmation, création réelle et rejeu HTTP200 sans doublon, refus terminal, audit SQL, mobile390×844 et ordinateur1440×900. Compte conservé et session de recette déconnectée. IA désactivée et budgets nuls ; les plans de l’orchestrateur restent mock. [État et preuves du scénario](docs/GUIDED_CRM_SCENARIO_2026-11-03.md).
+
+Les états datés qui suivent sont historiques. Cette recette ne valide pas la production, les fournisseurs privés ou les 37 tests PostgreSQL distants ignorés. Un avertissement pg8.22 sur des requêtes concurrentes dans l’aperçu CSV est suivi avant une future migration pg9.
 
 ## État vérifié — 30 octobre 2026
 
