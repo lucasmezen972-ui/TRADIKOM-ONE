@@ -24,6 +24,7 @@ const environmentSchema = z
       )
       .optional(),
     DATABASE_POOL_MAX: positiveIntegerString.optional(),
+    DATABASE_SSL_CA: z.string().min(1).optional(),
     PGLITE_DATA_DIR: z.string().min(1).optional(),
     BUSINESS_TIME_ZONE: z
       .string()
