@@ -1,3 +1,7 @@
+## Reprise et sauvegarde indépendante — 3 novembre 2026
+
+La reprise protège les conversations et leurs preuves : export privé cohérent au schéma132, sauvegarde chiffrée hors Supabase et restauration depuis la copie relue vérifiés. Le contrôle a corrigé deux défauts du nouvel outil d’export/reprise (index uniques référencés par des FK, puis search_path des rôles). Aucun code métier modifié. Les nouveaux outils et leurs limites sont documentés dans BACKUP_AND_RECOVERY.md ; preuve exacte dans BACKUP_VERIFICATION_2026-11-03.json. PostgreSQL17.11 et restauration plateforme restent distincts de cette preuve PostgreSQL17.5 embarquée. Aucun budget IA ou message métier externe.
+
 ## Configuration OpenAI bornée — 3 novembre 2026
 
 ### Impact north star

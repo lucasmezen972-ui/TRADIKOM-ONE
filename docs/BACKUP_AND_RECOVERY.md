@@ -1,5 +1,21 @@
 # Sauvegarde et reprise
 
+## Sauvegarde du projet hébergé — 3 novembre 2026
+
+La [preuve structurée](./BACKUP_VERIFICATION_2026-11-03.json) décrit la capture cohérente du schéma public132 (153 tables/215 lignes), son chiffrement, son stockage hors Supabase, la relecture exacte et la restauration depuis cette copie sur PostgreSQL17.5 embarqué. Les deux rejeux de migrations sous tradikom_owner laissent le journal inchangé. Aucun GitHub Actions utilisé.
+
+Outils de cette reprise :
+
+1. Exécuter [export-application-snapshot.sql](../scripts/export-application-snapshot.sql) en lecture seule. Conserver le résultat JSON en fichier privé0600 dans un dossier0700 ; ne pas le journaliser. Il contient des données privées. Vérifier l’inventaire de fonctionnalités supportées : aucune séquence, vue, partition, type personnalisé ou colonne générée. Cette capture est adaptée au schéma observé de TRADIKOM, et ne remplace pas un pg_dump général. Vérifier aussi les collations/options non standard, règles, triggers désactivés et tables d’extension : tous absents à cette reprise.
+2. Exécuter `python scripts/prepare-application-restore.py SNAPSHOT_JSON DOSSIER_NEUF`. L’outil construit les tables, données, fonctions, contraintes/index, triggers, RLS, propriétaires, ACL, privilèges par défaut et memberships. Les rôles applicatifs restent volontairement NOLOGIN/NOSUPERUSER/NOBYPASSRLS ; reprovisionner les credentials séparément. Le SQL généré refuse un schéma public non vide ; l’exécuter uniquement dans un environnement neuf isolé, jamais sur la base existante.
+3. Exécuter `node scripts/verify-application-snapshot.mjs DOSSIER_NEUF [MODULE_PGLITE]`. Le test compare toutes les lignes et les métadonnées de sécurité, puis vérifie le rôle restreint, l’isolation et la remise à zéro du contexte. Le moteur réellement testé est dans la preuve ; le PGlite du dépôt est18.3, celui de cette recette est17.5 (`@electric-sql/pglite@0.3.14` installé uniquement dans le cloud temporaire).
+4. Archiver le kit et ses empreintes, puis utiliser `node scripts/seal-application-backup.mjs seal ARCHIVE_ZIP BACKUP [CLE_JSON_PRIVEE]`. AES-256-GCM et HKDF-SHA256 avec sel/nonce aléatoires ; clé d’environnement CONNECTOR_ENCRYPTION_KEY et version CONNECTOR_ENCRYPTION_KEY_VERSION, conservées séparément dans Vercel. Un fichier de clés éventuel doit être privé0600 et retiré après usage. La clé n’est jamais dans l’archive. La commande `open` inverse l’opération sans écraser un fichier existant. Vérifier mauvaise clé/version et altération refusées.
+5. Stocker uniquement le fichier chiffré hors plateforme, relire cette copie, vérifier l’empreinte et toutes les entrées, déchiffrer puis restaurer depuis cette copie. Nettoyer les fichiers intermédiaires contenant données et clé après le contrôle.
+
+Inventaire : Auth0 utilisateur, Storage0 bucket/objet ; deux valeurs Vault vérifiées par SHA256 contre les secrets Vercel existants, sans export en clair. Trois payloads historiques de connecteur AES-GCM déchiffrables avec la clé existante, sans affichage. Les schémas/configurations internes, mots de passe de rôles et racine Vault restent exclus : cette preuve ne certifie pas une restauration complète de plateforme, ni la version cible17.11. Le compte personnel et l’entreprise fictive de Lucas sont préservés.
+
+L’ancien paragraphe de CI ci-dessous décrit une procédure historique ; aucun workflow n’a été exécuté dans cette reprise.
+
 ## Portee
 
 PostgreSQL contient les donnees applicatives, audits, snapshots, definitions de workflow et references de credentials chiffres. Le depot ne stocke actuellement aucun objet client dans un service objet externe; tout futur stockage devra avoir sa propre politique de versionnement et de restauration.

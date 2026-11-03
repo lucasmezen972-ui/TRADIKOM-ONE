@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "29b5ae389be4ee59d00d013d9a0a9fada409f264",
-  "publishedHeadObserved": "29b5ae389be4ee59d00d013d9a0a9fada409f264",
-  "status": "preview_key_configured_model_disabled_zero_budget",
+  "lastCommit": "04d72d19f155a2271cca14e15042c556cc3a6dab",
+  "publishedHeadObserved": "04d72d19f155a2271cca14e15042c556cc3a6dab",
+  "status": "fresh_encrypted_backup_offsite_restore_verified_upgrade_pending",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Ne pas recréer la clé : OPENAI_API_KEY est désormais un secret Vercel sensitive limité à preview/codex/tradikom-one-os. Conserver génération désactivée et plafonds global/organisation à zéro jusqu’à autorisation explicite distincte. La nouvelle variable sera injectée au prochain déploiement ; aucun déploiement ou appel IA n’a été lancé pour ce provisionnement. Poursuivre indépendamment la qualification de sauvegarde/restauration Supabase.",
+  "nextAction": "Sauvegarde fraîche132 hors Supabase restaurée depuis sa copie relue (preuve BACKUP_VERIFICATION_2026-11-03.json). Ne pas recréer de clé OpenAI : IA désactivée, budgets à zéro. Finir la qualification et la fenêtre de l’upgrade natif17.11.0.011 (coupure annoncée jusqu’à1h, pas de downgrade), puis vérifier runtime/RLS/journal/Vault et compte personnel. Aucun upgrade lancé à ce checkpoint.",
   "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2428,7 +2428,7 @@
   "humanBlockers": [
     "OpenAI : clé de préversion enregistrée comme secret Vercel, mais budget API explicitement non autorisé. Génération désactivée et plafonds global/organisation à zéro. Aucun aller-retour modèle réel prouvé.",
     "Planification des évaluations, Meta/SMS, email et OAuth propriétaires non activés ; consentements et authentifications distincts restent nécessaires.",
-    "Moteur Supabase PostgreSQL 17.6 : préparer sauvegarde plateforme et fenêtre de mise à niveau 17.11.0.003 ou ultérieure, après contrôle des extensions/données PGP ; interruption attendue selon le fournisseur."
+    "Moteur Supabase17.6 : sauvegarde fraîche publique et restauration embarquée prouvées, secrets récupérables séparément ; qualification du périmètre plateforme/version cible et préparation de la coupure native17.11.0.011 à terminer."
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2516,7 +2516,7 @@
     "Recette ciblée finale Node22/PostgreSQL17, build et20 Playwright verts; Codespace arrêté"
   ],
   "remainingGaps": [
-    "Valider un véritable aller-retour OpenAI après installation sécurisée de la clé dans Vercel et budget ; les tests actuels du transport utilisent des doubles.",
+    "Valider un véritable aller-retour OpenAI uniquement après autorisation explicite de budget ; clé déjà enregistrée dans Vercel, génération désactivée, plafonds à zéro.",
     "Dictée physique dépendante du navigateur : API simulée en Playwright, aucun microphone réel éprouvé.",
     "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
@@ -2784,6 +2784,54 @@
       "redeploymentPerformed": false,
       "availableAfterNextDeployment": true,
       "oldLostKeyRevoked": false
+    },
+    "applicationBackup": {
+      "verifiedAt": "2026-11-03T12:27:20.029Z",
+      "capturedAt": "2026-11-03T12:18:22.846781+00:00",
+      "engine": "17.5",
+      "restoredTables": 153,
+      "restoredRows": 215,
+      "constraints": 1281,
+      "indexes": 540,
+      "triggers": 65,
+      "policies": 260,
+      "functions": 53,
+      "allRowsExact": true,
+      "migrationJournalExact": true,
+      "tableOwnersRlsPoliciesAndAclsExact": true,
+      "functionDefinitionsOwnersAndAclsExact": true,
+      "schemaAndDefaultPrivilegesExact": true,
+      "restoredCustomRolesWithoutLoginOrBypass": true,
+      "roleMembershipsExact": true,
+      "restrictedRoleAndContextReset": true,
+      "scope": "public application schema only; no platform restore or target engine qualification",
+      "projectId": "iwngumaqdjiglhfekgug",
+      "applicationSourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+      "backupLibraryFileId": "libfile_d0c868f3eb008191ab682973a8be075f",
+      "backupFileName": "TRADIKOM_ONE_sauvegarde_chiffree_schema132_2026-11-03.tkbackup",
+      "encryptedSha256": "1962d1d829776142566b55f731d51810ab1eb35816f75d66cf6fadcf76b3919d",
+      "encryptedBytes": 191226,
+      "offsiteReadbackExact": true,
+      "decryptedArchiveChecksumsMatch": true,
+      "migrationReplays": 2,
+      "migrationReplayRole": "tradikom_owner",
+      "journalEntries": 132,
+      "journalUnchangedAfterReplays": true,
+      "vaultSecretsMatchIndependentVercelValues": 2,
+      "encryptedConnectorPayloadsRecoveredWithoutLogging": 3,
+      "connectorCipher": "aes-256-gcm",
+      "customLoginPasswordFormats": "scram-sha-256",
+      "cryptoChecks": [
+        "roundtrip",
+        "randomization",
+        "wrong_key_rejected",
+        "wrong_version_rejected",
+        "tamper_rejected"
+      ],
+      "nativePostgres17_11Execution": "blocked_cloud_os_user_permissions",
+      "targetEngineRestorationQualified": false,
+      "platformRestoreProven": false,
+      "paidModelCalls": 0
     }
   }
 }

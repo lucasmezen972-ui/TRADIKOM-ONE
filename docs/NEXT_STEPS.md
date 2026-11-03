@@ -1,3 +1,11 @@
+# Prochaine action concrète — qualification native de l’upgrade
+
+La sauvegarde fraîche chiffrée du schéma132 est enregistrée hors Supabase et restaurée depuis sa copie relue : 153 tables/215 lignes, droits/RLS/fonctions exacts et journal inchangé après deux rejeux. Voir BACKUP_VERIFICATION_2026-11-03.json. Les secrets Vault et trois payloads de connecteur restent récupérables avec la clé séparée existante. Ne pas répéter cet export sans changement des données ou besoin de reprise.
+
+Le tableau de bord est accessible et propose 17.11.0.011. La confirmation native avertit d’une coupure jusqu’à une heure, d’un redimensionnement du disque et de l’absence de downgrade vers17.6.1.141. Aucun lancement effectué à ce checkpoint. Finir les vérifications de compatibilité et la préparation de l’interruption/retour avant cette confirmation, puis prouver santé, RLS, journal132, Vault et parcours personnel après l’opération. La restauration plateforme et la version cible exacte ne sont pas prouvées par le test embarqué17.5.
+
+Le secret OpenAI est déjà enregistré ; génération désactivée et budgets global/organisation à zéro, sans appel facturable. Conserver le compte personnel Caraïbe Démo Services. Les sections suivantes sont des checkpoints antérieurs.
+
 # Prochaine action concrète — clé provisionnée, budget bloqué
 
 OPENAI_API_KEY est maintenant un secret Vercel sensitive limité à preview/codex/tradikom-one-os. Ne pas créer une autre clé. La variable sera injectée au prochain déploiement ; aucun redéploiement ou appel IA n’a été lancé pour cette opération. Conserver FEATURE_CONVERSATION_MODEL=false, FEATURE_AI_GENERATION=false et les plafonds global/organisation à zéro jusqu’à autorisation explicite de budget API. La clé ne constitue pas cette autorisation.
