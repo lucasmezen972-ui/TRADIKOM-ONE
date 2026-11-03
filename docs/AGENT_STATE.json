@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T04:51:43.832680+00:00",
+  "updatedAt": "2026-11-03T05:40:41.092Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
-  "publishedHeadObserved": "0da2c88ad2f7cd89526fc797530634251f4470fe",
-  "status": "product_candidate_verified_activation_blocked_by_supabase_confirmation",
+  "publishedHeadObserved": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
+  "status": "preview_deployed_schema132_health_verified",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -37,7 +37,7 @@
       "evidenceExpected": "Tests lifecycle, refus sans consentement, arrêt/reprise concurrents, RLS en PostgreSQL 17, parcours navigateur et build du candidat."
     }
   },
-  "nextAction": "Relancer apply_migration 125–132 quand Lucas peut accepter la confirmation native avant son expiration ; vérifier le journal et les avis, puis déployer en preview le SHA source exact. Obtenir séparément clé et budget OpenAI avant son activation. Aucun cron ni Actions.",
+  "nextAction": "Vérifier le parcours utilisateur connecté dans la préversion ; configurer la clé OpenAI dans Vercel uniquement par un parcours sécurisé et activer des appels après budget distinct. Préparer séparément sauvegarde et fenêtre d’upgrade du moteur Supabase. Aucun cron ni production.",
   "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2400,8 +2400,7 @@
     }
   ],
   "humanBlockers": [
-    "Supabase exige sa confirmation native : deux demandes 125/126 puis une demande revue 125–132 ont expiré après deux minutes sans changement. Ne pas contourner via execute_sql ou navigateur.",
-    "OpenAI : clé serveur dédiée et budget d’appels à autoriser/configurer ; le plafond de 1 USD accordé à la préversion ne couvre pas ces appels.",
+    "OpenAI : clé créée dans le cloud et exclue de Git ; installation sécurisée Vercel et budget d’appels distinct restent nécessaires.",
     "Planification des évaluations, Meta/SMS, email et OAuth propriétaires non activés ; consentements et authentifications distincts restent nécessaires.",
     "Moteur Supabase PostgreSQL 17.6 : préparer sauvegarde plateforme et fenêtre de mise à niveau 17.11.0.003 ou ultérieure, après contrôle des extensions/données PGP ; interruption attendue selon le fournisseur."
   ],
@@ -2428,12 +2427,12 @@
       "environmentVariableCount": 11,
       "buildCostSettingsUpdate": "denied_by_vercel_permission",
       "appUrlConfigured": true,
-      "publishedSource": "0dfa1f2a0bd7379cd05f10b3ac11befb8ce9f73e",
-      "deploymentId": "dpl_Ff2VEs1SK7J1D6pfLLViRWqbkCBw",
+      "publishedSource": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
+      "deploymentId": "dpl_81smzYPqTYhfZqcAtFbHeYd5aCYZ",
       "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
       "currentCandidate": "0da2c88ad2f7cd89526fc797530634251f4470fe",
-      "candidateDeployed": false,
-      "lastHealth": "2026-11-03T04:47:08.701Z",
+      "candidateDeployed": true,
+      "lastHealth": "2026-11-03T05:40:21.278Z",
       "lastHealthHttpStatus": 200
     },
     "database": {
@@ -2441,8 +2440,8 @@
       "projectRef": "iwngumaqdjiglhfekgug",
       "status": "ACTIVE_HEALTHY",
       "runtimeValidated": true,
-      "appliedMigrations": 124,
-      "lastMigration": "124_runtime_function_search_path",
+      "appliedMigrations": 132,
+      "lastMigration": "132_github_public_connectors_rls",
       "backupVerified": true,
       "backupScope": "public application schema; platform internals and role credentials excluded",
       "restorationEngine": "PGlite PostgreSQL 17.5",
@@ -2451,8 +2450,8 @@
       "runtimeIdentityCanSetOwner": false,
       "runtimeIdentityVaultAccess": false,
       "candidateMigrations": "125–132",
-      "candidateApplied": false,
-      "confirmationStatus": "expired_without_effect",
+      "candidateApplied": true,
+      "confirmationStatus": "applied_verified",
       "engineVersion": "17.6",
       "providerUpgradeRecommended": "17.11.0.003 or later",
       "publicLtreeIndexes": 0,
@@ -2489,8 +2488,7 @@
     "Recette ciblée finale Node22/PostgreSQL17, build et20 Playwright verts; Codespace arrêté"
   ],
   "remainingGaps": [
-    "Déployer et vérifier le candidat connecté après application Supabase 125–132 ; la préversion hébergée reste 0dfa1f2/schema124.",
-    "Valider un véritable aller-retour OpenAI après clé/budget ; les tests actuels du transport utilisent des doubles.",
+    "Valider un véritable aller-retour OpenAI après installation sécurisée de la clé dans Vercel et budget ; les tests actuels du transport utilisent des doubles.",
     "Dictée physique dépendante du navigateur : API simulée en Playwright, aucun microphone réel éprouvé.",
     "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
@@ -2653,6 +2651,16 @@
     "continuityCheck": {
       "status": "blocked",
       "reason": "canonical PDF unavailable; no consulted pages invented"
+    },
+    "remotePreview": {
+      "sourceCommit": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
+      "deploymentId": "dpl_81smzYPqTYhfZqcAtFbHeYd5aCYZ",
+      "state": "READY",
+      "schema": 132,
+      "healthHttp": 200,
+      "database": "ok",
+      "securityAdvisoryCount": 0,
+      "userAuthenticatedWorkflow": "not_yet_verified_on_hosted_database"
     }
   }
 }
