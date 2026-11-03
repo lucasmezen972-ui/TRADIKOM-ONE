@@ -23,17 +23,30 @@ export async function createConversationModelPlanAction(formData: FormData) {
     result.approvalStatus === "draft" ? "clarification" : "cree", result.id));
 }
 
-export async function createNativeConversationTaskAction(formData: FormData) {
+export async function prepareNativeConversationTaskAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
-  const result = await safeServerAction("conversation.native_task", () => services.createContactTaskFromConversation(user.id, tenant.id, {
+  const result = await safeServerAction("conversation.task_proposal.prepare", () => services.prepareTaskProposal(user.id, tenant.id, {
     threadId: text(formData, "threadId"), sourceMessageId: text(formData, "sourceMessageId"),
     contactId: text(formData, "contactId"), title: text(formData, "title"), dueAt: text(formData, "dueAt"),
-    idempotencyKey: text(formData, "idempotencyKey"), teamVisibilityConfirmed: requiredConfirmation(formData, "teamVisibilityConfirmed"),
+    idempotencyKey: text(formData, "idempotencyKey"),
+  }));
+  revalidatePath("/conversation");
+  redirect(`/conversation?fil=${encodeURIComponent(result.threadId)}#task-proposal-${encodeURIComponent(result.id)}`);
+}
+
+export async function decideNativeConversationTaskAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const decision = z.enum(["approved", "rejected"]).parse(text(formData, "decision"));
+  const result = await safeServerAction("conversation.task_proposal.decide", () => services.decideTaskProposal(user.id, tenant.id, {
+    proposalId: text(formData, "proposalId"), decision,
+    teamVisibilityConfirmed: decision === "approved" ? requiredConfirmation(formData, "teamVisibilityConfirmed") : false,
   }));
   revalidatePath("/conversation");
   revalidatePath("/contacts");
-  redirect(`/conversation?fil=${encodeURIComponent(result.threadId)}`);
+  revalidatePath("/aujourdhui");
+  redirect(`/conversation?fil=${encodeURIComponent(result.threadId)}#task-proposal-${encodeURIComponent(result.id)}`);
 }
 
 export async function createConversationGoalAction(formData: FormData) {

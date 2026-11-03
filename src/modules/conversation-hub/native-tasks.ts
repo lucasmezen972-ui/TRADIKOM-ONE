@@ -80,7 +80,7 @@ export async function createConversationContactTask(
   });
 }
 
-async function withNativeTransaction<T>(db: DbClient, tenantId: string, actorId: string, callback: (transaction: DbClient) => Promise<T>): Promise<T> {
+export async function withNativeTransaction<T>(db: DbClient, tenantId: string, actorId: string, callback: (transaction: DbClient) => Promise<T>): Promise<T> {
   const client = db as DbClient & { __transaction?: boolean; transaction?: PGlite["transaction"] };
   if (!client.__transaction && client.transaction) {
     return client.transaction((transaction) => callback({ __transaction: true,

@@ -38,6 +38,7 @@ import {
 import { PlanRevisionForm } from "@/app/(app)/conversation/plan-revision-form";
 import { GoalWatchPanel } from "@/app/(app)/conversation/goal-watch-panel";
 import { NativeTaskForm } from "@/app/(app)/conversation/native-task-form";
+import { TaskProposals } from "@/app/(app)/conversation/task-proposals";
 import { ModelPlanForm } from "@/app/(app)/conversation/model-plan-form";
 import {
   planReceiptMessage,
@@ -97,6 +98,7 @@ export default async function ConversationPage({
     ? await services.listPlans(user.id, tenant.id, thread.id)
     : [];
   const goals = thread ? await services.listGoalWatches(user.id, tenant.id, thread.id) : [];
+  const taskProposals = thread ? await services.listTaskProposals(user.id, tenant.id, thread.id) : [];
   const latestPlan = plans[0];
   const requestedPlan = plans.find((plan) => plan.id === params.plan_id);
   const planReceipt = resolveConversationPlanReceipt(
@@ -354,6 +356,7 @@ export default async function ConversationPage({
           ) : null}
 
           {thread ? <GoalWatchPanel threadId={thread.id} goals={goals} canWrite={canWrite && thread.status !== "archived"} creationIdempotencyKey={`goal-create:${randomUUID()}`} /> : null}
+          <TaskProposals proposals={taskProposals} />
           {thread && sourceMessage && taskForm ? <NativeTaskForm threadId={thread.id} sourceMessageId={sourceMessage.id} contacts={taskForm.contacts} dueAt={taskForm.dueAt} idempotencyKey={`native-task:${randomUUID()}`} /> : null}
           {thread && sourceMessage && canWrite && thread.status !== "archived" ? <ModelPlanForm threadId={thread.id} sourceMessageId={sourceMessage.id} state={services.modelReadiness.state} idempotencyKey={`model-plan:${randomUUID()}`} /> : null}
           <div className="border-t border-slate-200 bg-slate-50 p-4 lg:p-5">

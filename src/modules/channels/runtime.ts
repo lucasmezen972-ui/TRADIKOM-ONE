@@ -14,6 +14,8 @@ import { createWebChannelAdapter } from "@/modules/channels/web-channel";
 import { createConversationModelPlan, getConversationModelReadiness, type CreateModelPlanInput } from "@/modules/orchestrator/model-runtime";
 import { createConversationContactTask, listConversationTaskContacts,
   type CreateConversationContactTaskInput } from "@/modules/conversation-hub/native-tasks";
+import { prepareConversationTaskProposal, decideConversationTaskProposal, listConversationTaskProposals,
+  type PrepareConversationTaskProposalInput, type DecideConversationTaskProposalInput } from "@/modules/conversation-hub/task-proposals";
 import { createGoalWatch, changeGoalWatch, listGoalWatchesForThread,
   type CreateGoalWatchInput, type ChangeGoalWatchInput } from "@/modules/goal-watch";
 import { inspectMetaWhatsAppTenantReadiness } from "@/modules/channels/provider-endpoints-service";
@@ -49,6 +51,12 @@ export function createConversationChannelServices(
       createConversationModelPlan(db, userId, tenantId, input),
     createContactTaskFromConversation: (userId: string, tenantId: string, input: CreateConversationContactTaskInput) =>
       createConversationContactTask(db, userId, tenantId, input),
+    prepareTaskProposal: (userId: string, tenantId: string, input: PrepareConversationTaskProposalInput) =>
+      prepareConversationTaskProposal(db, userId, tenantId, input),
+    decideTaskProposal: (userId: string, tenantId: string, input: DecideConversationTaskProposalInput) =>
+      decideConversationTaskProposal(db, userId, tenantId, input),
+    listTaskProposals: (userId: string, tenantId: string, threadId: string) =>
+      listConversationTaskProposals(db, userId, tenantId, threadId),
     prepareTaskForm: async (userId: string, tenantId: string, threadId: string) => ({
       contacts: await listConversationTaskContacts(db, userId, tenantId, threadId),
       dueAt: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
