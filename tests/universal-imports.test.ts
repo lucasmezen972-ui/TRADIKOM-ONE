@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryDb } from "../src/lib/db";
+import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import {
   importFileSizeLimit,
@@ -27,6 +27,7 @@ describe("imports universels contrôlés", () => {
       name: "Import Atelier",
       category: "Commerce",
     });
+    const imports = createServices(requireSerialQueries(db));
     const buffer = Buffer.from(
       [
         "nom,email,telephone",
@@ -36,7 +37,7 @@ describe("imports universels contrôlés", () => {
       ].join("\n"),
     );
 
-    const preview = await services.previewUniversalImport(owner.id, tenant.id, {
+    const preview = await imports.previewUniversalImport(owner.id, tenant.id, {
       entityType: "contacts",
       format: "csv",
       fileName: "contacts.csv",
@@ -54,7 +55,7 @@ describe("imports universels contrôlés", () => {
     );
     expect(Number(beforeCommit.rows[0]?.count)).toBe(0);
 
-    const committed = await services.commitUniversalImportBatch(
+    const committed = await imports.commitUniversalImportBatch(
       owner.id,
       tenant.id,
       { importId: preview.id, batchSize: 1 },
@@ -73,7 +74,7 @@ describe("imports universels contrôlés", () => {
     ]);
 
     await expect(
-      services.rollbackUniversalImport(owner.id, tenant.id, preview.id),
+      imports.rollbackUniversalImport(owner.id, tenant.id, preview.id),
     ).resolves.toMatchObject({ status: "rolled_back" });
     const afterRollback = await db.query<{ count: number | string }>(
       "select count(*) as count from contacts where tenant_id = $1",
@@ -220,6 +221,23 @@ describe("imports universels contrôlés", () => {
     ).rejects.toMatchObject({ code: "import_not_found" });
   });
 });
+
+// A transaction has one connection. Reject the overlap deprecated by pg8.22
+// instead of letting PGlite's internal queue hide it from the CSV lifecycle test.
+function requireSerialQueries(db: DbClient): DbClient {
+  let active = false;
+  return {
+    async query<T = Record<string, unknown>>(sql: string, params?: unknown[]) {
+      if (active) throw new Error("query_overlap_on_transaction_connection");
+      active = true;
+      try {
+        return await db.query<T>(sql, params);
+      } finally {
+        active = false;
+      }
+    },
+  };
+}
 
 async function previewAndCommit(
   services: ReturnType<typeof createServices>,
