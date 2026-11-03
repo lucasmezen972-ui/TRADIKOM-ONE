@@ -1521,3 +1521,12 @@ Deux valeurs Vault toujours conformes aux secrets Vercel séparés ; extensions/
 TLS du client vers le pooler : certificat fourni, verify-full et rejectUnauthorized=true vérifiés dans la configuration réelle et le code. La vue serveur pg_stat_ssl observe ssl=false sur les connexions du pooler à PostgreSQL ; elle ne prouve pas le premier segment et aucune garantie TLS de bout en bout n’est revendiquée. Cette liaison interne et la restauration complète de plateforme restent à qualifier pour la production. Les fichiers temporaires de données/clé de sauvegarde et le lien privé de recette ont été retirés ; sauvegarde chiffrée et accès personnel privé conservés.
 
 Code métier et préversion inchangés : aucun redéploiement pour cette opération. La clé OpenAI reste enregistrée pour la prochaine préversion ; IA désactivée, plafonds 0/0, aucun appel payant. Plans mock, fournisseurs privés et microphone physique restent des limites réelles. L’audit des dépendances conserve zéro high/critical et un modéré minimatch, sans avis ignoré. Ne pas répéter l’upgrade ou les recettes déjà prouvées sans changement utile.
+
+
+## 2026-11-03 — Recette complète et livraison indépendante du schéma135
+
+Campagne native sur d3f7a2a : imports JSON/CSV/XLSX, CRM et tâche dédiée, opportunité et historique, modules locaux, préférences restaurées, TXT/PDF texte extraits et téléchargés identiques puis rechargés, objectif consenti jusqu’à arrêt terminal, DNS/OAuth mock sans réseau externe, FAQ approuvée puis appliquée au seul brouillon. Compte/session personnels gardés, budgets0/0.
+
+Candidat complet135 préparé dans fbb1a44, ciblés images54/13fichiers et restauration132/1353/2fichiers verts; lint/TS globaux verts, continuité avec PDF indisponible. Build local non prouvé (réseau/fonts puis tentative incomplète); corpus complet commencé mais suspendu sans conclusion globale. Confirmation native apply_migration135 expirée, vérificationSQL134/app_private absent/0asset/owner personnel intact. Aucun retry ou déploiement135.
+
+Une livraison compatible134 reprend uniquement les six patchs déjà qualifiés HTTP/CRM/export/lecturesSQL. Qualification globale, déploiement exact et recette correspondante en cours. Auto-déploiements désactivés seulement pour les deux branches de travail; déploiements manuels exacts conservés. Voir SCHEMA134_RELEASE_2026-11-03.md.

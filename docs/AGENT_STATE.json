@@ -5,10 +5,10 @@
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
-  "publishedHeadObserved": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
-  "status": "csv_serialization_preview_native_desktop_recipe_verified",
+  "publishedHeadObserved": "261efe488cd3cf5dcc4b53a701ab2cec2da848ef",
+  "status": "schema134_independent_fixes_pending_global_validation",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
-  "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
+  "currentObjective": "Tester tous les modules accessibles et livrer les corrections compatibles134 malgré expiration de confirmation native135.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -55,8 +55,8 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Conserver la préversion protégée d3f7a2a et la recette CSV native desktop réussie : premier import1, second import0/deux doublons, SQL et audits exacts, zéro événement error/warning/fatal retrouvé dans la fenêtre16:52:44–17:12:44UTC. La session personnelle interactive et l’onglet Contacts sont conservés pour Lucas présent ; ne pas annoncer une déconnexion ou réimporter les fixtures. Aucun nouveau mobile ou test local rejoué sur cette reprise. Préserver base134, compte et entreprise ; IA désactivée, budgets0/0. Traiter uniquement les limites restantes explicitement documentées.",
-  "nextFile": "docs/CSV_QUERY_SERIALIZATION_2026-11-03.md",
+  "nextAction": "Qualifier globalement puis déployer le candidat compatible134 au SHA exact, sans target et withLatestCommit=false. Vérifier export existant, statut Importé, HTTP et régressions. Conserver candidat135 séparé : confirmation native expirée, pas de nouvelle tentative automatique. Compte personnel/session et budgets0/0 préservés, sans GitHub Actions.",
+  "nextFile": "docs/SCHEMA134_RELEASE_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -3078,6 +3078,14 @@
       "localChecksRepeatedDuringNativeRecipe": false,
       "previousHostedBlocker": "history: command-line cloud browser proxy CA error before native browser authentication"
     }
+  },
+  "fullApplicationCampaign": {
+    "sourceInitial": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
+    "schemaObserved": 134,
+    "candidate135Original": "fbb1a44177d49c0599ce85333376009bb1db27a5",
+    "migration135": "native_confirmation_expired_not_applied",
+    "currentCandidate": "schema134_independent_fixes",
+    "globalValidation": "pending",
+    "masterPrompt": "Non relu dans ce cloud; pages consultées ci-dessus historiques, exigences versionnées appliquées."
   }
 }
-

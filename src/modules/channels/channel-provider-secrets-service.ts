@@ -314,21 +314,19 @@ export function createWhatsAppTwilioSecretResolvers(
     ): Promise<WhatsAppTwilioResolvedDestination | null> {
       const parsed = destinationReferenceSchema.parse(reference);
       return withSystemDbTransaction(db, async (transaction) => {
-        const [endpointRow, identityRow] = await Promise.all([
-          findActiveEndpointSecretVersion(
-            transaction,
-            parsed.tenantId,
-            parsed.endpointId,
-            "whatsapp_twilio",
-          ),
-          findActiveIdentitySecretVersion(
-            transaction,
-            parsed.tenantId,
-            parsed.endpointId,
-            parsed.channelIdentityId,
-            "whatsapp_twilio",
-          ),
-        ]);
+        const endpointRow = await findActiveEndpointSecretVersion(
+          transaction,
+          parsed.tenantId,
+          parsed.endpointId,
+          "whatsapp_twilio",
+        );
+        const identityRow = await findActiveIdentitySecretVersion(
+          transaction,
+          parsed.tenantId,
+          parsed.endpointId,
+          parsed.channelIdentityId,
+          "whatsapp_twilio",
+        );
         if (!endpointRow || !identityRow) return null;
         const endpoint = decryptSecret(
           endpointRow,
@@ -384,21 +382,19 @@ export function createWhatsAppMetaSecretResolvers(
     ): Promise<WhatsAppMetaResolvedDestination | null> {
       const parsed = destinationReferenceSchema.parse(reference);
       return withSystemDbTransaction(db, async (transaction) => {
-        const [endpointRow, identityRow] = await Promise.all([
-          findActiveEndpointSecretVersion(
-            transaction,
-            parsed.tenantId,
-            parsed.endpointId,
-            "whatsapp_meta",
-          ),
-          findActiveIdentitySecretVersion(
-            transaction,
-            parsed.tenantId,
-            parsed.endpointId,
-            parsed.channelIdentityId,
-            "whatsapp_meta",
-          ),
-        ]);
+        const endpointRow = await findActiveEndpointSecretVersion(
+          transaction,
+          parsed.tenantId,
+          parsed.endpointId,
+          "whatsapp_meta",
+        );
+        const identityRow = await findActiveIdentitySecretVersion(
+          transaction,
+          parsed.tenantId,
+          parsed.endpointId,
+          parsed.channelIdentityId,
+          "whatsapp_meta",
+        );
         if (!endpointRow || !identityRow) return null;
         const identity = decryptSecret(
           identityRow,

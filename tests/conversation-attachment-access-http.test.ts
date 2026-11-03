@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 import {
   ConversationAttachmentAccessError,
   handleConversationAttachmentAccessRequest,
@@ -12,6 +13,53 @@ const ticket = "t".repeat(120);
 const correlationId = "corr_attachment_http_test";
 
 describe("frontière HTTP des pièces jointes de conversation", () => {
+  it("accepte le flux POST vide de l’adaptateur Next sans activer le stockage fournisseur", async () => {
+    const dependencies = createDependencies({ prepareResult: { status: "not_configured" } });
+    const candidate = new NextRequest(requestUrl, {
+      method: "POST",
+      headers: { origin: appOrigin, "content-length": "0" },
+      body: new ReadableStream({ start(controller) { controller.close(); } }),
+      duplex: "half",
+    } as NonNullable<ConstructorParameters<typeof NextRequest>[1]>);
+    expect(candidate.body).not.toBeNull();
+    const response = await handleConversationAttachmentAccessRequest(candidate, { attachmentId }, dependencies);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, status: "not_configured", error: "Téléchargement non configuré." });
+    expect(dependencies.prepare).toHaveBeenCalledExactlyOnceWith({
+      userId: "user_http_1", tenantId: "tenant_http_1", attachmentId,
+    });
+    expect(dependencies.read).not.toHaveBeenCalled();
+  });
+
+  it("refuse une taille annoncée non nulle même si le flux est absent", async () => {
+    const dependencies = createDependencies();
+    const candidate = new Request(requestUrl, {
+      method: "POST", headers: { origin: appOrigin, "content-length": "1" },
+    });
+    const response = await handleConversationAttachmentAccessRequest(candidate, { attachmentId }, dependencies);
+    expect(response.status).toBe(400);
+    expect(dependencies.prepare).not.toHaveBeenCalled();
+  });
+
+  it("borne et ferme le flux de préparation sans jamais demander un ticket pour ses octets", async () => {
+    for (const pending of [false, true]) {
+      const dependencies = createDependencies();
+      const cancel = vi.fn();
+      const stream = new ReadableStream({
+        start(controller) { if (!pending) controller.enqueue(new Uint8Array([1])); },
+        cancel,
+      });
+      const candidate = new Request(requestUrl, {
+        method: "POST", headers: { origin: appOrigin }, body: stream, duplex: "half",
+      } as RequestInit);
+      const response = await handleConversationAttachmentAccessRequest(candidate, { attachmentId }, dependencies);
+      expect(response.status).toBe(400);
+      expect(dependencies.prepare).not.toHaveBeenCalled();
+      expect(dependencies.read).not.toHaveBeenCalled();
+      expect(cancel).toHaveBeenCalledOnce();
+    }
+  });
+
   it("refuse les méthodes non autorisées avant session et métier", async () => {
     const dependencies = createDependencies();
     const response = await handleConversationAttachmentAccessRequest(

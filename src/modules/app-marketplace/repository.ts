@@ -61,8 +61,8 @@ export async function listMarketplaceSourceRows(
   db: DbClient,
   tenantId: string,
 ) {
-  const [connectorPlans, workflows, aiEmployees] = await Promise.all([
-    db.query<MarketplaceSourceRow>(
+  // Refresh owns one PostgreSQL connection for this entire transaction.
+  const connectorPlans = await db.query<MarketplaceSourceRow>(
       `select 'connector_plan' as source_kind,
               'connector:' || plan.store_entry_id as source_key,
               plan.id as source_id,
@@ -86,8 +86,8 @@ export async function listMarketplaceSourceRows(
        order by proposal.name asc, plan.id asc
        limit 100`,
       [tenantId],
-    ),
-    db.query<MarketplaceSourceRow>(
+    );
+  const workflows = await db.query<MarketplaceSourceRow>(
       `select 'workflow' as source_kind,
               'workflow:' || workflow_key as source_key,
               id as source_id,
@@ -108,8 +108,8 @@ export async function listMarketplaceSourceRows(
        order by name asc, id asc
        limit 100`,
       [tenantId],
-    ),
-    db.query<MarketplaceSourceRow>(
+    );
+  const aiEmployees = await db.query<MarketplaceSourceRow>(
       `select 'ai_employee_profile' as source_kind,
               'ai-employee:' || employee_key as source_key,
               id as source_id,
@@ -131,8 +131,7 @@ export async function listMarketplaceSourceRows(
        order by display_name asc, id asc
        limit 100`,
       [tenantId],
-    ),
-  ]);
+    );
   return [...connectorPlans.rows, ...workflows.rows, ...aiEmployees.rows];
 }
 

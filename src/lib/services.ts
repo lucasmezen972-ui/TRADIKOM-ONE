@@ -326,6 +326,7 @@ import {
 import {
   cancelUniversalExport,
   createUniversalExport,
+  generateUniversalExport,
   getExportWorkspace,
   getUniversalExportDownload,
   processUniversalExportJob,
@@ -891,6 +892,11 @@ export function createServices(
       tenantId: string,
       exportId: string,
     ) => processUniversalExportJob(db, actorId, tenantId, exportId),
+    generateUniversalExport: (
+      userId: string,
+      tenantId: string,
+      exportId: string,
+    ) => generateUniversalExport(db, userId, tenantId, { exportId }),
     cancelUniversalExport: (
       userId: string,
       tenantId: string,

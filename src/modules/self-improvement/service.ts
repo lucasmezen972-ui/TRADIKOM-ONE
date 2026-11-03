@@ -86,14 +86,11 @@ export async function generateSelfImprovementProposals(
 ) {
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, [...managerRoles]);
-    const [workflows, connectors, duplicateContactPairs, websitePages, websiteHeroes] =
-      await Promise.all([
-        listWorkflowImprovementSignals(transaction, tenantId),
-        listConnectorImprovementSignals(transaction, tenantId),
-        countDuplicateContactPairs(transaction, tenantId),
-        listWebsitePageImprovementSignals(transaction, tenantId),
-        listWebsiteHeroImprovementSignals(transaction, tenantId),
-      ]);
+    const workflows = await listWorkflowImprovementSignals(transaction, tenantId);
+    const connectors = await listConnectorImprovementSignals(transaction, tenantId);
+    const duplicateContactPairs = await countDuplicateContactPairs(transaction, tenantId);
+    const websitePages = await listWebsitePageImprovementSignals(transaction, tenantId);
+    const websiteHeroes = await listWebsiteHeroImprovementSignals(transaction, tenantId);
     const now = nowIso();
     const candidates = buildSelfImprovementCandidates(
       { workflows, connectors, duplicateContactPairs, websitePages, websiteHeroes },

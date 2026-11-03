@@ -690,29 +690,26 @@ export async function delegateConversationActionPlan(
           "La validation unique de ce plan est introuvable.",
         );
       }
-      const [policyReceipt, mission, successor, currentDelegation] =
-        await Promise.all([
-          findConversationActionPlanPolicyReceiptByPlan(
-            transaction,
-            tenantId,
-            plan.id,
-          ),
-          findWorkflowRunByKey(
-            transaction,
-            tenantId,
-            conversationActionPlanWorkflowKey(plan.id),
-          ),
-          findActionPlanRevisionByPreviousPlan(
-            transaction,
-            tenantId,
-            plan.id,
-          ),
-          findLatestConversationActionPlanDelegation(
-            transaction,
-            tenantId,
-            plan.id,
-          ),
-        ]);
+      const policyReceipt = await findConversationActionPlanPolicyReceiptByPlan(
+        transaction,
+        tenantId,
+        plan.id,
+      );
+      const mission = await findWorkflowRunByKey(
+        transaction,
+        tenantId,
+        conversationActionPlanWorkflowKey(plan.id),
+      );
+      const successor = await findActionPlanRevisionByPreviousPlan(
+        transaction,
+        tenantId,
+        plan.id,
+      );
+      const currentDelegation = await findLatestConversationActionPlanDelegation(
+        transaction,
+        tenantId,
+        plan.id,
+      );
       if (policyReceipt || mission || successor) {
         throw new OrchestratorError(
           "orchestrator_decision_conflict",
@@ -937,20 +934,17 @@ export async function reviseConversationActionPlan(
           "Seul un plan encore en attente peut être modifié.",
         );
       }
-      const [previousApproval, previousReceipt, previousMission] =
-        await Promise.all([
-          findActionPlanApproval(transaction, tenantId, previousPlan.id),
-          findConversationActionPlanPolicyReceiptByPlan(
-            transaction,
-            tenantId,
-            previousPlan.id,
-          ),
-          findWorkflowRunByKey(
-            transaction,
-            tenantId,
-            conversationActionPlanWorkflowKey(previousPlan.id),
-          ),
-        ]);
+      const previousApproval = await findActionPlanApproval(transaction, tenantId, previousPlan.id);
+      const previousReceipt = await findConversationActionPlanPolicyReceiptByPlan(
+        transaction,
+        tenantId,
+        previousPlan.id,
+      );
+      const previousMission = await findWorkflowRunByKey(
+        transaction,
+        tenantId,
+        conversationActionPlanWorkflowKey(previousPlan.id),
+      );
       if (!previousApproval || previousApproval.status !== "pending") {
         throw new OrchestratorError(
           "orchestrator_approval_not_found",
@@ -1944,10 +1938,8 @@ async function finalizeConversationActionPlanInTransaction(
     );
   }
 
-  const [planSteps, workflowSteps] = await Promise.all([
-    listActionPlanStepRows(db, input.tenantId, plan.id),
-    listWorkflowRunStepRows(db, input.tenantId, [run.id]),
-  ]);
+  const planSteps = await listActionPlanStepRows(db, input.tenantId, plan.id);
+  const workflowSteps = await listWorkflowRunStepRows(db, input.tenantId, [run.id]);
   if (planSteps.length !== 2) {
     throw new OrchestratorError(
       "orchestrator_execution_failed",
@@ -2070,20 +2062,18 @@ async function assertConversationActionPlanFinalizationProjection(
     policy: VerifiedConversationActionPlanPolicy;
   },
 ) {
-  const [steps, resultMessage, executionAudits] = await Promise.all([
-    listActionPlanStepRows(db, input.plan.tenant_id, input.plan.id),
-    findConversationMessageByIdempotencyKey(
-      db,
-      input.plan.tenant_id,
-      `orchestrator:${input.plan.id}:executed`,
-    ),
-    listAuditLogRowsByActionAndTarget(db, {
-      tenantId: input.plan.tenant_id,
-      action: "conversation.plan_executed",
-      targetType: "conversation_action_plan",
-      targetId: input.plan.id,
-    }),
-  ]);
+  const steps = await listActionPlanStepRows(db, input.plan.tenant_id, input.plan.id);
+  const resultMessage = await findConversationMessageByIdempotencyKey(
+    db,
+    input.plan.tenant_id,
+    `orchestrator:${input.plan.id}:executed`,
+  );
+  const executionAudits = await listAuditLogRowsByActionAndTarget(db, {
+    tenantId: input.plan.tenant_id,
+    action: "conversation.plan_executed",
+    targetType: "conversation_action_plan",
+    targetId: input.plan.id,
+  });
   const messageIsBound =
     resultMessage?.thread_id === input.plan.thread_id &&
     resultMessage.direction === "internal" &&
@@ -2440,25 +2430,23 @@ async function mapPlanResult(
   plan: ConversationActionPlanRow,
   idempotentReplay: boolean,
 ) {
-  const [steps, approval, mission, policyReceipt, delegation] = await Promise.all([
-    listActionPlanStepRows(db, plan.tenant_id, plan.id),
-    findActionPlanApproval(db, plan.tenant_id, plan.id),
-    findWorkflowRunByKey(
-      db,
-      plan.tenant_id,
-      conversationActionPlanWorkflowKey(plan.id),
-    ),
-    findConversationActionPlanPolicyReceiptByPlan(
-      db,
-      plan.tenant_id,
-      plan.id,
-    ),
-    findLatestConversationActionPlanDelegation(
-      db,
-      plan.tenant_id,
-      plan.id,
-    ),
-  ]);
+  const steps = await listActionPlanStepRows(db, plan.tenant_id, plan.id);
+  const approval = await findActionPlanApproval(db, plan.tenant_id, plan.id);
+  const mission = await findWorkflowRunByKey(
+    db,
+    plan.tenant_id,
+    conversationActionPlanWorkflowKey(plan.id),
+  );
+  const policyReceipt = await findConversationActionPlanPolicyReceiptByPlan(
+    db,
+    plan.tenant_id,
+    plan.id,
+  );
+  const delegation = await findLatestConversationActionPlanDelegation(
+    db,
+    plan.tenant_id,
+    plan.id,
+  );
   return {
     id: plan.id,
     tenantId: plan.tenant_id,

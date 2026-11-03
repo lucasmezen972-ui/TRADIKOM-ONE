@@ -1,3 +1,13 @@
+# Livraison compatible134 — 3 novembre2026
+
+## Impact north star
+
+Les essais ont révélé plusieurs défauts. Les corrections HTTP/CRM/export/connexionsSQL sont indépendantes de135 et peuvent être qualifiées puis livrées sans altérer la base. Le stockage images/publication135 reste séparé après expiration native; aucun contournement.
+
+## Alignement prompt maître
+
+Pages 3–7,31–33,46,48,69–71 référencées historiquement, aucune nouvelle lecture du PDF inaccessible. Preuves et limites explicites, RLS/audit/idempotence et budgets0/0 conservés. Les sections suivantes sont historiques.
+
 ## Continuité après mise à niveau native — 3 novembre 2026
 
 Le moteur hébergé17.11.0.011 et le compte personnel sont vérifiés après la mise à niveau préparée. Données, RLS et droits préservés ; aucun nouveau comportement métier ni dépense IA. Les sept différences de présentation CHECK sont documentées et contrôlées. La preuve de reprise publique ne devient pas une preuve de restauration plateforme ; TLS client strict vérifié, segment pooler/base sans TLS observé et à qualifier en production. Prochaine priorité : conserver cette stabilité et les budgets nuls, sans répéter l’upgrade ni activer de fournisseur non autorisé.

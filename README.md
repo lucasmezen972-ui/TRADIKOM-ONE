@@ -1,5 +1,11 @@
 # TRADIKOM ONE
 
+## Recette complète — livraison compatible avec le schéma134
+
+Les corrections indépendantes sont intégrées : génération explicite du seul export autorisé, statut Importé conservé, HTTP webhook/pièces jointes durci, lectures successives sur les connexions de transaction. La qualification globale puis la recette de cette préversion restent à terminer. [État de livraison](docs/SCHEMA134_RELEASE_2026-11-03.md).
+
+Le candidat de stockage image/publication au schéma135 est distinct : la confirmation native Supabase a expiré, aucun SQL n’a été appliqué. La base134 et la préversion précédente sont conservées jusqu’à la livraison compatible134. IA désactivée, budgets0/0; aucun GitHub Actions. Les états suivants sont historiques.
+
 ## Correctif CSV déployé — recette native desktop vérifiée
 
 Le source `d3f7a2a` attend les quatre lectures de référence sur la connexion de transaction, au lieu de les superposer. Régression rouge avant correction ; dix tests ciblés verts ensuite, dont un rôle réellement limité. Lint, TypeScript, continuité et build Vercel du SHA exact passent. Préversion protégée READY, schéma134 conservé, health HTTP200/database=ok.

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServices } from "@/lib/services";
+import { ConnectorError } from "@/modules/connectors/errors";
 import {
   logServerError,
   resolveCorrelationId,
@@ -62,11 +63,11 @@ function parseWebhookPayload(body: string) {
   try {
     parsed = JSON.parse(body) as unknown;
   } catch {
-    throw new Error("Payload invalide.");
+    throw new ConnectorError("webhook_payload_invalid", "Payload invalide.");
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Payload invalide.");
+    throw new ConnectorError("webhook_payload_invalid", "Payload invalide.");
   }
 
   return parsed as Record<string, unknown>;

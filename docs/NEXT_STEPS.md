@@ -1,3 +1,11 @@
+# Prochaine action concrète — correctifs compatibles134
+
+Qualifier le candidat compatible134, puis déployer son SHA exact en préversion protégée et vérifier export existant, statut Importé et régressions. Le candidat135 reste séparé, bloqué par une confirmation native expirée; aucun SQL ni déploiement135 tenté après expiration. Ne pas le réessayer automatiquement. Voir SCHEMA134_RELEASE_2026-11-03.md.
+
+## Référence prompt maître — portée actuelle
+
+Pages 3–7,31–33,46,48,69–71 citées historiquement; PDF inaccessible dans ce cloud, aucune nouvelle lecture revendiquée. Exigences versionnées et instructions actuelles appliquées. Les sections suivantes sont historiques.
+
 # État stable — Supabase 17.11 et recette personnelle vérifiés
 
 Le moteur réel est17.11.0.011, ACTIVE_HEALTHY ; journal 132, 153 tables et215 lignes comparées exactement avant nouvelle connexion. RLS/droits/fonctions/memberships préservés, zéro avis sécurité ; sept CHECK n’ont qu’une présentation AND aplatie, équivalence contrôlée. Sauvegarde chiffrée hors Supabase et restauration depuis sa copie relue prouvées. Voir SUPABASE_UPGRADE_VERIFICATION_2026-11-03.json et BACKUP_VERIFICATION_2026-11-03.json. Ne pas relancer l’upgrade, recréer les anciennes fixtures ou refaire ces preuves sans nouveau changement.
