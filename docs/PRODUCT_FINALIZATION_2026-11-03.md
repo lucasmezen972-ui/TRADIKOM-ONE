@@ -1,3 +1,9 @@
+## Clé OpenAI enregistrée, aucun budget autorisé — 3 novembre 2026
+
+Lucas a autorisé le provisionnement d’une clé sans budget API. Une nouvelle clé nommée TRADIKOM ONE preview a été créée via le connecteur chiffré dans l’organisation opspilot / Default project, puis enregistrée comme OPENAI_API_KEY de type sensitive dans Vercel, exclusivement pour preview et la branche codex/tradikom-one-os. Métadonnées de stockage et portée relues ; copie locale cloud en .env.local ignorée par Git et protégée en 0600. Aucun secret brut dans les notes, le dépôt ou les sorties de conversation ; clé de transport temporaire supprimée.
+
+Les valeurs FEATURE_CONVERSATION_MODEL=false, FEATURE_AI_GENERATION=false et les plafonds global/organisation 0/0 ont été relus. Aucun appel OpenAI, test de génération, budget ou redéploiement activé. La nouvelle variable sera injectée au prochain déploiement ; ne pas la recréer entre-temps. L’ancienne clé perdue n’est pas récupérée ni révoquée par cette opération. La configuration ne prouve pas un aller-retour modèle réel. Le code applicatif testé reste a0920cf ; les preuves de recette précédentes ne sont pas réémises.
+
 ## Plafond IA corrigé et candidat vérifié — 3 novembre 2026
 
 Source applicatif `a0920cfa074c0168bc1161ce350629e02164b6b5`, [PR 11](https://github.com/lucasmezen972-ui/TRADIKOM-ONE/pull/11), préversion protégée `dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy` READY. Aucun changement de schéma ; Supabase reste à 132. Le correctif remplace le fallback implicite du plafond d’organisation : seule une variable absente donne le défaut de 0,10 USD. Zéro, valeur invalide ou plafond inférieur à une réservation bloque la génération avant tout débit ou appel fournisseur. Le readiness et le runtime utilisent la même lecture des deux plafonds.

@@ -1,3 +1,9 @@
+## Configuration OpenAI bornée — 3 novembre 2026
+
+### Impact north star
+
+À la demande de Lucas, le secret serveur de préversion est provisionné pour préparer le modèle Conversation. Aucun budget n’est autorisé : deux drapeaux de génération désactivés et plafonds global/organisation nuls, relus dans Vercel. Aucun appel fournisseur ni redéploiement ; aucun nouveau comportement métier. Le secret sensitive reste propre à preview/codex/tradikom-one-os, sans valeur dans le dépôt. La prochaine activation nécessitera budget et consentements distincts. Aucun aller-retour réel n’est déduit de la création de clé.
+
 # Reprise vérifiée — 3 novembre 2026
 
 ## Impact north star

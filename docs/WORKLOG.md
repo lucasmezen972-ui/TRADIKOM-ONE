@@ -1494,3 +1494,10 @@ La copie canonique du PDF maître a été retrouvée dans les fichiers de Lucas 
 Trois variables propres à la branche preview ont été ajoutées et relues dans Vercel : génération IA désactivée, plafonds global et organisation à zéro. Aucune clé n’est entrée et aucun appel IA payant activé ; l’allocation de préversion ne vaut pas budget d’API. Les plans restent mock. Aucun GitHub Actions, Mac ou message métier externe.
 
 Résultat final de cette reprise : 1 110 tests verts, 37 ignorés, zéro échec, 179 fichiers verts/16 ignorés sur195, 1567,97secondes. Build Vercel du source applicatif a0920cf vert, déploiement dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy READY ; health200/databaseok et connexion indépendante mobile/4routes/rechargements sans débordement réussis. Déconnexion de la session de contrôle confirmée. Continuité prête, aucun avertissement. Les tests PostgreSQL distants ignorés restent non prouvés.
+
+
+## Clé OpenAI enregistrée, aucun budget autorisé — 3 novembre 2026
+
+Lucas a autorisé le provisionnement d’une clé sans budget API. Une nouvelle clé nommée TRADIKOM ONE preview a été créée via le connecteur chiffré dans l’organisation opspilot / Default project, puis enregistrée comme OPENAI_API_KEY de type sensitive dans Vercel, exclusivement pour preview et la branche codex/tradikom-one-os. Métadonnées de stockage et portée relues ; copie locale cloud en .env.local ignorée par Git et protégée en 0600. Aucun secret brut dans les notes, le dépôt ou les sorties de conversation ; clé de transport temporaire supprimée.
+
+Les valeurs FEATURE_CONVERSATION_MODEL=false, FEATURE_AI_GENERATION=false et les plafonds global/organisation 0/0 ont été relus. Aucun appel OpenAI, test de génération, budget ou redéploiement activé. La nouvelle variable sera injectée au prochain déploiement ; ne pas la recréer entre-temps. L’ancienne clé perdue n’est pas récupérée ni révoquée par cette opération. La configuration ne prouve pas un aller-retour modèle réel. Le code applicatif testé reste a0920cf ; les preuves de recette précédentes ne sont pas réémises.

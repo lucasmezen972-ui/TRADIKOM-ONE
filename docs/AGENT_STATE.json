@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
-  "publishedHeadObserved": "a0920cfa074c0168bc1161ce350629e02164b6b5",
-  "status": "preview_budget_fix_hosted_recipe_passed_activation_incomplete",
+  "lastCommit": "29b5ae389be4ee59d00d013d9a0a9fada409f264",
+  "publishedHeadObserved": "29b5ae389be4ee59d00d013d9a0a9fada409f264",
+  "status": "preview_key_configured_model_disabled_zero_budget",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Préparer une destination de secret durable et un remplacement contrôlé de la clé OpenAI perdue ; n’activer aucun appel sans budget API distinct. Lire SUPABASE_UPGRADE_2026-11-03.md pour préparer backup/restauration plateforme avant upgrade. Ne pas recréer les fixtures supprimées ; conserver Lucas/Caraïbe Démo Services. PDF maître disponible dans Library, empreinte vérifiée.",
+  "nextAction": "Ne pas recréer la clé : OPENAI_API_KEY est désormais un secret Vercel sensitive limité à preview/codex/tradikom-one-os. Conserver génération désactivée et plafonds global/organisation à zéro jusqu’à autorisation explicite distincte. La nouvelle variable sera injectée au prochain déploiement ; aucun déploiement ou appel IA n’a été lancé pour ce provisionnement. Poursuivre indépendamment la qualification de sauvegarde/restauration Supabase.",
   "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2419,10 +2419,14 @@
     {
       "command": "reprise3novembre : lint, TypeScript, tests modèle, suite exhaustive, build Vercel et recette personnelle mobile",
       "status": "passed_lint_typecheck_targeted27_full1110_skipped37_build_hosted_ready_health200_mobile_four_routes_reload_logout_continuity_ready_zero_errors_warnings"
+    },
+    {
+      "command": "OpenAI encrypted key setup and Vercel secret metadata/budget readback",
+      "status": "verified_sensitive_preview_only_local0600_ignored_feature_flags_false_budgets0_no_inference_no_redeploy"
     }
   ],
   "humanBlockers": [
-    "OpenAI : ancienne clé créée dans le cloud désormais inaccessible ; vérifier une destination de secret durable et un remplacement contrôlé, avec budget d’appels distinct avant activation. Préversion explicitement désactivée avec plafonds global/organisation à zéro.",
+    "OpenAI : clé de préversion enregistrée comme secret Vercel, mais budget API explicitement non autorisé. Génération désactivée et plafonds global/organisation à zéro. Aucun aller-retour modèle réel prouvé.",
     "Planification des évaluations, Meta/SMS, email et OAuth propriétaires non activés ; consentements et authentifications distincts restent nécessaires.",
     "Moteur Supabase PostgreSQL 17.6 : préparer sauvegarde plateforme et fenêtre de mise à niveau 17.11.0.003 ou ultérieure, après contrôle des extensions/données PGP ; interruption attendue selon le fournisseur."
   ],
@@ -2446,7 +2450,7 @@
       "automaticPreviews": false,
       "published": true,
       "previewEnvironmentConfigured": true,
-      "environmentVariableCount": 14,
+      "environmentVariableCount": 15,
       "buildCostSettingsUpdate": "denied_by_vercel_permission",
       "appUrlConfigured": true,
       "publishedSource": "a0920cfa074c0168bc1161ce350629e02164b6b5",
@@ -2455,7 +2459,9 @@
       "currentCandidate": "a0920cfa074c0168bc1161ce350629e02164b6b5",
       "candidateDeployed": true,
       "lastHealth": "2026-11-03T11:16:16.303Z",
-      "lastHealthHttpStatus": 200
+      "lastHealthHttpStatus": 200,
+      "openaiKeyConfigured": true,
+      "openaiKeyAvailableAfterNextDeployment": true
     },
     "database": {
       "provider": "Supabase",
@@ -2515,8 +2521,7 @@
     "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
     "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
-    "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé.",
-    "Ancienne clé OpenAI non récupérée. Le fichier privé du compte personnel a été récupéré séparément et sa connexion vérifiée ; les deux fixtures jetables et leurs temporaires identifiés sont nettoyés."
+    "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé."
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 1,
@@ -2750,6 +2755,35 @@
       "healthHttp": 200,
       "database": "ok",
       "mobilePersonalRecipe": "passed_login_dashboard_contacts_site_conversation_reloads_no_overflow_test_session_logged_out"
+    },
+    "openaiKeyProvisioning": {
+      "date": "2026-11-03",
+      "userAuthorizedKeyOnly": true,
+      "keyName": "TRADIKOM ONE preview",
+      "organizationId": "org-PdK3kPcZiYW5hkjIh0hnn2Cl",
+      "projectId": "proj_0eCTYByjy1SFeMHNzWsVNR71",
+      "storage": "Vercel project environment variable",
+      "variableName": "OPENAI_API_KEY",
+      "variableType": "sensitive",
+      "environmentVariableId": "1TmM0cCBnmLL1teA",
+      "target": [
+        "preview"
+      ],
+      "gitBranch": "codex/tradikom-one-os",
+      "metadataReadbackVerified": true,
+      "localCopyIgnoredByGit": true,
+      "localCopyMode": "0600",
+      "rawKeyPrinted": false,
+      "transportKeyRemoved": true,
+      "modelEnabled": false,
+      "genericAiGenerationEnabled": false,
+      "globalBudgetMicroUsd": 0,
+      "tenantBudgetMicroUsd": 0,
+      "controlsReadbackVerified": true,
+      "inferenceCalls": 0,
+      "redeploymentPerformed": false,
+      "availableAfterNextDeployment": true,
+      "oldLostKeyRevoked": false
     }
   }
 }

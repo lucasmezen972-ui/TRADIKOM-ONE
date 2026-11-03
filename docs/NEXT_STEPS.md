@@ -1,3 +1,9 @@
+# Prochaine action concrète — clé provisionnée, budget bloqué
+
+OPENAI_API_KEY est maintenant un secret Vercel sensitive limité à preview/codex/tradikom-one-os. Ne pas créer une autre clé. La variable sera injectée au prochain déploiement ; aucun redéploiement ou appel IA n’a été lancé pour cette opération. Conserver FEATURE_CONVERSATION_MODEL=false, FEATURE_AI_GENERATION=false et les plafonds global/organisation à zéro jusqu’à autorisation explicite de budget API. La clé ne constitue pas cette autorisation.
+
+La prochaine étape indépendante reste la qualification de sauvegarde/restauration Supabase dans SUPABASE_UPGRADE_2026-11-03.md. Les anciennes instructions de remplacement de clé ci-dessous sont historiques et désormais satisfaites. Le compte personnel de Lucas doit toujours être conservé.
+
 # Prochaine action concrète — reprise du 3 novembre 2026
 
 Le correctif du plafond IA par organisation est publié dans `a0920cfa074c0168bc1161ce350629e02164b6b5`. Un plafond explicite nul, invalide ou insuffisant bloque la génération sans réservation ni appel ; le défaut de 0,10 USD ne vaut que si la variable est absente. Les 27 tests ciblés, lint et TypeScript passent. La suite exhaustive réussit : 1 110 tests verts, 37 ignorés ; build hébergé et recette personnelle mobile verts. Les tests PostgreSQL distants ignorés restent distincts.
