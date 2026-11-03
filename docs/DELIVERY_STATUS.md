@@ -1,3 +1,17 @@
+## Recette hébergée confirmée — 3 novembre 2026
+
+Le source `9022539246b091f3e64918b18a91c37768e97b31` est déployé en préversion protégée : `dpl_5gEdmyp1f7rVz43uFiviFYZMDupJ`, READY, target nul (preview), SHA vérifié auprès de Vercel. Le health du candidat exact répond HTTP 200, ok=true/database=ok à 07:08:30 UTC (03:08 Martinique). Ce checkpoint remplace les anciens états schéma124/non-déployé ci-dessous ; Supabase est au schéma132. L’analyseur sécurité consulté dans cette reprise renvoie zéro alerte.
+
+Le défaut PDF hébergé est corrigé : le répertoire d’assets tracé est transmis explicitement par l’hôte au worker isolé. Recette mobile 390×844 exécutée sur la fixture ed86f8f3d252b8ce8e90 : upload d’un vrai PDF texte, extrait visible, téléchargement identique octet pour octet et extrait retrouvé après rechargement. Sept tests documents et un test de découverte sous rôle restreint repassent dans cette reprise (8/8, 14 secondes). Ce lot local ne remplace pas une suite PostgreSQL distante exhaustive.
+
+Les journaux retrouvés confirment aussi une lecture GitHub publique et sa révocation terminale persistante après rechargement. Les preuves hébergées précédentes couvrent message/TXT, dashboard, import CSV, tâche CRM avec audit et rapport persistants, création/pause/reprise consentie/arrêt d’objectif sur mobile. Les 1 106 tests verts et 37 ignorés concernent le source7958638, pas une nouvelle campagne exhaustive sur9022539.
+
+Le compte personnel de Lucas et Caraïbe Démo Services sont présents, actifs, avec membership owner vérifié en SQL ; ils doivent être conservés. L’onboarding, le brouillon de site et la connexion indépendante ont été prouvés dans la reprise précédente. La nouvelle relance de connexion n’a pas pu démarrer : l’ancien workspace cloud et ses dépendances ne sont plus accessibles. Aucun mot de passe, cookie ou secret n’est copié ici.
+
+Les deux anciens comptes example.test restent à nettoyer : leurs identités/propriétés ont été vérifiées et une nouvelle transaction ciblée avec gardes a été soumise au dialogue natif ; la confirmation a expiré sans succès confirmé. Ne pas contourner ce dialogue et ne jamais inclure le compte personnel dans le nettoyage.
+
+Restent ouverts : transfert sécurisé de la clé OpenAI (ancien fichier cloud maintenant inaccessible) et budget OpenAI distinct, aller-retour modèle réel, préparation backup/restauration/compatibilité avant upgrade du moteur Supabase17.6, qualification des fournisseurs privés. Les plans restent mock. Aucun OCR, antivirus, microphone physique, application entièrement livrée ou production validée n’est revendiqué. Le PDF maître reste inaccessible. Aucun appel IA payant ni message métier externe.
+
 ## Candidat produit vérifié — 3 novembre 2026
 
 Source publié : `0da2c88ad2f7cd89526fc797530634251f4470fe` dans la PR 11 en brouillon. Objectifs avec consentement/pause/reprise/arrêt et RLS fine ; tâche CRM réelle et idempotente ; documents TXT/CSV/PDF texte chiffrés et téléchargement authentifié ; dictée après consentement ; connecteur GitHub public install/read/revoke. Génération OpenAI raccordée à une réservation durable, désactivée sans clé/budget dédiés. Le pipeline des plans reste mock et aucun message externe n’est envoyé.
