@@ -22,3 +22,10 @@ Compte/tenant/session conservés, base134, IA désactivée/budgets0/0, aucun mes
 ## Résultat intermédiaire du complément8612862
 
 Build fournisseur READY. La couleur calculée devient rgb(255,255,255) sur rgb(8,17,31), capture native enregistrée. Affichage puis rechargement : compteur audit7→7→7, préchargement éliminé. Clic explicite : compteur7→9, contenu259octets/hash identique. La navigation client Next émet encore deux requêtes au clic; ne pas annoncer un événement par clic. Le lien est donc remplacé par une ancre native avec attribut download, toujours vers le même endpoint autorisé. Dernière recette de cette ancre encore à faire.
+
+
+## Résultat final du complément8c4c93e
+
+Build fournisseur Node22 READY sur8c4c93e, schéma134 inchangé. Contrôle natif : couleur blanche sur fond sombre, véritable ancre avec attribut download, affichage/rechargement sans nouvel événement ; compteur9 avant clic,10 après un clic explicite,10 après rechargement. CSV259octets et SHA256 identiques au payload SQL. Les événements historiques et l’autorisation du endpoint sont conservés. Nouveaux JSON/XLSX également téléchargés :3lignes chacun, un audit de génération et un audit de téléchargement par job, empreintes SQL identiques.
+
+Le corpus métier c881 se termine1153réussis/37ignorés/0échec dans203fichiers ; il n’est pas attribué au complément CSS/lien. Cinq scénarios mobiles locaux distincts passent sur le source final en deux exécutions après reprise d’un échec d’infrastructure conservé. Voir FULL_APP_RECIPE_2026-11-03.md et les trois preuves JSON associées. Les paragraphes « attendus » et8612862 ci-dessus décrivent les étapes historiques de la régression.

@@ -2,7 +2,7 @@
 
 ## Recette complète — livraison compatible avec le schéma134
 
-Préversion protégée8c4c93e READY, base134 conservée. Exports CSV/JSON/XLSX réellement générés et téléchargés avec3lignes, empreintes SQL identiques, audit au clic explicite et contraste corrigés. Statut Importé conservé après enregistrement/rechargement; PDF privé et objectif arrêté persistants. La campagne globale203fichiers reste en cours, sans résultat final anticipé. [Preuves et limites](docs/FULL_APP_RECIPE_2026-11-03.md).
+Préversion protégée8c4c93e READY, base134 conservée. Exports CSV/JSON/XLSX réellement générés et téléchargés avec3lignes, empreintes SQL identiques, audit au clic explicite et contraste corrigés. Statut Importé conservé après enregistrement/rechargement; PDF privé et objectif arrêté persistants. Corpus local terminé : **1 153 tests réussis, 37 ignorés, zéro échec**, 203 fichiers sur le code métier c881. Cinq scénarios mobiles locaux distincts passent sur8c4c93e en deux exécutions, avec reprise ciblée après un échec d’infrastructure conservé ; cela ne vaut pas recette mobile hébergée. [Preuves et limites](docs/FULL_APP_RECIPE_2026-11-03.md).
 
 Le candidat de stockage image/publication au schéma135 est distinct : la confirmation native Supabase a expiré, aucun SQL n’a été appliqué. Le release134 est livré ; le schéma135 n’a pas été appliqué. IA désactivée, budgets0/0; aucun GitHub Actions. Les états suivants sont historiques.
 

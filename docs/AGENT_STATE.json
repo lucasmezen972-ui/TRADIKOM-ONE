@@ -5,8 +5,8 @@
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
-  "publishedHeadObserved": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
-  "status": "schema134_preview_native_recipe_verified_global_tests_running",
+  "publishedHeadObserved": "39f263fa1b94fe344e0ad812a6eec9c9c6559849",
+  "status": "schema134_preview_native_recipe_and_local_campaign_verified_schema135_blocked",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Tester tous les modules accessibles et livrer les corrections compatibles134 malgré expiration de confirmation native135.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Terminer les203 fichiers du code métier c881, conserver les ignorés non prouvés et exécuter les5scénarios mobiles locaux isolés si possible. Les natifs CSV/JSON/XLSX/Importé/PDF/objectif sont vérifiés sur le release final8c4c93e, logs bornés sans événements. Mettre à jour preuves et Notion. Le candidat135 reste séparé après confirmation native expirée, aucun retry automatique; budgets0/0, compte/session conservés.",
+  "nextAction": "Conserver le release134 source8c4c93e READY et les preuves finales : corpus c881 terminé1153/37ignorés/0échec; cinq scénarios mobiles locaux distincts sur8c4 en deux exécutions, échec initial infrastructure et reprise ciblée documentés. Aucune nouvelle suite à relancer sans changement. Reste135 : nouvelle confirmation native valide, qualification puis recette image/publication; aucune réutilisation de confirmation expirée ni retry automatique. Budgets0/0, compte personnel/entreprise/session conservés. Les37ignorés,20autres scénarios Playwright, fournisseurs réels, microphone physique et plateforme complète restent non qualifiés.",
   "nextFile": "docs/FULL_APP_RECIPE_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -3085,11 +3085,16 @@
     "candidate135Original": "fbb1a44177d49c0599ce85333376009bb1db27a5",
     "migration135": "native_confirmation_expired_not_applied",
     "currentCandidate": "schema134_delivered",
-    "globalValidation": "running_on_c881",
+    "globalValidation": "complete_c881_1153_passed_37_skipped_0_failed_203_files",
     "masterPrompt": "Non relu dans ce cloud; pages consultées ci-dessus historiques, exigences versionnées appliquées.",
     "sourceDeployed": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
     "deployment": "dpl_kSML4ukksxj4vzadWFHcvMyXsLpj",
     "preserved135Commit": "954ff25d23eeb5930c88e817620b7efec24bdb83",
-    "proof": "docs/NATIVE_RECIPE_VERIFICATION_2026-11-03.json"
+    "proof": "docs/NATIVE_RECIPE_VERIFICATION_2026-11-03.json",
+    "localProof": "docs/LOCAL_TEST_VERIFICATION_2026-11-03.json",
+    "mobileValidation": "five_distinct_local_mobile_scenarios_passed_two_runs_initial_infrastructure_failure_preserved",
+    "mobileSource": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+    "mobileProof": "docs/MOBILE_LOCAL_VERIFICATION_2026-11-03.json",
+    "wholeApplicationFinished": false
   }
 }

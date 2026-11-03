@@ -5,7 +5,7 @@
   "target": null,
   "schema": 134,
   "sourceBusinessTests": "c8817c6ec849ba6fb0e4705c8f8c0e37801b1073",
-  "testsRunning": true,
+  "testsRunning": false,
   "exportCsv": {
     "generation": "PASS",
     "completedAudits": 1,
@@ -112,7 +112,8 @@
   "health": {
     "ok": true,
     "database": "ok",
-    "timestamp": "2026-11-03T20:11:32.651Z"
+    "timestamp": "2026-11-03T20:11:32.651Z",
+    "subsequentTimestamp": "2026-11-03T21:09:37.419Z"
   },
   "runtimeLogs": {
     "deployment": "dpl_kSML4ukksxj4vzadWFHcvMyXsLpj",
@@ -124,7 +125,19 @@
       "fatal"
     ],
     "groups": [],
-    "globalAbsenceNotInferred": true
+    "globalAbsenceNotInferred": true,
+    "additionalWindows": [
+      {
+        "since": "2026-11-03T20:13:14Z",
+        "until": "2026-11-03T20:33:07Z",
+        "groups": []
+      },
+      {
+        "since": "2026-11-03T20:33:07Z",
+        "until": "2026-11-03T21:19:52Z",
+        "groups": []
+      }
+    ]
   },
   "supabase": {
     "schema": 134,
@@ -137,5 +150,24 @@
     "recipeTaskDone": 1,
     "oldDisposableUsersRemaining": 0
   },
-  "recordedAt": "2026-11-03T20:21:43.798460+00:00"
+  "recordedAt": "2026-11-03T21:24:43.151937+00:00",
+  "localTestProof": "docs/LOCAL_TEST_VERIFICATION_2026-11-03.json",
+  "localMobileProof": "docs/MOBILE_LOCAL_VERIFICATION_2026-11-03.json",
+  "wholeApplicationFinished": false,
+  "providerFinalRead": {
+    "latestDeploymentUnchanged": true,
+    "readyState": "READY",
+    "target": null,
+    "nodeVersion": "22.x",
+    "ssoProtection": {
+      "enabled": true,
+      "deploymentType": "all_except_custom_domains"
+    },
+    "schema": 134,
+    "privateSchemaAbsent": true,
+    "assets": 0,
+    "personalOwnerPreserved": true,
+    "contacts": 3,
+    "oldDisposableUsersRemaining": 0
+  }
 }

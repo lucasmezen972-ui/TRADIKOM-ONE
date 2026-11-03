@@ -2,7 +2,7 @@
 
 ## Impact north star
 
-Les essais ont révélé plusieurs défauts. Les corrections HTTP/CRM/export/connexionsSQL indépendantes de135 sont livrées dans la preview protégée8c4c93e, avec base134 inchangée et recette native vérifiée. Le corpus203fichiers reste en cours; FULL_APP_RECIPE_2026-11-03.md porte le checkpoint actuel. Le stockage images/publication135 reste séparé après expiration native; aucun contournement.
+Les essais ont révélé plusieurs défauts. Les corrections HTTP/CRM/export/connexionsSQL indépendantes de135 sont livrées dans la preview protégée8c4c93e, avec base134 inchangée et recette native vérifiée. Le corpus203fichiers du code métier c881 termine1153tests réussis/37ignorés/0échec. Cinq scénarios mobiles locaux distincts passent sur8c4c93e en deux exécutions, avec échec initial d’infrastructure et reprise ciblée documentés ; les compléments CSS/lien possèdent leurs preuves natives et build fournisseur distincts. Les ignorés et20autres scénarios Playwright restent non prouvés ; FULL_APP_RECIPE_2026-11-03.md porte le checkpoint actuel. Le stockage images/publication135 reste séparé après expiration native; aucun contournement.
 
 ## Alignement prompt maître
 

@@ -1,0 +1,148 @@
+{
+  "status": "FIVE_DISTINCT_SCENARIOS_PASSED_ACROSS_TWO_EXECUTIONS",
+  "recordedAt": "2026-11-03T21:18:46.943639+00:00",
+  "sourceSha": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+  "sourceTree": "71aa54a054a5f9136dab46453e0bb7bc62d365bf",
+  "node": "v24.22.1",
+  "browser": "Chrome Headless Shell156.0.8078.80",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "isMobile": true,
+    "hasTouch": true
+  },
+  "distinctScenarios": 5,
+  "passedExecutions": 5,
+  "initialFailedExecutions": 1,
+  "singleFiveTestRunGreen": false,
+  "recovery": "Only the failed objective scenario rerun with a fresh isolated fixture and heap3072MiB. Initial failure was connection refused during Next dev memory restart, before application assertions. No retries hidden.",
+  "offlineFontAndImageFixtures": true,
+  "speechRecognitionSimulated": true,
+  "physicalMicrophoneNotTested": true,
+  "githubCaseInstallationRevocationOnlyNoExternalRead": true,
+  "privateUserCredentialsUsed": false,
+  "modelDisabled": true,
+  "modelBudgets": {
+    "global": 0,
+    "tenant": 0
+  },
+  "developmentEmulatedMobileOnly": true,
+  "hostedMobileNotProvenByThisRun": true,
+  "nineteenOtherUiAndOneApiScenarioNotRun": "Require a genuinely shared PostgreSQL database; PGlite must not be opened concurrently by browser worker and server. No PostgreSQL or Docker binary available.",
+  "infrastructureWarnings": [
+    "Initial Next development server restarted at its1536MiB heap threshold",
+    "Targeted run rebuilt an incomplete webpack cache; assertion passed"
+  ],
+  "runs": [
+    {
+      "run": "q6j5ximn",
+      "exitcode": 1,
+      "status": "FAILED",
+      "seconds": 260.45,
+      "nodeHeapLimitMiB": 1536,
+      "reportSha256": "67ad9cc51b2128219f5fc577d8d2829d021fbf0732d8f0355edd9a63ba3c6f19",
+      "logSha256": "ad532a7037a2d49afd8eea36f13f3cb5ef318e3f90adf5e581ce3a293eeb68ac"
+    },
+    {
+      "run": "0_c4z1u4",
+      "exitcode": 0,
+      "status": "COMPLETE",
+      "seconds": 70.69,
+      "nodeHeapLimitMiB": 3072,
+      "reportSha256": "aecc8cf66f634aea0230100e73d1355732c6c14f39e9bc57c9934722cdd3e28f",
+      "logSha256": "876f6489b69a989c022b9db6d9a63e1d145d495c78a5bb61f6c92d5c0f69b732"
+    }
+  ],
+  "results": [
+    {
+      "run": "q6j5ximn",
+      "file": "tests/e2e/goal-watch.spec.ts",
+      "line": 3,
+      "title": "crée une tâche réelle depuis le fil puis la retrouve sur la fiche du contact",
+      "status": "passed",
+      "durationMs": 74644,
+      "screenshots": [
+        {
+          "name": "test-finished-1.png",
+          "sha256": "a0e8f9fc335326f3a19519c5083db789806c4addf9decce8c66781fcb8a64f06",
+          "privateArtifactRetained": true
+        }
+      ]
+    },
+    {
+      "run": "q6j5ximn",
+      "file": "tests/e2e/goal-watch.spec.ts",
+      "line": 37,
+      "title": "refuse une proposition CRM sans créer la tâche et conserve ce refus",
+      "status": "passed",
+      "durationMs": 26408,
+      "screenshots": [
+        {
+          "name": "test-finished-1.png",
+          "sha256": "ab886d6ae4c0ed7f96f1593feb3baa8a1bf5a4f2923fcb6dafe79422c1fb29ea",
+          "privateArtifactRetained": true
+        }
+      ]
+    },
+    {
+      "run": "q6j5ximn",
+      "file": "tests/e2e/goal-watch.spec.ts",
+      "line": 59,
+      "title": "autorise, suspend, reprend et arrête un objectif depuis Conversation",
+      "status": "failed",
+      "durationMs": 587,
+      "screenshots": [
+        {
+          "name": "test-failed-1.png",
+          "sha256": "fb32313e11bc8ffbd5310a1660e630b64cedb4622f8462a5eae2d5464ac8279e",
+          "privateArtifactRetained": true
+        }
+      ]
+    },
+    {
+      "run": "q6j5ximn",
+      "file": "tests/e2e/goal-watch.spec.ts",
+      "line": 93,
+      "title": "dicte un brouillon modifiable, joint un vrai document et télécharge l’original",
+      "status": "passed",
+      "durationMs": 81000,
+      "screenshots": [
+        {
+          "name": "test-finished-1.png",
+          "sha256": "e13ed4d7fafec949b04d457ad5acaadce13e57235fa41a3399e6c54721fac37a",
+          "privateArtifactRetained": true
+        }
+      ]
+    },
+    {
+      "run": "q6j5ximn",
+      "file": "tests/e2e/goal-watch.spec.ts",
+      "line": 134,
+      "title": "installe et révoque le connecteur GitHub réel depuis les connexions",
+      "status": "passed",
+      "durationMs": 15382,
+      "screenshots": [
+        {
+          "name": "test-finished-1.png",
+          "sha256": "1c093abee2b39080228587b102d25f71a06c9cf9b5fec6daa476a0d5298f5997",
+          "privateArtifactRetained": true
+        }
+      ]
+    },
+    {
+      "run": "0_c4z1u4",
+      "file": "tests/e2e/goal-watch.spec.ts",
+      "line": 59,
+      "title": "autorise, suspend, reprend et arrête un objectif depuis Conversation",
+      "status": "passed",
+      "durationMs": 41949,
+      "screenshots": [
+        {
+          "name": "test-finished-1.png",
+          "sha256": "4fd0116c746bd6fcc53b2744d80eeb28a34398f2cfb7e23959e3968890da36ba",
+          "privateArtifactRetained": true
+        }
+      ]
+    }
+  ]
+}

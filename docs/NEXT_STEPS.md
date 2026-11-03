@@ -1,6 +1,6 @@
-# Prochaine action concrète — finir la qualification du release livré
+# État vérifié — qualification locale terminée, limite fournisseur conservée
 
-Source8c4c93e READY/protégé, base134. Les exports3formats, statut Importé, PDF privé, objectif arrêté et journaux bornés sont vérifiés; voir FULL_APP_RECIPE_2026-11-03.md. Terminer les203fichiers surc881 puis le sous-ensemble mobile local isolé; ne pas annoncer les tests distants ignorés comme prouvés. Candidat135 sur branche dédiée954ff25, confirmation native expirée : aucune application, aucun retry. Compte/session conservés et budgets0/0. Les instructions suivantes sont historiques.
+Source8c4c93e READY/protégé, base134. Les exports3formats, statut Importé, PDF privé, objectif arrêté et journaux bornés sont vérifiés; voir FULL_APP_RECIPE_2026-11-03.md. Les203 fichiers surc881 sont terminés :1153réussis/37ignorés/0échec,187fichiers avec assertions et16entièrement ignorés. Cinq scénarios mobiles locaux distincts passent sur8c4c93e en deux exécutions, après reprise ciblée d’un échec d’infrastructure conservé. Les ignorés et20autres scénarios Playwright restent non prouvés. Ne pas relancer les suites sans changement. La prochaine étape restante concerne135 : nouvelle confirmation native valide, qualification et recette image/publication sur SHA exact avant livraison. Candidat135 sur branche dédiée954ff25, confirmation native expirée : aucune application, aucun retry. Compte/session conservés et budgets0/0. Les instructions suivantes sont historiques.
 
 # Prochaine action concrète — correctifs compatibles134
 
