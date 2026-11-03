@@ -274,7 +274,7 @@ export default async function WebsitePage({ searchParams }: WebsitePageProps) {
                   Envoyer l&apos;image
                 </button>
                 <p className="w-full text-xs text-slate-500">
-                  PNG, JPEG ou WebP, 5 Mo maximum. Le format est vérifié à
+                  PNG, JPEG ou WebP, 3 Mo maximum. Le format est vérifié à
                   partir du contenu du fichier, pas de son extension.
                 </p>
               </form>
@@ -289,6 +289,16 @@ export default async function WebsitePage({ searchParams }: WebsitePageProps) {
               afficherait une image manquante sans que personne ne s&apos;en
               aperçoive.
             </p>
+            {params.fichier === "ajoute" ? (
+              <p role="status" className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
+                Image enregistrée.
+              </p>
+            ) : null}
+            {params.fichier === "refuse" || params.fichier === "vide" ? (
+              <p role="alert" className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                {params.fichier === "vide" ? "Choisissez une image non vide." : params.messageFichier ?? "Cette image ne peut pas être enregistrée."}
+              </p>
+            ) : null}
             {params.fichier === "supprime" ? (
               <p
                 role="status"

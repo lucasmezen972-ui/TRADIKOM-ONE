@@ -48,10 +48,17 @@ export function getGlobalSecurityHeaders(
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
+  experimental: {
+    // Leave room for multipart fields while staying below Vercel's request cap.
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   serverExternalPackages: ["@electric-sql/pglite", "pdfjs-dist"],
   outputFileTracingIncludes: { "/conversation": ["./src/modules/conversation-hub/pdf-text-worker.mjs", "./node_modules/pdfjs-dist/**/*", "./node_modules/.pnpm/@napi-rs+canvas*/**/*"] },
   poweredByHeader: false,
   images: {
+    // Local assets use their access-controlled route directly. Deny optimizer
+    // requests so its independent cache cannot outlive a publication's access.
+    localPatterns: [],
     remotePatterns: [
       {
         protocol: "https",

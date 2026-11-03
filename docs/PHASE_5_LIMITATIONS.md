@@ -8,7 +8,7 @@
 - une seule installation mock en lecture seule, sans réseau ni donnée client;
 - aucune lecture production;
 - aucune écriture production;
-- imports limités à 5 Mo et 10 000 lignes;
+- imports limités à 3 Mo (3 × 1024² octets) et 10 000 lignes; enveloppe des Server Actions limitée à 4 Mo;
 - exports limités à 10 Mo, 5 000 lignes et 366 jours;
 - fichiers d'export conservés dans un stockage borné tenant-owned et supprimés après 24 heures; aucun stockage objet externe;
 - liaison domaine-site limitée au fournisseur mock local et à une version déjà publiée;

@@ -154,11 +154,9 @@ async function assessCandidate(
   tenantId: string,
   row: UniversalConnectorCandidateRow,
 ) {
-  const [productClaimApproved, mappings, operations] = await Promise.all([
-    hasApprovedApiProductClaim(db, row.api_product_id),
-    listApprovedTenantMappings(db, tenantId, row.api_product_id),
-    listApiOperations(db, row.api_product_id),
-  ]);
+  const productClaimApproved = await hasApprovedApiProductClaim(db, row.api_product_id);
+  const mappings = await listApprovedTenantMappings(db, tenantId, row.api_product_id);
+  const operations = await listApiOperations(db, row.api_product_id);
   const parsedManifest = connectorManifestSchema.safeParse(
     safeJson<unknown>(row.manifest, null),
   );

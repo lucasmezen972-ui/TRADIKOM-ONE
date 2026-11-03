@@ -356,15 +356,11 @@ async function readConversationThread(
     );
   }
 
-  const [identities, messages] = await Promise.all([
-    listConversationIdentityRows(db, tenantId, thread.id),
-    listConversationMessageRows(db, tenantId, thread.id, parsed.messageLimit),
-  ]);
+  const identities = await listConversationIdentityRows(db, tenantId, thread.id);
+  const messages = await listConversationMessageRows(db, tenantId, thread.id, parsed.messageLimit);
   const messageIds = messages.map((message) => message.id);
-  const [attachments, routeHops] = await Promise.all([
-    listConversationAttachmentRows(db, tenantId, messageIds),
-    listConversationRouteHopRows(db, tenantId, messageIds),
-  ]);
+  const attachments = await listConversationAttachmentRows(db, tenantId, messageIds);
+  const routeHops = await listConversationRouteHopRows(db, tenantId, messageIds);
 
   const attachmentsByMessage = groupByMessage(attachments);
   const routeHopsByMessage = groupByMessage(routeHops);

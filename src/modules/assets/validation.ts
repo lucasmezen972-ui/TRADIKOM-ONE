@@ -1,6 +1,6 @@
 export type AllowedImageType = "image/png" | "image/jpeg" | "image/webp";
 
-export const maxAssetBytes = 5 * 1024 * 1024;
+export const maxAssetBytes = 3 * 1024 * 1024;
 
 export type AssetValidationResult =
   | { ok: true; contentType: AllowedImageType }

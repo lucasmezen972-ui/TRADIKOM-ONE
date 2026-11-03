@@ -1,3 +1,13 @@
+# Campagne complète — 3 novembre2026
+
+## Impact north star
+
+Les parcours vérifient que les données et décisions persistent, que les objectifs exigent leurs consentements et que les simulations restent visibles. Les défauts reproduits de stockage image, export en attente et contexte public sont corrigés dans le candidat; aucune livraison hébergée du candidat n’est encore déclarée.
+
+## Alignement prompt maître
+
+Pages 3–7,31–33,46,48,69–71 référencées historiquement; aucune nouvelle lecture du PDF inaccessible dans ce cloud. Exigences versionnées et instructions actuelles appliquées : preuve avant conclusion, RLS/isolation/audit/idempotence, budgets0/0 et confirmations natives. Le rapport courant est FULL_APP_VALIDATION_2026-11-03.md. Les états suivants sont historiques.
+
 ## Continuité après mise à niveau native — 3 novembre 2026
 
 Le moteur hébergé17.11.0.011 et le compte personnel sont vérifiés après la mise à niveau préparée. Données, RLS et droits préservés ; aucun nouveau comportement métier ni dépense IA. Les sept différences de présentation CHECK sont documentées et contrôlées. La preuve de reprise publique ne devient pas une preuve de restauration plateforme ; TLS client strict vérifié, segment pooler/base sans TLS observé et à qualifier en production. Prochaine priorité : conserver cette stabilité et les budgets nuls, sans répéter l’upgrade ni activer de fournisseur non autorisé.

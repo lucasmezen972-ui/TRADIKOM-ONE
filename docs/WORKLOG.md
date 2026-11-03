@@ -1521,3 +1521,10 @@ Deux valeurs Vault toujours conformes aux secrets Vercel séparés ; extensions/
 TLS du client vers le pooler : certificat fourni, verify-full et rejectUnauthorized=true vérifiés dans la configuration réelle et le code. La vue serveur pg_stat_ssl observe ssl=false sur les connexions du pooler à PostgreSQL ; elle ne prouve pas le premier segment et aucune garantie TLS de bout en bout n’est revendiquée. Cette liaison interne et la restauration complète de plateforme restent à qualifier pour la production. Les fichiers temporaires de données/clé de sauvegarde et le lien privé de recette ont été retirés ; sauvegarde chiffrée et accès personnel privé conservés.
 
 Code métier et préversion inchangés : aucun redéploiement pour cette opération. La clé OpenAI reste enregistrée pour la prochaine préversion ; IA désactivée, plafonds 0/0, aucun appel payant. Plans mock, fournisseurs privés et microphone physique restent des limites réelles. L’audit des dépendances conserve zéro high/critical et un modéré minimatch, sans avis ignoré. Ne pas répéter l’upgrade ou les recettes déjà prouvées sans changement utile.
+
+
+## 2026-11-03 — Campagne native de toute l’application, candidat en qualification
+
+Recette sur d3f7a2a : imports JSON/CSV/XLSX, CRM/tâche dédiée, opportunité/historique, modules locaux et décisions, préférences restaurées, profil IA pause/reprise, documents TXT224octets/PDF texte1484octets extraits et téléchargés à l’identique, objectif consenti jusqu’à arrêt terminal, simulation DNS avec double confirmation et rechargement. Compte personnel/session préservés; aucun budget IA ou message externe.
+
+Défauts reproduits : PNG5513octets refusé sans stockage disponible (zéro asset), export sans génération, statut Importé remplacé visuellement, contexte public/runtime, HTTP et requêtes PG concurrentes. Correctifs intégrés au candidat, migration135 préparée seulement. Stockage/associations54tests distincts/13fichiers et lint ciblé verts; kit132/135 et contrôles globaux en cours. Campagne exhaustive initiale interrompue, aucun résultat global inventé. Voir FULL_APP_VALIDATION_2026-11-03.md.

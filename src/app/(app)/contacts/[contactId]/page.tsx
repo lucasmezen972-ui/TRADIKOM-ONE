@@ -42,6 +42,9 @@ export default async function ContactDetailPage({
   }
 
   const { contact, notes, consent, tasks, activities, opportunities } = detail;
+  const availableContactStatuses = contactStatuses.includes(contact.status)
+    ? contactStatuses
+    : [contact.status, ...contactStatuses];
   const whatsAppSuggestions = buildWhatsAppSuggestions({
     phone: contact.phone,
     contactName: contact.name,
@@ -154,7 +157,7 @@ export default async function ContactDetailPage({
                 defaultValue={contact.status}
                 className="rounded-md border border-slate-200 px-4 py-3 font-normal"
               >
-                {contactStatuses.map((status) => (
+                {availableContactStatuses.map((status) => (
                   <option key={status} value={status}>
                     {status}
                   </option>

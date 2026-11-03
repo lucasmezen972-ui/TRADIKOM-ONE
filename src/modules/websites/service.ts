@@ -2,14 +2,16 @@ import type { DbClient } from "@/lib/db";
 import { withTenantDbTransaction } from "@/db/tenant-context";
 import { createWebsiteDraft } from "@/lib/generation";
 import { id, nowIso, safeJson, toJson } from "@/lib/security";
-import type { BusinessProfile, Website, WebsiteSection } from "@/lib/types";
+import type { BusinessProfile, WebsiteSection } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
-import { getTenantById, getTenantBySlug, assertTenantAccess } from "@/modules/tenants";
+import { getTenantById, assertTenantAccess, lockTenantForPublicationMutation } from "@/modules/tenants";
 import { WebsiteError } from "@/modules/websites/errors";
+import { AssetError } from "@/modules/assets/errors";
+import { findTenantAssetForTenant } from "@/modules/assets/repository";
 import {
   deleteWebsiteSections,
   findBusinessProfile,
-  findLatestPublishedSnapshot,
+  findPublicSiteBySlug,
   findSectionWebsite,
   findWebsite,
   findWebsiteId,
@@ -113,36 +115,40 @@ export async function updateWebsiteSection(
   sectionId: string,
   input: WebsiteSectionUpdateInput,
 ) {
-  await assertTenantAccess(db, userId, tenantId, [
-    "owner",
-    "administrator",
-    "manager",
-    "collaborator",
-  ]);
-  const parsed = websiteSectionUpdateSchema.parse(input);
-  const websiteId = await findSectionWebsite(db, tenantId, sectionId);
-  if (!websiteId) {
-    throw new WebsiteError("section_not_found", "Section introuvable.");
-  }
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [
+      "owner",
+      "administrator",
+      "manager",
+      "collaborator",
+    ]);
+    await lockTenantForPublicationMutation(transaction, tenantId);
+    const parsed = websiteSectionUpdateSchema.parse(input);
+    const websiteId = await findSectionWebsite(transaction, tenantId, sectionId);
+    if (!websiteId) {
+      throw new WebsiteError("section_not_found", "Section introuvable.");
+    }
 
-  await updateWebsiteSectionContent(db, {
-    tenantId,
-    sectionId,
-    ...parsed,
-  });
-  await markWebsiteDraft(db, {
-    tenantId,
-    websiteId,
-    updatedAt: nowIso(),
-  });
-  await snapshotWebsite(db, tenantId, websiteId, "manual_edit");
-  await recordAuditLog(db, {
-    tenantId,
-    actorId: userId,
-    action: "website.section_updated",
-    targetType: "website_section",
-    targetId: sectionId,
-    metadata: { enabled: parsed.enabled },
+    await assertSectionImageAsset(transaction, tenantId, parsed.imageUrl);
+    await updateWebsiteSectionContent(transaction, {
+      tenantId,
+      sectionId,
+      ...parsed,
+    });
+    await markWebsiteDraft(transaction, {
+      tenantId,
+      websiteId,
+      updatedAt: nowIso(),
+    });
+    await snapshotWebsite(transaction, tenantId, websiteId, "manual_edit");
+    await recordAuditLog(transaction, {
+      tenantId,
+      actorId: userId,
+      action: "website.section_updated",
+      targetType: "website_section",
+      targetId: sectionId,
+      metadata: { enabled: parsed.enabled },
+    });
   });
 }
 
@@ -195,10 +201,14 @@ export async function publishWebsite(db: DbClient, userId: string, tenantId: str
       "administrator",
       "manager",
     ]);
+    await lockTenantForPublicationMutation(transaction, tenantId);
     const website = await findWebsite(transaction, tenantId);
     if (!website) {
       throw new WebsiteError("website_not_found", "Aucun site a publier.");
     }
+
+    const sections = await findWebsiteSections(transaction, tenantId, website.id);
+    for (const section of sections) await assertSectionImageAsset(transaction, tenantId, section.imageUrl);
 
     const versionId = await snapshotWebsite(
       transaction,
@@ -251,6 +261,7 @@ export async function restoreWebsiteVersion(
       "administrator",
       "manager",
     ]);
+    await lockTenantForPublicationMutation(transaction, tenantId);
     const version = await findWebsiteVersionSnapshot(
       transaction,
       tenantId,
@@ -263,6 +274,7 @@ export async function restoreWebsiteVersion(
     const snapshot = safeJson<{ sections: WebsiteSection[] }>(version.snapshot, {
       sections: [],
     });
+    for (const section of snapshot.sections) await assertSectionImageAsset(transaction, tenantId, section.imageUrl);
     await deleteWebsiteSections(transaction, tenantId, version.website_id);
 
     for (const section of snapshot.sections) {
@@ -291,30 +303,21 @@ export async function restoreWebsiteVersion(
 }
 
 export async function getPublishedSite(db: DbClient, slug: string) {
-  const tenant = await getTenantBySlug(db, slug);
-  if (!tenant) {
-    return null;
-  }
-
-  const snapshot = await findLatestPublishedSnapshot(db, tenant.id);
-  if (!snapshot) {
-    return null;
-  }
-
-  const published = safeJson<{ website: Website; sections: WebsiteSection[] }>(
-    snapshot,
-    null as never,
-  );
-
-  if (!published?.website || published.website.status === "draft") {
-    published.website.status = "published";
-  }
-
+  const published = await findPublicSiteBySlug(db, slug);
+  if (!published) return null;
   return {
-    tenant,
+    tenant: { id: published.tenant_id, slug: published.tenant_slug },
     website: published.website,
-    sections: published.sections.filter((section) => section.enabled),
+    sections: published.sections,
   };
+}
+
+async function assertSectionImageAsset(db: DbClient, tenantId: string, imageUrl?: string) {
+  if (!imageUrl?.startsWith("/fichiers/")) return;
+  const assetId = imageUrl.slice("/fichiers/".length);
+  if (!assetId || !await findTenantAssetForTenant(db, tenantId, assetId)) {
+    throw new AssetError("asset_not_found", "Cette image n’est plus disponible dans cette organisation.");
+  }
 }
 
 async function snapshotWebsite(

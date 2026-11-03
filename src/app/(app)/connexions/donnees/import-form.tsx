@@ -133,7 +133,7 @@ export function UniversalImportForm() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-600">
-          Limite : 5 Mo, 10 000 lignes. Les formules et structures imbriquées sont refusées.
+          Limite : 3 Mo, 10 000 lignes. Les formules et structures imbriquées sont refusées.
         </p>
         <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
           <FileUp size={17} aria-hidden />

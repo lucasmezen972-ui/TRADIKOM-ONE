@@ -80,6 +80,9 @@ export class AssetStorageUnavailableError extends Error {
 }
 
 export function createRuntimeAssetStorage(): AssetStorage {
+  // Vercel's filesystem is ephemeral. Runtime uploads persist in PostgreSQL;
+  // an old filesystem reference must never silently use a temporary directory.
+  if (process.env.VERCEL === "1") return createUnavailableAssetStorage();
   const directory = process.env.ASSET_STORAGE_DIR?.trim();
   if (directory) {
     return createLocalAssetStorage(directory);

@@ -13,6 +13,7 @@ import {
   insertExportJob,
   listExportJobs,
   listExportSourceRows,
+  lockExportJob,
   mapExportJob,
   markExportDownloaded,
   markExportProcessing,
@@ -105,98 +106,107 @@ export async function createUniversalExport(
   });
 }
 
+export async function generateUniversalExport(
+  db: DbClient,
+  userId: string,
+  tenantId: string,
+  input: { exportId: string },
+) {
+  const parsed = exportJobReferenceSchema.parse(input);
+  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, [...exportRoles]);
+    return processUniversalExportJob(transaction, userId, tenantId, parsed.exportId);
+  });
+}
+
 export async function processUniversalExportJob(
   db: DbClient,
   actorId: string,
   tenantId: string,
   exportId: string,
 ) {
-  try {
-    return await withTenantDbTransaction(
-      db,
-      tenantId,
-      actorId,
-      async (transaction) => {
-        const job = await findExportJob(transaction, tenantId, exportId);
-        if (!job) throw new ExportError("export_not_found", "Export introuvable.");
-        if (job.status === "completed") {
-          return { exportId, status: "completed" as const, idempotentReplay: true };
-        }
-        if (["cancelled", "failed", "expired"].includes(job.status)) {
-          return {
-            exportId,
-            status: job.status as "cancelled" | "failed" | "expired",
-            idempotentReplay: true,
-          };
-        }
-        if (job.status !== "queued") {
-          throw new ExportError(
-            "export_not_processable",
-            "Cet export ne peut plus être généré.",
-          );
-        }
-        const now = nowIso();
-        await markExportProcessing(transaction, { tenantId, exportId, now });
-        const rows = await listExportSourceRows(transaction, {
-          tenantId,
-          entityType: job.entity_type,
-          dateFrom: job.date_from,
-          dateTo: job.date_to,
-          limit: exportRowLimit + 1,
-        });
-        if (rows.length > exportRowLimit) {
-          throw new ExportError(
-            "export_row_limit_exceeded",
-            `L'export dépasse la limite de ${exportRowLimit} lignes.`,
-          );
-        }
-        const selectedFields = mapExportJob(job).selectedFields;
-        const formatted = await formatExport({
-          entityType: job.entity_type,
-          format: job.format,
-          selectedFields,
-          rows,
-        });
-        const fileName = buildExportFileName(job.entity_type, job.format, now);
-        await completeExportJob(transaction, {
-          tenantId,
-          exportId,
-          rowCount: rows.length,
-          content: formatted.content,
-          contentType: formatted.contentType,
-          fileName,
-          now,
-        });
-        await recordAuditLog(transaction, {
-          tenantId,
-          actorId,
-          action: "export.completed",
-          targetType: "export",
-          targetId: exportId,
-          metadata: {
-            entityType: job.entity_type,
-            format: job.format,
-            rowCount: rows.length,
-            contentBytes: formatted.content.length,
-          },
-        });
-        return {
-          exportId,
-          status: "completed" as const,
-          rowCount: rows.length,
-          idempotentReplay: false,
-        };
-      },
-    );
-  } catch (error) {
-    if (!(error instanceof ExportError)) throw error;
-    await withTenantDbTransaction(db, tenantId, actorId, async (transaction) => {
-      await failExportJob(transaction, {
+  return withTenantDbTransaction(db, tenantId, actorId, async (transaction) => {
+    // The worker and explicit user action share this row lock for the whole
+    // generation. A concurrent claimant sees the committed terminal result.
+    const job = await lockExportJob(transaction, tenantId, exportId);
+    if (!job) throw new ExportError("export_not_found", "Export introuvable.");
+    if (
+      ["queued", "processing", "completed"].includes(job.status) &&
+      new Date(job.expires_at).getTime() <= Date.now()
+    ) {
+      await expireExportJob(transaction, { tenantId, exportId, now: nowIso() });
+      await recordAuditLog(transaction, {
+        tenantId,
+        actorId,
+        action: "export.expired",
+        targetType: "export",
+        targetId: exportId,
+        metadata: { contentDeleted: true },
+      });
+      return { exportId, status: "expired" as const, idempotentReplay: false };
+    }
+    if (["completed", "cancelled", "failed", "expired", "processing"].includes(job.status)) {
+      return {
+        exportId,
+        status: job.status as "completed" | "cancelled" | "failed" | "expired" | "processing",
+        idempotentReplay: true,
+      };
+    }
+    if (job.status !== "queued") {
+      throw new ExportError("export_not_processable", "Cet export ne peut plus être généré.");
+    }
+    const now = nowIso();
+    await markExportProcessing(transaction, { tenantId, exportId, now });
+    try {
+      const rows = await listExportSourceRows(transaction, {
+        tenantId,
+        entityType: job.entity_type,
+        dateFrom: job.date_from,
+        dateTo: job.date_to,
+        limit: exportRowLimit + 1,
+      });
+      if (rows.length > exportRowLimit) {
+        throw new ExportError(
+          "export_row_limit_exceeded",
+          `L'export dépasse la limite de ${exportRowLimit} lignes.`,
+        );
+      }
+      const selectedFields = mapExportJob(job).selectedFields;
+      const formatted = await formatExport({
+        entityType: job.entity_type,
+        format: job.format,
+        selectedFields,
+        rows,
+      });
+      const fileName = buildExportFileName(job.entity_type, job.format, now);
+      await completeExportJob(transaction, {
         tenantId,
         exportId,
-        errorCode: error.code,
-        now: nowIso(),
+        rowCount: rows.length,
+        content: formatted.content,
+        contentType: formatted.contentType,
+        fileName,
+        now,
       });
+      await recordAuditLog(transaction, {
+        tenantId,
+        actorId,
+        action: "export.completed",
+        targetType: "export",
+        targetId: exportId,
+        metadata: {
+          entityType: job.entity_type,
+          format: job.format,
+          rowCount: rows.length,
+          contentBytes: formatted.content.length,
+        },
+      });
+      return { exportId, status: "completed" as const, rowCount: rows.length, idempotentReplay: false };
+    } catch (error) {
+      if (!(error instanceof ExportError)) throw error;
+      // Keep the claim locked while recording a bounded generation failure.
+      // Authorization, lookup and busy replays never fail another job.
+      await failExportJob(transaction, { tenantId, exportId, errorCode: error.code, now: nowIso() });
       await recordAuditLog(transaction, {
         tenantId,
         actorId,
@@ -205,9 +215,9 @@ export async function processUniversalExportJob(
         targetId: exportId,
         metadata: { errorCode: error.code },
       });
-    });
-    return { exportId, status: "failed" as const, errorCode: error.code };
-  }
+      return { exportId, status: "failed" as const, errorCode: error.code };
+    }
+  });
 }
 
 export async function cancelUniversalExport(
@@ -219,7 +229,7 @@ export async function cancelUniversalExport(
   const parsed = exportJobReferenceSchema.parse(input);
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId, [...exportRoles]);
-    const job = await findExportJob(transaction, tenantId, parsed.exportId);
+    const job = await lockExportJob(transaction, tenantId, parsed.exportId);
     if (!job) throw new ExportError("export_not_found", "Export introuvable.");
     if (!["queued", "processing", "completed"].includes(job.status)) {
       throw new ExportError(

@@ -1,5 +1,9 @@
 # TRADIKOM ONE
 
+## Campagne de toute l’application — en cours
+
+La recette native a vérifié les imports, le CRM, les documents TXT/PDF texte avec téléchargement identique, les objectifs consentis jusqu’à l’arrêt terminal, et les modules locaux. Elle a aussi révélé des défauts d’images, d’exports, de contexte public et de requêtes concurrentes. Les correctifs sont intégrés au candidat, avec régressions ciblées; validation globale, migration135 et nouvelle recette hébergée restent à effectuer. Base distante134, IA désactivée/budgets0/0. [Parcours, preuves et limites](docs/FULL_APP_VALIDATION_2026-11-03.md). Les sections suivantes sont des checkpoints antérieurs.
+
 ## Correctif CSV déployé — recette native desktop vérifiée
 
 Le source `d3f7a2a` attend les quatre lectures de référence sur la connexion de transaction, au lieu de les superposer. Régression rouge avant correction ; dix tests ciblés verts ensuite, dont un rôle réellement limité. Lint, TypeScript, continuité et build Vercel du SHA exact passent. Préversion protégée READY, schéma134 conservé, health HTTP200/database=ok.
@@ -247,6 +251,7 @@ FEATURE_LIVE_INTEGRATIONS=false
 FEATURE_PUBLIC_DEMO=false
 
 CONNECTOR_ENCRYPTION_KEY=change-me-change-me-change-me-32b
+# Références historiques/locales seulement ; nouveaux uploads en PostgreSQL.
 ASSET_STORAGE_DIR=.data/tradikom-one-assets
 COOKIE_SECURE=false
 

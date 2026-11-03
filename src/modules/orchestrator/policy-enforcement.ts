@@ -301,10 +301,8 @@ export async function assertConversationActionPlanWorkflowActionPolicy(
     );
   }
 
-  const [run, durableEvent] = await Promise.all([
-    findWorkflowRunById(db, input.event.tenantId, input.runId),
-    findDomainEventById(db, input.event.tenantId, input.event.id),
-  ]);
+  const run = await findWorkflowRunById(db, input.event.tenantId, input.runId);
+  const durableEvent = await findDomainEventById(db, input.event.tenantId, input.event.id);
   const snapshot = run?.definition_snapshot
     ? workflowDefinitionSchema.safeParse(
         safeJson<Record<string, unknown>>(run.definition_snapshot, {}),

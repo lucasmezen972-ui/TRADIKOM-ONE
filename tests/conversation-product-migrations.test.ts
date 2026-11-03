@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, it } from "vitest";
 import { createMemoryDb, migrate } from "../src/lib/db";
-it("conserve les six miroirs SQL IA/documents/connecteur et rejoue le journal avec RLS", async () => {
+it("conserve les miroirs SQL produit et rejoue le journal avec RLS", async () => {
   const source = await readFile("src/lib/db.ts", "utf8");
   for (const [file, constant] of [
     ["0121_conversation_model_requests.sql", "conversationModelRequestsMigrationSql"],
@@ -12,6 +12,7 @@ it("conserve les six miroirs SQL IA/documents/connecteur et rejoue le journal av
     ["0126_github_public_connectors_rls.sql", "githubPublicConnectorsRlsMigrationSql"],
     ["0127_conversation_task_proposals.sql", "conversationTaskProposalsMigrationSql"],
     ["0128_conversation_task_proposals_rls.sql", "conversationTaskProposalsRlsMigrationSql"],
+    ["0129_public_website_read_brokers.sql", "publicWebsiteReadBrokersMigrationSql"],
   ]) {
     const sql = await readFile(`src/db/migrations/${file}`, "utf8");
     expect(source).toContain(`const ${constant} = \`\n${sql}\`;`);
@@ -23,6 +24,7 @@ it("conserve les six miroirs SQL IA/documents/connecteur et rejoue le journal av
     expect(new Set(journal).size).toBe(journal.length);
     expect(journal).toContain("132_github_public_connectors_rls");
     expect(journal).toContain("134_conversation_task_proposals_rls");
+    expect(journal).toContain("135_public_website_read_brokers");
     for (const table of ["conversation_model_requests", "conversation_model_budget_charges", "conversation_file_objects", "github_public_connectors", "conversation_task_proposals"]) {
       expect((await db.query("select policyname from pg_policies where tablename = $1 and policyname = 'tenant_isolation'", [table])).rows).toHaveLength(0);
     }

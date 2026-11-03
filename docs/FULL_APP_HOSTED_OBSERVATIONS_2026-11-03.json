@@ -1,0 +1,175 @@
+{
+  "status": "IN_PROGRESS_CANDIDATE_NOT_DEPLOYED",
+  "date": "2026-11-03",
+  "hostedSource": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
+  "branchBase": "261efe488cd3cf5dcc4b53a701ab2cec2da848ef",
+  "observations": [
+    {
+      "feature": "knowledge.create",
+      "result": "PASS",
+      "date": "2026-11-03T17:26:18.770Z",
+      "evidence": "Visible success: Information ajoutée à la mémoire; one active, v1 confidence80; fictive RECETTE20261103"
+    },
+    {
+      "feature": "knowledge.reload",
+      "result": "PASS"
+    },
+    {
+      "feature": "strategy.generate_approve_reject_reload",
+      "result": "PASS",
+      "evidence": "2 proposals; summary0pending1approved1rejected; mute visible and persisted"
+    },
+    {
+      "feature": "marketing.generate_submit_approve_reload",
+      "result": "PASS",
+      "evidence": "2generated;1draft1approved0pending persisted; no send"
+    },
+    {
+      "feature": "finance.negative_revenue_validation",
+      "result": "PASS",
+      "evidence": "native min0 validation blocked -1"
+    },
+    {
+      "feature": "finance.create_compute_reload_reuse",
+      "result": "PASS",
+      "evidence": "10000revenue-6000cost=4000profit40%;9000in-7000out=2000cashflow;500/2=250CAC;unknownROI preserved;same source keepsv1"
+    },
+    {
+      "feature": "reputation.import_analyze_submit_approve_reload",
+      "result": "PASS",
+      "evidence": "1manualfictivereview5/5;1positive lowriskv1;approved no publication;0pending afterreload"
+    },
+    {
+      "feature": "competitor.create_observe_analyze_submit_reject_reload",
+      "result": "PASS",
+      "evidence": "1fictive profile;1illustrative source;1v1insight;declined;0pending persisted;no scraping or reaction"
+    },
+    {
+      "feature": "crm.note_task_create_complete_retention_reload",
+      "result": "PASS",
+      "evidence": "note1;ownnewtaskdone;retention2027-11-03;marketingfalse;preexistingtaskuntouched"
+    },
+    {
+      "feature": "crm.imported_status_selector",
+      "result": "FAIL_CONFIRMED_FIX_VALIDATED",
+      "evidence": "badgeImporté;selectNouveau;no profilesave performed;minimalfix5tests+TSlintgreen pendingpublication"
+    },
+    {
+      "feature": "imports.json_contacts",
+      "result": "PASS",
+      "importId": "import_ef75f30a9fee45f7a94d1ffa13716d73",
+      "evidence": "preview1valid/0imported;commit1;reloadpersist"
+    },
+    {
+      "feature": "imports.xlsx_products",
+      "result": "PASS",
+      "importId": "import_6b9e1c50cdd84718a6dcccc91dfd13d0",
+      "evidence": "preview1valid0imported;commit1"
+    },
+    {
+      "feature": "imports.companies_json",
+      "result": "PASS",
+      "importId": "import_b220e68c2ec54919bf3abd034fd4c574",
+      "evidence": "preview1valid0imported;commit1"
+    },
+    {
+      "feature": "imports.opportunities_valid_negative",
+      "result": "PASS",
+      "importId": "import_03e9499d4f5a414090d53583e02a68f7",
+      "evidence": "2rows1valid1negativeinvalid0imported;commit1;reloadpersist"
+    },
+    {
+      "feature": "opportunity.search_update_history_reload",
+      "result": "PASS",
+      "evidence": "unknownfilterempty;positive1;stageAqualifier;value125.50;probability50;6historyentries;reload"
+    },
+    {
+      "feature": "sales_assistant.generate_reload",
+      "result": "PASS",
+      "evidence": "1localassessmentv1;pipeline125.50;sourceevidence;persisted"
+    },
+    {
+      "feature": "catalog.refresh_preview_reload",
+      "result": "PASS",
+      "evidence": "9AIprofiles1workflow;SEOpreviewreadydisabled;persisted"
+    },
+    {
+      "feature": "exports.queued_without_worker",
+      "result": "FAIL_CONFIRMED_FIX_TARGETED",
+      "exportId": "export_7c920f7be46344a6bd07c8fa94bc848d",
+      "evidence": "queued persists;no worker/user generation;new boundedbutton/service patch7targetedtestsgreen pendingintegration"
+    },
+    {
+      "feature": "automation_library.prepare_preview_reload",
+      "result": "PASS",
+      "evidence": "privatepackagev1 3steps/sourcevaluesexcluded;previewdisabledpersisted"
+    },
+    {
+      "feature": "improvements.analyze_accept_reload",
+      "result": "PASS",
+      "evidence": "1proposalfor mockdegradedconnector;acceptedplanningonly;unknownmetricsremainunavailable"
+    },
+    {
+      "feature": "operational_health.read",
+      "result": "PASS_WITH_CONFIGURATION_LIMITS",
+      "evidence": "7measured5healthy2watch8notinstrumented;1exporteventqueued;no workertelemetry;no costtelemetry"
+    },
+    {
+      "feature": "preferences.native_bounds_save_restore_reload",
+      "result": "PASS",
+      "evidence": "0blocked min1;7→8 persisted audited;8→7 restored;mute30 preserved"
+    },
+    {
+      "feature": "assets.hosted_upload",
+      "result": "FAIL_CONFIGURATION_CONFIRMED",
+      "evidence": "5513bytePNG rejected asset_storage_unavailable;0assetsforchecksum;no retry;DBpersistentbackendinpreparation"
+    },
+    {
+      "feature": "ai_team.pause_resume_version_reload",
+      "result": "PASS",
+      "evidence": "Rédacteur v1enabled→v2paused reload→v3enabled;freshTab afterbrowserrecovery confirmed9available0external;SQLmatch"
+    },
+    {
+      "feature": "browser_control_recovery",
+      "result": "PASS_WITH_TRANSIENT_TOOL_FAILURE",
+      "evidence": "oldtab4CDPfocusfailed;newtab12samebrowser authcontext native reused;no credential read or re-entry"
+    },
+    {
+      "feature": "conversation.txt_upload_extract_download_reload",
+      "result": "PASS",
+      "bytes": 224,
+      "sha256": "8a8913d68f5e464cf0a7ab548bc27a63ab4cb7fcc927e7ea904e792e614cc787",
+      "evidence": "nativefixturemessage;extractionvisible;originalbyteidentical;reload"
+    },
+    {
+      "feature": "conversation.pdf_text_upload_extract_download_reload",
+      "result": "PASS",
+      "bytes": 1484,
+      "sha256": "7f28bddd587614b04ca7d468613926b64a273e39d9475480862a898f61909513",
+      "evidence": "actualtextphraseRECETTE-FULL-PDF-20261103;originalbyteidentical;reload;noOCR/antivirusclaim",
+      "screenshot": "tradikom-fullapp-pdf-20261103.jpg"
+    },
+    {
+      "feature": "goal.consent_pause_reconsent_stop_reload",
+      "result": "PASS",
+      "evidence": "newfictivegoal>=5contacts cadence24h;uncheckedresumeandstopblocked;explicitconsentre-enabled;terminalstop persists0resume0pause;noscheduler"
+    },
+    {
+      "feature": "domain.mock_double_confirmation_simulation_reload",
+      "result": "PASS",
+      "evidence": "fixture.example.test;12verifiedlocalfixtures;firstapproval+secondconfirmation+simulation;reload Simulation réussie;noDNSwrite;linknotrununpublished"
+    },
+    {
+      "feature": "connector.mock_oauth_consent_refresh_install_read_sync_reload",
+      "result": "PASS_MOCK_ONLY",
+      "evidence": "nativePKCEconsentfixture;refresh persistedexpiry;installinitiallydisabled thenexplicitreadonly;manualsync healthSain 3clients2appointments1quote fixtures;quota20to19;reload;noexternalnetwork;mockconnectionretained"
+    }
+  ],
+  "noPaidAiCalls": true,
+  "budgets": {
+    "global": 0,
+    "tenant": 0
+  },
+  "nativeHostedDesktopOnly": true,
+  "remotePostgresSkippedNotProven": true
+}

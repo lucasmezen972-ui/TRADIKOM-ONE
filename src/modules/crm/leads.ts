@@ -8,7 +8,7 @@ import {
   secureToken,
   toJson,
 } from "@/lib/security";
-import type { Tenant, Website } from "@/lib/types";
+import type { Tenant, Website, WebsiteSection } from "@/lib/types";
 import { recordAuditLog } from "@/modules/audit";
 import { CrmError } from "@/modules/crm/errors";
 import {
@@ -33,8 +33,9 @@ import { enqueueLeadFollowUpWorkflow } from "@/modules/workflows/engine";
 import { enforceRateLimit, rateLimitPolicies } from "@/modules/rate-limit";
 
 export type PublishedSiteLookup = {
-  tenant: Tenant;
+  tenant: Pick<Tenant, "id" | "slug">;
   website: Website;
+  sections: Pick<WebsiteSection, "type" | "enabled">[];
 };
 
 export async function submitPublicLead(
@@ -56,28 +57,16 @@ export async function submitPublicLead(
       "Site introuvable ou non publie.",
     );
   }
+  if (!site.sections.some(section => section.type === "contact" && section.enabled)) {
+    throw new CrmError(
+      "invalid_lead_payload",
+      "Le formulaire de contact n'est pas disponible sur ce site publie.",
+    );
+  }
 
   const websiteId = site.website.id;
   const tenantId = site.tenant.id;
   const idempotencyKey = parsed.idempotencyKey || secureToken();
-  const existing = await findFormSubmissionByIdempotency(
-    db,
-    tenantId,
-    idempotencyKey,
-  );
-
-  if (existing) {
-    return existing.id;
-  }
-
-  await enforceRateLimit(db, {
-    operationKey: "public_form.submit",
-    subjectKey: parsed.email.toLowerCase(),
-    scopeKey: tenantId,
-    limit: rateLimitPolicies.publicForm.limit,
-    windowSeconds: rateLimitPolicies.publicForm.windowSeconds,
-  });
-
   return withTenantDbTransaction(db, tenantId, "system", async (transaction) => {
     const duplicate = await findFormSubmissionByIdempotency(
       transaction,
@@ -85,6 +74,14 @@ export async function submitPublicLead(
       idempotencyKey,
     );
     if (duplicate) return duplicate.id;
+
+    await enforceRateLimit(transaction, {
+      operationKey: "public_form.submit",
+      subjectKey: parsed.email.toLowerCase(),
+      scopeKey: tenantId,
+      limit: rateLimitPolicies.publicForm.limit,
+      windowSeconds: rateLimitPolicies.publicForm.windowSeconds,
+    });
 
     const result = await createLeadFromPayload(transaction, tenantId, {
       name: parsed.name,

@@ -127,17 +127,15 @@ export async function getWorkflowQueueOverview(
 ) {
   return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId);
-    const [summaryRows, activeRows] = await Promise.all([
-      listDomainEventQueueSummaryRows(transaction, tenantId),
-      listAccessibleWorkflowDomainEvents(
-        transaction,
-        userId,
-        tenantId,
-        12,
-        (limit, offset) =>
-          listActiveDomainEventQueueRows(transaction, tenantId, limit, offset),
-      ),
-    ]);
+    const summaryRows = await listDomainEventQueueSummaryRows(transaction, tenantId);
+    const activeRows = await listAccessibleWorkflowDomainEvents(
+      transaction,
+      userId,
+      tenantId,
+      12,
+      (limit, offset) =>
+        listActiveDomainEventQueueRows(transaction, tenantId, limit, offset),
+    );
 
     return {
       summary: normalizeQueueSummary(summaryRows.map(mapWorkflowQueueSummary)),

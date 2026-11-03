@@ -1,3 +1,11 @@
+# Prochaine action concrète — campagne complète du 3 novembre
+
+Le checkpoint actif est [FULL_APP_VALIDATION_2026-11-03.md](FULL_APP_VALIDATION_2026-11-03.md). Qualifier le kit applicatif132/135 puis le candidat globalement, appliquer135 avec confirmation native valide, déployer le SHA exact en préversion protégée et rejouer les défauts corrigés. Les preuves natives TXT/PDF/CRM/objectifs sont acquises sur le source d3f7a2a; images et export restent à vérifier après correction. Compte personnel et session gardés; budgets0/0, aucun message externe ou GitHub Actions.
+
+## Référence prompt maître — portée de cette reprise
+
+Les pages 3–7,31–33,46,48,69–71 citées dans le référentiel sont des lectures historiques. Le PDF est inaccessible dans ce cloud; aucune nouvelle lecture n’est revendiquée. La demande actuelle et les exigences versionnées bornent cette recette. Les sections suivantes sont historiques.
+
 # État stable — Supabase 17.11 et recette personnelle vérifiés
 
 Le moteur réel est17.11.0.011, ACTIVE_HEALTHY ; journal 132, 153 tables et215 lignes comparées exactement avant nouvelle connexion. RLS/droits/fonctions/memberships préservés, zéro avis sécurité ; sept CHECK n’ont qu’une présentation AND aplatie, équivalence contrôlée. Sauvegarde chiffrée hors Supabase et restauration depuis sa copie relue prouvées. Voir SUPABASE_UPGRADE_VERIFICATION_2026-11-03.json et BACKUP_VERIFICATION_2026-11-03.json. Ne pas relancer l’upgrade, recréer les anciennes fixtures ou refaire ces preuves sans nouveau changement.

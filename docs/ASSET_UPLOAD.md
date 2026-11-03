@@ -1,67 +1,50 @@
-# Envoi de fichiers
+# Images du site
 
-Les images du site (photos de section, logo) peuvent être envoyées depuis l'éditeur. C'était le dernier manque fonctionnel du générateur de site : les visuels ne pouvaient venir que d'une URL externe.
+Ce contrat décrit le candidat courant. La recette hébergée du nouveau stockage reste à vérifier sur le SHA déployé : l’ancien envoi PNG de 5 513 octets a échoué `asset_storage_unavailable`, sans ligne créée. Ce défaut n’est pas une preuve de livraison.
 
-## Validation
-
-Le type est déterminé par la **signature binaire** du fichier, jamais par son extension ni par le `Content-Type` annoncé — les deux viennent du client et se falsifient trivialement. Un script renommé `photo.png` est refusé avant toute écriture.
+## Validation et transport de préversion
 
 | Contrôle | Règle |
 | --- | --- |
-| Types acceptés | PNG, JPEG, WebP, reconnus par magic bytes |
-| Taille | 5 Mo maximum, fichier vide refusé |
-| Nom d'origine | conservé pour l'affichage seulement, nettoyé (séparateurs, `..`, caractères de contrôle), borné à 120 caractères |
+| Types | PNG, JPEG et WebP, reconnus par signature binaire ; extension et Content-Type déclarés ne font pas foi |
+| Service et interface | 3 MiB maximum par image, fichier vide refusé |
+| Server Actions | enveloppe de `4mb`, avec marge multipart sous la limite du fournisseur ; les imports partagent la limite utilisateur 3 MiB |
+| Défense SQL | payload PostgreSQL borné à 3 MiB, longueur exacte, SHA256 et signature cohérents avec les métadonnées |
+| Nom affiché | séparateurs, segments `..` et contrôles supprimés,120 caractères maximum |
 
-Le WebP exige la présence du marqueur `WEBP` après l'en-tête `RIFF` : un fichier audio RIFF n'est pas accepté comme image.
+Les 3 MiB sont une adaptation explicite de la préversion cloud. Le code ne revendique aucun upload hébergé de 5 MiB. Les documents natifs 512 KiB et les attachments legacy 25 MiB conservent leurs contrats distincts.
 
-## Stockage
+## Persistance
 
-`AssetStorage` suit le même principe que le fournisseur email : une interface, plusieurs implémentations.
+L’envoi normal conserve les octets dans `tenant_assets.content_bytes` (`bytea`) avec `storage_backend=postgres`. La transaction vérifie le membership et le rôle, verrouille le tenant avec le même verrou que publication/suppression, réutilise un contenu identique du même tenant/type, puis insère la ligne et l’audit. Les déclencheurs de quota, l’image et l’audit réussissent ou sont annulés ensemble. Un rejeu exact du contenu n’ajoute ni fichier, ni consommation, ni nouvel audit d’upload.
 
-| `ASSET_STORAGE_DIR` | Comportement |
-| --- | --- |
-| renseigné | stockage local sur disque |
-| absent | `unavailable` : l'envoi échoue avec un message explicite, rien n'est écrit |
+Les anciens fichiers restent `external` sans payload et sans conversion destructive, y compris une référence historique dépassant 3 MiB. Un nouvel envoi depuis la préversion Vercel reste limité à 3 MiB. Le contrat `AssetStorage` injecté reste disponible pour les tests et le stockage local explicitement demandé. Aucun disque Vercel éphémère, clé, provider, abonnement ou budget nouveau n’est utilisé par le chemin normal. `ASSET_STORAGE_DIR` ne fournit jamais un fallback de disque sur Vercel.
 
-**La clé de stockage est entièrement dérivée d'identifiants générés côté serveur** (`tenantId/assetId.ext`). Aucun fragment ne provient du nom envoyé, ce qui rend la traversée de répertoire impossible par construction. Un garde-fou supplémentaire vérifie malgré tout que le chemin résolu reste sous la racine — défense en profondeur, couverte par un test.
+## Quotas
 
-Le stockage local convient au développement et à un hébergement à disque persistant. Sur un hébergement éphémère, il faut écrire un fournisseur objet au même contrat, sans toucher aux appelants.
+| Périmètre | Octets logiques | Nombre de fichiers |
+| --- | --- | --- |
+| Tenant | 10 MiB | 64 |
+| Application | 50 MiB | 512 |
 
-## Cohérence base / disque
+Ces plafonds sont fixes. Ils couvrent aussi les métadonnées d’anciens fichiers externes. Des compteurs privés atomiques, alimentés uniquement pour les insertions/suppressions réellement effectuées, évitent la consommation sur `ON CONFLICT DO NOTHING` et les courses entre tenants. Une réservation globale annulée pour dépassement du quota tenant est annulée dans la même transaction. Un total historique déjà supérieur n’est ni supprimé ni ramené artificiellement au plafond ; de nouveaux envois sont refusés.
 
-L'écriture disque précède l'insertion en base. Si l'insertion échoue, le fichier est supprimé : aucun fichier orphelin ne subsiste. La ligne en base fait toujours foi.
+Les compteurs ne sont ni lisibles, ni modifiables, ni appelables par le runtime. Leur fonction de trigger est propriétaire borné dans `app_private`, avec `search_path=''`, sans flag SYSTEM global ni GRANT de table supplémentaire. Les limites portent sur octets logiques et nombre de fichiers ; elles ne constituent pas une mesure du WAL, des sauvegardes ou de l’espace physique fournisseur.
 
-## Service des fichiers
+## Lecture et suppression
 
-`GET /fichiers/{assetId}` sert l'image d'un site publié. L'identifiant est un UUID non devinable ; **le chemin n'est jamais construit à partir de l'URL**, la ligne en base fournit la clé de stockage. La réponse ne révèle ni l'organisation propriétaire ni la clé.
+Les listes et la suppression lisent seulement les métadonnées. La lecture privée exige une session, son organisation vérifiée et un membership ; la requête inclut tenant et identifiant. Elle répond `private, no-store`. La lecture publique projette les octets uniquement si l’image est référencée par une section active du dernier snapshot publié du même tenant. Un brouillon, un identifiant privé ou une référence copiée d’un autre tenant ne suffit pas.
 
-En-têtes : `x-content-type-options: nosniff`, `content-disposition: inline`, et un cache immuable d'un an — le contenu d'un identifiant ne change jamais, un nouvel envoi crée un nouvel identifiant.
+Les images locales passent directement par `/fichiers/:id` : le renderer ne les confie pas à l’optimiseur Next et celui-ci refuse les sources locales. Les réponses publiques demandent revalidation ; une publication ne transforme pas ses brouillons ultérieurs en contenu public.
 
-## Isolation et traçabilité
+L’association à une section et la persistance de l’image sont deux transactions. Toute association locale, publication et restauration prend le même verrou tenant puis vérifie les références par métadonnées et tenant. Si une suppression précède l’association, celle-ci est refusée explicitement ; un fichier privé peut rester listé après un autre échec d’association.
 
-La table `tenant_assets` est tenant-scopée, sous RLS (migration `072`), avec index tenant-leading. Chaque envoi est réservé aux rôles `owner`, `administrator` et `manager`, et tracé en audit (`asset.uploaded`) avec le type, la taille et le format — jamais le contenu.
+La suppression vérifie sections courantes, profil et dernier snapshot publié sous le même verrou tenant que la publication. Ligne PostgreSQL, payload, quota et audit sont supprimés atomiquement. Pour un ancien stockage externe, les octets sont retirés après le commit logique ; une erreur de ce nettoyage peut laisser un objet invisible. L’envoi et la suppression refusent un client déjà engagé dans une transaction afin de conserver leurs frontières de commit.
 
-Un checksum SHA-256 est conservé pour chaque fichier et sert d'`ETag`.
+## Limites et preuves
 
-## Suppression
-
-`Mon site` liste les fichiers envoyés avec un bouton de suppression. Le geste est réservé aux mêmes rôles que l'envoi.
-
-**La suppression est refusée tant que le fichier est utilisé** (`asset_in_use`, 409), et le message nomme les endroits concernés. La raison n'est pas la prudence de principe : une image supprimée alors qu'elle est encore affichée ne produit qu'un **404 silencieux** sur la page publiée. Personne ne s'en aperçoit, sauf les visiteurs.
-
-Deux emplacements sont vérifiés : `website_sections.image_url`, comparé à l'URL exacte, et le profil de l'entreprise (`business_profiles.data`, JSON contenant `brand.logoUrl` et `brand.photoUrls`), cherché par sous-chaîne. La sous-chaîne suffit ici : l'URL contient un identifiant non devinable, il n'existe pas de collision réaliste.
-
-### Ordre des opérations
-
-La ligne est supprimée **avant** le fichier. Si l'effacement du fichier échoue, il reste un orphelin — invisible, sans effet pour l'utilisateur, récupérable par une tâche de ménage. Dans l'ordre inverse, une ligne survivante pointerait vers un fichier absent et servirait un 404 sur un site publié. C'est la symétrie de l'envoi, où le fichier est écrit d'abord et effacé si l'insertion échoue.
-
-Une organisation ne peut pas supprimer le fichier d'une autre : la recherche est tenant-scopée et renvoie `asset_not_found`, sans révéler que l'identifiant existe ailleurs.
-
-## Limites actuelles
-
-- Aucune analyse antivirus ni réencodage de l'image : le fichier est servi tel qu'il a été reçu.
-- Pas de redimensionnement ni de génération de miniatures.
-- L'URL d'un fichier est non devinable mais non authentifiée, comme n'importe quelle image de site public.
-- Aucune tâche de ménage ne ramasse les fichiers orphelins laissés par un effacement partiel.
-- Une version antérieure d'un site peut référencer un fichier supprimé : la vérification ne porte que sur les sections courantes, pas sur l'historique des versions.
-- Le SVG est volontairement exclu : il peut porter du script.
+- Aucune analyse antivirus, validation complète du décodeur, réencodage, OCR ou miniature n’est annoncée.
+- SVG refusé. Le SHA256 vérifie l’intégrité des octets, pas leur innocuité.
+- Les anciennes versions non publiées ou remplacées peuvent référencer un fichier supprimé ; seule la dernière publication bénéficie du garde de suppression.
+- Un fichier déjà téléchargé ne peut pas être rappelé. Le nouveau contrôle de cache ne supprime pas les copies déjà détenues par un visiteur.
+- Les tests locaux, la migration fournisseur, les advisors et la recette hébergée doivent être consignés séparément ; ce document ne les déclare pas exécutés.

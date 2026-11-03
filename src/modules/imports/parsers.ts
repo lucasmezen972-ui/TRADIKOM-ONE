@@ -6,7 +6,7 @@ import type {
   ImportMapping,
 } from "@/modules/imports/schemas";
 
-export const importFileSizeLimit = 5 * 1024 * 1024;
+export const importFileSizeLimit = 3 * 1024 * 1024;
 export const importRowLimit = 10_000;
 const importColumnLimit = 100;
 const importCellLengthLimit = 10_000;
@@ -68,7 +68,7 @@ function assertFileEnvelope(input: {
   if (input.buffer.length > importFileSizeLimit) {
     throw new ImportError(
       "file_too_large",
-      "Le fichier dépasse la limite autorisée de 5 Mo.",
+      "Le fichier dépasse la limite autorisée de 3 Mo.",
     );
   }
 

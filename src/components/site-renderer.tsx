@@ -94,6 +94,7 @@ function HeroSection({ section }: { section: WebsiteSection }) {
       {section.imageUrl ? (
         <Image
           src={section.imageUrl}
+          unoptimized={section.imageUrl.startsWith("/fichiers/")}
           alt=""
           width={960}
           height={720}

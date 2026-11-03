@@ -1,0 +1,122 @@
+{
+  "status": "local_candidate_verified_not_published",
+  "local_base_commit": "f59b8d0914da42dc203519c65f83d3f41d6dab18",
+  "migration_id": "135_public_website_read_brokers",
+  "sql_file": "src/db/migrations/0129_public_website_read_brokers.sql",
+  "sql_file_sha256": "0a02d2d04807768c9f3890d1dabcdf51315242f20ddf42f113b2ebb3d9cb095e",
+  "limits": {
+    "image_import_bytes": 3145728,
+    "server_actions_body": "4mb",
+    "tenant_image_bytes": 10485760,
+    "global_image_bytes": 52428800,
+    "tenant_image_count": 64,
+    "global_image_count": 512
+  },
+  "successful_targeted_files": [
+    {
+      "file": "tests/asset-postgres-storage.test.ts",
+      "passed": 3,
+      "evidence": "/tmp/tradikom-image-association-green.log",
+      "evidence_sha256": "cd22a6b31d233c2cbd5cfec6cb419e12f63d435ba703b295625c8478dab25dcf"
+    },
+    {
+      "file": "tests/website-asset-references.test.ts",
+      "passed": 2,
+      "evidence": "/tmp/tradikom-image-association-green.log",
+      "evidence_sha256": "cd22a6b31d233c2cbd5cfec6cb419e12f63d435ba703b295625c8478dab25dcf"
+    },
+    {
+      "file": "tests/public-publication-runtime-rls.test.ts",
+      "passed": 1,
+      "evidence": "/tmp/tradikom-image-association-green.log",
+      "evidence_sha256": "cd22a6b31d233c2cbd5cfec6cb419e12f63d435ba703b295625c8478dab25dcf"
+    },
+    {
+      "file": "tests/conversation-product-migrations.test.ts",
+      "passed": 1,
+      "evidence": "/tmp/tradikom-image-postgres-final-targeted.log",
+      "evidence_sha256": "12ac521e1b46163b36beb0a693b1ca74ffad265fb937fafaac797facab5511a7"
+    },
+    {
+      "file": "tests/asset-published-delete-runtime-rls.test.ts",
+      "passed": 2,
+      "evidence": "/tmp/tradikom-image-delete-regression.log",
+      "evidence_sha256": "c4006e31c8d1880e21ed2964ae2ea95eb63a3c4596237640b36f26154ebb3fe5"
+    },
+    {
+      "file": "tests/assets-upload.test.ts",
+      "passed": 9,
+      "evidence": "/tmp/tradikom-img-isolated-assets-upload.test.log",
+      "evidence_sha256": "ea2f625a0a240c2fb53a20c6579389c791d3ff229a50648702c147942ed437cc"
+    },
+    {
+      "file": "tests/assets-delete.test.ts",
+      "passed": 4,
+      "evidence": "/tmp/tradikom-img-isolated-assets-delete.test.log",
+      "evidence_sha256": "663687e4b65c68ebc9f80d982f3d84456dddf54a0febc6be2dfa26421af44b43"
+    },
+    {
+      "file": "tests/universal-imports.test.ts",
+      "passed": 3,
+      "evidence": "/tmp/tradikom-img-isolated-universal-imports.test.log",
+      "evidence_sha256": "0cbdaaa89021a53ce3d53402eb19374b1a96b4958af0c9c7c36e0d35bf9eacb5"
+    },
+    {
+      "file": "tests/asset-upload-action.test.ts",
+      "passed": 5,
+      "evidence": "/tmp/tradikom-img-isolated-asset-upload-action.test.log",
+      "evidence_sha256": "a03fa8b1d74061ba1fd6d6d9b2011a4544378d4d000005bf7c7475106d5a158c"
+    },
+    {
+      "file": "tests/upload-size-limits.test.ts",
+      "passed": 7,
+      "evidence": "/tmp/tradikom-img-isolated-upload-size-limits.test.log",
+      "evidence_sha256": "453d7744dabaf930fbe17bddb7a6c2a5c844e723b030136f542db965fbbbd906"
+    },
+    {
+      "file": "tests/asset-http-access.test.ts",
+      "passed": 6,
+      "evidence": "/tmp/tradikom-img-isolated-asset-http-access.test.log",
+      "evidence_sha256": "75425f91b6536d2ed215424c2d1ec4cb526671f6e6a6cb5b47c9b653022f2994"
+    },
+    {
+      "file": "tests/asset-image-optimizer-boundary.test.ts",
+      "passed": 8,
+      "evidence": "/tmp/tradikom-img-isolated-asset-image-optimizer-boundary.test.log",
+      "evidence_sha256": "023ce21ec1cf31df02b96444aae395c0d76e203c7f533bed1877ae31e2d1bbcb"
+    },
+    {
+      "file": "tests/asset-image-rendering.test.ts",
+      "passed": 3,
+      "evidence": "/tmp/tradikom-img-isolated-asset-image-rendering.test.log",
+      "evidence_sha256": "92c4f73e45306933b2d31ca73a3c673ed59b3ad5ccdae8a8e2d094e8be0d77ab"
+    }
+  ],
+  "distinct_passed_tests": 54,
+  "successful_passes_are_separate": true,
+  "global_suite_green": false,
+  "discarded_run": {
+    "log": "/tmp/tradikom-image-postgres-regressions.log",
+    "exit": 132,
+    "reason": "Node/V8 WASM native failure; grouped run is not counted as passing"
+  },
+  "association_red": {
+    "file": "tests/website-asset-references.test.ts",
+    "failed_tests": 2,
+    "failed_assertions": 26,
+    "log": "/tmp/tradikom-image-association-red.log"
+  },
+  "lint": {
+    "changed_typescript_files": 19,
+    "exit": 0,
+    "log": "/tmp/tradikom-image-postgres-lint.log"
+  },
+  "limitations": [
+    "PGlite tests use real limited SQL roles; they are not remote PostgreSQL or multi-connection concurrency evidence.",
+    "Upload and section association remain separate transactions; stale local references are explicitly refused under the common tenant lock.",
+    "No supplier migration or deployment was performed by this subtask.",
+    "Prior hosted PNG5513-byte upload failed; the new hosted image recipe remains pending.",
+    "Global typecheck/build and backup/restore qualification are centralised by root.",
+    "No AI budget, provider transport, key, subscription or personal account permission was changed."
+  ]
+}

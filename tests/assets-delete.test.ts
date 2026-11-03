@@ -8,6 +8,7 @@ import { createServices } from "../src/lib/services";
 import {
   deleteTenantAsset,
   readPublicAsset,
+  readTenantAsset,
   uploadTenantAsset,
 } from "../src/modules/assets";
 import { createLocalAssetStorage } from "../src/modules/assets/storage";
@@ -146,7 +147,8 @@ describe("asset deletion", () => {
     // Le fichier de la première organisation est intact.
     expect(await storedFileCount(first.storageDir, first.tenant.id)).toBe(1);
     expect(
-      await readPublicAsset(first.db, first.asset.id, first.storage),
+      await readTenantAsset(first.db, first.owner.id, first.tenant.id, first.asset.id, first.storage),
     ).not.toBeNull();
+    expect(await readPublicAsset(first.db, first.asset.id, first.storage)).toBeNull();
   }, 60_000);
 });

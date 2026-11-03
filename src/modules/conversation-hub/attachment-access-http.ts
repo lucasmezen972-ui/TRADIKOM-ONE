@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isTrustedNativeDocumentRequest } from "@/modules/conversation-hub/native-document-http";
 import {
   ConversationAttachmentAccessError,
   type AttachmentAccessFailed,
@@ -93,7 +94,7 @@ export async function handleConversationAttachmentAccessRequest(
 
   try {
     if (request.method === "POST") {
-      if (request.body) {
+      if (!await isTrustedNativeDocumentRequest(request, dependencies.expectedOrigin)) {
         return invalidRequestResponse(dependencies.correlationId);
       }
       const result = await dependencies.prepare({

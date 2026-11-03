@@ -12,6 +12,8 @@ import {
 import { getServices } from "@/lib/services";
 import { safeServerAction } from "@/lib/public-action";
 import { PublicActionError } from "@/modules/request-context";
+import { maxAssetBytes } from "@/modules/assets/validation";
+import { AssetError } from "@/modules/assets/errors";
 import {
   getCurrentSession,
   requireTenantContext,
@@ -814,7 +816,7 @@ export async function updateSectionAction(formData: FormData) {
     buttonLabel: text(formData, "buttonLabel"),
     buttonHref: text(formData, "buttonHref"),
     enabled: formData.get("enabled") === "on",
-  });
+  }).catch(redirectUnavailableWebsiteAsset);
   revalidatePath("/mon-site");
 }
 
@@ -833,7 +835,7 @@ export async function moveSectionAction(formData: FormData) {
 export async function publishWebsiteAction() {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  const url = await services.publishWebsite(user.id, tenant.id);
+  const url = await services.publishWebsite(user.id, tenant.id).catch(redirectUnavailableWebsiteAsset);
   revalidatePath("/mon-site");
   revalidatePath(url);
 }
@@ -841,7 +843,7 @@ export async function publishWebsiteAction() {
 export async function restoreVersionAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getServices();
-  await services.restoreWebsiteVersion(user.id, tenant.id, text(formData, "versionId"));
+  await services.restoreWebsiteVersion(user.id, tenant.id, text(formData, "versionId")).catch(redirectUnavailableWebsiteAsset);
   revalidatePath("/mon-site");
 }
 
@@ -1196,6 +1198,15 @@ export async function createUniversalExportAction(formData: FormData) {
     }),
   );
   redirect(`/connexions/donnees?export=${encodeURIComponent(result.id)}`);
+}
+
+export async function generateUniversalExportAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getServices();
+  await safeServerAction("export.generate", () =>
+    services.generateUniversalExport(user.id, tenant.id, text(formData, "exportId")),
+  );
+  revalidatePath("/connexions/donnees");
 }
 
 export async function cancelUniversalExportAction(formData: FormData) {
@@ -1952,6 +1963,9 @@ export async function uploadSectionImageAction(formData: FormData) {
   if (!(file instanceof File) || file.size === 0) {
     redirect("/mon-site?fichier=vide");
   }
+  if (file.size > maxAssetBytes) {
+    redirect(`/mon-site?fichier=refuse&messageFichier=${encodeURIComponent("Le fichier dépasse la taille autorisée de 3 Mo en préversion.")}`);
+  }
 
   const asset = await safeServerAction("asset.upload", async () =>
     services.uploadTenantAsset(user.id, tenant.id, {
@@ -1959,7 +1973,12 @@ export async function uploadSectionImageAction(formData: FormData) {
       originalName: file.name,
       bytes: new Uint8Array(await file.arrayBuffer()),
     }),
-  );
+  ).catch((error: unknown) => {
+    if (error instanceof PublicActionError && ["asset_empty", "asset_too_large", "asset_type_not_allowed", "asset_quota_exceeded"].includes(error.code)) {
+      redirect(`/mon-site?fichier=refuse&messageFichier=${encodeURIComponent(error.message)}`);
+    }
+    throw error;
+  });
 
   const sectionId = text(formData, "sectionId");
   if (sectionId) {
@@ -1973,7 +1992,7 @@ export async function uploadSectionImageAction(formData: FormData) {
         buttonLabel: section.buttonLabel,
         buttonHref: section.buttonHref,
         enabled: section.enabled,
-      });
+      }).catch(redirectUnavailableWebsiteAsset);
     }
   }
 
@@ -2047,4 +2066,11 @@ export async function moveOpportunityStageAction(formData: FormData) {
   revalidatePath("/opportunites");
   revalidatePath(`/opportunites/${opportunityId}`);
   redirect("/opportunites?vue=tableau&deplacement=ok");
+}
+
+function redirectUnavailableWebsiteAsset(error: unknown): never {
+  if (error instanceof AssetError && error.code === "asset_not_found") {
+    redirect(`/mon-site?fichier=refuse&messageFichier=${encodeURIComponent("Cette image n’est plus disponible. Renvoyez-la avant d’enregistrer ou de publier.")}`);
+  }
+  throw error;
 }

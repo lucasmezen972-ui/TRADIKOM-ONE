@@ -102,6 +102,7 @@ import {
   deleteTenantAsset,
   getTenantAssets,
   readPublicAsset,
+  readTenantAsset,
   uploadTenantAsset,
   type UploadAssetInput,
 } from "@/modules/assets";
@@ -326,6 +327,7 @@ import {
 import {
   cancelUniversalExport,
   createUniversalExport,
+  generateUniversalExport,
   getExportWorkspace,
   getUniversalExportDownload,
   processUniversalExportJob,
@@ -654,6 +656,8 @@ export function createServices(
     deleteTenantAsset: (userId: string, tenantId: string, assetId: string) =>
       deleteTenantAsset(db, userId, tenantId, assetId),
     readPublicAsset: (assetId: string) => readPublicAsset(db, assetId),
+    readTenantAsset: (userId: string, tenantId: string, assetId: string) =>
+      readTenantAsset(db, userId, tenantId, assetId),
     snoozeApproval: (
       userId: string,
       tenantId: string,
@@ -891,6 +895,11 @@ export function createServices(
       tenantId: string,
       exportId: string,
     ) => processUniversalExportJob(db, actorId, tenantId, exportId),
+    generateUniversalExport: (
+      userId: string,
+      tenantId: string,
+      exportId: string,
+    ) => generateUniversalExport(db, userId, tenantId, { exportId }),
     cancelUniversalExport: (
       userId: string,
       tenantId: string,

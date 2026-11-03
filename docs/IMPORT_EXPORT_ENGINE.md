@@ -5,7 +5,7 @@ Statut: import et export universels validés dans les runs complets `29380786047
 ## Import universel
 
 - Formats acceptés: CSV, JSON et XLSX.
-- Limites: 5 Mo, 10 000 lignes, 100 colonnes et 10 000 caractères par cellule.
+- Limites: 3 Mo (3 × 1024² octets), 10 000 lignes, 100 colonnes et 10 000 caractères par cellule. L'enveloppe multipart des Server Actions est bornée à 4 Mo pour rester sous la limite de requête de la préversion Vercel.
 - Les types de contenu et la signature XLSX sont vérifiés avant parsing.
 - Le JSON est limité en profondeur et doit être une liste d'objets simples.
 - Les formules XLSX et les valeurs textuelles assimilables à des formules sont refusées.

@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/db";
 import type { Role } from "@/lib/types";
+import { TenantError } from "@/modules/tenants/errors";
 
 export type TenantRow = {
   id: string;
@@ -90,6 +91,18 @@ export async function findTenantById(db: DbClient, tenantId: string) {
     tenantId,
   ]);
   return result.rows[0] ?? null;
+}
+
+/** Both publication and asset deletion call this after membership verification,
+ * inside their tenant transaction, before snapshot or reference reads. */
+export async function lockTenantForPublicationMutation(db: DbClient, tenantId: string) {
+  const result = await db.query<{ id: string }>(
+    "select id from tenants where id = $1 for update",
+    [tenantId],
+  );
+  if (!result.rows[0]) {
+    throw new TenantError("tenant_not_found", "Organisation introuvable.");
+  }
 }
 
 export async function findTenantBySlug(db: DbClient, slug: string) {

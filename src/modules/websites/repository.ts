@@ -459,3 +459,14 @@ function mapSection(row: WebsiteSectionRow): WebsiteSection {
     data: safeJson(row.data, {}),
   };
 }
+
+/** Public immutable projection; its SQL broker has no editable-table output. */
+export async function findPublicSiteBySlug(db: DbClient, slug: string) {
+  const result = await db.query<{
+    tenant_id: string;
+    tenant_slug: string;
+    website: Website;
+    sections: WebsiteSection[];
+  }>("select * from app_private.app_public_site_by_slug($1)", [slug]);
+  return result.rows[0] ?? null;
+}
