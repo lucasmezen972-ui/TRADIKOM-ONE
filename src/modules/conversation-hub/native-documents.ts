@@ -40,13 +40,17 @@ export async function extractNativeDocument(fileName: string, bytes: Uint8Array)
       const worker = new Worker(path.join(process.cwd(), "src/modules/conversation-hub/pdf-text-worker.mjs"), {
         workerData: bytes, resourceLimits: { maxOldGenerationSizeMb: 96, maxYoungGenerationSizeMb: 16, stackSizeMb: 4 },
       });
-      const timer = setTimeout(() => { void worker.terminate(); reject(new NativeDocumentError()); }, 8000);
+      const diagnostic = (reason: string) => console.warn(JSON.stringify({ event: "conversation.pdf.unavailable", reason }));
+      const timer = setTimeout(() => { diagnostic("timeout"); void worker.terminate(); reject(new NativeDocumentError()); }, 8000);
       const done = () => { clearTimeout(timer); void worker.terminate(); };
-      worker.once("message", (result: { ok?: boolean; text?: string }) => {
+      worker.once("message", (result: { ok?: boolean; text?: string; stage?: string }) => {
         done(); if (result.ok === true && typeof result.text === "string" && result.text.trim()) resolve(result.text.slice(0, 16000));
-        else reject(new NativeDocumentError());
+        else { diagnostic(["module", "assets", "load", "pages"].includes(result.stage ?? "") ? result.stage! : "result"); reject(new NativeDocumentError()); }
       });
-      worker.once("error", () => { done(); reject(new NativeDocumentError()); });
+      worker.once("error", (error: Error & { code?: string }) => {
+        diagnostic(["ERR_MODULE_NOT_FOUND", "MODULE_NOT_FOUND", "ERR_WORKER_OUT_OF_MEMORY"].includes(error.code ?? "") ? error.code! : "worker");
+        done(); reject(new NativeDocumentError());
+      });
       worker.once("exit", (code) => { clearTimeout(timer); if (code !== 0) reject(new NativeDocumentError()); });
     });
   } else {
