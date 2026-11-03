@@ -1,3 +1,11 @@
+## Démarrage sans privilèges DDL et configuration de préproduction — 2 novembre 2026
+
+Le runtime de production ne lance plus de migrations : il vérifie uniquement le journal attendu. Le script de migration utilise explicitement le rôle de migration. Trois tests couvrent le schéma prêt en lecture seule, le schéma incomplet et l'absence de fuite d'erreur sensible. Le lot runtime/sécurité/environnement passe 16 tests ; lint, typecheck et build sont verts. Un cache Turbopack local incohérent a été supprimé, puis le build propre a réussi. Aucun résultat de connexion Vercel n'est déduit de cette compilation.
+
+Une identité PostgreSQL dédiée à la préproduction a été créée, avec héritage des seuls droits runtime, sans droit SET vers le rôle parent, sans privilège propriétaire et sans accès au coffre. Deux secrets sont générés côté serveur et conservés chiffrés dans Vault. Huit variables sont configurées chiffrées dans Vercel, uniquement pour preview et la branche codex/tradikom-one-os ; aucun secret n'est enregistré dans le dépôt ou les notes. Le modèle de droits et le contrôle du schéma passent sur PostgreSQL 17.5 embarqué avec le compte limité. La connexion réseau Vercel/Supabase reste à prouver.
+
+Le budget additionnel reste nul. Le réglage Vercel Standard/sans concurrence à la demande a été refusé par l'API, faute de droits sur cette opération. Aucun déploiement n'a été lancé sans pouvoir confirmer les conditions de coût. APP_URL reste à fixer sur l'URL de préproduction effectivement attribuée, puis le parcours réel doit être testé. OpenAI, Meta et email réel ne sont pas raccordés ; les écarts fonctionnels précédemment décrits demeurent.
+
 ## Durcissement SQL vérifié — 2 novembre 2026 (Martinique)
 
 La migration 124 fixe le search_path de 26 fonctions à pg_catalog, public, pg_temp. Un test reproduit le masquage de pg_class par une table temporaire : le contrôle système était faussé avant correction et refuse cette tentative après mise à niveau. Les définitions, privilèges et rôles ne sont pas élargis.

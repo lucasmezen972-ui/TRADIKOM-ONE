@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T02:14:37.597Z",
+  "updatedAt": "2026-11-03T02:23:45.585Z",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
   "publishedHeadObserved": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
-  "status": "supabase_schema_124_security_advisor_clear_application_incomplete",
+  "status": "schema124_advisor_clear_restricted_preview_identity_configured_deployment_blocked",
   "currentPhase": "OS-5",
   "currentObjective": "Finaliser le parcours d'objectifs, sa RLS et le consentement/arrêt, puis préparer les intégrations réelles sans activation implicite.",
   "masterPrompt": {
@@ -54,7 +54,7 @@
       "evidenceExpected": "Conserver les preuves épinglées au source : baseline69a0660 exhaustive, correctiffa3b391 ciblé52 tests+build/Playwright. PDF absent du runner distant explicitement signalé ; relire le canon avant la prochaine tranche."
     }
   },
-  "nextAction": "Le durcissement SQL est livré et vérifié (migration 124, zéro alerte advisor). Les variables Vercel sont absentes et aucun déploiement n'existe. Finaliser le raccord serveur et les parcours incomplets de DELIVERY_STATUS.md, puis recette PostgreSQL complète et Playwright du candidat exact. Garder les services réels désactivés sans secrets, consentements et budget ; ne pas déclarer terminés les objectifs, multimodal ou connecteurs tiers.",
+  "nextAction": "La base 124 est saine, l'identité preview et les secrets serveur sont provisionnés, et huit variables preview sont configurées. Le runtime vérifie le journal sans exécuter de DDL. Le coût nul du déploiement ne peut pas être garanti et l'API refuse le réglage de build : résoudre cet accès ou obtenir un budget explicite avant de déployer. Déployer le SHA exact, fixer APP_URL sur l'URL contrôlée attribuée, puis vérifier la connexion réelle et les parcours. Les fournisseurs, le consentement/arrêt Goal Watch, la multimodalité et les connecteurs tiers réels restent incomplets.",
   "nextFile": "src/modules/goal-watch/service.ts",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2415,7 +2415,8 @@
   "humanBlockers": [
     "Authentifications, références de secrets et consentements bornés avant fournisseurs réels",
     "Toute dépense, programmation récurrente, fusion ou production reste distincte de cette recette gratuite",
-    "Configuration Vercel absente : accès runtime PostgreSQL et fournisseurs à provisionner par références serveur, sans secrets dans le chat"
+    "Régler ou autoriser les conditions de coût du déploiement Vercel ; l'API refuse le réglage Standard/sans concurrence payante",
+    "Accès et consentements fournisseurs OpenAI/Meta/email réel à compléter sans secrets dans le chat"
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2435,7 +2436,11 @@
       "nodeVersion": "22.x",
       "deploymentProtection": "SSO standard conservé",
       "automaticPreviews": false,
-      "published": false
+      "published": false,
+      "previewEnvironmentConfigured": true,
+      "environmentVariableCount": 8,
+      "buildCostSettingsUpdate": "denied_by_vercel_permission",
+      "appUrlConfigured": false
     },
     "database": {
       "provider": "Supabase",
@@ -2447,7 +2452,10 @@
       "backupVerified": true,
       "backupScope": "public application schema; platform internals and role credentials excluded",
       "restorationEngine": "PGlite PostgreSQL 17.5",
-      "postUpgradeSecurityWarnings": 0
+      "postUpgradeSecurityWarnings": 0,
+      "runtimeIdentityProvisioned": true,
+      "runtimeIdentityCanSetOwner": false,
+      "runtimeIdentityVaultAccess": false
     },
     "validation": {
       "runner": "Codespaces personnel dans le quota inclus, 2 cœurs, garde de dépense nulle vérifiée",

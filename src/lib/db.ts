@@ -60,7 +60,11 @@ export const closeDbForTests = closeDb;
 async function createRuntimeDb() {
   if (getDatabaseUrl()) {
     const db = pgPoolAsSqlClient();
-    await migrate(db, { enableRls: true });
+    if (process.env.NODE_ENV === "production") {
+      await verifyRuntimeMigrations(db);
+    } else {
+      await migrate(db, { enableRls: true });
+    }
     return db;
   }
 
@@ -77,6 +81,23 @@ async function createRuntimeDb() {
   const db = await pglitePromise;
   await migrate(db, { enableRls: false });
   return db;
+}
+
+// Production startup must work with a role that cannot create schema objects.
+export async function verifyRuntimeMigrations(db: DbClient) {
+  try {
+    const result = await db.query<{ id: string }>(
+      "select id from schema_migrations order by id asc",
+    );
+    const applied = new Set(result.rows.map((row) => row.id));
+    if (getMigrationIds(true).some((migrationId) => !applied.has(migrationId))) {
+      throw new Error("Missing migrations");
+    }
+  } catch {
+    throw new Error(
+      "Database schema is not ready. Run migrations with the migration identity before starting.",
+    );
+  }
 }
 
 export type MigrationOptions = {
