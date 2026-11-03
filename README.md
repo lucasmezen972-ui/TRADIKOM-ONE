@@ -2,9 +2,9 @@
 
 ## Recette complète — livraison compatible avec le schéma134
 
-Les corrections indépendantes sont intégrées : génération explicite du seul export autorisé, statut Importé conservé, HTTP webhook/pièces jointes durci, lectures successives sur les connexions de transaction. La qualification globale puis la recette de cette préversion restent à terminer. [État de livraison](docs/SCHEMA134_RELEASE_2026-11-03.md).
+Préversion protégée8c4c93e READY, base134 conservée. Exports CSV/JSON/XLSX réellement générés et téléchargés avec3lignes, empreintes SQL identiques, audit au clic explicite et contraste corrigés. Statut Importé conservé après enregistrement/rechargement; PDF privé et objectif arrêté persistants. La campagne globale203fichiers reste en cours, sans résultat final anticipé. [Preuves et limites](docs/FULL_APP_RECIPE_2026-11-03.md).
 
-Le candidat de stockage image/publication au schéma135 est distinct : la confirmation native Supabase a expiré, aucun SQL n’a été appliqué. La base134 et la préversion précédente sont conservées jusqu’à la livraison compatible134. IA désactivée, budgets0/0; aucun GitHub Actions. Les états suivants sont historiques.
+Le candidat de stockage image/publication au schéma135 est distinct : la confirmation native Supabase a expiré, aucun SQL n’a été appliqué. Le release134 est livré ; le schéma135 n’a pas été appliqué. IA désactivée, budgets0/0; aucun GitHub Actions. Les états suivants sont historiques.
 
 ## Correctif CSV déployé — recette native desktop vérifiée
 

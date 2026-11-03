@@ -2,7 +2,7 @@
 
 ## Impact north star
 
-Les essais ont révélé plusieurs défauts. Les corrections HTTP/CRM/export/connexionsSQL sont indépendantes de135 et peuvent être qualifiées puis livrées sans altérer la base. Le stockage images/publication135 reste séparé après expiration native; aucun contournement.
+Les essais ont révélé plusieurs défauts. Les corrections HTTP/CRM/export/connexionsSQL indépendantes de135 sont livrées dans la preview protégée8c4c93e, avec base134 inchangée et recette native vérifiée. Le corpus203fichiers reste en cours; FULL_APP_RECIPE_2026-11-03.md porte le checkpoint actuel. Le stockage images/publication135 reste séparé après expiration native; aucun contournement.
 
 ## Alignement prompt maître
 

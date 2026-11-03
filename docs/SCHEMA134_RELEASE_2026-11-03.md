@@ -1,5 +1,7 @@
 # Recette complète et livraison compatible134 — 3 novembre2026
 
+**Historique de préparation.** Le checkpoint livré8c4c93e et les preuves natives actualisées sont dans [FULL_APP_RECIPE_2026-11-03.md](FULL_APP_RECIPE_2026-11-03.md). Les états de préparation ci-dessous restent datés.
+
 **En cours.** La préversion courante reste le source `d3f7a2ac9cbe24c50d5197ae697cf26c90315da7`, déploiement protégé `dpl_AseSRQa24RLsBvE4BtEUpa1xbWnp`. Le candidat compatible134 doit passer sa campagne globale et sa recette avant toute conclusion.
 
 ## Changements livrables sans migration

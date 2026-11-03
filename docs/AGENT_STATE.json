@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
-  "publishedHeadObserved": "261efe488cd3cf5dcc4b53a701ab2cec2da848ef",
-  "status": "schema134_independent_fixes_pending_global_validation",
+  "lastCommit": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+  "publishedHeadObserved": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+  "status": "schema134_preview_native_recipe_verified_global_tests_running",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Tester tous les modules accessibles et livrer les corrections compatibles134 malgré expiration de confirmation native135.",
   "masterPrompt": {
@@ -55,8 +55,8 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Qualifier globalement puis déployer le candidat compatible134 au SHA exact, sans target et withLatestCommit=false. Vérifier export existant, statut Importé, HTTP et régressions. Conserver candidat135 séparé : confirmation native expirée, pas de nouvelle tentative automatique. Compte personnel/session et budgets0/0 préservés, sans GitHub Actions.",
-  "nextFile": "docs/SCHEMA134_RELEASE_2026-11-03.md",
+  "nextAction": "Terminer les203 fichiers du code métier c881, conserver les ignorés non prouvés et exécuter les5scénarios mobiles locaux isolés si possible. Les natifs CSV/JSON/XLSX/Importé/PDF/objectif sont vérifiés sur le release final8c4c93e, logs bornés sans événements. Mettre à jour preuves et Notion. Le candidat135 reste séparé après confirmation native expirée, aucun retry automatique; budgets0/0, compte/session conservés.",
+  "nextFile": "docs/FULL_APP_RECIPE_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -3084,8 +3084,12 @@
     "schemaObserved": 134,
     "candidate135Original": "fbb1a44177d49c0599ce85333376009bb1db27a5",
     "migration135": "native_confirmation_expired_not_applied",
-    "currentCandidate": "schema134_independent_fixes",
-    "globalValidation": "pending",
-    "masterPrompt": "Non relu dans ce cloud; pages consultées ci-dessus historiques, exigences versionnées appliquées."
+    "currentCandidate": "schema134_delivered",
+    "globalValidation": "running_on_c881",
+    "masterPrompt": "Non relu dans ce cloud; pages consultées ci-dessus historiques, exigences versionnées appliquées.",
+    "sourceDeployed": "8c4c93e832a9c769073e3cefb9aeb0c2c3ecec57",
+    "deployment": "dpl_kSML4ukksxj4vzadWFHcvMyXsLpj",
+    "preserved135Commit": "954ff25d23eeb5930c88e817620b7efec24bdb83",
+    "proof": "docs/NATIVE_RECIPE_VERIFICATION_2026-11-03.json"
   }
 }

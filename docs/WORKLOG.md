@@ -1530,3 +1530,10 @@ Campagne native sur d3f7a2a : imports JSON/CSV/XLSX, CRM et tâche dédiée, opp
 Candidat complet135 préparé dans fbb1a44, ciblés images54/13fichiers et restauration132/1353/2fichiers verts; lint/TS globaux verts, continuité avec PDF indisponible. Build local non prouvé (réseau/fonts puis tentative incomplète); corpus complet commencé mais suspendu sans conclusion globale. Confirmation native apply_migration135 expirée, vérificationSQL134/app_private absent/0asset/owner personnel intact. Aucun retry ou déploiement135.
 
 Une livraison compatible134 reprend uniquement les six patchs déjà qualifiés HTTP/CRM/export/lecturesSQL. Qualification globale, déploiement exact et recette correspondante en cours. Auto-déploiements désactivés seulement pour les deux branches de travail; déploiements manuels exacts conservés. Voir SCHEMA134_RELEASE_2026-11-03.md.
+
+
+## 2026-11-03 — Release134 déployé et nouveaux défauts de téléchargement corrigés
+
+Sourcec881 READY puis8612862 et8c4c93e (previewdpl_kSML4ukksxj4vzadWFHcvMyXsLpj, targetnull, withLatestCommit=false, SSO conservée). CSV259/JSON408/XLSX6753octets,3lignes et3champs fictifs, hashesSQLidentiques et un audit de génération parjob. Contraste sombre/sombre corrigé dans layerbase. Prefetch supprimé mais clicNext encore doublé7→9; ancre native finale9→10→10, contenus identiques. StatutImporté sauvegardé/rechargé/SQL, PDF1484identique et objectif terminal confirmés. Logs bornés19:55:53–20:13:14UTC sans événements error/warning/fatal; aucune garantie globale.
+
+Campagnec881 interrompue à78fichiers/331verts/17ignorés, rapports préservés; reprise sous root sur les125restants, tentativeCRMinterrompue conservée séparément. Aucun global vert anticipé. Candidat135 conservé sur954ff25 sans déploiement ni migration après expiration native. Aucun budgetIA, message métier, production ou GitHub Actions.

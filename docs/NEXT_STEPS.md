@@ -1,3 +1,7 @@
+# Prochaine action concrète — finir la qualification du release livré
+
+Source8c4c93e READY/protégé, base134. Les exports3formats, statut Importé, PDF privé, objectif arrêté et journaux bornés sont vérifiés; voir FULL_APP_RECIPE_2026-11-03.md. Terminer les203fichiers surc881 puis le sous-ensemble mobile local isolé; ne pas annoncer les tests distants ignorés comme prouvés. Candidat135 sur branche dédiée954ff25, confirmation native expirée : aucune application, aucun retry. Compte/session conservés et budgets0/0. Les instructions suivantes sont historiques.
+
 # Prochaine action concrète — correctifs compatibles134
 
 Qualifier le candidat compatible134, puis déployer son SHA exact en préversion protégée et vérifier export existant, statut Importé et régressions. Le candidat135 reste séparé, bloqué par une confirmation native expirée; aucun SQL ni déploiement135 tenté après expiration. Ne pas le réessayer automatiquement. Voir SCHEMA134_RELEASE_2026-11-03.md.
