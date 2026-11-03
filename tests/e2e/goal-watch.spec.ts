@@ -34,6 +34,28 @@ test("crée une tâche réelle depuis le fil puis la retrouve sur la fiche du co
   await expect(page.getByText(title, { exact: true })).toHaveCount(1);
 });
 
+test("refuse une proposition CRM sans créer la tâche et conserve ce refus", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await page.getByRole("button", {name:/Ouvrir la démo/}).click();
+  await expect(page).toHaveURL(/aujourdhui/);
+  await page.goto("/conversation");
+  await page.getByLabel("Écrire depuis le web").fill("Préparer un suivi à relire avant décision.");
+  await page.locator("form").filter({has:page.getByLabel("Écrire depuis le web")}).getByRole("button", {name:"Envoyer",exact:true}).click();
+  const panel=page.getByRole("region", {name:"Action réelle dans le CRM"});
+  const contactId=await panel.getByLabel("Contact à suivre").inputValue();
+  const title=`Proposition refusée ${Date.now()}`;
+  await panel.getByLabel("Titre de la tâche").fill(title);
+  await panel.getByRole("button", {name:"Préparer la proposition"}).click();
+  const proposal=page.getByRole("article", {name:title,exact:true});
+  await proposal.getByRole("button", {name:"Refuser la proposition"}).click();
+  await page.reload();
+  await expect(proposal.getByRole("status")).toHaveText("Proposition refusée · aucune tâche créée");
+  await expect(proposal.getByRole("button")).toHaveCount(0);
+  await page.goto(`/contacts/${encodeURIComponent(contactId)}`);
+  await expect(page.getByText(title,{exact:true})).toHaveCount(0);
+});
+
 test("autorise, suspend, reprend et arrête un objectif depuis Conversation", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");

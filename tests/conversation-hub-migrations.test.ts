@@ -55,6 +55,7 @@ describe("migrations du Conversation Hub", () => {
       "conversation_model_budget_charges",
       "conversation_model_requests",
       "conversation_participants",
+      "conversation_task_proposals",
       "conversation_thread_access_grants",
       "conversation_thread_access_operations",
       "conversation_thread_participants",

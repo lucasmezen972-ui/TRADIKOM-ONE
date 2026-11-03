@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
-  "publishedHeadObserved": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
-  "status": "preview_stable_postgres17_11_model_disabled_zero_budget",
+  "lastCommit": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
+  "publishedHeadObserved": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
+  "status": "guided_crm_candidate_native_migration_confirmation_expired",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -55,8 +55,8 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Conserver le checkpoint vérifié : Supabase17.11.0.011 ACTIVE_HEALTHY, schéma132, données et droits comparés, recette personnelle mobile réussie. Ne pas relancer l’upgrade ni recréer de clé/fixture. IA désactivée et plafonds0/0 : aucun appel modèle tant que budget API non autorisé. Périmètre production restant : fournisseurs privés/consentements, restauration plateforme et segment interne pooler/base sans TLS observé ; client TLS strict conservé. Aucun nouveau travail artificiel ou dépense pour contourner ces limites.",
-  "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
+  "nextAction": "Scénario CRM guidé codé et validé localement ; suite complète1116 réussis/37 ignorés, build et deux parcours mobiles locaux verts ; appliquer133/134 uniquement après confirmation native valable. La précédente confirmation a expiré ; journal132 et absence de nouvelle table vérifiés. Aucun contournement ni déploiement contre132. Préserver le compte personnel et la préversion actuelle ; IA désactivée, budgets0/0. Détails dans GUIDED_CRM_SCENARIO_2026-11-03.md.",
+  "nextFile": "docs/GUIDED_CRM_SCENARIO_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -2456,8 +2456,8 @@
       "publishedSource": "a0920cfa074c0168bc1161ce350629e02164b6b5",
       "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
       "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
-      "currentCandidate": "a0920cfa074c0168bc1161ce350629e02164b6b5",
-      "candidateDeployed": true,
+      "currentCandidate": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
+      "candidateDeployed": false,
       "lastHealth": "2026-11-03T12:40:54.019Z",
       "lastHealthHttpStatus": 200,
       "openaiKeyConfigured": true,
@@ -2477,9 +2477,9 @@
       "runtimeIdentityProvisioned": true,
       "runtimeIdentityCanSetOwner": false,
       "runtimeIdentityVaultAccess": false,
-      "candidateMigrations": "125–132",
-      "candidateApplied": true,
-      "confirmationStatus": "applied_verified",
+      "candidateMigrations": "133–134",
+      "candidateApplied": false,
+      "confirmationStatus": "expired_no_application",
       "engineVersion": "17.11",
       "providerUpgradeRecommended": "17.11.0.003 or later",
       "publicLtreeIndexes": 0,
@@ -3004,6 +3004,30 @@
       "backupCommit": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
       "upgradeUiCompleted": true,
       "stabilityProjectReadback": "ACTIVE_HEALTHY_17.11.0.011"
+    },
+    "guidedCrmCandidate": {
+      "applicationSourceCommit": "de427fa5b644af2d64dbde3a99b5f7b87ff5a38e",
+      "targetedPassed": 10,
+      "postgres17_5Passed": 6,
+      "additionalSchemaTestsPassed": 2,
+      "lint": "passed",
+      "typecheck": "passed",
+      "build": "passed_webpack_with_local_fixture_configuration",
+      "mobileBrowserTestsPassed": 2,
+      "fullSuite": {
+        "passed": 1116,
+        "skipped": 37,
+        "failed": 0,
+        "filesPassed": 180,
+        "filesSkipped": 16,
+        "filesTotal": 196,
+        "durationSeconds": 1740.65,
+        "remotePostgresSkippedNotProven": true
+      },
+      "providerMigration": "expired_not_applied_schema132",
+      "hostedRecipe": "not_run_candidate_not_deployed",
+      "modelCalls": 0,
+      "realBusinessMessages": 0
     }
   }
 }

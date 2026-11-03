@@ -1,5 +1,11 @@
 # TRADIKOM ONE
 
+## Candidat : scénario CRM guidé
+
+Le candidat ajoute une proposition durable dans Conversation, à relire puis confirmer ou refuser. La confirmation crée une vraie tâche CRM et sa preuve ; un rejeu ne duplique pas la tâche. Le refus ne crée rien. Les deux parcours mobiles locaux passent, avec confidentialité sous rôle limité et rollback en cas d’échec d’audit.
+
+**Pas encore en préversion** : la confirmation native des migrations133/134 a expiré ; la base reste132 et le déploiement actuel reste conservé. Ne pas publier ce candidat contre l’ancien schéma. IA désactivée et budgets nuls. [État et preuves du scénario](docs/GUIDED_CRM_SCENARIO_2026-11-03.md).
+
 ## État vérifié — 30 octobre 2026
 
 Le lot de dépendances et de durabilité Goal Watch est vérifié, sans GitHub Actions ni installation sur le Mac. L'audit complet retourne **zéro avis**. La suite exhaustive de la base `69a0660` passe **1 048 tests dans 181 fichiers**. Le correctif final `fa3b391` passe **52 tests ciblés**, dont deux PostgreSQL réels, ainsi que lint, typecheck, build et **20 scénarios Playwright**.
