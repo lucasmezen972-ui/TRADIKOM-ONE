@@ -9,6 +9,7 @@ import {
   createGoalWatch,
   evaluateGoalWatch,
   getGoalWatch,
+  runDueGoalWatches,
 } from "../src/modules/goal-watch";
 import { runMaintenance } from "../src/modules/maintenance";
 
@@ -185,6 +186,33 @@ describe("Goal and Watch Engine", () => {
     await expect(
       getGoalWatch(ownerA.db, ownerB.userId, ownerB.tenantId, goal.goalId),
     ).rejects.toMatchObject({ code: "goal_watch_not_found" });
+  });
+
+  it("parcourt les lots non échus pour atteindre un objectif encore dû", async () => {
+    const context = await createTenantContext("goal-watch-pagination@example.test");
+    const threadId = await createConversation(context);
+    const goals = [];
+    for (let i = 0; i < 3; i++) {
+      goals.push(await createGoalWatch(context.db, context.userId, context.tenantId, {
+        threadId, title: "Objectif paginé", signal: "contacts", operator: "gte",
+        target: 1, cadenceMinutes: 60,
+      }));
+    }
+    const ordered = [...goals].sort((a, b) => a.entryId < b.entryId ? -1 : 1);
+    for (const goal of ordered.slice(0, 2)) {
+      await evaluateGoalWatch(context.db, "system_goal_watch", {
+        tenantId: context.tenantId, goalId: goal.goalId,
+        evaluationKey: `pagination:${goal.goalId}`, observedAt: firstEvaluationAt,
+      });
+    }
+    expect(await runDueGoalWatches(context.db, {
+      now: new Date(firstEvaluationAt), limit: 1,
+    })).toMatchObject({ evaluated: 1, reported: 1, failed: 0 });
+    expect((await getGoalWatch(context.db, context.userId, context.tenantId,
+      ordered[2].goalId)).latestEvaluation).toBeDefined();
+    expect(await runDueGoalWatches(context.db, {
+      now: new Date(firstEvaluationAt), limit: 1,
+    })).toMatchObject({ evaluated: 0, reported: 0, failed: 0 });
   });
 
   it("branche les objectifs dus sur la maintenance planifiée sans rapport en doublon", async () => {

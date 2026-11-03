@@ -339,32 +339,45 @@ export async function runDueGoalWatches(
 ) {
   const now = options.now ?? new Date();
   const limit = boundedLimit(options.limit);
-  const entries = await withSystemDbTransaction(db, (transaction) =>
-    listActiveGoalWatchEntries(transaction, limit),
-  );
-
   let evaluated = 0;
   let reported = 0;
   let failed = 0;
 
-  for (const entry of entries) {
-    try {
-      const config = parseGoalConfig(entry);
-      const latest = await withSystemDbTransaction(db, (transaction) =>
-        readLatestEvaluation(transaction, entry.tenant_id, entry.entry_key),
-      );
-      if (!isDue(config, latest, now)) continue;
+  // Scan with a stable keyset: non-due entries must not consume the work limit.
+  // The cursor is local to this invocation; no recurring work is activated here.
+  let afterId = "";
+  let attempted = 0;
+  while (attempted < limit) {
+    const entries = await withSystemDbTransaction(db, (transaction) =>
+      listActiveGoalWatchEntries(transaction, limit, afterId),
+    );
+    if (entries.length === 0) break;
+    for (const entry of entries) {
+      afterId = entry.id;
+      let reserved = false;
+      try {
+        const config = parseGoalConfig(entry);
+        const latest = await withSystemDbTransaction(db, (transaction) =>
+          readLatestEvaluation(transaction, entry.tenant_id, entry.entry_key),
+        );
+        if (!isDue(config, latest, now)) continue;
 
-      const result = await evaluateGoalWatch(db, defaultSystemActorId, {
-        tenantId: entry.tenant_id,
-        goalId: entry.entry_key,
-        evaluationKey: scheduledEvaluationKey(entry.entry_key, config, now),
-        observedAt: now.toISOString(),
-      });
-      if (!result.idempotentReplay) evaluated += 1;
-      if (result.reported && !result.idempotentReplay) reported += 1;
-    } catch {
-      failed += 1;
+        attempted += 1;
+        reserved = true;
+        const result = await evaluateGoalWatch(db, defaultSystemActorId, {
+          tenantId: entry.tenant_id,
+          goalId: entry.entry_key,
+          evaluationKey: scheduledEvaluationKey(entry.entry_key, config, now),
+          observedAt: now.toISOString(),
+        });
+        if (!result.idempotentReplay) evaluated += 1;
+        if (result.reported && !result.idempotentReplay) reported += 1;
+      } catch {
+        failed += 1;
+        // Invalid configurations also consume a work slot.
+        if (!reserved) attempted += 1;
+      }
+      if (attempted >= limit) break;
     }
   }
 

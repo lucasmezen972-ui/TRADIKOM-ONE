@@ -1,3 +1,13 @@
+# Mise à jour — 2 novembre 2026 (Martinique)
+
+Supabase TRADIKOM-ONE a été réactivé à la demande de Lucas. État ACTIVE_HEALTHY et connexion SQL vérifiés. Le journal applicatif contient 66 migrations, dernière 066_phase5_website_domain_bindings_rls du 23 juillet. La base réelle reste inchangée : sauvegarde exportable et restauration à vérifier avant mise à niveau. Le connecteur ne fournit pas de sauvegarde et le tableau de bord demande une authentification.
+
+Le traitement Goal Watch parcourt désormais les lots par curseur d'identifiant : les entrées non échues ne consomment plus la limite d'évaluations. Le test de régression échoue sur le source précédent (0 évaluation au lieu de 1), puis les 51 tests ciblés passent sur trois fichiers. Lint, typecheck, build Next.js et diff check passent. Le build utilise une configuration factice et ne se connecte pas à Supabase. La suite exhaustive et Playwright ne sont pas rejoués sur ce lot. La mise à niveau depuis le socle 065 et son rejeu passent sur PGlite sans RLS (74 migrations, table conversation_threads présente). Cela ne remplace pas la recette PostgreSQL 17/RLS sur une copie de la base réelle.
+
+Limites conservées : le parcours peut lire tous les objectifs non échus ; une grande volumétrie demande une sélection SQL par échéance et des index. Les objectifs invalides et l'équité entre entreprises restent à traiter. Consentement/pause/arrêt et RLS spécialisés ne sont pas livrés par cette correction. Aucun suivi récurrent activé. Aucun fournisseur, migration réelle, fusion, déploiement, dépense ou GitHub Actions.
+
+Les constats datés ci-dessous sont historiques.
+
 # État de livraison — 30 octobre 2026
 
 Le lot de dépendances et de durabilité est vérifié. Le produit complet reste partiel ; aucun pourcentage d'achèvement n'est déduit des tests.

@@ -31,6 +31,7 @@ export async function findActiveGoalWatchEntry(
 export async function listActiveGoalWatchEntries(
   db: DbClient,
   limit: number,
+  afterId = "",
 ) {
   const result = await db.query<BusinessBrainEntryRow>(
     `select *
@@ -38,9 +39,10 @@ export async function listActiveGoalWatchEntries(
      where domain = 'objectives'
        and source_ref = $1
        and status = 'active'
-     order by updated_at asc, id asc
+       and id > $3
+     order by id asc
      limit $2`,
-    [GOAL_WATCH_SOURCE_REF, limit],
+    [GOAL_WATCH_SOURCE_REF, limit, afterId],
   );
   return result.rows;
 }
