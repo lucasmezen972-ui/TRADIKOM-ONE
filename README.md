@@ -1,10 +1,10 @@
 # TRADIKOM ONE
 
-## Correctif CSV déployé — recette hébergée à reprendre
+## Correctif CSV déployé — recette native desktop vérifiée
 
 Le source `d3f7a2a` attend les quatre lectures de référence sur la connexion de transaction, au lieu de les superposer. Régression rouge avant correction ; dix tests ciblés verts ensuite, dont un rôle réellement limité. Lint, TypeScript, continuité et build Vercel du SHA exact passent. Préversion protégée READY, schéma134 conservé, health HTTP200/database=ok.
 
-La nouvelle recette CSV est bloquée avant connexion par la confiance du navigateur cloud envers son proxy TLS. Aucun import hébergé nouveau, aucune disparition de warning en usage réel ou nouvelle suite exhaustive ne sont revendiqués. IA désactivée et budgets nuls. [Preuves et reprise](docs/CSV_QUERY_SERIALIZATION_2026-11-03.md).
+La recette native desktop est maintenant réussie : aperçu2/valide1/doublon1/import0, finalisation d’un contact fictif puis rechargement ; second import du même CSV avec deux doublons et zéro création. SQL confirme deux jobs terminés, leurs audits et la tâche CRM existante conservée. Aucun événement error/warning/fatal retrouvé dans la fenêtre de recette du déploiement exact ; cette observation ne vaut pas garantie globale. La session personnelle reste ouverte pour Lucas. Aucun nouveau parcours mobile, test local ou résultat exhaustif n’est revendiqué dans cette reprise. Le premier blocage TLS reste documenté en historique. IA désactivée et budgets nuls. [Preuves et limites](docs/CSV_QUERY_SERIALIZATION_2026-11-03.md).
 
 ## Préversion : scénario CRM guidé
 
@@ -380,3 +380,4 @@ Avant d’ajouter une fonctionnalité, répondre honnêtement à cette question 
 > **Est-ce que cela permet à une personne autorisée d’obtenir un meilleur résultat métier, plus simplement, par une conversation continue et sûre ?**
 
 Si la réponse est non, le chantier n’est probablement pas prioritaire.
+

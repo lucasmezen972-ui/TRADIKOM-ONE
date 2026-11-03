@@ -6,7 +6,7 @@
   "pullRequest": 11,
   "lastCommit": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
   "publishedHeadObserved": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
-  "status": "csv_serialization_preview_deployed_hosted_recipe_blocked_browser_tls",
+  "status": "csv_serialization_preview_native_desktop_recipe_verified",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Correctif CSV d3f7a2a déployé en preview protégée, dix tests ciblés verts et build exact réussi. Reprendre la recette CSV hébergée uniquement après rétablissement de la chaîne de confiance du navigateur cloud ou authentification native autorisée ; elle est bloquée avant connexion par ERR_CERT_AUTHORITY_INVALID. Aucun import/session nouveau, aucun warning absent en usage réel prouvé. Ne pas affaiblir TLS/SSO, réutiliser le lien révoqué, changer les identifiants ou recréer le compte personnel. Base134 et compte/entreprise préservés ; IA et budgets0/0.",
+  "nextAction": "Conserver la préversion protégée d3f7a2a et la recette CSV native desktop réussie : premier import1, second import0/deux doublons, SQL et audits exacts, zéro événement error/warning/fatal retrouvé dans la fenêtre16:52:44–17:12:44UTC. La session personnelle interactive et l’onglet Contacts sont conservés pour Lucas présent ; ne pas annoncer une déconnexion ou réimporter les fixtures. Aucun nouveau mobile ou test local rejoué sur cette reprise. Préserver base134, compte et entreprise ; IA désactivée, budgets0/0. Traiter uniquement les limites restantes explicitement documentées.",
   "nextFile": "docs/CSV_QUERY_SERIALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2431,6 +2431,10 @@
     {
       "command": "CSV reference serialization red/green, ten targeted tests, lint/typecheck/continuity and exact Vercel build",
       "status": "passed_local_and_build; hosted_csv_recipe_blocked_before_login_tls_ca; no_data_created"
+    },
+    {
+      "command": "native cloud desktop CSV preview/commit/reload, duplicate-only second import, SQL/audits and scoped deployment logs",
+      "status": "passed_on_d3f7a2a; one_new_fictitious_contact; second_import_zero; existing_task_preserved; no_matching_runtime_events_in_recipe_window; personal_session_retained_for_present_lucas; no_new_mobile_or_local_test_run"
     }
   ],
   "humanBlockers": [
@@ -2542,7 +2546,7 @@
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
     "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
     "Supabase17.11.0.011 qualifié sur le parcours personnel ; restauration de plateforme non prouvée. Le client utilise verify-full/rejectUnauthorized=true ; segment interne pooler/base observé sans TLS, aucune garantie bout en bout revendiquée.",
-    "CSV : sérialisation des références corrigée et déployée ; recette hébergée nouvelle non prouvée, navigateur cloud bloqué avant connexion par sa chaîne de certificats. Ne pas désactiver TLS/SSO. La sonde SQL SET ROLE runtime reste refusée au connecteur ; aucun droit ajouté."
+    "CSV : recette native desktop prouvée sur d3f7a2a, sans événement error/warning/fatal retrouvé dans sa fenêtre exacte ; aucun nouveau parcours mobile sur ce SHA, aucune garantie globale d’absence de warning. La sonde SQL SET ROLE runtime reste refusée au connecteur ; aucun droit ajouté."
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 1,
@@ -2730,9 +2734,10 @@
       "healthHttp": 200,
       "database": "ok",
       "securityAdvisoryCount": 0,
-      "userAuthenticatedWorkflow": "not_proven_for_current_csv_change_browser_tls_failure_before_login",
+      "userAuthenticatedWorkflow": "passed_native_cloud_desktop_csv_preview_commit_duplicate_only_reload_sql_and_audits",
       "engine": "17.11",
-      "lastAuthenticatedWorkflowSourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a"
+      "lastAuthenticatedWorkflowSourceCommit": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
+      "lastMobileAuthenticatedWorkflowSourceCommit": "df18aaba85d07c2884a0da641e50cdf6b9c7b07a"
     },
     "hostedRecipe": {
       "sourceCommit": "9022539246b091f3e64918b18a91c37768e97b31",
@@ -3058,12 +3063,21 @@
       "typecheck": "passed",
       "continuity": "ready_no_errors_or_warnings",
       "build": "passed_exact_hosted_node22",
-      "hostedRecipe": "blocked_before_login_cloud_browser_proxy_ca_untrusted",
-      "hostedBusinessDataCreated": false,
+      "hostedRecipe": "passed_native_cloud_desktop_preview_commit_reload_duplicate_only_import_sql_audits",
+      "hostedBusinessDataCreated": true,
       "schema": 134,
       "healthHttp": 200,
-      "warningAbsentInRealImportProven": false,
-      "proof": "docs/CSV_QUERY_SERIALIZATION_VERIFICATION_2026-11-03.json"
+      "warningAbsentInRealImportProven": true,
+      "proof": "docs/CSV_QUERY_SERIALIZATION_VERIFICATION_2026-11-03.json",
+      "hostedDataScope": "one fictitious recipe contact in the preserved personal demo company",
+      "warningAbsenceScope": "only the recipe and exact deployment window2026-11-03T16:52:44.284Z–17:12:44.284Z",
+      "runtimeLogEventsFound": 0,
+      "nativeInteractiveSessionRetainedForLucas": true,
+      "nativeInteractiveSessionLoggedOut": false,
+      "newMobileRun": false,
+      "localChecksRepeatedDuringNativeRecipe": false,
+      "previousHostedBlocker": "history: command-line cloud browser proxy CA error before native browser authentication"
     }
   }
 }
+
