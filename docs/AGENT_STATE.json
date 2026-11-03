@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T02:23:45.585Z",
+  "updatedAt": "2026-11-03T04:51:43.832680+00:00",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
-  "publishedHeadObserved": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
-  "status": "schema124_advisor_clear_restricted_preview_identity_configured_deployment_blocked",
-  "currentPhase": "OS-5",
-  "currentObjective": "Finaliser le parcours d'objectifs, sa RLS et le consentement/arrêt, puis préparer les intégrations réelles sans activation implicite.",
+  "lastCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+  "publishedHeadObserved": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+  "status": "product_candidate_verified_activation_blocked_by_supabase_confirmation",
+  "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
+  "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
     "source": "/Users/TRADIKOM/Downloads/Tradikom_One_OS_Prompt_Maitre_Codex_Acces_Ordinateur.pdf",
     "sha256": "bb838fb02c23247b1bcda8981539eebe73264a5334bfaf565aafa5bc26c50fe5",
@@ -29,33 +29,16 @@
       71
     ],
     "alignment": {
-      "pagesConsulted": [
-        3,
-        4,
-        5,
-        6,
-        7,
-        31,
-        32,
-        33,
-        46,
-        47,
-        48,
-        69,
-        70,
-        71
-      ],
+      "pagesConsulted": [],
       "sections": [
-        "Mandat, vérité des états et autonomie encadrée",
-        "Definition of Done, preuves et reprise",
-        "Conversation-first, anti-dérive et limites de validation"
+        "Exigences versionnées Goal Watch, RLS, Conversation et recette"
       ],
-      "requirement": "Ne pas attribuer à OpenAI une sortie déterministe et ne pas présenter une reprise comme confirmée depuis un paramètre d'URL. Les identifiants de retour proviennent du plan autorisé côté serveur. Respecter la demande actuelle : modifications directement sur GitHub, sans clone ni installation sur le Mac, aucun lancement GitHub Actions.",
-      "evidenceExpected": "Conserver les preuves épinglées au source : baseline69a0660 exhaustive, correctiffa3b391 ciblé52 tests+build/Playwright. PDF absent du runner distant explicitement signalé ; relire le canon avant la prochaine tranche."
+      "requirement": "Consentement explicite, pause, arrêt terminal, isolation des fils et preuve auditée. PDF canonique non accessible sur ce runner, poursuite limitée aux exigences déjà versionnées.",
+      "evidenceExpected": "Tests lifecycle, refus sans consentement, arrêt/reprise concurrents, RLS en PostgreSQL 17, parcours navigateur et build du candidat."
     }
   },
-  "nextAction": "La base 124 est saine, l'identité preview et les secrets serveur sont provisionnés, et huit variables preview sont configurées. Le runtime vérifie le journal sans exécuter de DDL. Le coût nul du déploiement ne peut pas être garanti et l'API refuse le réglage de build : résoudre cet accès ou obtenir un budget explicite avant de déployer. Déployer le SHA exact, fixer APP_URL sur l'URL contrôlée attribuée, puis vérifier la connexion réelle et les parcours. Les fournisseurs, le consentement/arrêt Goal Watch, la multimodalité et les connecteurs tiers réels restent incomplets.",
-  "nextFile": "src/modules/goal-watch/service.ts",
+  "nextAction": "Relancer apply_migration 125–132 quand Lucas peut accepter la confirmation native avant son expiration ; vérifier le journal et les avis, puis déployer en preview le SHA source exact. Obtenir séparément clé et budget OpenAI avant son activation. Aucun cron ni Actions.",
+  "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
     "repositoryWorkflow": ".github/workflows/tradikom-continuity.yml",
@@ -600,7 +583,11 @@
     "CI 34951720779 : 177 fichiers/1006 tests PostgreSQL et build Next.js 16.3.4 verts; 19/20 Playwright, unique échec typographique du libellé lecture seule alors que les droits et l'état durable étaient corrects",
     "correction française minimale publiée dans a9daf552bb88210fc3804657a4147dbd6dcf044f : apostrophe typographique du message lecture seule; ESLint ciblé, TypeScript, diff check et continuity-check locaux verts",
     "tentatives Playwright Conversation locales non probantes : démarrage production sans PostgreSQL local puis session de démo PGlite non établie; aucune conclusion fonctionnelle tirée, preuve réservée à la CI autoritative",
-    "continuité 34953928580 et CI 34953928584 entièrement vertes sur a9daf55 : SHA-256 exact, 71 pages, zéro erreur ou avertissement de continuité, audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 177 fichiers/1006 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright"
+    "continuité 34953928580 et CI 34953928584 entièrement vertes sur a9daf55 : SHA-256 exact, 71 pages, zéro erreur ou avertissement de continuité, audit, migrations, db:verify, sauvegarde/restauration, lint, TypeScript, 177 fichiers/1006 tests PostgreSQL, build Next.js 16.3.4 et 20/20 Playwright",
+    "Vitest : lifecycle, consentement historique, refus de rôle, isolation du fil et migrations Goal Watch verts",
+    "PostgreSQL 17.5 embarqué : 17 tests service/RLS verts",
+    "Playwright distant isolé : objectif consentement/pause/reprise/arrêt et tâche CRM réelle, 2 scénarios verts",
+    "Vitest native tasks : 3 tests réels de création/rejeu, accès et rollback verts"
   ],
   "lastValidation": [
     {
@@ -2413,10 +2400,10 @@
     }
   ],
   "humanBlockers": [
-    "Authentifications, références de secrets et consentements bornés avant fournisseurs réels",
-    "Toute dépense, programmation récurrente, fusion ou production reste distincte de cette recette gratuite",
-    "Régler ou autoriser les conditions de coût du déploiement Vercel ; l'API refuse le réglage Standard/sans concurrence payante",
-    "Accès et consentements fournisseurs OpenAI/Meta/email réel à compléter sans secrets dans le chat"
+    "Supabase exige sa confirmation native : deux demandes 125/126 puis une demande revue 125–132 ont expiré après deux minutes sans changement. Ne pas contourner via execute_sql ou navigateur.",
+    "OpenAI : clé serveur dédiée et budget d’appels à autoriser/configurer ; le plafond de 1 USD accordé à la préversion ne couvre pas ces appels.",
+    "Planification des évaluations, Meta/SMS, email et OAuth propriétaires non activés ; consentements et authentifications distincts restent nécessaires.",
+    "Moteur Supabase PostgreSQL 17.6 : préparer sauvegarde plateforme et fenêtre de mise à niveau 17.11.0.003 ou ultérieure, après contrôle des extensions/données PGP ; interruption attendue selon le fournisseur."
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2425,7 +2412,7 @@
     "githubActions": false,
     "reason": "Demande explicite de Lucas le 30 octobre 2026 : éviter le stockage sur le Mac et aucune minute GitHub Actions disponible.",
     "commitMarker": "[skip ci]",
-    "validation": "Suite exhaustive de la base69a0660 :181 fichiers/1048 tests ; correctif finalfa3b391 :52 tests ciblés dont2 PostgreSQL, contrôles globaux, build et20 Playwright. Périmètres distincts.",
+    "validation": "Work Mode Linux : quatre Playwright verts, lint/TypeScript/build verts, recette PG17.5 restaurée 124→132 et accès runtime verts. Aucun Mac ni Actions. Résultat exhaustif final enregistré séparément.",
     "macCloneOrInstall": false,
     "remoteClone": true
   },
@@ -2436,17 +2423,24 @@
       "nodeVersion": "22.x",
       "deploymentProtection": "SSO standard conservé",
       "automaticPreviews": false,
-      "published": false,
+      "published": true,
       "previewEnvironmentConfigured": true,
-      "environmentVariableCount": 8,
+      "environmentVariableCount": 11,
       "buildCostSettingsUpdate": "denied_by_vercel_permission",
-      "appUrlConfigured": false
+      "appUrlConfigured": true,
+      "publishedSource": "0dfa1f2a0bd7379cd05f10b3ac11befb8ce9f73e",
+      "deploymentId": "dpl_Ff2VEs1SK7J1D6pfLLViRWqbkCBw",
+      "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
+      "currentCandidate": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+      "candidateDeployed": false,
+      "lastHealth": "2026-11-03T04:47:08.701Z",
+      "lastHealthHttpStatus": 200
     },
     "database": {
       "provider": "Supabase",
       "projectRef": "iwngumaqdjiglhfekgug",
       "status": "ACTIVE_HEALTHY",
-      "runtimeValidated": false,
+      "runtimeValidated": true,
       "appliedMigrations": 124,
       "lastMigration": "124_runtime_function_search_path",
       "backupVerified": true,
@@ -2455,7 +2449,16 @@
       "postUpgradeSecurityWarnings": 0,
       "runtimeIdentityProvisioned": true,
       "runtimeIdentityCanSetOwner": false,
-      "runtimeIdentityVaultAccess": false
+      "runtimeIdentityVaultAccess": false,
+      "candidateMigrations": "125–132",
+      "candidateApplied": false,
+      "confirmationStatus": "expired_without_effect",
+      "engineVersion": "17.6",
+      "providerUpgradeRecommended": "17.11.0.003 or later",
+      "publicLtreeIndexes": 0,
+      "publicFloatGistIndexes": 0,
+      "publicCustomOperators": 0,
+      "providerUpgradePerformed": false
     },
     "validation": {
       "runner": "Codespaces personnel dans le quota inclus, 2 cœurs, garde de dépense nulle vérifiée",
@@ -2486,16 +2489,19 @@
     "Recette ciblée finale Node22/PostgreSQL17, build et20 Playwright verts; Codespace arrêté"
   ],
   "remainingGaps": [
-    "RLS Goal Watch spécialisée, sélection équitable/pagination, parcours Conversation et consentement/arrêt restent à finaliser",
-    "Composition serveur fournisseur réelle et preuve aller-retour non livrées ; authentifications et consentements opérateur nécessaires",
-    "Supabase active, schéma 124 et analyseur sécurité sans alerte ; runtime web/worker et exploitation non validés",
-    "OS-7 responsive partiel : voix et parcours documentaire mobile complet manquants",
-    "OS-8 installation tierce minimale encore preview_only et désactivée"
+    "Déployer et vérifier le candidat connecté après application Supabase 125–132 ; la préversion hébergée reste 0dfa1f2/schema124.",
+    "Valider un véritable aller-retour OpenAI après clé/budget ; les tests actuels du transport utilisent des doubles.",
+    "Dictée physique dépendante du navigateur : API simulée en Playwright, aucun microphone réel éprouvé.",
+    "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
+    "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
+    "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
+    "PDF canonique absent de ce runner : aucune nouvelle lecture paginée revendiquée.",
+    "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé."
   ],
   "remoteValidationBudget": {
-    "maximumAdditionalSpend": 0,
+    "maximumAdditionalSpend": 1,
     "currency": "USD",
-    "authorization": "Demande utilisateur du 30 octobre 2026 : essayer gratuitement.",
+    "authorization": "Autorisation de Lucas pour lancement et recette de la préversion uniquement ; aucune autorisation OpenAI déduite.",
     "paidRunnerAuthorized": false
   },
   "freeRemoteAttempt": {
@@ -2588,8 +2594,8 @@
     "runnerStopped": true
   },
   "goalWatchDurability": {
-    "sourceCommit": "fa3b391fdc80b7a477a929af038e32aa3c17096b",
-    "status": "verified_targeted_recipe",
+    "sourceCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+    "status": "consent_lifecycle_specialized_rls_and_fair_due_selection_verified",
     "tests": {
       "files": 4,
       "tests": 52,
@@ -2604,10 +2610,49 @@
     "playwright": 20,
     "activation": false,
     "remaining": [
-      "specialized_rls",
-      "fair_selection_pagination",
-      "conversation_consent_stop",
-      "independent_unique_evaluation_constraint"
+      "operator_authorized_scheduling",
+      "remote_schema125126_application",
+      "independent_unique_evaluation_constraint_review"
     ]
+  },
+  "currentValidation": {
+    "sourceCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+    "lint": "passed",
+    "typecheck": "passed",
+    "productionBuild": "passed_webpack_fixture_database_no_real_connection_inferred",
+    "playwright": {
+      "passed": 4,
+      "scope": "task CRM persisted; goal lifecycle; mobile dictation API fixture + real document upload/download; connector installation/revocation"
+    },
+    "postgres17Embedded": {
+      "modelDocumentsGithubTestsPassed": 14,
+      "restoredApplicationUpgrade": "guarded exact SQL 124→132, owner/RLS/runtime role verified"
+    },
+    "publicGithubRoundTrip": {
+      "http": 200,
+      "issuesAfterPrExclusion": 0,
+      "revocationVerified": true,
+      "externalWrites": false
+    },
+    "audit": {
+      "high": 0,
+      "critical": 0,
+      "moderate": 1,
+      "ignoredAdvisories": 0
+    },
+    "fullSuite": {
+      "passed": 1105,
+      "skipped": 37,
+      "failed": 0,
+      "filesPassed": 178,
+      "filesSkipped": 16,
+      "filesTotal": 194,
+      "durationSeconds": 551,
+      "sourceCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe"
+    },
+    "continuityCheck": {
+      "status": "blocked",
+      "reason": "canonical PDF unavailable; no consulted pages invented"
+    }
   }
 }

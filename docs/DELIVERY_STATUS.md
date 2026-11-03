@@ -1,3 +1,13 @@
+## Candidat produit vérifié — 3 novembre 2026
+
+Source publié : `0da2c88ad2f7cd89526fc797530634251f4470fe` dans la PR 11 en brouillon. Objectifs avec consentement/pause/reprise/arrêt et RLS fine ; tâche CRM réelle et idempotente ; documents TXT/CSV/PDF texte chiffrés et téléchargement authentifié ; dictée après consentement ; connecteur GitHub public install/read/revoke. Génération OpenAI raccordée à une réservation durable, désactivée sans clé/budget dédiés. Le pipeline des plans reste mock et aucun message externe n’est envoyé.
+
+Quatre parcours Playwright, lint, TypeScript et build de production réussis. PDF réellement extrait et dépendances du worker présentes dans les traces de production. Quatorze tests modèle/documents/connecteur passent sur PostgreSQL 17.5 embarqué. Le lot SQL exact 124→132 passe sur la copie restaurée, sous le rôle propriétaire ; RLS, journal et accès du rôle runtime sont vérifiés. Aller-retour GitHub réel HTTP 200 puis révocation vérifiés. Résultat exhaustif final : 1 105 tests réussis, 37 ignorés ; 178 fichiers verts, 16 ignorés, 194 au total, zéro échec, 551 secondes, source figé 0da2c88.
+
+La préversion existante `0dfa1f2` reste READY et son health répond HTTP 200/database=ok le 3 novembre à 04:47 UTC. Supabase est active au schéma 124 ; le lot 125–132 n’est pas appliqué car sa confirmation native a expiré, après deux expirations antérieures du lot 125/126. Aucun déploiement du candidat contre ce schéma incomplet. Le plafond de 1 USD est réservé à la préversion ; OpenAI nécessite sa clé et un budget distinct. Aucune programmation, fusion, production, GitHub Actions ou installation sur le Mac.
+
+Les sections antérieures décrivent leur date. Voir [PRODUCT_FINALIZATION_2026-11-03.md](./PRODUCT_FINALIZATION_2026-11-03.md) pour limites, activation et configuration.
+
 ## Démarrage sans privilèges DDL et configuration de préproduction — 2 novembre 2026
 
 Le runtime de production ne lance plus de migrations : il vérifie uniquement le journal attendu. Le script de migration utilise explicitement le rôle de migration. Trois tests couvrent le schéma prêt en lecture seule, le schéma incomplet et l'absence de fuite d'erreur sensible. Le lot runtime/sécurité/environnement passe 16 tests ; lint, typecheck et build sont verts. Un cache Turbopack local incohérent a été supprimé, puis le build propre a réussi. Aucun résultat de connexion Vercel n'est déduit de cette compilation.

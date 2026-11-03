@@ -52,3 +52,10 @@ Le Codespace est arrêté ; aucun fournisseur réel, GitHub Actions, achat ou d�
 - https://github.com/advisories/GHSA-xcx6-jx8p-x3h5
 - https://github.com/AzureAD/microsoft-authentication-library-for-js/tree/msal-node-v7.1.0/lib/msal-node/docs
 - https://github.com/microsoft/teams.ts
+
+
+## Mesure du 3 novembre 2026 — candidat 0da2c88
+
+Audit complet : zéro critical/high/low, un avis moderate minimatch GHSA-g3hv-75wg-m249, aucun avis ignoré. Les résultats zéro avis du 30 octobre décrivent cette date. Le correctif publié exige la majeure 11 ; les consommateurs ExcelJS/ESLint incluent encore l’API de la majeure 3. Aucun override majeur incompatible appliqué. Les nouveaux parcours ne prennent aucun motif glob utilisateur. Suivre une migration compatible des consommateurs plutôt que masquer cet avis.
+
+PDF.js 6.5.438 est verrouillé pour les PDF texte natifs, sous worker avec tas V8/durée/fichier/pages bornés. Node >=22.13 requis ; le projet Vercel est en 22.x. Les assets, polices et le module natif canvas sont explicitement inclus et vérifiés dans la trace de production. Aucun OCR ou antivirus revendiqué.

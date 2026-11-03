@@ -1459,3 +1459,25 @@ La base 69a06604c033ba35670578fd97581a8292799838 passe 181 fichiers et 1 048 tes
 Rapport et audit deviennent atomiques ; verrous objectif/fil, rejeu historique et dates bornées. Les revues ont corrigé précision, offset, année zéro et snapshot du test. Aucune migration ou activation de maintenance.
 
 Le PostgreSQL jetable est supprimé et le Codespace arrêté, confirmation GitHub relue. Aucun Actions, clone ou node_modules sur le Mac, achat, envoi réel, fusion ou déploiement. Le produit reste partiel ; voir DELIVERY_STATUS.md et VALIDATION_2026-10-30.md.
+
+
+## Finalisation du 3 novembre 2026 — objectifs et première action CRM réelle
+
+Le consentement Goal Watch est maintenant durable et obligatoire. Les anciens objectifs sans contrôle restent non autorisés. La pause bloque les évaluations, la reprise exige une nouvelle confirmation et l’arrêt est terminal. Les créations sont dédupliquées par demande et les changements de version sont contrôlés. Les évaluations et changements d’état verrouillent les mêmes lignes ; les écritures sont annulées si l’audit échoue. La sélection SQL porte seulement sur les objectifs dus, répartit les entrées par entreprise et recule les objectifs invalides pour ne pas bloquer les lots.
+
+Migrations additives 125/126 et miroirs SQL 0119/0120 : contrôles durables, relations tenant/fil/entrée et RLS des objectifs, preuves et audits. La règle générique tenant_isolation est retirée des contrôles : elle permettait sinon une lecture indue lors d’une activation différée de la RLS. Les identités et clés des preuves Goal Watch/actions natives sont réservées au runtime système.
+
+Conversation propose aussi la création explicite d’une vraie tâche pour un contact CRM de cette entreprise. La visibilité équipe est confirmée. La tâche, l’activité CRM, le rapport dans le fil et l’audit forment une transaction ; un rejeu n’en crée pas une deuxième. Le pipeline de plans mock reste identifié comme mock et n’est pas renommé en intégration réelle. Aucun message externe n’est envoyé.
+
+Preuves locales : lots service/RLS verts, 17 tests de service/RLS sur PostgreSQL 17.5 embarqué, 20 tests de migrations existantes verts, 3 tests des tâches natives verts et 2 scénarios Playwright de bout en bout verts. Le test de tâche retrouve la vraie tâche sur la fiche du contact. Les lots se recouvrent. La suite exhaustive et le build du candidat sont suivis séparément. Ces migrations ne sont pas encore appliquées à Supabase ; la préversion publiée reste le socle 0dfa1f2/schema124.
+
+
+## Candidat produit vérifié — 3 novembre 2026
+
+Source publié : `0da2c88ad2f7cd89526fc797530634251f4470fe` dans la PR 11 en brouillon. Objectifs avec consentement/pause/reprise/arrêt et RLS fine ; tâche CRM réelle et idempotente ; documents TXT/CSV/PDF texte chiffrés et téléchargement authentifié ; dictée après consentement ; connecteur GitHub public install/read/revoke. Génération OpenAI raccordée à une réservation durable, désactivée sans clé/budget dédiés. Le pipeline des plans reste mock et aucun message externe n’est envoyé.
+
+Quatre parcours Playwright, lint, TypeScript et build de production réussis. PDF réellement extrait et dépendances du worker présentes dans les traces de production. Quatorze tests modèle/documents/connecteur passent sur PostgreSQL 17.5 embarqué. Le lot SQL exact 124→132 passe sur la copie restaurée, sous le rôle propriétaire ; RLS, journal et accès du rôle runtime sont vérifiés. Aller-retour GitHub réel HTTP 200 puis révocation vérifiés. Résultat exhaustif final : 1 105 tests réussis, 37 ignorés ; 178 fichiers verts, 16 ignorés, 194 au total, zéro échec, 551 secondes, source figé 0da2c88.
+
+La préversion existante `0dfa1f2` reste READY et son health répond HTTP 200/database=ok le 3 novembre à 04:47 UTC. Supabase est active au schéma 124 ; le lot 125–132 n’est pas appliqué car sa confirmation native a expiré, après deux expirations antérieures du lot 125/126. Aucun déploiement du candidat contre ce schéma incomplet. Le plafond de 1 USD est réservé à la préversion ; OpenAI nécessite sa clé et un budget distinct. Aucune programmation, fusion, production, GitHub Actions ou installation sur le Mac.
+
+Les sections antérieures décrivent leur date. Voir [PRODUCT_FINALIZATION_2026-11-03.md](./PRODUCT_FINALIZATION_2026-11-03.md) pour limites, activation et configuration.
