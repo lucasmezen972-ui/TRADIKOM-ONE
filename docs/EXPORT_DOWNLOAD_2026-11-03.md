@@ -17,3 +17,8 @@ Références primaires : [styles de base Tailwind](https://tailwindcss.com/docs/
 Les deux corrections de présentation ne modifient ni services, actions, SQL, tests ou dépendances. Le corpus203 fichiers continue sur c881 ; ne pas lui attribuer un SHA différent. Le nouveau build fournisseur doit qualifier le complément, puis les contrôles natifs doivent confirmer texte clair et audits inchangés lors d’un affichage/rechargement, avec événement ajouté au clic explicite. Résultats encore à vérifier, aucun vert anticipé.
 
 Compte/tenant/session conservés, base134, IA désactivée/budgets0/0, aucun message externe ou nouveau budget. Migration135 toujours non appliquée après expiration native.
+
+
+## Résultat intermédiaire du complément8612862
+
+Build fournisseur READY. La couleur calculée devient rgb(255,255,255) sur rgb(8,17,31), capture native enregistrée. Affichage puis rechargement : compteur audit7→7→7, préchargement éliminé. Clic explicite : compteur7→9, contenu259octets/hash identique. La navigation client Next émet encore deux requêtes au clic; ne pas annoncer un événement par clic. Le lien est donc remplacé par une ancre native avec attribut download, toujours vers le même endpoint autorisé. Dernière recette de cette ancre encore à faire.

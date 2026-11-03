@@ -238,14 +238,14 @@ export default async function DataConnectionsPage({
               </form>
             ) : null}
             {selectedExport.status === "completed" ? (
-              <Link
+              <a
                 href={`/api/exports/${encodeURIComponent(selectedExport.id)}`}
-                prefetch={false}
+                download
                 className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 <Download size={16} aria-hidden />
                 Télécharger le fichier
-              </Link>
+              </a>
             ) : null}
             {["queued", "processing", "completed"].includes(selectedExport.status) && exportWorkspace.canManage ? (
               <form action={cancelUniversalExportAction}>
