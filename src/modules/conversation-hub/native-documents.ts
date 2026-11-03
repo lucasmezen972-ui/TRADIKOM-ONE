@@ -38,7 +38,8 @@ export async function extractNativeDocument(fileName: string, bytes: Uint8Array)
     if (Buffer.from(bytes.subarray(0, 5)).toString("ascii") !== "%PDF-") throw new NativeDocumentError();
     text = await new Promise<string>((resolve, reject) => {
       const worker = new Worker(path.join(process.cwd(), "src/modules/conversation-hub/pdf-text-worker.mjs"), {
-        workerData: bytes, resourceLimits: { maxOldGenerationSizeMb: 96, maxYoungGenerationSizeMb: 16, stackSizeMb: 4 },
+        workerData: { bytes, assetsRoot: path.join(process.cwd(), "node_modules/pdfjs-dist") },
+        resourceLimits: { maxOldGenerationSizeMb: 96, maxYoungGenerationSizeMb: 16, stackSizeMb: 4 },
       });
       const diagnostic = (reason: string) => console.warn(JSON.stringify({ event: "conversation.pdf.unavailable", reason }));
       const timer = setTimeout(() => { diagnostic("timeout"); void worker.terminate(); reject(new NativeDocumentError()); }, 8000);

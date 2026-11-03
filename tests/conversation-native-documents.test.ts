@@ -53,7 +53,7 @@ it.each([false, true])("extrait le PDF depuis un bundle sans résolution CommonJ
       expect(() => createRequire(path.join(directory, "worker.mjs")).resolve("pdfjs-dist/legacy/build/pdf.mjs")).toThrow();
     }
     await writeFile(path.join(directory, "worker.mjs"), await readFile(path.resolve("src/modules/conversation-hub/pdf-text-worker.mjs")));
-    worker = new Worker(path.join(directory, "worker.mjs"), { workerData: Buffer.from(textPdf()) });
+    worker = new Worker(path.join(directory, "worker.mjs"), { workerData: { bytes: Buffer.from(textPdf()), assetsRoot: bundle } });
     const result = await new Promise<{ ok: boolean; text?: string }>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("pdf_bundle_timeout")), 8000);
       worker!.once("message", result => { clearTimeout(timer); resolve(result); });
