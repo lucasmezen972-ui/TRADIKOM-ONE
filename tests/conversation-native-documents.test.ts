@@ -1,5 +1,10 @@
 import { afterEach, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { Worker } from "node:worker_threads";
 import { createMemoryDb, migrate } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
 import { configureConversationThreadAccess, getConversationThread } from "../src/modules/conversation-hub/service";
@@ -27,15 +32,41 @@ it("extrait le texte UTF-8 en masquant secrets et liens, refuse binaires et limi
   }
 });
 it("lit réellement un PDF texte isolé et refuse le PDF malformé", async () => {
+  const pdf = textPdf();
+  const result = await extractNativeDocument("document.pdf", Buffer.from(pdf));
+  expect(result.text).toContain("Bonjour PDF texte"); expect(result.extractorKey).toBe("native-pdf-text-v1");
+  await expect(extractNativeDocument("broken.pdf", Buffer.from("%PDF-1.4\nbroken"))).rejects.toThrow();
+}, 20000);
+it("extrait le PDF depuis un bundle sans manifeste pdfjs-dist", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "tradikom-pdf-bundle-"));
+  let worker: Worker | undefined;
+  try {
+    const root = path.resolve(path.dirname(createRequire(import.meta.url).resolve("pdfjs-dist/legacy/build/pdf.mjs")), "../..");
+    const bundle = path.join(directory, "node_modules/pdfjs-dist");
+    await mkdir(bundle, { recursive: true });
+    // Model a tracer keeping all runtime directories but omitting package.json.
+    for (const entry of await readdir(root, { withFileTypes: true })) {
+      if (entry.isDirectory()) await symlink(path.join(root, entry.name), path.join(bundle, entry.name), "dir");
+    }
+    await writeFile(path.join(directory, "worker.mjs"), await readFile(path.resolve("src/modules/conversation-hub/pdf-text-worker.mjs")));
+    worker = new Worker(path.join(directory, "worker.mjs"), { workerData: Buffer.from(textPdf()) });
+    const result = await new Promise<{ ok: boolean; text?: string }>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("pdf_bundle_timeout")), 8000);
+      worker!.once("message", result => { clearTimeout(timer); resolve(result); });
+      worker!.once("error", error => { clearTimeout(timer); reject(error); });
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(result.text).toContain("Bonjour PDF texte");
+  } finally { await worker?.terminate(); await rm(directory, { recursive: true, force: true }); }
+}, 15000);
+function textPdf() {
   const stream = "BT /F1 12 Tf 50 100 Td (Bonjour PDF texte) Tj ET";
   const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`];
   let pdf = "%PDF-1.4\n"; const offsets = [0];
   objects.forEach((object, i) => { offsets.push(Buffer.byteLength(pdf)); pdf += `${i + 1} 0 obj\n${object}\nendobj\n`; });
   const start = Buffer.byteLength(pdf); pdf += `xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map(n => `${String(n).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`;
-  const result = await extractNativeDocument("document.pdf", Buffer.from(pdf));
-  expect(result.text).toContain("Bonjour PDF texte"); expect(result.extractorKey).toBe("native-pdf-text-v1");
-  await expect(extractNativeDocument("broken.pdf", Buffer.from("%PDF-1.4\nbroken"))).rejects.toThrow();
-}, 20000);
+  return pdf;
+}
 it("stocke, extrait, télécharge sans doublon puis bloque le membre sans accès et le rôle lecture seule", async () => {
   const f = await fixture();
   const first = await ingestNativeConversationDocument(f.db, f.user.id, f.input, f.file, keys);

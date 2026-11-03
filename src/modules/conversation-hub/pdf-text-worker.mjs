@@ -6,7 +6,9 @@ let stage = 'module';
 try {
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
   stage = 'assets';
-  const assets = path.dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json'));
+  // Deployment tracers can omit the package manifest while retaining executable modules.
+  // Resolve the same entry point we actually import, then locate its sibling assets.
+  const assets = path.resolve(path.dirname(createRequire(import.meta.url).resolve('pdfjs-dist/legacy/build/pdf.mjs')), '../..');
   stage = 'load';
   const task = getDocument({ standardFontDataUrl: path.join(assets, 'standard_fonts') + '/',
     cMapUrl: path.join(assets, 'cmaps') + '/', cMapPacked: true, wasmUrl: path.join(assets, 'wasm') + '/', data: new Uint8Array(workerData), isEvalSupported: false,
