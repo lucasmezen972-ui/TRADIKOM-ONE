@@ -1,3 +1,11 @@
+## Mise à niveau Supabase réalisée — 2 novembre 2026 (Martinique)
+
+Le blocage de sauvegarde est levé gratuitement : export logique indépendant du schéma public applicatif, avec données, contraintes, index, fonctions, triggers, politiques et privilèges. Restauration vérifiée sur PostgreSQL 17.5 embarqué : 121 tables, 856 contraintes, 392 index, 109 politiques, 30 triggers, nombres de lignes et journal identiques. Les 120 tables métier étaient vides ; le journal contenait 66 lignes. Les réglages internes Supabase, fichiers Storage et secrets de connexion sont hors de ce périmètre.
+
+Le passage de 66 à 123 migrations et son rejeu ont passé la recette sur la copie restaurée, sous tradikom_owner. Les 57 migrations du dépôt ont ensuite été appliquées à Supabase en transaction, avec garde sur le journal, contrôle des données, verrou et rôle de migration. Le premier dialogue de confirmation a expiré sans effet ; le second a réussi. Contrôle réel : ACTIVE_HEALTHY, 123 migrations, 148 tables appartenant à tradikom_owner, tables Conversation avec RLS, aucun droit CRUD direct anon/authenticated sur les tables publiques.
+
+L'analyseur signale désormais 26 fonctions sans search_path fixé, contre 6 avant les migrations : durcissement à traiter avant exploitation. Cette tranche ne valide pas les fournisseurs réels, le runtime web/worker, le consentement/arrêt Goal Watch, les pièces jointes réelles ni la production. Aucun abonnement payant, déploiement ou GitHub Actions. Les assertions plus anciennes ci-dessous décrivent leur date.
+
 # Mise à jour — 2 novembre 2026 (Martinique)
 
 Supabase TRADIKOM-ONE a été réactivé à la demande de Lucas. État ACTIVE_HEALTHY et connexion SQL vérifiés. Le journal applicatif contient 66 migrations, dernière 066_phase5_website_domain_bindings_rls du 23 juillet. La base réelle reste inchangée : sauvegarde exportable et restauration à vérifier avant mise à niveau. Le connecteur ne fournit pas de sauvegarde et le tableau de bord demande une authentification.
