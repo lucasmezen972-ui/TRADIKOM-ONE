@@ -37,7 +37,7 @@ it("lit réellement un PDF texte isolé et refuse le PDF malformé", async () =>
   expect(result.text).toContain("Bonjour PDF texte"); expect(result.extractorKey).toBe("native-pdf-text-v1");
   await expect(extractNativeDocument("broken.pdf", Buffer.from("%PDF-1.4\nbroken"))).rejects.toThrow();
 }, 20000);
-it("extrait le PDF depuis un bundle sans manifeste pdfjs-dist", async () => {
+it.each([false, true])("extrait le PDF depuis un bundle sans résolution CommonJS (exports ESM : %s)", async (importOnly) => {
   const directory = await mkdtemp(path.join(tmpdir(), "tradikom-pdf-bundle-"));
   let worker: Worker | undefined;
   try {
@@ -47,6 +47,10 @@ it("extrait le PDF depuis un bundle sans manifeste pdfjs-dist", async () => {
     // Model a tracer keeping all runtime directories but omitting package.json.
     for (const entry of await readdir(root, { withFileTypes: true })) {
       if (entry.isDirectory()) await symlink(path.join(root, entry.name), path.join(bundle, entry.name), "dir");
+    }
+    if (importOnly) {
+      await writeFile(path.join(bundle, "package.json"), JSON.stringify({ exports: { "./legacy/build/pdf.mjs": { import: "./legacy/build/pdf.mjs" } } }));
+      expect(() => createRequire(path.join(directory, "worker.mjs")).resolve("pdfjs-dist/legacy/build/pdf.mjs")).toThrow();
     }
     await writeFile(path.join(directory, "worker.mjs"), await readFile(path.resolve("src/modules/conversation-hub/pdf-text-worker.mjs")));
     worker = new Worker(path.join(directory, "worker.mjs"), { workerData: Buffer.from(textPdf()) });

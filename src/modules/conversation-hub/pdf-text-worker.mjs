@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads';
-import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 // Isolated CPU/heap and strict byte/page/time caps; no rendering, links or document actions.
 let stage = 'module';
@@ -8,7 +8,7 @@ try {
   stage = 'assets';
   // Deployment tracers can omit the package manifest while retaining executable modules.
   // Resolve the same entry point we actually import, then locate its sibling assets.
-  const assets = path.resolve(path.dirname(createRequire(import.meta.url).resolve('pdfjs-dist/legacy/build/pdf.mjs')), '../..');
+  const assets = fileURLToPath(new URL('../../', import.meta.resolve('pdfjs-dist/legacy/build/pdf.mjs')));
   stage = 'load';
   const task = getDocument({ standardFontDataUrl: path.join(assets, 'standard_fonts') + '/',
     cMapUrl: path.join(assets, 'cmaps') + '/', cMapPacked: true, wasmUrl: path.join(assets, 'wasm') + '/', data: new Uint8Array(workerData), isEvalSupported: false,
