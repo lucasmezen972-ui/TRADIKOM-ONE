@@ -93,7 +93,21 @@ export async function verifyRuntimeMigrations(db: DbClient) {
     if (getMigrationIds(true).some((migrationId) => !applied.has(migrationId))) {
       throw new Error("Missing migrations");
     }
-  } catch {
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+    const safeCodes = new Set([
+      "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "ECONNRESET",
+      "SELF_SIGNED_CERT_IN_CHAIN", "DEPTH_ZERO_SELF_SIGNED_CERT",
+      "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "CERT_HAS_EXPIRED",
+      "ERR_TLS_CERT_ALTNAME_INVALID", "28P01", "28000", "42501",
+      "42P01", "08006", "53300",
+    ]);
+    console.error(JSON.stringify({
+      event: "database.readiness.failed",
+      code: typeof code === "string" && safeCodes.has(code) ? code : "unknown",
+    }));
     throw new Error(
       "Database schema is not ready. Run migrations with the migration identity before starting.",
     );
