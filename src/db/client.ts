@@ -56,7 +56,7 @@ export function getPgPoolConfig(environment: Record<string, string | undefined>)
   const url = new URL(connectionString);
   const sslMode = url.searchParams.get("sslmode");
   if ((sslMode && sslMode !== "verify-full") ||
-      ["sslcert", "sslkey", "sslrootcert", "uselibpqcompat"].some((key) => url.searchParams.has(key))) {
+      ["ssl", "sslnegotiation", "sslcert", "sslkey", "sslrootcert", "uselibpqcompat"].some((key) => url.searchParams.has(key))) {
     throw new Error("DATABASE_SSL_CA requires verify-full without conflicting URL TLS options.");
   }
   // node-postgres otherwise replaces the explicit TLS object with URL options.
