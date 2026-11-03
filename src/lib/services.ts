@@ -1,3 +1,6 @@
+import { withTenantDbTransaction } from "@/db/tenant-context";
+import { createRequestScopedDb } from "@/db/request-client";
+import { getSessionIdFromCookie, getTenantIdFromCookie } from "@/lib/security";
 import { z } from "zod";
 import { getDb, type DbClient } from "@/lib/db";
 import {
@@ -343,7 +346,14 @@ export type ServiceDependencies = {
 
 export async function getServices() {
   const db = await getDb();
-  return createServices(db);
+  // Authenticate and resolve membership before applying any cookie-selected tenant.
+  // Public requests keep the unprivileged database client.
+  const session = await getSessionUser(db, await getSessionIdFromCookie());
+  if (!session) return createServices(db);
+  const context = await getTenantContext(db, session.user.id, await getTenantIdFromCookie());
+  return createServices(context ? createRequestScopedDb(db, {
+    actorId: session.user.id, tenantId: context.tenant.id,
+  }) : db);
 }
 
 export function createServices(
@@ -375,7 +385,7 @@ export function createServices(
         createDefaults: createDefaultTenantResources,
       }),
     switchTenant: (userId: string, tenantId: string) =>
-      assertTenantAccess(db, userId, tenantId),
+      withTenantDbTransaction(db, tenantId, userId, tx => assertTenantAccess(tx, userId, tenantId)),
     getUserTenants: (userId: string) => getUserTenants(db, userId),
     getTenantContext: (userId: string, preferredTenantId?: string) =>
       getTenantContext(db, userId, preferredTenantId),

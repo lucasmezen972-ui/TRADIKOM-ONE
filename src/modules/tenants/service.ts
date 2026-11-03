@@ -1,5 +1,5 @@
 import type { DbClient } from "@/lib/db";
-import { withTenantDbTransaction } from "@/db/tenant-context";
+import { withSystemDbTransaction, withTenantDbTransaction } from "@/db/tenant-context";
 import { stalledOpportunityDays } from "@/lib/pipeline-stages";
 import { strategicRefusalMuteDays } from "@/modules/strategic-advisor/rules";
 import { daysFromNow, hashToken, id, nowIso, secureToken, slugify } from "@/lib/security";
@@ -126,7 +126,13 @@ export async function createTenant(
 }
 
 export async function getUserTenants(db: DbClient, userId: string) {
-  const rows = await listUserTenantRows(db, userId);
+  // Membership discovery precedes tenant selection; keep the privileged read
+  // confined to the authenticated actor and never expose another user’s rows.
+  const rows = await withSystemDbTransaction(db, async (transaction) => {
+    const actor = await transaction.query("select id from users where id = $1 and deleted_at is null", [userId]);
+    if (!actor.rows[0]) return [];
+    return listUserTenantRows(transaction, userId);
+  });
 
   return rows.map((row) => ({
     tenant: mapTenant(row),
