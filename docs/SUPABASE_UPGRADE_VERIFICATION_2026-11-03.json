@@ -1,0 +1,159 @@
+{
+  "checkedAt": "2026-11-03T12:40:31.864Z",
+  "beforeCapturedAt": "2026-11-03T12:18:22.846781+00:00",
+  "afterCapturedAt": "2026-11-03T12:40:29.993615+00:00",
+  "engine": "17.11",
+  "tableCount": 153,
+  "rowCount": 215,
+  "allTableRowsExact": true,
+  "functionsExact": true,
+  "schemaAclExact": true,
+  "defaultPrivilegesExact": true,
+  "customRolesExact": true,
+  "customRoleMembershipsExact": true,
+  "platformInventoryUnchanged": true,
+  "extensions": [
+    {
+      "name": "pg_stat_statements",
+      "schema": "extensions",
+      "version": "1.11"
+    },
+    {
+      "name": "pgcrypto",
+      "schema": "extensions",
+      "version": "1.3"
+    },
+    {
+      "name": "plpgsql",
+      "schema": "pg_catalog",
+      "version": "1.0"
+    },
+    {
+      "name": "supabase_vault",
+      "schema": "vault",
+      "version": "0.3.1"
+    },
+    {
+      "name": "uuid-ossp",
+      "schema": "extensions",
+      "version": "1.1"
+    }
+  ],
+  "dataDifferences": [],
+  "tableMetadataDifferences": [
+    "channel_provider_deliveries",
+    "channel_provider_media_import_executions",
+    "channel_provider_media_imports",
+    "sales_ai_assessments",
+    "strategic_recommendations"
+  ],
+  "platformRestoreProven": false,
+  "allTableMetadataExceptCheckPresentationExact": true,
+  "checkConstraintPresentationChanges": 7,
+  "checkConstraintReview": "Seven CHECK definitions differ only by flattening nested AND groups; same operands and outer OR precedence, reviewed individually.",
+  "otherMetadataDifferences": [],
+  "vaultValuesStillMatchIndependentVercelSecrets": 2,
+  "checkAssociativityCases": 81,
+  "checkAssociativityDifferences": 0,
+  "healthHttp": 200,
+  "healthDatabase": "ok",
+  "securityAdvisories": 0,
+  "providerTargetVersion": "17.11.0.011",
+  "providerStartedAt": "2026-11-03T12:32:59Z",
+  "healthyObservedAt": "2026-11-03T12:39:48Z",
+  "exactRowsComparedBeforeNewLogin": true,
+  "sqlVerification": {
+    "engine": "17.11",
+    "rls_tables": 133,
+    "runtime_tls": [
+      {
+        "ssl": false,
+        "cipher": null,
+        "version": null
+      },
+      {
+        "ssl": false,
+        "cipher": null,
+        "version": null
+      },
+      {
+        "ssl": false,
+        "cipher": null,
+        "version": null
+      }
+    ],
+    "runtime_roles": [
+      {
+        "role": "tradikom_app",
+        "login": true,
+        "superuser": false,
+        "bypass_rls": false
+      },
+      {
+        "role": "tradikom_owner",
+        "login": true,
+        "superuser": false,
+        "bypass_rls": false
+      },
+      {
+        "role": "tradikom_web_preview",
+        "login": true,
+        "superuser": false,
+        "bypass_rls": false
+      }
+    ],
+    "journal_entries": 132,
+    "application_tables": 153,
+    "preserved_personal_owner": 1,
+    "disposable_users_remaining": 0,
+    "non_owner_application_tables": 0
+  },
+  "applicationSourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+  "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
+  "mobileRecipe": {
+    "viewport": "390x844",
+    "independentLogin": true,
+    "credentialsFromPrivateFile": true,
+    "routes": [
+      "/aujourdhui",
+      "/contacts",
+      "/mon-site",
+      "/conversation"
+    ],
+    "reloads": true,
+    "horizontalOverflow": false,
+    "testSessionLoggedOut": true,
+    "newBusinessDataCreated": false
+  },
+  "openai": {
+    "modelEnabled": false,
+    "genericGenerationEnabled": false,
+    "globalBudgetMicroUsd": 0,
+    "tenantBudgetMicroUsd": 0,
+    "paidCalls": 0,
+    "keyRemainsPreviewSecret": true,
+    "noRedeployment": true
+  },
+  "clientToPoolerTlsConfiguration": {
+    "sharedPooler": true,
+    "sslMode": "verify-full",
+    "certificateProvided": true,
+    "rejectUnauthorized": true,
+    "conflictingUrlOptionsRemoved": true
+  },
+  "poolerToDatabaseTlsObservation": "pg_stat_ssl for the pooler backend legs reports ssl=false. This is not proof of client-to-pooler encryption and no end-to-end TLS claim is made.",
+  "allTableDefinitionTextExact": false,
+  "tableOwnersRlsPoliciesAclsExact": true,
+  "checkConstraintSemanticsReviewed": true,
+  "dependencyAudit": {
+    "high": 0,
+    "critical": 0,
+    "moderate": 1,
+    "ignoredAdvisories": 0,
+    "advisory": "GHSA-g3hv-75wg-m249"
+  },
+  "backupLibraryFileId": "libfile_d0c868f3eb008191ab682973a8be075f",
+  "backupCommit": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
+  "upgradeUiCompleted": true,
+  "stabilityProjectReadback": "ACTIVE_HEALTHY_17.11.0.011"
+}

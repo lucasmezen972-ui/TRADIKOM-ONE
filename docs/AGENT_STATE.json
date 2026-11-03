@@ -4,9 +4,9 @@
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
-  "lastCommit": "04d72d19f155a2271cca14e15042c556cc3a6dab",
-  "publishedHeadObserved": "04d72d19f155a2271cca14e15042c556cc3a6dab",
-  "status": "fresh_encrypted_backup_offsite_restore_verified_upgrade_pending",
+  "lastCommit": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
+  "publishedHeadObserved": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
+  "status": "preview_stable_postgres17_11_model_disabled_zero_budget",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Sauvegarde fraîche132 hors Supabase restaurée depuis sa copie relue (preuve BACKUP_VERIFICATION_2026-11-03.json). Ne pas recréer de clé OpenAI : IA désactivée, budgets à zéro. Finir la qualification et la fenêtre de l’upgrade natif17.11.0.011 (coupure annoncée jusqu’à1h, pas de downgrade), puis vérifier runtime/RLS/journal/Vault et compte personnel. Aucun upgrade lancé à ce checkpoint.",
+  "nextAction": "Conserver le checkpoint vérifié : Supabase17.11.0.011 ACTIVE_HEALTHY, schéma132, données et droits comparés, recette personnelle mobile réussie. Ne pas relancer l’upgrade ni recréer de clé/fixture. IA désactivée et plafonds0/0 : aucun appel modèle tant que budget API non autorisé. Périmètre production restant : fournisseurs privés/consentements, restauration plateforme et segment interne pooler/base sans TLS observé ; client TLS strict conservé. Aucun nouveau travail artificiel ou dépense pour contourner ces limites.",
   "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2428,7 +2428,7 @@
   "humanBlockers": [
     "OpenAI : clé de préversion enregistrée comme secret Vercel, mais budget API explicitement non autorisé. Génération désactivée et plafonds global/organisation à zéro. Aucun aller-retour modèle réel prouvé.",
     "Planification des évaluations, Meta/SMS, email et OAuth propriétaires non activés ; consentements et authentifications distincts restent nécessaires.",
-    "Moteur Supabase17.6 : sauvegarde fraîche publique et restauration embarquée prouvées, secrets récupérables séparément ; qualification du périmètre plateforme/version cible et préparation de la coupure native17.11.0.011 à terminer."
+    "Production : restauration complète de plateforme et qualification du segment interne pooler/base à terminer. Moteur17.11.0.011 et recette personnelle sont vérifiés ; client TLS strict conservé, pg_stat_ssl=false observé côté serveur pour le pooler. Aucune dépense ou souscription implicite."
   ],
   "executionConstraints": {
     "sourceOfTruth": "GitHub lucasmezen972-ui/TRADIKOM-ONE, branche codex/tradikom-one-os",
@@ -2458,7 +2458,7 @@
       "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
       "currentCandidate": "a0920cfa074c0168bc1161ce350629e02164b6b5",
       "candidateDeployed": true,
-      "lastHealth": "2026-11-03T11:16:16.303Z",
+      "lastHealth": "2026-11-03T12:40:54.019Z",
       "lastHealthHttpStatus": 200,
       "openaiKeyConfigured": true,
       "openaiKeyAvailableAfterNextDeployment": true
@@ -2480,12 +2480,23 @@
       "candidateMigrations": "125–132",
       "candidateApplied": true,
       "confirmationStatus": "applied_verified",
-      "engineVersion": "17.6",
+      "engineVersion": "17.11",
       "providerUpgradeRecommended": "17.11.0.003 or later",
       "publicLtreeIndexes": 0,
       "publicFloatGistIndexes": 0,
       "publicCustomOperators": 0,
-      "providerUpgradePerformed": false
+      "providerUpgradePerformed": true,
+      "providerVersion": "17.11.0.011",
+      "providerUpgradeStartedAt": "2026-11-03T12:32:59Z",
+      "providerUpgradeHealthyObservedAt": "2026-11-03T12:39:48Z",
+      "backupLibraryFileId": "libfile_d0c868f3eb008191ab682973a8be075f",
+      "backupRestoredTables": 153,
+      "backupRestoredRows": 215,
+      "applicationRowsPreserved": true,
+      "rlsTables": 133,
+      "clientTlsVerifyFull": true,
+      "poolerBackendSslObserved": false,
+      "platformRestoreProven": false
     },
     "validation": {
       "runner": "Codespaces personnel dans le quota inclus, 2 cœurs, garde de dépense nulle vérifiée",
@@ -2513,7 +2524,8 @@
     "Recette Linux/Docker PostgreSQL17 préparée sans base existante, Mac, Actions, port public ou programmation",
     "Dépendances production et développement corrigées sans exception d'audit",
     "Rapport/audit Goal Watch atomiques, verrous et rejeu historique validés, dates bornées",
-    "Recette ciblée finale Node22/PostgreSQL17, build et20 Playwright verts; Codespace arrêté"
+    "Recette ciblée finale Node22/PostgreSQL17, build et20 Playwright verts; Codespace arrêté",
+    "2026-11-03 : sauvegarde fraîche chiffrée hors Supabase, copie relue/restaurée, upgrade natif17.11.0.011 et recette personnelle mobile vérifiés. Données/RLS/droits conservés, journal132, zéro alerte sécurité ; compte personnel préservé et temporaires privés de sauvegarde retirés."
   ],
   "remainingGaps": [
     "Valider un véritable aller-retour OpenAI uniquement après autorisation explicite de budget ; clé déjà enregistrée dans Vercel, génération désactivée, plafonds à zéro.",
@@ -2521,7 +2533,7 @@
     "PDF texte uniquement, sans OCR ni antivirus ; clés de documents à préserver et faire migrer explicitement lors de leur rotation.",
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
     "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
-    "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé."
+    "Supabase17.11.0.011 qualifié sur le parcours personnel ; restauration de plateforme non prouvée. Le client utilise verify-full/rejectUnauthorized=true ; segment interne pooler/base observé sans TLS, aucune garantie bout en bout revendiquée."
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 1,
@@ -2641,7 +2653,7 @@
     ]
   },
   "currentValidation": {
-    "sourceCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+    "sourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
     "lint": "passed",
     "typecheck": "passed",
     "productionBuild": "passed_hosted_corepack_pnpm11.7_build_exact_app_source",
@@ -2702,14 +2714,15 @@
       "warnings": 0
     },
     "remotePreview": {
-      "sourceCommit": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
-      "deploymentId": "dpl_81smzYPqTYhfZqcAtFbHeYd5aCYZ",
+      "sourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+      "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
       "state": "READY",
       "schema": 132,
       "healthHttp": 200,
       "database": "ok",
       "securityAdvisoryCount": 0,
-      "userAuthenticatedWorkflow": "not_yet_verified_on_hosted_database"
+      "userAuthenticatedWorkflow": "passed_post_upgrade_independent_mobile_login_four_routes_reloads_logout",
+      "engine": "17.11"
     },
     "hostedRecipe": {
       "sourceCommit": "9022539246b091f3e64918b18a91c37768e97b31",
@@ -2832,6 +2845,165 @@
       "targetEngineRestorationQualified": false,
       "platformRestoreProven": false,
       "paidModelCalls": 0
+    },
+    "supabaseUpgrade": {
+      "checkedAt": "2026-11-03T12:40:31.864Z",
+      "beforeCapturedAt": "2026-11-03T12:18:22.846781+00:00",
+      "afterCapturedAt": "2026-11-03T12:40:29.993615+00:00",
+      "engine": "17.11",
+      "tableCount": 153,
+      "rowCount": 215,
+      "allTableRowsExact": true,
+      "functionsExact": true,
+      "schemaAclExact": true,
+      "defaultPrivilegesExact": true,
+      "customRolesExact": true,
+      "customRoleMembershipsExact": true,
+      "platformInventoryUnchanged": true,
+      "extensions": [
+        {
+          "name": "pg_stat_statements",
+          "schema": "extensions",
+          "version": "1.11"
+        },
+        {
+          "name": "pgcrypto",
+          "schema": "extensions",
+          "version": "1.3"
+        },
+        {
+          "name": "plpgsql",
+          "schema": "pg_catalog",
+          "version": "1.0"
+        },
+        {
+          "name": "supabase_vault",
+          "schema": "vault",
+          "version": "0.3.1"
+        },
+        {
+          "name": "uuid-ossp",
+          "schema": "extensions",
+          "version": "1.1"
+        }
+      ],
+      "dataDifferences": [],
+      "tableMetadataDifferences": [
+        "channel_provider_deliveries",
+        "channel_provider_media_import_executions",
+        "channel_provider_media_imports",
+        "sales_ai_assessments",
+        "strategic_recommendations"
+      ],
+      "platformRestoreProven": false,
+      "allTableMetadataExceptCheckPresentationExact": true,
+      "checkConstraintPresentationChanges": 7,
+      "checkConstraintReview": "Seven CHECK definitions differ only by flattening nested AND groups; same operands and outer OR precedence, reviewed individually.",
+      "otherMetadataDifferences": [],
+      "vaultValuesStillMatchIndependentVercelSecrets": 2,
+      "checkAssociativityCases": 81,
+      "checkAssociativityDifferences": 0,
+      "healthHttp": 200,
+      "healthDatabase": "ok",
+      "securityAdvisories": 0,
+      "providerTargetVersion": "17.11.0.011",
+      "providerStartedAt": "2026-11-03T12:32:59Z",
+      "healthyObservedAt": "2026-11-03T12:39:48Z",
+      "exactRowsComparedBeforeNewLogin": true,
+      "sqlVerification": {
+        "engine": "17.11",
+        "rls_tables": 133,
+        "runtime_tls": [
+          {
+            "ssl": false,
+            "cipher": null,
+            "version": null
+          },
+          {
+            "ssl": false,
+            "cipher": null,
+            "version": null
+          },
+          {
+            "ssl": false,
+            "cipher": null,
+            "version": null
+          }
+        ],
+        "runtime_roles": [
+          {
+            "role": "tradikom_app",
+            "login": true,
+            "superuser": false,
+            "bypass_rls": false
+          },
+          {
+            "role": "tradikom_owner",
+            "login": true,
+            "superuser": false,
+            "bypass_rls": false
+          },
+          {
+            "role": "tradikom_web_preview",
+            "login": true,
+            "superuser": false,
+            "bypass_rls": false
+          }
+        ],
+        "journal_entries": 132,
+        "application_tables": 153,
+        "preserved_personal_owner": 1,
+        "disposable_users_remaining": 0,
+        "non_owner_application_tables": 0
+      },
+      "applicationSourceCommit": "a0920cfa074c0168bc1161ce350629e02164b6b5",
+      "deploymentId": "dpl_9i28ecomWHuJ9uNd1yY5xgDhdmfy",
+      "mobileRecipe": {
+        "viewport": "390x844",
+        "independentLogin": true,
+        "credentialsFromPrivateFile": true,
+        "routes": [
+          "/aujourdhui",
+          "/contacts",
+          "/mon-site",
+          "/conversation"
+        ],
+        "reloads": true,
+        "horizontalOverflow": false,
+        "testSessionLoggedOut": true,
+        "newBusinessDataCreated": false
+      },
+      "openai": {
+        "modelEnabled": false,
+        "genericGenerationEnabled": false,
+        "globalBudgetMicroUsd": 0,
+        "tenantBudgetMicroUsd": 0,
+        "paidCalls": 0,
+        "keyRemainsPreviewSecret": true,
+        "noRedeployment": true
+      },
+      "clientToPoolerTlsConfiguration": {
+        "sharedPooler": true,
+        "sslMode": "verify-full",
+        "certificateProvided": true,
+        "rejectUnauthorized": true,
+        "conflictingUrlOptionsRemoved": true
+      },
+      "poolerToDatabaseTlsObservation": "pg_stat_ssl for the pooler backend legs reports ssl=false. This is not proof of client-to-pooler encryption and no end-to-end TLS claim is made.",
+      "allTableDefinitionTextExact": false,
+      "tableOwnersRlsPoliciesAclsExact": true,
+      "checkConstraintSemanticsReviewed": true,
+      "dependencyAudit": {
+        "high": 0,
+        "critical": 0,
+        "moderate": 1,
+        "ignoredAdvisories": 0,
+        "advisory": "GHSA-g3hv-75wg-m249"
+      },
+      "backupLibraryFileId": "libfile_d0c868f3eb008191ab682973a8be075f",
+      "backupCommit": "cd3a3db20fc374d6ed7749f7b2cab8f7514662e5",
+      "upgradeUiCompleted": true,
+      "stabilityProjectReadback": "ACTIVE_HEALTHY_17.11.0.011"
     }
   }
 }

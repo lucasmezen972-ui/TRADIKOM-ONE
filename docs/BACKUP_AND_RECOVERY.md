@@ -2,7 +2,9 @@
 
 ## Sauvegarde du projet hébergé — 3 novembre 2026
 
-La [preuve structurée](./BACKUP_VERIFICATION_2026-11-03.json) décrit la capture cohérente du schéma public132 (153 tables/215 lignes), son chiffrement, son stockage hors Supabase, la relecture exacte et la restauration depuis cette copie sur PostgreSQL17.5 embarqué. Les deux rejeux de migrations sous tradikom_owner laissent le journal inchangé. Aucun GitHub Actions utilisé.
+La [preuve structurée](./BACKUP_VERIFICATION_2026-11-03.json) décrit la capture cohérente du schéma public132 (153 tables / 215 lignes), son chiffrement, son stockage hors Supabase, la relecture exacte et la restauration depuis cette copie sur PostgreSQL 17.5 embarqué. Les deux rejeux de migrations sous tradikom_owner laissent le journal inchangé. Aucun GitHub Actions utilisé.
+
+L’[upgrade natif 17.11.0.011 et la comparaison après bascule](./SUPABASE_UPGRADE_VERIFICATION_2026-11-03.json) sont ensuite vérifiés sur le projet hébergé. Cette preuve du projet migré reste distincte d’une restauration complète de plateforme. Les temporaires locaux de données et clé ont été retirés après contrôle ; seule la sauvegarde chiffrée est conservée hors Supabase.
 
 Outils de cette reprise :
 

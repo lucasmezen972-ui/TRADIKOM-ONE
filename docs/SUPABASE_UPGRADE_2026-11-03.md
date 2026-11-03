@@ -1,10 +1,20 @@
 # Qualification de la mise à niveau Supabase — 3 novembre 2026
 
-Projet : `iwngumaqdjiglhfekgug`. Aucun upgrade, redémarrage, changement d’extension ou abonnement effectué. Le moteur reste PostgreSQL 17.6 ; le journal applicatif est à 132.
+Projet : `iwngumaqdjiglhfekgug`. Mise à niveau native **17.6.1.141 →17.11.0.011** confirmée le 3 novembre 2026 après préparation. Début fournisseur 12:32:59UTC, état ACTIVE_HEALTHY constaté à 12:39:48UTC et interface «Upgrade completed!». Journal applicatif132. Aucun changement de forfait, activation IA ou pause/restauration de contournement.
+
+## Résultat après mise à niveau
+
+La [preuve complète](./SUPABASE_UPGRADE_VERIFICATION_2026-11-03.json) compare le schéma avant/après : 153 tables et215 lignes exactes avant nouvelle connexion, propriétaires/RLS/politiques/ACL, fonctions, privilèges par défaut et rôles/memberships préservés. 133 tables sous RLS, aucune table hors propriétaire tradikom_owner, zéro avis sécurité. Sept CHECK ont une présentation de groupes AND aplatie : mêmes opérandes/priorité OR, revue individuelle et 81 combinaisons booléennes/nulles sans différence. Aucun changement de données appliqué.
+
+Extensions et versions inchangées ; deux valeurs Vault encore conformes aux secrets Vercel séparés. Health applicatif200/database=ok ; connexion personnelle indépendante en 390 × 844 et dashboard/contacts/site/Conversation avec rechargements sans débordement, puis déconnexion, réussis. Compte personnel conservé et zéro ancien utilisateur jetable. Aucune nouvelle campagne PostgreSQL distante exhaustive ou recette PDF post-upgrade revendiquée.
+
+Client/pooler : certificat fourni, verify-full, rejectUnauthorized=true vérifiés dans la configuration réelle et le code. pg_stat_ssl rapporte ssl=false pour les connexions du pooler à PostgreSQL ; aucune garantie TLS de bout en bout déduite du health. Ce segment interne et une restauration complète de plateforme restent à qualifier pour la production. Les temporaires privés de données et clé de sauvegarde ont été retirés, sauvegarde chiffrée et accès personnel conservés.
+
+Les sections suivantes décrivent la préparation antérieure au lancement, pas un upgrade restant à effectuer.
 
 ## Sauvegarde et contrôles supplémentaires réalisés
 
-La [sauvegarde fraîche et sa preuve](./BACKUP_VERIFICATION_2026-11-03.json) couvrent le schéma public à12:18:22UTC : 153 tables/215 lignes, restauration depuis la copie chiffrée hors Supabase sur PostgreSQL17.5 embarqué, données et métadonnées de sécurité exactes ; deux rejeux du journal132 sans changement sous tradikom_owner. Auth/Storage sont vides. Les deux valeurs Vault correspondent aux secrets Vercel indépendants et trois payloads AES-GCM de connecteur sont déchiffrables avec cette clé, sans sortie de contenu. Tous les mots de passe des trois rôles personnalisés utilisent SCRAM-SHA-256. Aucun contenu bytea ni marqueur PGP armuré dans les lignes publiques actuelles ; pas de prétention à un scan PGP complet de la plateforme ou d’archives inaccessibles.
+La [sauvegarde fraîche et sa preuve](./BACKUP_VERIFICATION_2026-11-03.json) couvrent le schéma public à 12:18:22UTC : 153 tables / 215 lignes, restauration depuis la copie chiffrée hors Supabase sur PostgreSQL 17.5 embarqué, données et métadonnées de sécurité exactes ; deux rejeux du journal 132 sans changement sous tradikom_owner. Auth/Storage sont vides. Les deux valeurs Vault correspondent aux secrets Vercel indépendants et trois payloads AES-GCM de connecteur sont déchiffrables avec cette clé, sans sortie de contenu. Tous les mots de passe des trois rôles personnalisés utilisent SCRAM-SHA-256. Aucun contenu bytea ni marqueur PGP armuré dans les lignes publiques actuelles ; pas de prétention à un scan PGP complet de la plateforme ou d’archives inaccessibles.
 
 Le tableau de bord consulté propose17.11.0.011. Sa confirmation native annonce une coupure pouvant atteindre1heure, un redimensionnement du disque et aucun downgrade vers17.6.1.141. Ce checkpoint ne déclenche pas l’opération. Aucun pg_dump physique/de plateforme disponible dans le forfaitFree ; aucun abonnement souscrit. Le lancement natif de PostgreSQL17.11 dans ce cloud est bloqué par les permissions de changement d’utilisateur ; ne pas présenter le test embarqué17.5 comme une qualification de17.11.
 

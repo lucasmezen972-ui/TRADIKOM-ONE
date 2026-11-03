@@ -1,3 +1,13 @@
+# État stable — Supabase 17.11 et recette personnelle vérifiés
+
+Le moteur réel est17.11.0.011, ACTIVE_HEALTHY ; journal 132, 153 tables et215 lignes comparées exactement avant nouvelle connexion. RLS/droits/fonctions/memberships préservés, zéro avis sécurité ; sept CHECK n’ont qu’une présentation AND aplatie, équivalence contrôlée. Sauvegarde chiffrée hors Supabase et restauration depuis sa copie relue prouvées. Voir SUPABASE_UPGRADE_VERIFICATION_2026-11-03.json et BACKUP_VERIFICATION_2026-11-03.json. Ne pas relancer l’upgrade, recréer les anciennes fixtures ou refaire ces preuves sans nouveau changement.
+
+Préversion a0920cf inchangée : health 200/database=ok, connexion personnelle indépendante mobile et quatre routes avec rechargements réussies, session de recette déconnectée. Conserver le compte personnel et Caraïbe Démo Services. Les temporaires de sauvegarde en clair et le lien privé de recette ont été retirés ; fichier personnel privé et sauvegarde chiffrée conservés.
+
+OPENAI_API_KEY est déjà enregistré comme secret Vercel preview de cette branche et sera injecté au prochain déploiement utile. Aucun budget API autorisé : génération désactivée, plafonds global/organisation 0/0. Aucun test modèle facturable à lancer. Les plans restent mock. Les fournisseurs privés attendent leurs accès/consentements propres ; ne pas envoyer de message métier, programmer de traitement ou souscrire un forfait pour lever ces limites.
+
+Pour la production restent la restauration complète de plateforme et la qualification du segment interne pooler/base (pg_stat_ssl=false observé). Le client vers le pooler utilise son certificat avec verify-full/rejectUnauthorized=true. Le microphone physique, OCR/antivirus et modèle réel ne sont pas prouvés. Si aucune action indépendante déjà autorisée ne lève ces limites, conserver ce checkpoint au lieu de créer du travail ou une dépense. Les sections suivantes sont des états historiques remplacés par ce checkpoint.
+
 # Prochaine action concrète — qualification native de l’upgrade
 
 La sauvegarde fraîche chiffrée du schéma132 est enregistrée hors Supabase et restaurée depuis sa copie relue : 153 tables/215 lignes, droits/RLS/fonctions exacts et journal inchangé après deux rejeux. Voir BACKUP_VERIFICATION_2026-11-03.json. Les secrets Vault et trois payloads de connecteur restent récupérables avec la clé séparée existante. Ne pas répéter cet export sans changement des données ou besoin de reprise.
