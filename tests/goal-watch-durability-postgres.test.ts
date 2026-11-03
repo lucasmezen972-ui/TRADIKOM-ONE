@@ -174,6 +174,7 @@ async function createFixture() {
     text: "Fixture interne sans fournisseur.", attachments: [], occurredAt: observedAt,
   });
   const goal = await createGoalWatch(db, user.id, tenant.id, {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
     threadId: ingress.threadId, title: "Vérifier la durabilité",
     signal: "contacts", operator: "gte", target: 1, cadenceMinutes: 60,
   });

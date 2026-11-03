@@ -36,10 +36,10 @@ describe("migration des révisions de plans Conversation", () => {
       ).trim(),
     ).toBe(mirror.trim());
     expect(getMigrationIds().at(-1)).toBe(
-      "124_runtime_function_search_path",
+      "125_goal_watch_controls",
     );
     expect(getMigrationIds(true).at(-1)).toBe(
-      "124_runtime_function_search_path",
+      "126_goal_watch_controls_rls",
     );
   });
 

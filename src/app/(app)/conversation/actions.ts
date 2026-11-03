@@ -7,6 +7,51 @@ import { safeServerAction } from "@/lib/public-action";
 import { requireTenantContext } from "@/lib/session";
 import { getConversationChannelServices } from "@/modules/channels";
 
+export async function createNativeConversationTaskAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction("conversation.native_task", () => services.createContactTaskFromConversation(user.id, tenant.id, {
+    threadId: text(formData, "threadId"), sourceMessageId: text(formData, "sourceMessageId"),
+    contactId: text(formData, "contactId"), title: text(formData, "title"), dueAt: text(formData, "dueAt"),
+    idempotencyKey: text(formData, "idempotencyKey"), teamVisibilityConfirmed: requiredConfirmation(formData, "teamVisibilityConfirmed"),
+  }));
+  revalidatePath("/conversation");
+  revalidatePath("/contacts");
+  redirect(`/conversation?fil=${encodeURIComponent(result.threadId)}`);
+}
+
+export async function createConversationGoalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const goal = await safeServerAction("conversation.goal_create", () => services.createGoalWatch(user.id, tenant.id, {
+    threadId: text(formData, "threadId"), title: text(formData, "title"),
+    signal: z.enum(["contacts", "opportunities", "published_websites"]).parse(text(formData, "signal")),
+    operator: z.enum(["gte", "lte"]).parse(text(formData, "operator")),
+    target: z.coerce.number().int().nonnegative().parse(text(formData, "target")),
+    cadenceMinutes: z.coerce.number().int().parse(text(formData, "cadenceMinutes")),
+    consentConfirmed: requiredConfirmation(formData, "goalConsent"),
+    idempotencyKey: text(formData, "idempotencyKey"),
+  }));
+  revalidatePath("/conversation");
+  redirect(`/conversation?fil=${encodeURIComponent(goal.threadId)}`);
+}
+
+export async function changeConversationGoalAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const goal = await safeServerAction("conversation.goal_change", () => {
+    const action = z.enum(["pause", "resume", "stop"]).parse(text(formData, "action"));
+    if (action === "stop") requiredConfirmation(formData, "stopConfirmed");
+    return services.changeGoalWatch(user.id, tenant.id, {
+      goalId: text(formData, "goalId"), action,
+      expectedVersion: z.coerce.number().int().nonnegative().parse(text(formData, "version")),
+      ...(action === "resume" ? { consentConfirmed: requiredConfirmation(formData, "goalConsent") } : {}),
+    });
+  });
+  revalidatePath("/conversation");
+  redirect(`/conversation?fil=${encodeURIComponent(goal.threadId)}`);
+}
+
 export async function sendWebConversationMessageAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();

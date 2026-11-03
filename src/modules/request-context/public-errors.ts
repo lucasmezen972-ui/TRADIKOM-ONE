@@ -1,4 +1,6 @@
 import { ZodError } from "zod";
+import { GoalWatchError } from "@/modules/goal-watch/errors";
+import { ConversationHubError } from "@/modules/conversation-hub/errors";
 import { AccountDeletionError } from "@/modules/account-deletion";
 import { ApprovalCenterError } from "@/modules/approval-center";
 import { AssetError } from "@/modules/assets";
@@ -25,6 +27,21 @@ export type PublicError = {
 };
 
 export function toPublicError(error: unknown): PublicError {
+  if (error instanceof ConversationHubError) {
+    return publicError(error.code, "conversation",
+      error.code === "conversation_access_denied" ? "Cette action n’est pas autorisée dans cette conversation."
+      : error.code === "conversation_thread_not_found" ? "Conversation introuvable."
+      : "Cette demande ne correspond plus à l’état de la conversation. Actualisez la page.",
+      error.code === "conversation_access_denied" ? 403 : error.code === "conversation_thread_not_found" ? 404 : 409);
+  }
+  if (error instanceof GoalWatchError) {
+    const notFound = ["goal_watch_not_found", "goal_watch_thread_not_found"].includes(error.code);
+    return publicError(error.code, "goal_watch", notFound ? "Objectif ou conversation introuvable."
+      : error.code === "goal_watch_version_conflict" ? "L’objectif a changé. Actualisez la conversation."
+      : error.code === "goal_watch_consent_required" ? "Confirmez le suivi avant de l’activer."
+      : error.code === "goal_watch_transition_invalid" ? "Ce suivi est arrêté. Créez un nouvel objectif."
+      : "Ce suivi ne peut pas être modifié dans son état actuel.", notFound ? 404 : 409);
+  }
   if (error instanceof RateLimitError) {
     return {
       code: error.code,

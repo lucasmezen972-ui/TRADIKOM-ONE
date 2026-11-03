@@ -10,6 +10,10 @@ import {
 } from "@/modules/conversation-hub";
 import { createTestChannelAdapter } from "@/modules/channels/test-channel";
 import { createWebChannelAdapter } from "@/modules/channels/web-channel";
+import { createConversationContactTask, listConversationTaskContacts,
+  type CreateConversationContactTaskInput } from "@/modules/conversation-hub/native-tasks";
+import { createGoalWatch, changeGoalWatch, listGoalWatchesForThread,
+  type CreateGoalWatchInput, type ChangeGoalWatchInput } from "@/modules/goal-watch";
 import { inspectMetaWhatsAppTenantReadiness } from "@/modules/channels/provider-endpoints-service";
 import {
   issueCurrentWhatsAppMetaTrialAuthorization,
@@ -38,6 +42,18 @@ export function createConversationChannelServices(
     dependencies.attachmentAccess ??
     createUnavailableAttachmentAccessDependencies("not_configured");
   return {
+    createContactTaskFromConversation: (userId: string, tenantId: string, input: CreateConversationContactTaskInput) =>
+      createConversationContactTask(db, userId, tenantId, input),
+    prepareTaskForm: async (userId: string, tenantId: string, threadId: string) => ({
+      contacts: await listConversationTaskContacts(db, userId, tenantId, threadId),
+      dueAt: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+    }),
+    createGoalWatch: (userId: string, tenantId: string, input: CreateGoalWatchInput) =>
+      createGoalWatch(db, userId, tenantId, input),
+    changeGoalWatch: (userId: string, tenantId: string, input: ChangeGoalWatchInput) =>
+      changeGoalWatch(db, userId, tenantId, input),
+    listGoalWatches: (userId: string, tenantId: string, threadId: string) =>
+      listGoalWatchesForThread(db, userId, tenantId, threadId),
     web: createWebChannelAdapter(db),
     test: createTestChannelAdapter(db),
     getMetaWhatsAppTenantReadiness: (userId: string, tenantId: string) =>

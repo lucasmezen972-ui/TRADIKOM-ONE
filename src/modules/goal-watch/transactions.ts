@@ -1,6 +1,20 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { withSystemDbTransaction } from "@/db/tenant-context";
+import { withSystemDbTransaction, withTenantDbTransaction } from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
+
+export async function withGoalWatchActorTransaction<T>(
+  db: DbClient, tenantId: string, actorId: string,
+  callback: (transaction: DbClient) => Promise<T>,
+): Promise<T> {
+  const client = db as DbClient & { __transaction?: boolean; transaction?: PGlite["transaction"] };
+  if (!client.__transaction && client.transaction) {
+    return client.transaction((transaction) => callback({
+      __transaction: true,
+      query: (sql: string, params?: unknown[]) => transaction.query(sql, params),
+    } as DbClient));
+  }
+  return withTenantDbTransaction(db, tenantId, actorId, callback);
+}
 
 export async function withGoalWatchEvaluationTransaction<T>(
   db: DbClient,

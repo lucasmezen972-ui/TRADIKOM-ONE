@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
@@ -16,6 +17,9 @@ import {
 } from "../src/modules/conversation-hub/service";
 import {
   createGoalWatch,
+  changeGoalWatch,
+  evaluateGoalWatch,
+  runDueGoalWatches,
   getGoalWatch,
 } from "../src/modules/goal-watch";
 
@@ -27,6 +31,23 @@ afterEach(async () => {
 });
 
 describe("accès aux objectifs internes Goal Watch", () => {
+  it("n'active jamais un objectif historique sans consentement et refuse un tiers du même tenant", async () => {
+    const context = await createContext();
+    const goal = await seedInternalGoal(context);
+    expect((await getGoalWatch(context.db, context.ownerId, context.tenantId, goal.goalId)))
+      .toMatchObject({ state: "consent_required", version: 0 });
+    expect(await runDueGoalWatches(context.db)).toEqual({ evaluated: 0, reported: 0, failed: 0 });
+    await expect(evaluateGoalWatch(context.db, "system_goal_watch", { tenantId: context.tenantId,
+      goalId: goal.goalId, evaluationKey: "legacy:without-consent", observedAt: timestamp }))
+      .rejects.toMatchObject({ code: "goal_watch_consent_required" });
+    await expect(changeGoalWatch(context.db, context.memberId, context.tenantId, {
+      goalId: goal.goalId, action: "resume", expectedVersion: 0, consentConfirmed: true }))
+      .rejects.toMatchObject({ code: "goal_watch_not_found" });
+    await changeGoalWatch(context.db, context.ownerId, context.tenantId, {
+      goalId: goal.goalId, action: "resume", expectedVersion: 0, consentConfirmed: true });
+    expect((await getGoalWatch(context.db, context.ownerId, context.tenantId, goal.goalId)))
+      .toMatchObject({ state: "active", version: 1 });
+  });
   it("hérite de l’accès au fil et refuse la création sans autorisation", async () => {
     const context = await createContext();
     const goal = await seedInternalGoal(context);
@@ -58,6 +79,7 @@ describe("accès aux objectifs internes Goal Watch", () => {
         context.memberId,
         context.tenantId,
         {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
           threadId: context.threadId,
           title: "Objectif non autorisé",
           signal: "contacts",

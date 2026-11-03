@@ -36,6 +36,8 @@ import {
   type PlanDelegationTargetOption,
 } from "@/app/(app)/conversation/plan-delegation-form";
 import { PlanRevisionForm } from "@/app/(app)/conversation/plan-revision-form";
+import { GoalWatchPanel } from "@/app/(app)/conversation/goal-watch-panel";
+import { NativeTaskForm } from "@/app/(app)/conversation/native-task-form";
 import {
   planReceiptMessage,
   resolveConversationPlanReceipt,
@@ -93,6 +95,7 @@ export default async function ConversationPage({
   const plans = thread
     ? await services.listPlans(user.id, tenant.id, thread.id)
     : [];
+  const goals = thread ? await services.listGoalWatches(user.id, tenant.id, thread.id) : [];
   const latestPlan = plans[0];
   const requestedPlan = plans.find((plan) => plan.id === params.plan_id);
   const planReceipt = resolveConversationPlanReceipt(
@@ -114,6 +117,8 @@ export default async function ConversationPage({
             message.direction === "inbound" && message.kind === "text",
         )
     : undefined;
+  const taskForm = thread && sourceMessage && canWrite && thread.status !== "archived"
+    ? await services.prepareTaskForm(user.id, tenant.id, thread.id) : null;
   const identities = new Map(
     thread?.identities.map((identity) => [identity.id, identity] as const),
   );
@@ -345,6 +350,8 @@ export default async function ConversationPage({
             />
           ) : null}
 
+          {thread ? <GoalWatchPanel threadId={thread.id} goals={goals} canWrite={canWrite && thread.status !== "archived"} creationIdempotencyKey={`goal-create:${randomUUID()}`} /> : null}
+          {thread && sourceMessage && taskForm ? <NativeTaskForm threadId={thread.id} sourceMessageId={sourceMessage.id} contacts={taskForm.contacts} dueAt={taskForm.dueAt} idempotencyKey={`native-task:${randomUUID()}`} /> : null}
           <div className="border-t border-slate-200 bg-slate-50 p-4 lg:p-5">
             {canWrite ? (
               <div className="grid gap-3 xl:grid-cols-2">

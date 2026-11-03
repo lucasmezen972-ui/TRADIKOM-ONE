@@ -1,0 +1,58 @@
+import { expect, test } from "@playwright/test";
+
+test("crée une tâche réelle depuis le fil puis la retrouve sur la fiche du contact", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await expect(page.locator('[data-app-hydrated="true"]')).toHaveCount(1);
+  await page.getByRole("button", { name: /Ouvrir la démo/ }).click();
+  await expect(page).toHaveURL(/aujourdhui/, { timeout: 30_000 });
+  await page.goto("/conversation");
+  await expect(page.locator('[data-app-hydrated="true"]')).toHaveCount(1);
+  await page.getByLabel("Écrire depuis le web").fill("Prévoir une relance du devis client.");
+  await page.locator("form").filter({ has: page.getByLabel("Écrire depuis le web") }).getByRole("button", { name: "Envoyer", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Action réelle dans le CRM" });
+  const contactId = await panel.getByLabel("Contact à suivre").inputValue();
+  const title = `Relance réelle navigateur ${Date.now()}`;
+  await panel.getByLabel("Titre de la tâche").fill(title);
+  await panel.getByRole("checkbox", { name: /Je confirme la création de cette tâche/ }).check();
+  await panel.getByRole("button", { name: "Créer la tâche dans le CRM" }).click();
+  await expect(page.getByText(`Tâche créée dans le CRM : ${title}`, { exact: false })).toBeVisible();
+  await page.goto(`/contacts/${encodeURIComponent(contactId)}`);
+  await expect(page.getByText(title, { exact: true })).toHaveCount(1);
+  await page.reload();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(1);
+});
+
+test("autorise, suspend, reprend et arrête un objectif depuis Conversation", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await expect(page.locator('[data-app-hydrated="true"]')).toHaveCount(1);
+  await page.getByRole("button", { name: /Ouvrir la démo/ }).click();
+  await expect(page).toHaveURL(/aujourdhui/, { timeout: 30_000 });
+  await page.goto("/conversation");
+  await expect(page.locator('[data-app-hydrated="true"]')).toHaveCount(1);
+  await page.getByLabel("Écrire depuis le web").fill("Je souhaite suivre mes contacts actifs.");
+  await page.locator("form").filter({ has: page.getByLabel("Écrire depuis le web") }).getByRole("button", { name: "Envoyer", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Objectifs de cette conversation" });
+  await expect(panel).toBeVisible();
+  await panel.getByText("Suivre un nouvel objectif", { exact: true }).click();
+  const title = `Objectif navigateur ${Date.now()}`;
+  await panel.getByLabel("Nom de l’objectif").fill(title);
+  await panel.getByLabel("Valeur cible").fill("2");
+  await panel.getByRole("checkbox", { name: /J’autorise le suivi/ }).check();
+  await panel.getByRole("button", { name: "Autoriser cet objectif" }).click();
+  const goal = panel.getByRole("listitem").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+  await expect(goal.getByRole("status")).toHaveText("Suivi autorisé");
+  await goal.getByRole("button", { name: "Mettre en pause" }).click();
+  await expect(goal.getByRole("status")).toHaveText("En pause");
+  await goal.getByRole("checkbox", { name: /J’autorise le suivi/ }).check();
+  await goal.getByRole("button", { name: "Reprendre le suivi" }).click();
+  await expect(goal.getByRole("status")).toHaveText("Suivi autorisé");
+  await goal.getByText("Arrêter définitivement", { exact: true }).click();
+  await goal.getByRole("checkbox", { name: /Je confirme l’arrêt définitif/ }).check();
+  await goal.getByRole("button", { name: "Confirmer l’arrêt" }).click();
+  await expect(goal.getByRole("status")).toHaveText("Arrêté définitivement");
+  await page.reload();
+  await expect(goal.getByRole("status")).toHaveText("Arrêté définitivement");
+  await expect(goal.getByRole("button", { name: "Reprendre le suivi" })).toHaveCount(0);
+});

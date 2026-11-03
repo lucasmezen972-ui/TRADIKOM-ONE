@@ -1,8 +1,4 @@
 import { createHash } from "node:crypto";
-import {
-  withSystemDbTransaction,
-  withTenantDbTransaction,
-} from "@/db/tenant-context";
 import type { DbClient } from "@/lib/db";
 import { id, nowIso } from "@/lib/security";
 import type { Role } from "@/lib/types";
@@ -25,10 +21,16 @@ import {
   findActiveGoalWatchEntry,
   findGoalWatchEvaluationAuditsByKey,
   findLatestGoalWatchEvaluationAudit,
-  listActiveGoalWatchEntries,
+  findGoalWatchControl,
+  insertGoalWatchControl,
+  listGoalWatchEntriesForThread,
+  listDueGoalWatchEntries,
+  type GoalWatchControlRow,
 } from "@/modules/goal-watch/repository";
 import {
   createGoalWatchInputSchema,
+  changeGoalWatchInputSchema,
+  type ChangeGoalWatchInput,
   evaluateGoalWatchInputSchema,
   goalWatchConfigSchema,
   goalWatchEvaluationAuditSchema,
@@ -38,7 +40,7 @@ import {
   type GoalWatchSignal,
   type GoalWatchState,
 } from "@/modules/goal-watch/schemas";
-import { withGoalWatchEvaluationTransaction } from "@/modules/goal-watch/transactions";
+import { withGoalWatchActorTransaction, withGoalWatchEvaluationTransaction } from "@/modules/goal-watch/transactions";
 import { assertTenantAccess } from "@/modules/tenants";
 
 const goalWatchWriteRoles: Role[] = [
@@ -69,7 +71,7 @@ export async function createGoalWatch(
   input: CreateGoalWatchInput,
 ) {
   const parsed = createGoalWatchInputSchema.parse(input);
-  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+  return withGoalWatchActorTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(
       transaction,
       userId,
@@ -88,16 +90,10 @@ export async function createGoalWatch(
         "La conversation liée à cet objectif est introuvable.",
       );
     }
-    if (thread.status === "archived") {
-      throw new GoalWatchError(
-        "goal_watch_thread_unavailable",
-        "Une conversation archivée ne peut pas recevoir un objectif permanent.",
-      );
-    }
 
     const now = nowIso();
-    const goalId = id("goal_watch");
-    const entryId = id("brain_entry");
+    const goalId = `goal_watch_${digest(`${tenantId}:${userId}:${parsed.idempotencyKey}`, 48)}`;
+    const entryId = `brain_entry_${digest(goalId, 48)}`;
     const config = goalWatchConfigSchema.parse({
       schemaVersion: 1,
       threadId: parsed.threadId,
@@ -106,6 +102,27 @@ export async function createGoalWatch(
       target: parsed.target,
       cadenceMinutes: parsed.cadenceMinutes,
     });
+
+    if ((transaction as { __runtime?: string }).__runtime === "postgres") {
+      await transaction.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [goalId]);
+    }
+    const existing = await findActiveGoalWatchEntry(transaction, tenantId, goalId, true);
+    const lockedThread = await lockConversationThreadRow(transaction, tenantId, parsed.threadId);
+    if (!lockedThread || lockedThread.status === "archived") {
+      throw new GoalWatchError(
+        "goal_watch_thread_unavailable",
+        "Une conversation archivée ne peut pas recevoir un objectif permanent.",
+      );
+    }
+
+    if (existing) {
+      if (existing.title !== parsed.title || JSON.stringify(parseGoalConfig(existing)) !== JSON.stringify(config)) {
+        throw new GoalWatchError("goal_watch_version_conflict", "Cette demande de création a déjà été utilisée avec un autre objectif.");
+      }
+      return mapGoalWatch(existing.id, goalId, tenantId, existing.title, config,
+        await readLatestEvaluation(transaction, tenantId, goalId),
+        await findGoalWatchControl(transaction, tenantId, goalId));
+    }
 
     await insertBusinessBrainEntry(transaction, {
       id: entryId,
@@ -121,6 +138,9 @@ export async function createGoalWatch(
       version: 1,
       actorId: userId,
       now,
+    });
+    await insertGoalWatchControl(transaction, {
+      entryId, tenantId, goalId, threadId: config.threadId, actorId: userId, now,
     });
     await insertBusinessBrainEvidence(transaction, {
       id: id("brain_evidence"),
@@ -143,10 +163,13 @@ export async function createGoalWatch(
         operator: config.operator,
         cadenceMinutes: config.cadenceMinutes,
         threadId: config.threadId,
+        consentVersion: 1,
+        consentConfirmed: true,
       },
     });
 
-    return mapGoalWatch(entryId, goalId, tenantId, parsed.title, config, null);
+    return mapGoalWatch(entryId, goalId, tenantId, parsed.title, config, null,
+      await findGoalWatchControl(transaction, tenantId, goalId));
   });
 }
 
@@ -156,7 +179,7 @@ export async function getGoalWatch(
   tenantId: string,
   goalId: string,
 ) {
-  return withTenantDbTransaction(db, tenantId, userId, async (transaction) => {
+  return withGoalWatchActorTransaction(db, tenantId, userId, async (transaction) => {
     await assertTenantAccess(transaction, userId, tenantId);
     const entry = await findActiveGoalWatchEntry(transaction, tenantId, goalId);
     if (!entry) {
@@ -186,7 +209,76 @@ export async function getGoalWatch(
       entry.title,
       config,
       latest,
+      await findGoalWatchControl(transaction, tenantId, goalId),
     );
+  });
+}
+
+export async function listGoalWatchesForThread(
+  db: DbClient, userId: string, tenantId: string, threadId: string,
+) {
+  return withGoalWatchActorTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId);
+    if (!await findAccessibleConversationThreadRow(transaction, tenantId, userId, threadId)) {
+      throw new GoalWatchError("goal_watch_thread_not_found", "Conversation introuvable.");
+    }
+    const entries = await listGoalWatchEntriesForThread(transaction, tenantId, threadId);
+    const result = [];
+    for (const entry of entries) {
+      const config = parseGoalConfig(entry);
+      result.push(mapGoalWatch(entry.id, entry.entry_key, tenantId, entry.title, config,
+        await readLatestEvaluation(transaction, tenantId, entry.entry_key),
+        await findGoalWatchControl(transaction, tenantId, entry.entry_key)));
+    }
+    return result;
+  });
+}
+
+export async function changeGoalWatch(
+  db: DbClient, userId: string, tenantId: string, input: ChangeGoalWatchInput,
+) {
+  const parsed = changeGoalWatchInputSchema.parse(input);
+  return withGoalWatchActorTransaction(db, tenantId, userId, async (transaction) => {
+    await assertTenantAccess(transaction, userId, tenantId, goalWatchWriteRoles);
+    // Same lock order as evaluation: entry, control, thread.
+    const entry = await findActiveGoalWatchEntry(transaction, tenantId, parsed.goalId, true);
+    if (!entry) throw new GoalWatchError("goal_watch_not_found", "Objectif introuvable.");
+    const config = parseGoalConfig(entry);
+    const control = await findGoalWatchControl(transaction, tenantId, parsed.goalId, true);
+    if (!await findAccessibleConversationThreadRow(transaction, tenantId, userId, config.threadId)) {
+      throw new GoalWatchError("goal_watch_not_found", "Objectif introuvable.");
+    }
+    const thread = await lockConversationThreadRow(transaction, tenantId, config.threadId);
+    if (parsed.action === "resume" && (!thread || thread.status === "archived")) {
+      throw new GoalWatchError("goal_watch_thread_unavailable", "Le suivi exige une conversation active.");
+    }
+    if ((control?.version ?? 0) !== parsed.expectedVersion) {
+      throw new GoalWatchError("goal_watch_version_conflict", "Cet objectif a changé. Actualisez la conversation.");
+    }
+    const nextState = { pause: "paused", resume: "active", stop: "stopped" }[parsed.action];
+    if (control?.state === nextState) return { goalId: parsed.goalId, threadId: config.threadId, state: control.state, version: control.version };
+    if (control?.state === "stopped" || (!control && parsed.action !== "resume")) {
+      throw new GoalWatchError("goal_watch_transition_invalid", "Un suivi arrêté ne peut pas reprendre. Créez un nouvel objectif.");
+    }
+    const now = nowIso();
+    if (!control) {
+      await insertGoalWatchControl(transaction, { entryId: entry.id, tenantId, goalId: parsed.goalId,
+        threadId: config.threadId, actorId: userId, now });
+    } else {
+      await transaction.query(`update goal_watch_controls set state = $3, version = version + 1,
+        updated_by = $4, updated_at = $5, consented_by = $6, consented_at = $7,
+        next_due_at = case when $3 = 'active' then '1970-01-01T00:00:00Z'::timestamptz else next_due_at end
+        where tenant_id = $1 and goal_id = $2`,
+      [tenantId, parsed.goalId, nextState, userId, now,
+        parsed.action === "resume" ? userId : control.consented_by,
+        parsed.action === "resume" ? now : control.consented_at]);
+    }
+    const version = (control?.version ?? 0) + 1;
+    await recordAuditLog(transaction, { tenantId, actorId: userId,
+      action: !control ? "goal_watch.consented" : `goal_watch.${nextState === "active" ? "resumed" : nextState}`,
+      targetType: "goal_watch", targetId: parsed.goalId,
+      metadata: { state: nextState, version, consentConfirmed: parsed.action === "resume" } });
+    return { goalId: parsed.goalId, threadId: config.threadId, state: nextState, version };
   });
 }
 
@@ -224,6 +316,13 @@ export async function evaluateGoalWatch(
       );
     }
     const config = parseGoalConfig(entry);
+    const control = await findGoalWatchControl(transaction, parsed.tenantId, parsed.goalId, true);
+    if (!control) throw new GoalWatchError("goal_watch_consent_required", "Confirmez le suivi dans la conversation avant toute évaluation.");
+    if (control.state !== "active") throw new GoalWatchError("goal_watch_inactive", "Le suivi de cet objectif est suspendu ou arrêté.");
+    await assertTenantAccess(transaction, control.consented_by, parsed.tenantId, goalWatchWriteRoles);
+    if (!await findAccessibleConversationThreadRow(transaction, parsed.tenantId, control.consented_by, config.threadId)) {
+      throw new GoalWatchError("goal_watch_consent_required", "L'autorisation de suivi n'est plus valide pour cette conversation.");
+    }
     const thread = await lockConversationThreadRow(
       transaction,
       parsed.tenantId,
@@ -319,6 +418,10 @@ export async function evaluateGoalWatch(
       metadata: auditMetadata,
     });
 
+    await transaction.query(`update goal_watch_controls set next_due_at = $3::timestamptz
+      where tenant_id = $1 and goal_id = $2`, [parsed.tenantId, parsed.goalId,
+      new Date(Date.parse(parsed.observedAt) + config.cadenceMinutes * 60_000).toISOString()]);
+
     return {
       tenantId: parsed.tenantId,
       goalId: parsed.goalId,
@@ -343,41 +446,30 @@ export async function runDueGoalWatches(
   let reported = 0;
   let failed = 0;
 
-  // Scan with a stable keyset: non-due entries must not consume the work limit.
-  // The cursor is local to this invocation; no recurring work is activated here.
-  let afterId = "";
-  let attempted = 0;
-  while (attempted < limit) {
-    const entries = await withSystemDbTransaction(db, (transaction) =>
-      listActiveGoalWatchEntries(transaction, limit, afterId),
-    );
-    if (entries.length === 0) break;
-    for (const entry of entries) {
-      afterId = entry.id;
-      let reserved = false;
-      try {
-        const config = parseGoalConfig(entry);
-        const latest = await withSystemDbTransaction(db, (transaction) =>
-          readLatestEvaluation(transaction, entry.tenant_id, entry.entry_key),
-        );
-        if (!isDue(config, latest, now)) continue;
-
-        attempted += 1;
-        reserved = true;
-        const result = await evaluateGoalWatch(db, defaultSystemActorId, {
-          tenantId: entry.tenant_id,
-          goalId: entry.entry_key,
-          evaluationKey: scheduledEvaluationKey(entry.entry_key, config, now),
-          observedAt: now.toISOString(),
-        });
-        if (!result.idempotentReplay) evaluated += 1;
-        if (result.reported && !result.idempotentReplay) reported += 1;
-      } catch {
-        failed += 1;
-        // Invalid configurations also consume a work slot.
-        if (!reserved) attempted += 1;
-      }
-      if (attempted >= limit) break;
+  const entries = await withGoalWatchEvaluationTransaction(db, (transaction) =>
+    listDueGoalWatchEntries(transaction, limit, now.toISOString()),
+  );
+  for (const entry of entries) {
+    try {
+      const config = parseGoalConfig(entry);
+      const control = await withGoalWatchEvaluationTransaction(db, (transaction) =>
+        findGoalWatchControl(transaction, entry.tenant_id, entry.entry_key));
+      const result = await evaluateGoalWatch(db, defaultSystemActorId, {
+        tenantId: entry.tenant_id, goalId: entry.entry_key,
+        evaluationKey: scheduledEvaluationKey(entry.entry_key, config, now, control?.version ?? 0),
+        observedAt: now.toISOString(),
+      });
+      if (!result.idempotentReplay) evaluated += 1;
+      if (result.reported && !result.idempotentReplay) reported += 1;
+    } catch {
+      failed += 1;
+      // Back off corrupt or inaccessible goals so one tenant cannot occupy every batch.
+      // Never overwrite the lifecycle or a later successful schedule.
+      await withGoalWatchEvaluationTransaction(db, async (transaction) => {
+        await transaction.query(`update goal_watch_controls set next_due_at = $3::timestamptz
+          where tenant_id = $1 and goal_id = $2 and state = 'active' and next_due_at <= $4::timestamptz`,
+        [entry.tenant_id, entry.entry_key, new Date(now.getTime() + 60 * 60_000).toISOString(), now.toISOString()]);
+      });
     }
   }
 
@@ -520,26 +612,16 @@ function evaluateState(config: GoalWatchConfig, value: number): GoalWatchState {
   return met ? "met" : "pending";
 }
 
-function isDue(
-  config: GoalWatchConfig,
-  latest: GoalWatchEvaluationAudit | null,
-  now: Date,
-) {
-  if (!latest) return true;
-  const last = Date.parse(latest.observedAt);
-  if (!Number.isFinite(last)) return true;
-  return now.getTime() - last >= config.cadenceMinutes * 60_000;
-}
-
 function scheduledEvaluationKey(
   goalId: string,
   config: GoalWatchConfig,
   now: Date,
+  version: number,
 ) {
   const slot = Math.floor(
     now.getTime() / (config.cadenceMinutes * 60_000),
   );
-  return `goal-watch:scheduled:${digest(`${goalId}:${slot}`, 48)}`;
+  return `goal-watch:scheduled:${digest(`${goalId}:${version}:${slot}`, 48)}`;
 }
 
 function goalSummary(config: GoalWatchConfig) {
@@ -595,6 +677,7 @@ function mapGoalWatch(
   title: string,
   config: GoalWatchConfig,
   latest: GoalWatchEvaluationAudit | null,
+  control: GoalWatchControlRow | null = null,
 ) {
   return {
     entryId,
@@ -603,9 +686,14 @@ function mapGoalWatch(
     title,
     threadId: config.threadId,
     signal: config.signal,
+    signalLabel: signalLabels[config.signal],
+    targetLabel: formatValue(config.signal, config.target),
     operator: config.operator,
     target: config.target,
     cadenceMinutes: config.cadenceMinutes,
+    state: (control?.state ?? "consent_required") as GoalWatchControlRow["state"] | "consent_required",
+    version: control?.version ?? 0,
+    consentedAt: control?.consented_at,
     latestEvaluation: latest ?? undefined,
   };
 }

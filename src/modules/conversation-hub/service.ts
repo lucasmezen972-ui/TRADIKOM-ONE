@@ -83,6 +83,15 @@ function assertIngressDoesNotUseReservedOrchestratorNamespace(
   input: MessageIngress,
   allowSystemRole: boolean,
 ) {
+  if (!allowSystemRole && (
+    input.idempotencyKey.startsWith("goal-watch:report:") ||
+    input.idempotencyKey.startsWith("native-task:report:") ||
+    /^(identity_goal_watch_[a-f0-9]{32}$|identity_native_task_)/.test(input.channelIdentity.id) ||
+    /^(participant_goal_watch_[a-f0-9]{32}$|participant_native_task_)/.test(input.channelIdentity.participantId) ||
+    ["goal-watch", "native-actions"].includes(input.channelIdentity.adapterKey)
+  )) {
+    throw new ConversationHubError("conversation_identity_conflict", "Cette identité est réservée aux preuves internes.");
+  }
   if (input.idempotencyKey.startsWith("orchestrator:")) {
     throw new ConversationHubError(
       "conversation_idempotency_conflict",

@@ -59,6 +59,8 @@ export const goalWatchConfigSchema = z
 
 export const createGoalWatchInputSchema = z
   .object({
+    consentConfirmed: z.literal(true),
+    idempotencyKey: boundedIdentifierSchema.min(8),
     threadId: boundedIdentifierSchema,
     title: z.string().trim().min(3).max(120),
     signal: goalWatchSignalSchema,
@@ -95,6 +97,16 @@ export const goalWatchEvaluationAuditSchema = z
   .strict();
 
 export type GoalWatchSignal = z.infer<typeof goalWatchSignalSchema>;
+export const changeGoalWatchInputSchema = z.object({
+  goalId: boundedIdentifierSchema,
+  action: z.enum(["pause", "resume", "stop"]),
+  expectedVersion: z.number().int().nonnegative(),
+  consentConfirmed: z.boolean().optional(),
+}).strict().refine((value) => value.action !== "resume" || value.consentConfirmed === true, {
+  message: "Confirmez le consentement avant de reprendre le suivi.",
+  path: ["consentConfirmed"],
+});
+export type ChangeGoalWatchInput = z.input<typeof changeGoalWatchInputSchema>;
 export type GoalWatchOperator = z.infer<typeof goalWatchOperatorSchema>;
 export type GoalWatchState = z.infer<typeof goalWatchStateSchema>;
 export type GoalWatchConfig = z.infer<typeof goalWatchConfigSchema>;

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryDb, type DbClient } from "../src/lib/db";
 import { createServices } from "../src/lib/services";
@@ -7,6 +8,8 @@ import {
 } from "../src/modules/conversation-hub/service";
 import {
   createGoalWatch,
+  changeGoalWatch,
+  listGoalWatchesForThread,
   evaluateGoalWatch,
   getGoalWatch,
   runDueGoalWatches,
@@ -22,6 +25,93 @@ afterEach(async () => {
 });
 
 describe("Goal and Watch Engine", () => {
+  it("déduplique une même création et refuse sa réutilisation avec une cible différente", async () => {
+    const context = await createTenantContext("goal-create-replay@example.test");
+    const threadId = await createConversation(context);
+    const input = { threadId, title: "Objectif unique", signal: "contacts" as const, operator: "gte" as const,
+      target: 1, consentConfirmed: true as const, idempotencyKey: "goal:create:replayed" };
+    const [first, replay] = await Promise.all([
+      createGoalWatch(context.db, context.userId, context.tenantId, input),
+      createGoalWatch(context.db, context.userId, context.tenantId, input),
+    ]);
+    expect(first.goalId).toBe(replay.goalId);
+    expect((await context.db.query("select * from goal_watch_controls")).rows).toHaveLength(1);
+    await expect(createGoalWatch(context.db, context.userId, context.tenantId, { ...input, target: 2 }))
+      .rejects.toMatchObject({ code: "goal_watch_version_conflict" });
+    await changeGoalWatch(context.db, context.userId, context.tenantId, { goalId: first.goalId, action: "stop", expectedVersion: 1 });
+    expect((await createGoalWatch(context.db, context.userId, context.tenantId, input)).state).toBe("stopped");
+  });
+  it("refuse un objectif sans consentement explicite avant toute écriture", async () => {
+    const context = await createTenantContext("no-consent@example.test");
+    const threadId = await createConversation(context);
+    const input = { threadId, idempotencyKey: "without-consent", title: "Pas encore autorisé", signal: "contacts" as const, operator: "gte" as const, target: 1 };
+    await expect(createGoalWatch(context.db, context.userId, context.tenantId,
+      input as Parameters<typeof createGoalWatch>[3])).rejects.toThrow();
+    expect((await context.db.query("select * from goal_watch_controls")).rows).toHaveLength(0);
+  });
+
+  it("met en pause, exige un nouveau consentement et rend l'arrêt définitif", async () => {
+    const { context, goal } = await createDurabilityFixture("lifecycle");
+    expect((await listGoalWatchesForThread(context.db, context.userId, context.tenantId, goal.threadId))[0])
+      .toMatchObject({ state: "active", version: 1 });
+    const change = (input: Parameters<typeof changeGoalWatch>[3]) => changeGoalWatch(context.db, context.userId, context.tenantId, input);
+    await change({ goalId: goal.goalId, action: "pause", expectedVersion: 1 });
+    await expect(evaluateGoalWatch(context.db, "system_goal_watch", { tenantId: context.tenantId,
+      goalId: goal.goalId, evaluationKey: "paused:refused", observedAt: firstEvaluationAt }))
+      .rejects.toMatchObject({ code: "goal_watch_inactive" });
+    expect(await runDueGoalWatches(context.db, { now: new Date(firstEvaluationAt) }))
+      .toEqual({ evaluated: 0, reported: 0, failed: 0 });
+    await expect(change({ goalId: goal.goalId, action: "resume", expectedVersion: 2 })).rejects.toThrow();
+    await expect(change({ goalId: goal.goalId, action: "resume", expectedVersion: 1, consentConfirmed: true }))
+      .rejects.toMatchObject({ code: "goal_watch_version_conflict" });
+    await change({ goalId: goal.goalId, action: "resume", expectedVersion: 2, consentConfirmed: true });
+    expect(await runDueGoalWatches(context.db, { now: new Date(firstEvaluationAt) }))
+      .toEqual({ evaluated: 1, reported: 1, failed: 0 });
+    await change({ goalId: goal.goalId, action: "stop", expectedVersion: 3 });
+    const snapshot = await durabilityCounts(context);
+    await expect(change({ goalId: goal.goalId, action: "resume", expectedVersion: 4, consentConfirmed: true }))
+      .rejects.toMatchObject({ code: "goal_watch_transition_invalid" });
+    await expect(evaluateGoalWatch(context.db, "system_goal_watch", { tenantId: context.tenantId,
+      goalId: goal.goalId, evaluationKey: "after-stop:refused", observedAt: "2026-08-21T13:00:00Z" }))
+      .rejects.toMatchObject({ code: "goal_watch_inactive" });
+    expect(await durabilityCounts(context)).toEqual(snapshot);
+    expect((await getGoalWatch(context.db, context.userId, context.tenantId, goal.goalId)).state).toBe("stopped");
+    const logs = await context.db.query<{ action: string }>("select action from audit_logs where target_id = $1", [goal.goalId]);
+    expect(logs.rows.map((row) => row.action)).toEqual(expect.arrayContaining(["goal_watch.paused", "goal_watch.resumed", "goal_watch.stopped"]));
+  });
+
+  it("sérialise une évaluation en vol puis refuse toute évaluation après l'arrêt confirmé", async () => {
+    const { context, goal } = await createDurabilityFixture("concurrent-stop");
+    const running = evaluateGoalWatch(context.db, "system_goal_watch", { tenantId: context.tenantId,
+      goalId: goal.goalId, evaluationKey: "in-flight:allowed", observedAt: firstEvaluationAt });
+    const stopping = changeGoalWatch(context.db, context.userId, context.tenantId, {
+      goalId: goal.goalId, action: "stop", expectedVersion: 1 });
+    await Promise.all([running, stopping]);
+    const snapshot = await durabilityCounts(context);
+    expect(await runDueGoalWatches(context.db, { now: new Date("2026-08-22T13:00:00Z") }))
+      .toEqual({ evaluated: 0, reported: 0, failed: 0 });
+    expect(await durabilityCounts(context)).toEqual(snapshot);
+  });
+
+  it("annule le changement d'état si son audit échoue", async () => {
+    const { context, goal } = await createDurabilityFixture("lifecycle-rollback");
+    await context.db.exec(`create function reject_goal_stop_audit() returns trigger language plpgsql as $$
+      begin if new.action = 'goal_watch.stopped' then raise exception 'fixture_audit_failure'; end if; return new; end $$;
+      create trigger reject_goal_stop_audit before insert on audit_logs for each row execute function reject_goal_stop_audit()`);
+    await expect(changeGoalWatch(context.db, context.userId, context.tenantId, {
+      goalId: goal.goalId, action: "stop", expectedVersion: 1 })).rejects.toThrow("fixture_audit_failure");
+    expect((await getGoalWatch(context.db, context.userId, context.tenantId, goal.goalId)))
+      .toMatchObject({ state: "active", version: 1 });
+  });
+
+  it("refuse la mutation d'un objectif depuis une autre entreprise", async () => {
+    const { context, goal } = await createDurabilityFixture("lifecycle-tenant");
+    const other = await createSecondUserAndTenant(context.db, "other-goal-tenant@example.test");
+    await expect(changeGoalWatch(context.db, other.userId, other.tenantId, {
+      goalId: goal.goalId, action: "stop", expectedVersion: 1 }))
+      .rejects.toMatchObject({ code: "goal_watch_not_found" });
+    expect((await getGoalWatch(context.db, context.userId, context.tenantId, goal.goalId)).state).toBe("active");
+  });
   it("crée un objectif permanent, le surveille de façon idempotente et le rapporte dans le même fil", async () => {
     const context = await createTenantContext("goal-watch-owner@example.com");
     const threadId = await createConversation(context);
@@ -30,6 +120,7 @@ describe("Goal and Watch Engine", () => {
       context.userId,
       context.tenantId,
       {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
         threadId,
         title: "Atteindre un premier contact actif",
         signal: "contacts",
@@ -138,6 +229,7 @@ describe("Goal and Watch Engine", () => {
       ownerA.userId,
       ownerA.tenantId,
       {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
         threadId,
         title: "Obtenir au moins un contact",
         signal: "contacts",
@@ -194,6 +286,7 @@ describe("Goal and Watch Engine", () => {
     const goals = [];
     for (let i = 0; i < 3; i++) {
       goals.push(await createGoalWatch(context.db, context.userId, context.tenantId, {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
         threadId, title: "Objectif paginé", signal: "contacts", operator: "gte",
         target: 1, cadenceMinutes: 60,
       }));
@@ -219,6 +312,7 @@ describe("Goal and Watch Engine", () => {
     const context = await createTenantContext("goal-watch-maintenance@example.com");
     const threadId = await createConversation(context);
     await createGoalWatch(context.db, context.userId, context.tenantId, {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
       threadId,
       title: "Surveiller la base contacts",
       signal: "contacts",
@@ -403,6 +497,7 @@ async function createDurabilityFixture(name: string) {
   const context = await createTenantContext(`goal-watch-${name}@example.test`);
   const threadId = await createConversation(context);
   const goal = await createGoalWatch(context.db, context.userId, context.tenantId, {
+        consentConfirmed: true, idempotencyKey: `goal-create:${randomUUID()}`,
     threadId, title: "Objectif de durabilité", signal: "contacts", operator: "gte",
     target: 1, cadenceMinutes: 60,
   });
