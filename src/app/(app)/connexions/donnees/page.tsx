@@ -240,6 +240,7 @@ export default async function DataConnectionsPage({
             {selectedExport.status === "completed" ? (
               <Link
                 href={`/api/exports/${encodeURIComponent(selectedExport.id)}`}
+                prefetch={false}
                 className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 <Download size={16} aria-hidden />
