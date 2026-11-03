@@ -26,6 +26,10 @@ describe("migrations du Conversation Hub", () => {
         "122_os5_conversation_action_plan_delegations",
         "123_os5_conversation_action_plan_delegations_rls",
         "124_runtime_function_search_path",
+        "127_conversation_model_requests",
+        "128_conversation_model_requests_rls",
+        "129_conversation_native_documents",
+        "130_conversation_native_documents_rls",
       ]),
     );
 
@@ -44,9 +48,12 @@ describe("migrations du Conversation Hub", () => {
       "conversation_action_plan_steps",
       "conversation_action_plans",
       "conversation_channel_identities",
+      "conversation_file_objects",
       "conversation_message_attachments",
       "conversation_message_route_hops",
       "conversation_messages",
+      "conversation_model_budget_charges",
+      "conversation_model_requests",
       "conversation_participants",
       "conversation_thread_access_grants",
       "conversation_thread_access_operations",

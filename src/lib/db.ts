@@ -632,6 +632,12 @@ function getMigrations(enableRls: boolean) {
     },
     { id: "125_goal_watch_controls", sql: goalWatchControlsMigrationSql },
     ...(enableRls ? [{ id: "126_goal_watch_controls_rls", sql: goalWatchControlsRlsMigrationSql }] : []),
+    { id: "127_conversation_model_requests", sql: conversationModelRequestsMigrationSql },
+    ...(enableRls ? [{ id: "128_conversation_model_requests_rls", sql: conversationModelRequestsRlsMigrationSql }] : []),
+    { id: "129_conversation_native_documents", sql: conversationNativeDocumentsMigrationSql },
+    ...(enableRls ? [{ id: "130_conversation_native_documents_rls", sql: conversationNativeDocumentsRlsMigrationSql }] : []),
+    { id: "131_github_public_connectors", sql: githubPublicConnectorsMigrationSql },
+    ...(enableRls ? [{ id: "132_github_public_connectors_rls", sql: githubPublicConnectorsRlsMigrationSql }] : []),
   ];
 }
 
@@ -9125,4 +9131,229 @@ BEGIN
   END LOOP;
 END
 $$;
+`;
+
+const conversationModelRequestsMigrationSql = `
+create table if not exists conversation_model_budget_charges (
+  id text primary key,
+  tenant_id text not null,
+  reserved_cost_micro_usd integer not null check (reserved_cost_micro_usd = 25000),
+  created_at text not null
+);
+create index if not exists idx_conversation_model_charges_tenant on conversation_model_budget_charges(tenant_id);
+
+create table if not exists conversation_model_requests (
+  id text primary key references conversation_model_budget_charges(id) on delete restrict,
+  tenant_id text not null references tenants(id) on delete cascade,
+  actor_id text not null references users(id) on delete cascade,
+  thread_id text not null,
+  source_message_id text not null,
+  request_key_hash text not null check (request_key_hash ~ '^[a-f0-9]{64}$'),
+  context_fingerprint text not null check (context_fingerprint ~ '^[a-f0-9]{64}$'),
+  model text not null check (model = 'gpt-5.4-mini-2026-03-17'),
+  external_context_approved boolean not null,
+  consented_at text not null,
+  expires_at text not null,
+  status text not null check (status in ('reserved', 'succeeded', 'failed')),
+  outcome_reason text check (outcome_reason in ('valid_draft', 'invalid_output', 'provider_failure')),
+  input_tokens integer check (input_tokens between 0 and 1000000),
+  output_tokens integer check (output_tokens between 0 and 1000000),
+  completed_at text,
+  generation_snapshot text check (generation_snapshot is null or char_length(generation_snapshot) <= 128000),
+  unique (tenant_id, actor_id, request_key_hash),
+  foreign key (tenant_id, thread_id) references conversation_threads(tenant_id, id) on delete cascade,
+  foreign key (tenant_id, source_message_id) references conversation_messages(tenant_id, id) on delete cascade,
+  check ((status = 'reserved' and completed_at is null and outcome_reason is null and generation_snapshot is null)
+    or (status in ('succeeded', 'failed') and completed_at is not null and outcome_reason is not null)),
+  check (generation_snapshot is null or status = 'succeeded')
+);
+
+create or replace function protect_conversation_model_charge()
+returns trigger language plpgsql security invoker
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+  raise exception 'conversation_model_charge_immutable';
+end;
+$$;
+drop trigger if exists conversation_model_charge_immutable on conversation_model_budget_charges;
+create trigger conversation_model_charge_immutable before update or delete on conversation_model_budget_charges
+  for each row execute function protect_conversation_model_charge();
+
+create or replace function protect_conversation_model_request()
+returns trigger language plpgsql security invoker
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.status <> 'reserved' or new.generation_snapshot is not null
+      or not exists (select 1 from conversation_messages message
+        where message.tenant_id = new.tenant_id and message.thread_id = new.thread_id
+          and message.id = new.source_message_id and message.direction = 'inbound' and message.kind = 'text') then
+      raise exception 'conversation_model_source_invalid';
+    end if;
+  else
+    if new.id is distinct from old.id or new.tenant_id is distinct from old.tenant_id
+      or new.actor_id is distinct from old.actor_id or new.thread_id is distinct from old.thread_id
+      or new.source_message_id is distinct from old.source_message_id
+      or new.request_key_hash is distinct from old.request_key_hash
+      or new.context_fingerprint is distinct from old.context_fingerprint
+      or new.model is distinct from old.model
+      or new.external_context_approved is distinct from old.external_context_approved
+      or new.consented_at is distinct from old.consented_at or new.expires_at is distinct from old.expires_at then
+      raise exception 'conversation_model_identity_immutable';
+    end if;
+    if old.status = 'reserved' then
+      if new.status not in ('succeeded', 'failed') or new.generation_snapshot is not null then
+        raise exception 'conversation_model_outcome_invalid';
+      end if;
+    elsif old.status <> 'succeeded' or old.generation_snapshot is not null or new.generation_snapshot is null
+      or new.status is distinct from old.status or new.outcome_reason is distinct from old.outcome_reason
+      or new.input_tokens is distinct from old.input_tokens or new.output_tokens is distinct from old.output_tokens
+      or new.completed_at is distinct from old.completed_at then
+      raise exception 'conversation_model_outcome_immutable';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists conversation_model_request_integrity on conversation_model_requests;
+create trigger conversation_model_request_integrity before insert or update on conversation_model_requests
+  for each row execute function protect_conversation_model_request();
+`;
+
+const conversationModelRequestsRlsMigrationSql = `
+alter table conversation_model_requests enable row level security;
+alter table conversation_model_budget_charges enable row level security;
+drop policy if exists tenant_isolation on conversation_model_requests;
+drop policy if exists tenant_isolation on conversation_model_budget_charges;
+
+drop policy if exists conversation_model_requests_read on conversation_model_requests;
+create policy conversation_model_requests_read on conversation_model_requests for select
+using (app_is_system() or app_actor_can_access_conversation_thread(tenant_id, thread_id));
+drop policy if exists conversation_model_requests_insert on conversation_model_requests;
+create policy conversation_model_requests_insert on conversation_model_requests for insert with check (app_is_system());
+drop policy if exists conversation_model_requests_update on conversation_model_requests;
+create policy conversation_model_requests_update on conversation_model_requests for update
+using (app_is_system()) with check (app_is_system());
+
+drop policy if exists conversation_model_charges_read on conversation_model_budget_charges;
+create policy conversation_model_charges_read on conversation_model_budget_charges for select using (app_is_system());
+drop policy if exists conversation_model_charges_insert on conversation_model_budget_charges;
+create policy conversation_model_charges_insert on conversation_model_budget_charges for insert with check (app_is_system());
+
+drop policy if exists conversation_model_audit_access on audit_logs;
+create policy conversation_model_audit_access on audit_logs as restrictive for select
+using (app_is_system() or target_type <> 'conversation_model_request' or exists (
+  select 1 from conversation_model_requests request where request.tenant_id = audit_logs.tenant_id
+    and request.id = audit_logs.target_id
+));
+`;
+
+const conversationNativeDocumentsMigrationSql = `
+create table if not exists conversation_file_objects (
+  attachment_id text primary key references conversation_message_attachments(id) on delete cascade,
+  tenant_id text not null references tenants(id) on delete cascade,
+  request_fingerprint text not null check (request_fingerprint ~ '^[a-f0-9]{64}$'),
+  key_version text not null,
+  envelope text not null check (char_length(envelope) <= 710000),
+  size_bytes integer not null check (size_bytes between 1 and 524288),
+  created_at text not null,
+  unique (tenant_id, attachment_id)
+);
+alter table conversation_message_attachments drop constraint if exists conversation_message_attachments_external_extraction_check;
+alter table conversation_message_attachments add constraint conversation_message_attachments_external_extraction_check check (
+  (trust_boundary is null and extractor_mode is null and extractor_key is null and extracted_text is null and extracted_text_sha256 is null and extracted_at is null)
+  or (trust_boundary = 'external_untrusted_data' and extractor_mode in ('mock', 'native')
+    and char_length(extractor_key) between 1 and 160 and char_length(extracted_text) between 1 and 16000
+    and extracted_text_sha256 ~ '^[A-Fa-f0-9]{64}$' and char_length(extracted_at) between 20 and 40
+    and (extractor_mode <> 'native' or extractor_key in ('native-utf8-v1', 'native-pdf-text-v1')))
+);
+create or replace function enforce_conversation_native_document_identity() returns trigger
+language plpgsql security invoker set search_path = pg_catalog, public, pg_temp as $$
+begin
+  if tg_op = 'UPDATE' then raise exception 'conversation_native_document_immutable'; end if;
+  if not exists (select 1 from conversation_message_attachments a where a.id = new.attachment_id
+    and a.tenant_id = new.tenant_id and a.size_bytes = new.size_bytes
+    and a.storage_reference = 'dbdoc:' || new.tenant_id || ':' || new.attachment_id
+    and a.extractor_mode = 'native') then raise exception 'conversation_native_document_identity_invalid'; end if;
+  return new;
+end;
+$$;
+drop trigger if exists conversation_native_document_identity on conversation_file_objects;
+create trigger conversation_native_document_identity before insert or update on conversation_file_objects
+for each row execute function enforce_conversation_native_document_identity();
+`;
+
+const conversationNativeDocumentsRlsMigrationSql = `
+alter table conversation_file_objects enable row level security;
+drop policy if exists tenant_isolation on conversation_file_objects;
+drop policy if exists conversation_file_read on conversation_file_objects;
+create policy conversation_file_read on conversation_file_objects for select using (app_is_system() or exists (
+  select 1 from conversation_message_attachments a join conversation_messages m on m.id = a.message_id and m.tenant_id = a.tenant_id
+  where a.id = conversation_file_objects.attachment_id and a.tenant_id = conversation_file_objects.tenant_id
+    and app_actor_can_access_conversation_thread(m.tenant_id, m.thread_id)
+));
+drop policy if exists conversation_file_insert on conversation_file_objects;
+create policy conversation_file_insert on conversation_file_objects for insert with check (app_is_system());
+drop policy if exists conversation_native_extraction_insert on conversation_message_attachments;
+create policy conversation_native_extraction_insert on conversation_message_attachments as restrictive for insert
+with check (extractor_mode is distinct from 'native' or app_is_system());
+drop policy if exists conversation_native_document_namespace on conversation_message_attachments;
+create policy conversation_native_document_namespace on conversation_message_attachments as restrictive for insert
+with check (app_is_system() or (storage_reference not like 'dbdoc:%' and id !~ '^file_[a-f0-9]{64}$'));
+drop policy if exists conversation_attachment_audit_access on audit_logs;
+create policy conversation_attachment_audit_access on audit_logs as restrictive for select using (
+  app_is_system() or target_type <> 'conversation_message_attachment' or exists (
+    select 1 from conversation_message_attachments a join conversation_messages m on m.id = a.message_id and m.tenant_id = a.tenant_id
+    where a.id = audit_logs.target_id and a.tenant_id = audit_logs.tenant_id
+      and app_actor_can_access_conversation_thread(m.tenant_id, m.thread_id)
+  )
+);
+`;
+
+const githubPublicConnectorsMigrationSql = `
+create table if not exists github_public_connectors (
+  id text primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  owner_name text not null check (owner_name ~ '^[A-Za-z0-9][A-Za-z0-9-]{0,38}$'),
+  repository_name text not null check (repository_name ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'),
+  status text not null check (status in ('active', 'revoked')),
+  version integer not null default 1 check (version > 0),
+  installed_by text not null references users(id),
+  installed_at text not null,
+  revoked_at text,
+  last_requested_at timestamptz,
+  last_checked_at text,
+  latest_issues text not null default '[]' check (char_length(latest_issues) <= 20000),
+  unique (tenant_id, owner_name, repository_name)
+);
+create or replace function protect_github_public_connector_identity() returns trigger
+language plpgsql security invoker set search_path = pg_catalog, public, pg_temp as $$
+begin
+  if new.id <> old.id or new.tenant_id <> old.tenant_id or new.owner_name <> old.owner_name
+    or new.repository_name <> old.repository_name or new.installed_by <> old.installed_by
+    or new.installed_at <> old.installed_at then raise exception 'github_connector_identity_immutable'; end if;
+  if old.status = 'revoked' or (new.status <> old.status and (new.status <> 'revoked' or new.version <> old.version + 1))
+    or (new.status = old.status and new.version <> old.version) then raise exception 'github_connector_transition_invalid'; end if;
+  return new;
+end;
+$$;
+drop trigger if exists github_public_connector_identity on github_public_connectors;
+create trigger github_public_connector_identity before update on github_public_connectors
+for each row execute function protect_github_public_connector_identity();
+`;
+
+const githubPublicConnectorsRlsMigrationSql = `
+alter table github_public_connectors enable row level security;
+drop policy if exists tenant_isolation on github_public_connectors;
+drop policy if exists github_public_connector_read on github_public_connectors;
+create policy github_public_connector_read on github_public_connectors for select using (
+  app_is_system() or (tenant_id = app_current_tenant_id() and nullif(current_setting('app.actor_id', true), '') is not null
+    and exists (select 1 from memberships m where m.tenant_id = github_public_connectors.tenant_id and m.user_id = nullif(current_setting('app.actor_id', true), '')))
+);
+drop policy if exists github_public_connector_insert on github_public_connectors;
+create policy github_public_connector_insert on github_public_connectors for insert with check (app_is_system());
+drop policy if exists github_public_connector_update on github_public_connectors;
+create policy github_public_connector_update on github_public_connectors for update using (app_is_system()) with check (app_is_system());
 `;

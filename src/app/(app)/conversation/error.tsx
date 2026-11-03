@@ -5,8 +5,8 @@ export default function ConversationError({ reset }: { reset: () => void }) {
     <div className="rounded-lg border border-rose-200 bg-rose-50 p-6 text-rose-950">
       <h1 className="text-xl font-bold">La conversation est indisponible</h1>
       <p className="mt-2 text-sm">
-        Le fil n&apos;a pas pu être chargé. Aucun message n&apos;a été envoyé à un
-        service externe.
+        Le résultat de la dernière demande n&apos;a pas pu être affiché.
+        Rechargez le fil et vérifiez son état avant de recommencer.
       </p>
       <button
         onClick={reset}

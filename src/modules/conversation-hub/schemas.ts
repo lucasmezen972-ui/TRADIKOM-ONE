@@ -145,7 +145,7 @@ export const externalUntrustedDataExtractionSchema = z.discriminatedUnion(
     z
       .object({
         trustBoundary: z.literal("external_untrusted_data"),
-        mode: z.literal("mock"),
+        mode: z.enum(["mock", "native"]),
         extractorKey: boundedIdentifierSchema,
         integrity: z.literal("verified"),
         text: z.string().min(1).max(16_000),

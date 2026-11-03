@@ -49,10 +49,10 @@ describe("migrations des délégations de plans Conversation", () => {
         "os5ConversationActionPlanDelegationsRlsMigrationSql",
       ).trim(),
     ).toBe(rlsMirror.trim());
-    expect(getMigrationIds().at(-1)).toBe(
+    expect(getMigrationIds()).toContain(
       "125_goal_watch_controls",
     );
-    expect(getMigrationIds(true).at(-1)).toBe(
+    expect(getMigrationIds(true)).toContain(
       "126_goal_watch_controls_rls",
     );
     expect(baseMirror).toContain("approval_id text not null");

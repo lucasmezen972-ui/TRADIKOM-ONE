@@ -5,7 +5,7 @@ const maximumDataOnlyCharacters = 8_000;
 
 export type VerifiedExternalUntrustedDataExtraction = {
   trustBoundary: "external_untrusted_data";
-  mode: "mock";
+  mode: "mock" | "native";
   extractorKey: string;
   integrity: "verified";
   text: string;
@@ -48,7 +48,7 @@ export function readExternalUntrustedDataExtraction(
 
   if (
     extraction.trust_boundary !== "external_untrusted_data" ||
-    extraction.extractor_mode !== "mock" ||
+    !["mock", "native"].includes(extraction.extractor_mode ?? "") ||
     !extraction.extractor_key ||
     !extraction.extracted_text ||
     !extraction.extracted_text_sha256 ||
@@ -68,7 +68,7 @@ export function readExternalUntrustedDataExtraction(
 
   return {
     trustBoundary: "external_untrusted_data",
-    mode: "mock",
+    mode: extraction.extractor_mode as "mock" | "native",
     extractorKey: extraction.extractor_key,
     integrity: "verified",
     text: extraction.extracted_text,

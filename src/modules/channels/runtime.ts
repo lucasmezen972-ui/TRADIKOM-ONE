@@ -1,3 +1,4 @@
+import { ingestNativeConversationDocument } from "@/modules/conversation-hub/native-documents";
 import { getDb, type DbClient } from "@/lib/db";
 import {
   createUnavailableAttachmentAccessDependencies,
@@ -10,6 +11,7 @@ import {
 } from "@/modules/conversation-hub";
 import { createTestChannelAdapter } from "@/modules/channels/test-channel";
 import { createWebChannelAdapter } from "@/modules/channels/web-channel";
+import { createConversationModelPlan, getConversationModelReadiness, type CreateModelPlanInput } from "@/modules/orchestrator/model-runtime";
 import { createConversationContactTask, listConversationTaskContacts,
   type CreateConversationContactTaskInput } from "@/modules/conversation-hub/native-tasks";
 import { createGoalWatch, changeGoalWatch, listGoalWatchesForThread,
@@ -42,6 +44,9 @@ export function createConversationChannelServices(
     dependencies.attachmentAccess ??
     createUnavailableAttachmentAccessDependencies("not_configured");
   return {
+    modelReadiness: getConversationModelReadiness(),
+    createModelPlan: (userId: string, tenantId: string, input: CreateModelPlanInput) =>
+      createConversationModelPlan(db, userId, tenantId, input),
     createContactTaskFromConversation: (userId: string, tenantId: string, input: CreateConversationContactTaskInput) =>
       createConversationContactTask(db, userId, tenantId, input),
     prepareTaskForm: async (userId: string, tenantId: string, threadId: string) => ({
@@ -54,6 +59,7 @@ export function createConversationChannelServices(
       changeGoalWatch(db, userId, tenantId, input),
     listGoalWatches: (userId: string, tenantId: string, threadId: string) =>
       listGoalWatchesForThread(db, userId, tenantId, threadId),
+    uploadDocument: (userId: string, input: Parameters<typeof ingestNativeConversationDocument>[2], file: { name: string; bytes: Uint8Array }) => ingestNativeConversationDocument(db, userId, input, file),
     web: createWebChannelAdapter(db),
     test: createTestChannelAdapter(db),
     getMetaWhatsAppTenantReadiness: (userId: string, tenantId: string) =>

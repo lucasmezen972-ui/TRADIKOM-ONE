@@ -26,7 +26,15 @@ export function createWebChannelAdapter(db: DbClient) {
   return {
     key: "web-chat" as const,
     kind: "web" as const,
-    async ingest(userId: string, input: WebChannelMessage) {
+    ingest: (userId: string, input: WebChannelMessage) => ingestWebChannelMessage(db, userId, input),
+  };
+}
+
+// Server-only document boundary supplies verified metadata; the public input stays strict.
+export async function ingestWebChannelMessage(db: DbClient, userId: string, input: WebChannelMessage,
+  attachments: import("@/modules/conversation-hub/schemas").MessageIngress["attachments"] = [],
+  attachmentExtractions: Parameters<typeof ingestConversationMessage>[3] = {},
+) {
       const parsed = webChannelMessageSchema.parse(input);
       const identityFingerprint = hashToken(
         `${parsed.tenantId}:${userId}`,
@@ -61,9 +69,7 @@ export function createWebChannelAdapter(db: DbClient) {
           },
         ],
         text: parsed.text,
-        attachments: [],
+        attachments,
         occurredAt: parsed.occurredAt,
-      });
-    },
-  };
+      }, attachmentExtractions);
 }

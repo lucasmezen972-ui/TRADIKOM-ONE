@@ -1,11 +1,27 @@
 "use server";
 
+import { NativeDocumentError } from "@/modules/conversation-hub/native-documents";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { safeServerAction } from "@/lib/public-action";
 import { requireTenantContext } from "@/lib/session";
 import { getConversationChannelServices } from "@/modules/channels";
+import { conversationModelMaximumCostMicroUsd } from "@/modules/orchestrator/model-runtime";
+
+export async function createConversationModelPlanAction(formData: FormData) {
+  const { user, tenant } = await requireTenantContext();
+  const services = await getConversationChannelServices();
+  const result = await safeServerAction("conversation.model_plan", () => services.createModelPlan(user.id, tenant.id, {
+    threadId: text(formData, "threadId"), sourceMessageId: text(formData, "sourceMessageId"),
+    idempotencyKey: text(formData, "idempotencyKey"), dataTransferApproved: requiredConfirmation(formData, "modelConsent"),
+    externalContextApproved: text(formData, "modelExternalConsent") === "true",
+    maximumCostMicroUsd: conversationModelMaximumCostMicroUsd,
+  }));
+  revalidatePath("/conversation");
+  redirect(conversationPlanRedirect(result.threadId,
+    result.approvalStatus === "draft" ? "clarification" : "cree", result.id));
+}
 
 export async function createNativeConversationTaskAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
@@ -55,8 +71,8 @@ export async function changeConversationGoalAction(formData: FormData) {
 export async function sendWebConversationMessageAction(formData: FormData) {
   const { user, tenant } = await requireTenantContext();
   const services = await getConversationChannelServices();
-  const result = await safeServerAction("conversation.web_ingest", () =>
-    services.web.ingest(user.id, {
+  const result = await safeServerAction("conversation.web_ingest", async () => {
+    const input = {
       tenantId: tenant.id,
       threadId: optionalText(formData, "threadId"),
       displayName: user.name,
@@ -65,8 +81,14 @@ export async function sendWebConversationMessageAction(formData: FormData) {
       correlationId: text(formData, "correlationId"),
       text: text(formData, "message"),
       occurredAt: text(formData, "occurredAt"),
-    }),
-  );
+    };
+    const file = formData.get("attachmentFile");
+    if (file instanceof File && file.size > 0) {
+      if (file.size > 512 * 1024) throw new NativeDocumentError();
+      return services.uploadDocument(user.id, input, { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) });
+    }
+    return services.web.ingest(user.id, input);
+  });
   revalidatePath("/conversation");
   redirect(`/conversation?fil=${encodeURIComponent(result.threadId)}&envoye=web`);
 }

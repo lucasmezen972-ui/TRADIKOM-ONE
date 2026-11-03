@@ -10,6 +10,6 @@ it("garde les contrôles et leur RLS identiques aux miroirs SQL et sans élargis
     expect(runtime.slice(start, runtime.indexOf("`;", start)).trim()).toBe(mirror.trim());
     expect(mirror).not.toMatch(/security\s+definer/i);
   }
-  expect(getMigrationIds().at(-1)).toBe("125_goal_watch_controls");
-  expect(getMigrationIds(true).at(-1)).toBe("126_goal_watch_controls_rls");
+  expect(getMigrationIds()).toContain("125_goal_watch_controls");
+  expect(getMigrationIds(true)).toContain("126_goal_watch_controls_rls");
 });

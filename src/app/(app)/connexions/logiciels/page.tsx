@@ -1,3 +1,4 @@
+import { GithubPublicPanel } from "./github-panel";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -103,6 +104,8 @@ export default async function SoftwareConnectionsPage({
           Secrets côté serveur
         </span>
       </header>
+
+      <GithubPublicPanel userId={user.id} tenantId={tenant.id} />
 
       {params.oauth === "connecte" ? (
         <Notice kind="success">

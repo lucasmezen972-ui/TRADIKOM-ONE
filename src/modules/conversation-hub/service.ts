@@ -59,6 +59,7 @@ export async function ingestConversationMessage(
   db: DbClient,
   userId: string,
   input: MessageIngress,
+  attachmentExtractions: Record<string, NonNullable<Parameters<typeof insertConversationAttachment>[1]["extraction"]>> = {},
 ) {
   const parsed = messageIngressSchema.parse(input);
   assertIngressDoesNotUseReservedOrchestratorNamespace(parsed, false);
@@ -74,7 +75,7 @@ export async function ingestConversationMessage(
         parsed.tenantId,
         conversationWriteRoles,
       );
-      return persistConversationMessage(transaction, userId, parsed, false, true);
+      return persistConversationMessage(transaction, userId, parsed, false, true, attachmentExtractions);
     },
   );
 }
@@ -146,6 +147,7 @@ async function persistConversationMessage(
   parsed: MessageIngress,
   createRequestedThreadIfMissing: boolean,
   enforceActorAccess: boolean,
+  attachmentExtractions: Record<string, NonNullable<Parameters<typeof insertConversationAttachment>[1]["extraction"]>> = {},
 ) {
   const replay = await findConversationMessageByIdempotencyKey(
     transaction,
@@ -247,6 +249,7 @@ async function persistConversationMessage(
       sizeBytes: attachment.sizeBytes,
       storageReference: attachment.storageReference,
       checksumSha256: attachment.checksumSha256,
+      extraction: attachmentExtractions[attachment.id],
       createdAt,
     });
   }

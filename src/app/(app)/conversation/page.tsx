@@ -1,3 +1,5 @@
+import { DocumentDownload } from "./document-download";
+import { MessageComposer } from "./message-composer";
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import {
@@ -6,9 +8,7 @@ import {
   ListChecks,
   MessageCircle,
   Paperclip,
-  Radio,
   RotateCcw,
-  Send,
   ShieldCheck,
   XCircle,
 } from "lucide-react";
@@ -38,6 +38,7 @@ import {
 import { PlanRevisionForm } from "@/app/(app)/conversation/plan-revision-form";
 import { GoalWatchPanel } from "@/app/(app)/conversation/goal-watch-panel";
 import { NativeTaskForm } from "@/app/(app)/conversation/native-task-form";
+import { ModelPlanForm } from "@/app/(app)/conversation/model-plan-form";
 import {
   planReceiptMessage,
   resolveConversationPlanReceipt,
@@ -274,6 +275,7 @@ export default async function ConversationPage({
                         {message.attachments.map((attachment) => (
                           <li
                             key={attachment.id}
+                            role="group" aria-label={attachment.fileName}
                             className="flex flex-wrap items-center gap-2 rounded-lg border border-current/15 bg-white/70 px-3 py-2 text-xs normal-case tracking-normal text-slate-800"
                           >
                             <Paperclip size={15} aria-hidden />
@@ -287,10 +289,11 @@ export default async function ConversationPage({
                                 : "Stockage sécurisé"}
                             </span>
                             <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
-                              {attachmentAccessLabel(
+                              {attachment.storageReference.startsWith("dbdoc:") ? "Original chiffré téléchargeable" : attachmentAccessLabel(
                                 services.attachmentAccessState,
                               )}
                             </span>
+                            {attachment.storageReference.startsWith("dbdoc:") ? <DocumentDownload attachmentId={attachment.id} fileName={attachment.fileName} /> : null}
                             {attachment.extraction ? (
                               <div className="w-full rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-950">
                                 <p className="font-semibold">
@@ -299,7 +302,7 @@ export default async function ConversationPage({
                                 {attachment.extraction.integrity === "verified" ? (
                                   <>
                                     <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-                                      Extraction mock · intégrité vérifiée
+                                      Extraction {attachment.extraction.mode === "native" ? "locale" : "mock"} · intégrité vérifiée
                                     </p>
                                     <p className="mt-1 whitespace-pre-wrap leading-5">
                                       {attachment.extraction.text}
@@ -352,6 +355,7 @@ export default async function ConversationPage({
 
           {thread ? <GoalWatchPanel threadId={thread.id} goals={goals} canWrite={canWrite && thread.status !== "archived"} creationIdempotencyKey={`goal-create:${randomUUID()}`} /> : null}
           {thread && sourceMessage && taskForm ? <NativeTaskForm threadId={thread.id} sourceMessageId={sourceMessage.id} contacts={taskForm.contacts} dueAt={taskForm.dueAt} idempotencyKey={`native-task:${randomUUID()}`} /> : null}
+          {thread && sourceMessage && canWrite && thread.status !== "archived" ? <ModelPlanForm threadId={thread.id} sourceMessageId={sourceMessage.id} state={services.modelReadiness.state} idempotencyKey={`model-plan:${randomUUID()}`} /> : null}
           <div className="border-t border-slate-200 bg-slate-50 p-4 lg:p-5">
             {canWrite ? (
               <div className="grid gap-3 xl:grid-cols-2">
@@ -1019,27 +1023,7 @@ function MessageForm({
         {title}
       </label>
       <p className="mt-1 text-xs text-slate-500">{description}</p>
-      <textarea
-        id={`message-${channel}`}
-        name="message"
-        required
-        maxLength={16_000}
-        rows={3}
-        placeholder={
-          channel === "web"
-            ? "Que voulez-vous accomplir ?"
-            : "Réponse simulée depuis un autre canal"
-        }
-        className="mt-3 w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-      />
-      <button className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md bg-[#08111f] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-        {channel === "web" ? (
-          <Send size={16} aria-hidden />
-        ) : (
-          <Radio size={16} aria-hidden />
-        )}
-        Envoyer
-      </button>
+      <MessageComposer channel={channel} title={title} />
     </form>
   );
 }

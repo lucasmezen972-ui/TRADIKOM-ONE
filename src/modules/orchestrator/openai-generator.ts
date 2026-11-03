@@ -131,6 +131,7 @@ export type OpenAiPlanRequest = {
   input: string;
   instructions: string;
   store: false;
+  service_tier?: "default";
   max_output_tokens: number;
   text: {
     format: {
@@ -312,6 +313,7 @@ export function createConfiguredConversationModelGenerator(
           input,
           instructions,
           store: false,
+          service_tier: "default",
           max_output_tokens: configured.maximumOutputTokens,
           text: {
             format: {

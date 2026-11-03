@@ -24,10 +24,10 @@ describe("migration RLS des objets dérivés de Conversation", () => {
     expect(getMigrationIds()).not.toContain(
       "114_os5_conversation_derived_access_rls",
     );
-    expect(getMigrationIds().at(-1)).toBe(
+    expect(getMigrationIds()).toContain(
       "125_goal_watch_controls",
     );
-    expect(getMigrationIds(true).at(-1)).toBe(
+    expect(getMigrationIds(true)).toContain(
       "126_goal_watch_controls_rls",
     );
   });

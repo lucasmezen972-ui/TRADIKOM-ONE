@@ -92,7 +92,7 @@ export type ConversationAttachmentRow = {
   storage_reference: string;
   checksum_sha256: string;
   trust_boundary: "external_untrusted_data" | null;
-  extractor_mode: "mock" | null;
+  extractor_mode: "mock" | "native" | null;
   extractor_key: string | null;
   extracted_text: string | null;
   extracted_text_sha256: string | null;
@@ -681,7 +681,7 @@ export async function insertConversationAttachment(
     checksumSha256: string;
     extraction?: {
       trustBoundary: "external_untrusted_data";
-      extractorMode: "mock";
+      extractorMode: "mock" | "native";
       extractorKey: string;
       text: string;
       textSha256: string;

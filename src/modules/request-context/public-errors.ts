@@ -1,6 +1,9 @@
+import { GithubPublicConnectorError } from "@/modules/github-public/service";
+import { NativeDocumentError } from "@/modules/conversation-hub/native-documents";
 import { ZodError } from "zod";
 import { GoalWatchError } from "@/modules/goal-watch/errors";
 import { ConversationHubError } from "@/modules/conversation-hub/errors";
+import { ConversationModelGenerationError } from "@/modules/orchestrator/openai-generator";
 import { AccountDeletionError } from "@/modules/account-deletion";
 import { ApprovalCenterError } from "@/modules/approval-center";
 import { AssetError } from "@/modules/assets";
@@ -27,6 +30,15 @@ export type PublicError = {
 };
 
 export function toPublicError(error: unknown): PublicError {
+  if (error instanceof GithubPublicConnectorError) return publicError(error.code, "github_connector", error.message, 400);
+  if (error instanceof NativeDocumentError) return publicError(error.code, "conversation_document", error.message, 400);
+  if (error instanceof ConversationModelGenerationError) {
+    return publicError(error.code, "conversation_model",
+      error.code === "model_not_configured" ? "L’IA n’est pas configurée pour cette demande."
+      : error.code === "model_not_authorized" ? "Consentement, accès ou budget insuffisant. Aucune nouvelle génération n’a été autorisée."
+      : "La génération n’a pas fourni de résultat exploitable. Son éventuel coût reste enregistré.",
+      error.code === "model_not_authorized" ? 403 : 503);
+  }
   if (error instanceof ConversationHubError) {
     return publicError(error.code, "conversation",
       error.code === "conversation_access_denied" ? "Cette action n’est pas autorisée dans cette conversation."

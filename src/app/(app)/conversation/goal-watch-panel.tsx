@@ -9,12 +9,12 @@ export function GoalWatchPanel({ threadId, goals, canWrite, creationIdempotencyK
 }) {
   return <section aria-label="Objectifs de cette conversation" className="border-t border-slate-200 p-4 lg:p-5">
     <h2 className="text-lg font-bold">Objectifs suivis</h2>
-    <p className="mt-1 text-sm text-slate-600">Suivez un indicateur de cette entreprise. Les changements sont rapportés dans ce fil lors des évaluations. Vous pouvez suspendre le suivi ou l’arrêter définitivement.</p>
+    <p className="mt-1 text-sm text-slate-600">Suivez un indicateur de cette entreprise. Les changements sont rapportés dans ce fil lors des évaluations. Vous pouvez suspendre le suivi ou l’arrêter définitivement. Les évaluations automatiques ne sont pas programmées sur cette préversion.</p>
     {goals.length === 0 ? <p className="mt-3 text-sm text-slate-500">Aucun suivi autorisé dans ce fil.</p> : <ul className="mt-4 grid gap-3">
       {goals.map((goal) => <li key={goal.goalId} className="rounded-lg border border-slate-200 p-3">
         <h3 className="font-semibold">{goal.title}</h3>
         <p role="status" className="mt-1 text-sm font-semibold">{states[goal.state]}</p>
-        <p className="mt-1 text-sm text-slate-600">{goal.signalLabel} : {goal.operator === "gte" ? "au moins" : "au plus"} {goal.targetLabel}. Évaluation toutes les {goal.cadenceMinutes / 60} heures.</p>
+        <p className="mt-1 text-sm text-slate-600">{goal.signalLabel} : {goal.operator === "gte" ? "au moins" : "au plus"} {goal.targetLabel}. Cadence souhaitée : {goal.cadenceMinutes / 60} heures.</p>
         {goal.latestEvaluation ? <p className="mt-1 text-sm">Dernier résultat : {goal.latestEvaluation.state === "met" ? "objectif atteint" : "objectif non atteint"}.</p> : null}
         {canWrite && goal.state !== "stopped" ? <div className="mt-3 flex flex-wrap items-start gap-3">
           {goal.state === "active" ? <Control goal={goal} action="pause"><button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold">Mettre en pause</button></Control>
