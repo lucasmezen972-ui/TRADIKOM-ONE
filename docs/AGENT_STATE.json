@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T05:40:41.092Z",
+  "updatedAt": "2026-11-03",
   "northStar": "Une conversation continue, tous les canaux, des actions durables, des validations simples et des preuves auditables.",
   "branch": "codex/tradikom-one-os",
   "pullRequest": 11,
   "lastCommit": "0da2c88ad2f7cd89526fc797530634251f4470fe",
-  "publishedHeadObserved": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
-  "status": "preview_deployed_schema132_health_verified",
+  "publishedHeadObserved": "9022539246b091f3e64918b18a91c37768e97b31",
+  "status": "preview_hosted_pdf_verified_activation_incomplete",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Mettre en service le candidat vérifié : objectifs consentis, action CRM réelle, documents privés, dictée et connecteur public. IA bornée raccordée mais non activée.",
   "masterPrompt": {
@@ -37,7 +37,7 @@
       "evidenceExpected": "Tests lifecycle, refus sans consentement, arrêt/reprise concurrents, RLS en PostgreSQL 17, parcours navigateur et build du candidat."
     }
   },
-  "nextAction": "Vérifier le parcours utilisateur connecté dans la préversion ; configurer la clé OpenAI dans Vercel uniquement par un parcours sécurisé et activer des appels après budget distinct. Préparer séparément sauvegarde et fenêtre d’upgrade du moteur Supabase. Aucun cron ni production.",
+  "nextAction": "Ne pas reprendre depuis schéma124. Recette PDF mobile du candidat9022539 réussie. Préparer le transfert sécurisé OpenAI si un secret autorisé est encore disponible ; ne pas activer sans budget distinct. Préparer sauvegarde plateforme et compatibilité upgrade Supabase. Nettoyage des deux fixtures example.test uniquement par nouvelle confirmation native ; conserver impérativement Lucas/Caraïbe Démo Services.",
   "nextFile": "docs/PRODUCT_FINALIZATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -2427,12 +2427,12 @@
       "environmentVariableCount": 11,
       "buildCostSettingsUpdate": "denied_by_vercel_permission",
       "appUrlConfigured": true,
-      "publishedSource": "4c4619d5e15e2b303b4e80486b629d35e8c41d44",
-      "deploymentId": "dpl_81smzYPqTYhfZqcAtFbHeYd5aCYZ",
+      "publishedSource": "9022539246b091f3e64918b18a91c37768e97b31",
+      "deploymentId": "dpl_5gEdmyp1f7rVz43uFiviFYZMDupJ",
       "previewUrl": "https://tradikom-one-git-codex-tradik-3e15f6-lucasmezen972-uis-projects.vercel.app/",
-      "currentCandidate": "0da2c88ad2f7cd89526fc797530634251f4470fe",
+      "currentCandidate": "9022539246b091f3e64918b18a91c37768e97b31",
       "candidateDeployed": true,
-      "lastHealth": "2026-11-03T05:40:21.278Z",
+      "lastHealth": "2026-11-03T07:08:30.960Z",
       "lastHealthHttpStatus": 200
     },
     "database": {
@@ -2494,7 +2494,8 @@
     "Les connecteurs propriétaires génériques restent préparatoires ; seul le connecteur GitHub public dispose du parcours réel install/read/revoke.",
     "Un avis modéré minimatch reste suivi, sans high/critical ni avis ignoré.",
     "PDF canonique absent de ce runner : aucune nouvelle lecture paginée revendiquée.",
-    "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé."
+    "Moteur Supabase 17.6 non mis à niveau ; inventaire public sans index ltree/GiST flottant ni opérateur personnalisé, périmètre plateforme/PGP non validé.",
+    "Ancien workspace cloud devenu inaccessible : clé OpenAI et temporaires privés non récupérables depuis cette reprise ; ne pas prétendre les avoir transférés ou nettoyés."
   ],
   "remoteValidationBudget": {
     "maximumAdditionalSpend": 1,
@@ -2661,6 +2662,29 @@
       "database": "ok",
       "securityAdvisoryCount": 0,
       "userAuthenticatedWorkflow": "not_yet_verified_on_hosted_database"
+    },
+    "hostedRecipe": {
+      "sourceCommit": "9022539246b091f3e64918b18a91c37768e97b31",
+      "deploymentId": "dpl_5gEdmyp1f7rVz43uFiviFYZMDupJ",
+      "pdf": "mobile390x844_upload_text_extraction_byte_identical_download_reload_passed",
+      "healthHttp": 200,
+      "database": "ok",
+      "securityAdvisories": 0,
+      "targetedTests": {
+        "passed": 8,
+        "failed": 0,
+        "files": 2,
+        "scope": "native documents and restricted-role tenant discovery; local, not remote PostgreSQL exhaustive"
+      },
+      "github": "recovered logs: read, revoke, reload terminal state passed",
+      "personalAccount": {
+        "userId": "user_13b9b6970b174c2da0289bf6975d56c4",
+        "tenantId": "tenant_82a4bfd5699644cd8b15e58517c7f15d",
+        "preserve": true,
+        "activeOwnerSqlVerified": true,
+        "newIndependentLogin": "not_started_workspace_disappeared"
+      },
+      "fixtureCleanup": "native_confirmation_expired_no_cleanup_claimed"
     }
   }
 }
