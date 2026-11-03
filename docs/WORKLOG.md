@@ -1528,3 +1528,8 @@ Code métier et préversion inchangés : aucun redéploiement pour cette opérat
 Recette sur d3f7a2a : imports JSON/CSV/XLSX, CRM/tâche dédiée, opportunité/historique, modules locaux et décisions, préférences restaurées, profil IA pause/reprise, documents TXT224octets/PDF texte1484octets extraits et téléchargés à l’identique, objectif consenti jusqu’à arrêt terminal, simulation DNS avec double confirmation et rechargement. Compte personnel/session préservés; aucun budget IA ou message externe.
 
 Défauts reproduits : PNG5513octets refusé sans stockage disponible (zéro asset), export sans génération, statut Importé remplacé visuellement, contexte public/runtime, HTTP et requêtes PG concurrentes. Correctifs intégrés au candidat, migration135 préparée seulement. Stockage/associations54tests distincts/13fichiers et lint ciblé verts; kit132/135 et contrôles globaux en cours. Campagne exhaustive initiale interrompue, aucun résultat global inventé. Voir FULL_APP_VALIDATION_2026-11-03.md.
+
+
+## 2026-11-03 — Candidat135 conservé après expiration native
+
+Confirmation apply_migration135 expirée, non réessayée. SQL distinct : journal134, app_private absent, zéro asset, propriétaire personnel intact. Le candidat135 reste séparé, sans déploiement; ciblés images54 et restauration3 verts, lint/TS globaux verts, corpus global suspendu à8fichiers/35tests verts. Livraison compatible134 qualifiée séparément pour avancer sans migration. Auto-déploiements des deux branches de travail désactivés, aucune Actions.

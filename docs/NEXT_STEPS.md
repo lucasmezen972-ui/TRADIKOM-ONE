@@ -1,3 +1,7 @@
+# Blocage natif135 — 3 novembre2026
+
+La confirmation apply_migration135 a expiré : aucun SQL appliqué, aucun retry. Conserver ce candidat sur la branche dédiée; ne pas le déployer avant nouvelle confirmation native valide. La livraison compatible134 est traitée séparément dans codex/tradikom-one-os. Le checkpoint courant est FULL_APP_VALIDATION_2026-11-03.md. Les plans suivants sont historiques.
+
 # Prochaine action concrète — campagne complète du 3 novembre
 
 Le checkpoint actif est [FULL_APP_VALIDATION_2026-11-03.md](FULL_APP_VALIDATION_2026-11-03.md). Qualifier le kit applicatif132/135 puis le candidat globalement, appliquer135 avec confirmation native valide, déployer le SHA exact en préversion protégée et rejouer les défauts corrigés. Les preuves natives TXT/PDF/CRM/objectifs sont acquises sur le source d3f7a2a; images et export restent à vérifier après correction. Compte personnel et session gardés; budgets0/0, aucun message externe ou GitHub Actions.

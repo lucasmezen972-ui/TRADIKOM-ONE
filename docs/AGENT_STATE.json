@@ -6,7 +6,7 @@
   "pullRequest": 11,
   "lastCommit": "d3f7a2ac9cbe24c50d5197ae697cf26c90315da7",
   "publishedHeadObserved": "261efe488cd3cf5dcc4b53a701ab2cec2da848ef",
-  "status": "full_application_recipe_candidate_integrated_not_deployed",
+  "status": "schema135_candidate_blocked_native_confirmation_expired",
   "currentPhase": "OS-6/OS-7/OS-8 bounded candidate",
   "currentObjective": "Tester tous les modules accessibles, corriger les défauts reproduits et qualifier le candidat en préversion protégée sans budget IA.",
   "masterPrompt": {
@@ -55,7 +55,7 @@
     },
     "libraryFileId": "libfile_87452c8e10f88191b16e89dede16aca9"
   },
-  "nextAction": "Qualifier le kit132/135, geler le candidat puis lint/TypeScript/build/continuité et suite complète. Appliquer135 avec confirmation native valide, déployer le SHA exact et vérifier images, export existant, publication/leads, statut Importé et régressions hébergées. Conserver compte, entreprise et session personnels; budgets0/0; aucun GitHub Actions.",
+  "nextAction": "Conserver ce candidat135 séparé. La confirmation native Supabase a expiré, aucun SQL appliqué ni retry. Ne pas déployer135 sans nouvelle confirmation native valide; la livraison indépendante compatible134 est qualifiée séparément sur codex/tradikom-one-os. Ensuite compléter tests globaux et vraie recette images/publication/leads. Budgets0/0, compte/session préservés.",
   "nextFile": "docs/FULL_APP_VALIDATION_2026-11-03.md",
   "automation": {
     "nativeId": "continuit-tradikom-one-os",
@@ -3087,6 +3087,12 @@
     "migrationPrepared": 135,
     "globalChecksPending": true,
     "nativeHostedDesktopOnly": true,
-    "masterPromptAvailability": "Non relu dans ce cloud; les pages consultées ci-dessus sont historiques, exigences versionnées utilisées."
+    "masterPromptAvailability": "Non relu dans ce cloud; les pages consultées ci-dessus sont historiques, exigences versionnées utilisées.",
+    "migrationNativeStatus": "expired_not_applied",
+    "globalCandidate135Partial": {
+      "files": 8,
+      "testsPassed": 35,
+      "status": "paused_not_global_green"
+    }
   }
 }

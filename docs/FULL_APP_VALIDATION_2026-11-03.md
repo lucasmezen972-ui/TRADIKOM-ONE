@@ -1,6 +1,6 @@
 # Recette de toute l’application — 3 novembre 2026
 
-La campagne est **en cours**. Le source hébergé au début est `d3f7a2ac9cbe24c50d5197ae697cf26c90315da7`, déploiement protégé `dpl_AseSRQa24RLsBvE4BtEUpa1xbWnp`; la branche de départ est `261efe488cd3cf5dcc4b53a701ab2cec2da848ef`. Les résultats ci-dessous ne prouvent pas encore le candidat corrigé en hébergement.
+La campagne est **bloquée pour le schéma135 par expiration de confirmation native**. Le source hébergé au début est `d3f7a2ac9cbe24c50d5197ae697cf26c90315da7`, déploiement protégé `dpl_AseSRQa24RLsBvE4BtEUpa1xbWnp`; la branche de départ est `261efe488cd3cf5dcc4b53a701ab2cec2da848ef`. Les résultats ci-dessous ne prouvent pas encore le candidat corrigé en hébergement.
 
 ## Parcours natifs déjà vérifiés
 
@@ -53,6 +53,12 @@ Cette reprise native est sur ordinateur. Les anciennes preuves mobiles concernen
 
 Le compte personnel et Caraïbe Démo Services sont conservés, session ouverte. Aucun nouveau compte, suppression réelle, message métier externe, achat, abonnement, production, fusion ou GitHub Actions. IA modèle désactivée et budgets global/tenant0/0; la clé existante reste privée. Les plans orchestrateur restent mock et les analyses locales ne sont pas des appels de modèle.
 
+## Checkpoint natif et qualification
+
+Le candidatfbb1a44 a passé lint/TypeScript globaux et continuité ready avec avertissement PDF inaccessible. La restauration132/135 passe3/3 tests dans2fichiers, lint et syntaxe verts. Build local non prouvé. La campagne216fichiers a été suspendue proprement après8fichiers et35tests verts, sans échec; ces35 ne constituent pas une suite globale.
+
+La confirmation native apply_migration135 a expiré. Aucun retry ni contournement; SQL après expiration confirme journal134, app_private absent, zéro asset et propriétaire personnel intact. Aucun déploiement135. Une livraison compatible134 (HTTP/CRM/exports/lecturesSQL) est préparée séparément pour avancer. Les auto-déploiements des deux branches sont désactivés; ce candidat135 reste conservé sans changer la préversion stable.
+
 ## Prochaine action concrète
 
-Qualifier le kit132/135, geler et tester globalement le candidat, appliquer135 avec confirmation native valide puis déployer une preview au SHA exact sans `target` et avec `withLatestCommit=false`. Rejouer en hébergement images, publication/leads, export existant, statut Importé et les parcours corrigés; conserver source, déploiement, résultats et limites.
+Reprendre seulement après une nouvelle confirmation native valide pour135, terminer la qualification globale puis déployer une preview au SHA exact sans `target` et avec `withLatestCommit=false`. Rejouer en hébergement images, publication/leads, export existant, statut Importé et les parcours corrigés; conserver source, déploiement, résultats et limites.
